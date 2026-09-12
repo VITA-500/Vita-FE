@@ -1,55 +1,88 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Menu, X } from "lucide-react";
-import { translations } from "@/constants/translations";
-import { useLanguageStore } from "@/stores/languageStore";
 import HeaderControls from "@/components/HeaderControls";
+import { routes } from "@/shared/constants/routes";
+import { Logo } from "@/shared/ui/Logo";
 
 const navItems = [
-  { key: "overview", href: "/" },
-  { key: "profile", href: "/profile" },
-  { key: "repositories", href: "/repository" },
-  { key: "languages", href: "/language" },
-  { key: "activity", href: "/activity" },
-  { key: "ranking", href: "/ranking" },
+  { label: "서비스 소개", href: `${routes.home}#service-intro` },
+  { label: "주요 기능", href: `${routes.home}#features` },
+  { label: "이용 흐름", href: `${routes.home}#service-flow` },
 ] as const;
+
+const HEADER_HIDE_SCROLL_Y = 140;
+const HEADER_SHOW_TOP_Y = 64;
+const HEADER_DELTA_THRESHOLD = 48;
 
 const Header = () => {
   const pathname = usePathname();
-  const { language } = useLanguageStore();
-
-  const t = translations[language];
 
   const [mobileMenuPath, setMobileMenuPath] = useState<string | null>(null);
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
 
   const lastScrollY = useRef(0);
+  const accumulatedScrollDelta = useRef(0);
+  const frameId = useRef<number | null>(null);
   const isMobileMenuOpen = mobileMenuPath === pathname;
   const shouldHideHeader =
-    pathname === "/" && !isMobileMenuOpen && isHeaderHidden;
+    pathname === routes.home && !isMobileMenuOpen && isHeaderHidden;
 
   useEffect(() => {
-    if (pathname !== "/" || isMobileMenuOpen) {
+    if (pathname !== routes.home || isMobileMenuOpen) {
       return;
     }
 
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      const scrollDifference = currentScrollY - lastScrollY.current;
-
-      if (currentScrollY < 80) {
-        setIsHeaderHidden(false);
-      } else if (scrollDifference > 12) {
-        setIsHeaderHidden(true);
-      } else if (scrollDifference < -12) {
-        setIsHeaderHidden(false);
+      if (frameId.current !== null) {
+        return;
       }
 
-      lastScrollY.current = currentScrollY;
+      frameId.current = window.requestAnimationFrame(() => {
+        frameId.current = null;
+
+        const currentScrollY = window.scrollY;
+        const scrollDifference = currentScrollY - lastScrollY.current;
+
+        if (currentScrollY < HEADER_SHOW_TOP_Y) {
+          accumulatedScrollDelta.current = 0;
+          setIsHeaderHidden(false);
+          lastScrollY.current = currentScrollY;
+          return;
+        }
+
+        if (Math.abs(scrollDifference) < 2) {
+          lastScrollY.current = currentScrollY;
+          return;
+        }
+
+        if (
+          Math.sign(scrollDifference) !==
+          Math.sign(accumulatedScrollDelta.current)
+        ) {
+          accumulatedScrollDelta.current = 0;
+        }
+
+        accumulatedScrollDelta.current += scrollDifference;
+
+        if (
+          currentScrollY > HEADER_HIDE_SCROLL_Y &&
+          accumulatedScrollDelta.current > HEADER_DELTA_THRESHOLD
+        ) {
+          setIsHeaderHidden(true);
+          accumulatedScrollDelta.current = 0;
+        } else if (
+          accumulatedScrollDelta.current < -HEADER_DELTA_THRESHOLD
+        ) {
+          setIsHeaderHidden(false);
+          accumulatedScrollDelta.current = 0;
+        }
+
+        lastScrollY.current = currentScrollY;
+      });
     };
 
     lastScrollY.current = window.scrollY;
@@ -57,9 +90,17 @@ const Header = () => {
     window.addEventListener("scroll", handleScroll, { passive: true });
 
     return () => {
+      if (frameId.current !== null) {
+        window.cancelAnimationFrame(frameId.current);
+      }
+
       window.removeEventListener("scroll", handleScroll);
     };
   }, [pathname, isMobileMenuOpen]);
+
+  if (pathname === routes.login) {
+    return null;
+  }
 
   return (
     <>
@@ -68,54 +109,34 @@ const Header = () => {
           shouldHideHeader ? "-translate-y-full" : "translate-y-0"
         }`}
       >
-        <div className="mx-auto flex h-16 w-full max-w-[1140px] items-center justify-between px-6">
+        <div className="mx-auto flex h-16 w-full max-w-[1200px] items-center justify-between px-6">
           {/* 로고 */}
-          <Link
-            href="/"
+          <Logo
+            href={routes.home}
+            priority
+            heightClassName="h-11"
+            alt="VITA Logo"
             onClick={() => setMobileMenuPath(null)}
-            className="flex items-center gap-3"
-          >
-            <Image
-              src="/images/logo.svg"
-              alt="GitPulse Logo"
-              width={40}
-              height={40}
-              priority
-              className="h-8 w-8"
-            />
-
-            <span className="text-lg font-extrabold text-gray-900 dark:text-white">
-              {t.common.title}
-            </span>
-          </Link>
+          />
 
           {/* 데스크탑 네비게이션 */}
           <nav className="hidden items-center gap-1 md:flex">
             {navItems.map((item) => {
-              const isActive =
-                item.href === "/"
-                  ? pathname === item.href
-                  : pathname.startsWith(item.href);
-
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-gray-900 text-white dark:bg-white dark:text-black"
-                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
-                  }`}
+                  className="rounded-full px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
                 >
-                  {t.nav[item.key]}
+                  {item.label}
                 </Link>
               );
             })}
           </nav>
 
-          {/* 데스크탑 언어 / 테마 컨트롤 */}
+          {/* 데스크탑 테마 / 로그인 컨트롤 */}
           <div className="hidden md:block">
-            <HeaderControls dropdownPosition="right" />
+            <HeaderControls />
           </div>
 
           {/* 모바일 햄버거 버튼 */}
@@ -149,23 +170,14 @@ const Header = () => {
           >
             <nav className="flex flex-col gap-2">
               {navItems.map((item) => {
-                const isActive =
-                  item.href === "/"
-                    ? pathname === item.href
-                    : pathname.startsWith(item.href);
-
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={() => setMobileMenuPath(null)}
-                    className={`rounded-2xl px-4 py-3 text-sm font-semibold transition-colors ${
-                      isActive
-                        ? "bg-gray-900 text-white dark:bg-white dark:text-black"
-                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
-                    }`}
+                    className="rounded-2xl px-4 py-3 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
                   >
-                    {t.nav[item.key]}
+                    {item.label}
                   </Link>
                 );
               })}
@@ -173,7 +185,6 @@ const Header = () => {
 
             <div className="mt-5 border-t border-gray-200 pt-5 dark:border-gray-800">
               <HeaderControls
-                dropdownPosition="left"
                 onSelectComplete={() => setMobileMenuPath(null)}
               />
             </div>

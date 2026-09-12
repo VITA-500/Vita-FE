@@ -16,7 +16,7 @@ const MotionReveal = ({
   className = "",
   delay = 0,
   y = 48,
-  once = false,
+  once = true,
 }: MotionRevealProps) => {
   const shouldReduceMotion = useReducedMotion();
 

@@ -3,12 +3,23 @@
 import { useEffect, useState } from "react";
 import { ArrowUp } from "lucide-react";
 
+const SHOW_SCROLL_TOP_AT = 560;
+const HIDE_SCROLL_TOP_AT = 440;
+
 const ScrollTopButton = () => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsVisible(window.scrollY > 500);
+      const currentScrollY = window.scrollY;
+
+      setIsVisible((currentVisible) => {
+        if (currentVisible) {
+          return currentScrollY > HIDE_SCROLL_TOP_AT;
+        }
+
+        return currentScrollY > SHOW_SCROLL_TOP_AT;
+      });
     };
 
     handleScroll();

@@ -1,26 +1,30 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Mail } from "lucide-react";
 import { FaGithub } from "react-icons/fa";
-import { translations } from "@/constants/translations";
-import { useLanguageStore } from "@/stores/languageStore";
+import { uiText } from "@/constants/uiText";
+import { routes } from "@/shared/constants/routes";
+import { Logo } from "@/shared/ui/Logo";
 
 const isExternalLink = (href: string) => {
   return href.startsWith("http") || href.startsWith("mailto:");
 };
 
 const Footer = () => {
-  const { language } = useLanguageStore();
-  const t = translations[language];
+  const t = uiText;
+  const pathname = usePathname();
+
+  if (pathname === routes.login) {
+    return null;
+  }
 
   return (
     <footer className="border-t border-gray-200 bg-gray-50 px-6 py-14 transition-colors dark:border-white/10 dark:bg-zinc-950">
-      <div className="mx-auto max-w-[1140px]">
+      <div className="mx-auto max-w-[1200px]">
         <div className="mb-12">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white">
-            {t.common.title}
-          </h2>
+          <Logo href={routes.home} heightClassName="h-12" alt={`${t.common.title} 로고`} />
 
           <p className="mt-5 max-w-4xl text-sm leading-7 text-gray-500 dark:text-gray-400">
             {t.footer.description}

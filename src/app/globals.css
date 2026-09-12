@@ -1,20 +1,45 @@
 @import "tailwindcss";
+@import "driver.js/dist/driver.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --surface: #ffffff;
+  --surface-warm: #fffdf7;
+  --surface-muted: #f7f8fa;
+  --surface-brand-hover: #fff4d8;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
 }
 
 .dark {
   --background: #0a0a0a;
   --foreground: #ededed;
+  --surface: #0a0a0a;
+  --surface-warm: #0a0a0a;
+  --surface-muted: #18181b;
+  --surface-brand-hover: rgba(253, 182, 29, 0.14);
+  --text-primary: #f9fafb;
+  --text-secondary: #a1a1aa;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-warm: var(--surface-warm);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-brand-hover: var(--surface-brand-hover);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-brand: #fdb61d;
+  --color-brand-hover: #e0a018;
+  --color-brand-soft: #fff6df;
+  --color-app-bg: #f4f6f8;
+  --color-border: #e7eaee;
+  --color-border-soft: #e7eaee;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -23,6 +48,88 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.hero-visual-frame {
+  isolation: isolate;
+}
+
+.hero-visual-frame::after {
+  position: absolute;
+  inset: -1px;
+  z-index: 1;
+  background:
+    radial-gradient(
+      circle at 52% 50%,
+      transparent 0%,
+      transparent 48%,
+      color-mix(in srgb, var(--surface-warm) 28%, transparent) 62%,
+      color-mix(in srgb, var(--surface-warm) 78%, transparent) 76%,
+      var(--surface-warm) 92%
+    ),
+    linear-gradient(90deg, var(--surface-warm), transparent 18%, transparent 82%, var(--surface-warm)),
+    linear-gradient(180deg, var(--surface-warm), transparent 18%, transparent 82%, var(--surface-warm));
+  content: "";
+  pointer-events: none;
+}
+
+.dark .hero-visual-frame::after {
+  background:
+    radial-gradient(
+      circle at 52% 50%,
+      transparent 0%,
+      transparent 46%,
+      color-mix(in srgb, var(--surface-warm) 34%, transparent) 60%,
+      color-mix(in srgb, var(--surface-warm) 82%, transparent) 76%,
+      var(--surface-warm) 92%
+    ),
+    linear-gradient(90deg, var(--surface-warm), transparent 20%, transparent 80%, var(--surface-warm)),
+    linear-gradient(180deg, var(--surface-warm), transparent 20%, transparent 80%, var(--surface-warm));
+}
+
+button:not(:disabled):not([aria-disabled="true"]):not([class*="cursor-"]),
+a[href]:not([class*="cursor-"]),
+[role="button"]:not(:disabled):not([aria-disabled="true"]):not([class*="cursor-"]),
+input[type="button"]:not(:disabled):not([class*="cursor-"]),
+input[type="submit"]:not(:disabled):not([class*="cursor-"]),
+input[type="reset"]:not(:disabled):not([class*="cursor-"]) {
+  cursor: pointer;
+}
+
+.driver-popover.vita-driver-popover {
+  border-radius: 16px;
+  padding: 14px 16px;
+  color: #111827;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
+}
+
+.driver-popover.vita-driver-popover .driver-popover-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.driver-popover.vita-driver-popover .driver-popover-description {
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.driver-popover.vita-driver-popover .driver-popover-next-btn,
+.driver-popover.vita-driver-popover .driver-popover-prev-btn,
+.driver-popover.vita-driver-popover .driver-popover-close-btn {
+  text-shadow: none;
+}
+
+.driver-popover.vita-driver-popover .driver-popover-next-btn {
+  border-color: #fdb61d;
+  background: #fdb61d;
+  color: #ffffff;
+}
+
+.driver-popover.vita-driver-popover .driver-popover-prev-btn {
+  border-color: #e5e7eb;
+  background: #ffffff;
+  color: #4b5563;
 }
 
 /* 스크롤바 커스터마이징 */
