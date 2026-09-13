@@ -41,10 +41,10 @@ export const ChatSidebar = ({
     <aside
       className={cn(
         "fixed inset-y-0 left-0 z-[100] flex overflow-hidden border-r border-gray-200 bg-surface-muted text-gray-950 transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-white/10 dark:text-white",
-        isOpen ? "w-[300px] md:w-[276px]" : "w-0 border-r-0 md:w-[64px] md:border-r",
+        isOpen ? "w-[276px]" : "w-0 border-r-0 md:w-[64px] md:border-r",
       )}
     >
-    <div className="flex h-full w-[300px] shrink-0 flex-col md:w-[276px]">
+    <div className="flex h-full w-[276px] shrink-0 flex-col">
       <div className="flex h-16 items-center justify-between">
         <div className="flex h-10 w-[92px] shrink-0 items-center pl-5 md:hidden">
           <Logo

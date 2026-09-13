@@ -78,7 +78,7 @@ const Footer = () => {
 
           <div className="flex items-center gap-3">
             <a
-              href="https://github.com/haejunbag131-maker"
+              href="https://github.com/orgs/VITA-500/repositories"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="GitHub"
