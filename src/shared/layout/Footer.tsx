@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Mail } from "lucide-react";
 import { FaGithub } from "react-icons/fa";
-import { uiText } from "@/constants/uiText";
+import { uiText } from "@/shared/constants/uiText";
 import { routes } from "@/shared/constants/routes";
 import { Logo } from "@/shared/ui/Logo";
 
@@ -21,17 +21,21 @@ const Footer = () => {
   }
 
   return (
-    <footer className="border-t border-gray-200 bg-gray-50 px-6 py-14 transition-colors dark:border-white/10 dark:bg-zinc-950">
+    <footer className="border-t border-gray-200 bg-gray-50 px-5 py-10 transition-colors sm:px-6 sm:py-14 dark:border-white/10 dark:bg-zinc-950">
       <div className="mx-auto max-w-[1200px]">
-        <div className="mb-12">
-          <Logo href={routes.home} heightClassName="h-12" alt={`${t.common.title} 로고`} />
+        <div className="mb-10 sm:mb-12">
+          <Logo
+            href={routes.home}
+            heightClassName="h-12"
+            alt={`${t.common.title} 로고`}
+          />
 
-          <p className="mt-5 max-w-4xl text-sm leading-7 text-gray-500 dark:text-gray-400">
+          <p className="mt-4 max-w-4xl text-sm leading-7 text-gray-500 sm:mt-5 dark:text-gray-400">
             {t.footer.description}
           </p>
         </div>
 
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-9 sm:gap-x-10 lg:grid-cols-4">
           {t.footer.columns.map((column) => (
             <div key={column.title}>
               <h3 className="mb-4 text-sm font-bold text-gray-900 dark:text-white">
@@ -52,14 +56,14 @@ const Footer = () => {
                             ? "noopener noreferrer"
                             : undefined
                         }
-                        className="text-sm font-medium text-gray-500 transition hover:text-gray-950 dark:text-gray-400 dark:hover:text-white"
+                        className="text-sm font-medium break-words text-gray-500 transition hover:text-gray-950 dark:text-gray-400 dark:hover:text-white"
                       >
                         {link.label}
                       </a>
                     ) : (
                       <Link
                         href={link.href}
-                        className="text-sm font-medium text-gray-500 transition hover:text-gray-950 dark:text-gray-400 dark:hover:text-white"
+                        className="text-sm font-medium break-words text-gray-500 transition hover:text-gray-950 dark:text-gray-400 dark:hover:text-white"
                       >
                         {link.label}
                       </Link>
@@ -71,14 +75,14 @@ const Footer = () => {
           ))}
         </div>
 
-        <div className="mt-12 flex flex-col gap-6 border-t border-gray-200 pt-8 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-10 flex flex-col gap-5 border-t border-gray-200 pt-7 sm:mt-12 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:pt-8 dark:border-white/10">
           <p className="text-sm font-medium text-gray-400">
             {t.footer.copyright}
           </p>
 
           <div className="flex items-center gap-3">
             <a
-              href="https://github.com/haejunbag131-maker"
+              href="https://github.com/orgs/VITA-500/repositories"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="GitHub"

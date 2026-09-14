@@ -122,7 +122,10 @@ export const uiText = {
         links: [
           { label: "홈", href: routes.home },
           { label: "기능 소개", href: `${routes.home}#features` },
-          { label: "GitHub Repository", href: "https://github.com/haejunbag131-maker" },
+          {
+            label: "GitHub Repository",
+            href: "https://github.com/orgs/VITA-500/repositories",
+          },
           { label: "문의하기", href: "mailto:example@example.com" },
         ],
       },

@@ -3,8 +3,7 @@ import type { ButtonHTMLAttributes, ComponentProps } from "react";
 import { cn } from "@/shared/lib/cn";
 
 const variantStyles = {
-  primary:
-    "bg-brand text-white shadow-sm shadow-brand/20 hover:bg-brand-hover",
+  primary: "bg-brand text-white shadow-sm shadow-brand/20 hover:bg-brand-hover",
   secondary:
     "border border-border bg-white text-gray-900 shadow-sm hover:bg-gray-50 dark:border-white/10 dark:bg-zinc-950 dark:text-white dark:hover:bg-white/10",
   ghost:
@@ -61,8 +60,5 @@ export const ButtonLink = ({
   size,
   ...props
 }: ButtonLinkProps) => (
-  <Link
-    className={buttonClassName({ className, variant, size })}
-    {...props}
-  />
+  <Link className={buttonClassName({ className, variant, size })} {...props} />
 );

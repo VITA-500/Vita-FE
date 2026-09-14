@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Menu, X } from "lucide-react";
-import HeaderControls from "@/components/HeaderControls";
+import HeaderControls from "@/shared/layout/HeaderControls";
 import { routes } from "@/shared/constants/routes";
 import { Logo } from "@/shared/ui/Logo";
 
@@ -74,9 +74,7 @@ const Header = () => {
         ) {
           setIsHeaderHidden(true);
           accumulatedScrollDelta.current = 0;
-        } else if (
-          accumulatedScrollDelta.current < -HEADER_DELTA_THRESHOLD
-        ) {
+        } else if (accumulatedScrollDelta.current < -HEADER_DELTA_THRESHOLD) {
           setIsHeaderHidden(false);
           accumulatedScrollDelta.current = 0;
         }
@@ -98,6 +96,18 @@ const Header = () => {
     };
   }, [pathname, isMobileMenuOpen]);
 
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isMobileMenuOpen]);
+
   if (pathname === routes.login) {
     return null;
   }
@@ -105,7 +115,7 @@ const Header = () => {
   return (
     <>
       <header
-        className={`fixed left-0 top-0 z-50 w-full transform-gpu border-b border-gray-200 bg-white/80 backdrop-blur-xl transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform dark:border-gray-800 dark:bg-black/80 ${
+        className={`fixed top-0 left-0 z-50 w-full transform-gpu border-b border-gray-200 bg-white/80 backdrop-blur-xl transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform dark:border-gray-800 dark:bg-black/80 ${
           shouldHideHeader ? "-translate-y-full" : "translate-y-0"
         }`}
       >
