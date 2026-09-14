@@ -7,7 +7,7 @@ type ChatMessageListProps = {
 };
 
 const AssistantProfile = () => (
-  <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-black text-white shadow-sm shadow-brand/20">
+  <div className="bg-brand shadow-brand/20 mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black text-white shadow-sm">
     V
   </div>
 );
@@ -24,7 +24,7 @@ export const ChatMessageList = ({
         return (
           <article
             key={message.id}
-            className="ml-auto max-w-[72%] rounded-2xl border border-brand/40 bg-brand px-5 py-3 text-sm leading-6 text-white shadow-sm"
+            className="border-brand/40 bg-brand ml-auto max-w-[72%] rounded-2xl border px-5 py-3 text-sm leading-6 text-white shadow-sm"
           >
             <p className="whitespace-pre-line">{message.content}</p>
           </article>
@@ -39,19 +39,19 @@ export const ChatMessageList = ({
           <AssistantProfile />
 
           <div className="min-w-0 flex-1">
-            <article className="rounded-3xl border border-border bg-white px-5 py-4 text-sm leading-6 text-text-primary shadow-sm dark:border-white/10 dark:bg-zinc-950 dark:text-white">
+            <article className="border-border text-text-primary rounded-3xl border bg-white px-5 py-4 text-sm leading-6 shadow-sm dark:border-white/10 dark:bg-zinc-950 dark:text-white">
               <p className="whitespace-pre-line">{message.content}</p>
 
               {message.sources && message.sources.length > 0 && (
-                <div className="mt-4 space-y-2 border-t border-border pt-3 dark:border-white/10">
-                  <p className="text-xs font-extrabold text-brand">
+                <div className="border-border mt-4 space-y-2 border-t pt-3 dark:border-white/10">
+                  <p className="text-brand text-xs font-extrabold">
                     참고한 FAQ
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {message.sources.map((source) => (
                       <span
                         key={source.id}
-                        className="rounded-full bg-surface-muted px-3 py-1 text-xs font-bold text-text-secondary dark:bg-white/10 dark:text-gray-300"
+                        className="bg-surface-muted text-text-secondary rounded-full px-3 py-1 text-xs font-bold dark:bg-white/10 dark:text-gray-300"
                       >
                         {source.category} · {source.title}
                       </span>
@@ -83,7 +83,7 @@ export const ChatMessageList = ({
     {isLoading && (
       <div
         aria-label="답변을 정리하고 있어요"
-        className="mr-auto flex max-w-[76%] items-start gap-3 text-sm font-medium text-text-secondary dark:text-gray-400"
+        className="text-text-secondary mr-auto flex max-w-[76%] items-start gap-3 text-sm font-medium dark:text-gray-400"
       >
         <AssistantProfile />
 
@@ -91,9 +91,9 @@ export const ChatMessageList = ({
           <div className="flex items-center gap-2">
             <span className="animate-pulse">생각 중</span>
             <span className="flex items-center gap-1 pt-1" aria-hidden="true">
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brand [animation-delay:0ms]" />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brand [animation-delay:120ms]" />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brand [animation-delay:240ms]" />
+              <span className="bg-brand h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:0ms]" />
+              <span className="bg-brand h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:120ms]" />
+              <span className="bg-brand h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:240ms]" />
             </span>
           </div>
         </div>

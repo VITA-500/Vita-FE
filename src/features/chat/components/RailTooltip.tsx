@@ -17,7 +17,7 @@ export const RailTooltip = ({
 }: RailTooltipProps) => (
   <span
     className={cn(
-      "pointer-events-none fixed z-[999] flex items-center gap-2 whitespace-nowrap rounded-full bg-gray-900 px-3.5 py-2 text-sm font-extrabold text-white shadow-xl",
+      "pointer-events-none fixed z-[999] flex items-center gap-2 rounded-full bg-gray-900 px-3.5 py-2 text-sm font-extrabold whitespace-nowrap text-white shadow-xl",
       placement === "bottom" ? "-translate-x-1/2" : "-translate-y-1/2",
     )}
     style={{ left: x, top: y }}

@@ -35,7 +35,8 @@ export const useChatTour = () => {
             element: "#vita-chat-input-tour",
             popover: {
               title: "바로 물어보기",
-              description: "궁금한 통신 관련 내용을 입력하면 VITA가 답변해드려요.",
+              description:
+                "궁금한 통신 관련 내용을 입력하면 VITA가 답변해드려요.",
               side: "bottom",
               align: "start",
             },
@@ -44,7 +45,8 @@ export const useChatTour = () => {
             element: "#vita-suggestion-tour",
             popover: {
               title: "예시로 시작하기",
-              description: "무엇을 물어볼지 고민될 때는 추천 질문을 선택해보세요.",
+              description:
+                "무엇을 물어볼지 고민될 때는 추천 질문을 선택해보세요.",
               side: "top",
               align: "start",
             },
@@ -53,7 +55,8 @@ export const useChatTour = () => {
             element: "#vita-store-map-tour",
             popover: {
               title: "매장 찾기",
-              description: "가까운 매장을 찾거나 위치 기반으로 상담을 이어갈 수 있어요.",
+              description:
+                "가까운 매장을 찾거나 위치 기반으로 상담을 이어갈 수 있어요.",
               side: "right",
               align: "center",
             },

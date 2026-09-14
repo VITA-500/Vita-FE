@@ -124,7 +124,7 @@ const ChatPageContent = () => {
   };
 
   return (
-    <main className="relative h-screen overflow-hidden bg-surface-warm text-gray-950 dark:text-white">
+    <main className="bg-surface-warm relative h-screen overflow-hidden text-gray-950 dark:text-white">
       <button
         type="button"
         className={cn(
@@ -151,14 +151,14 @@ const ChatPageContent = () => {
       {/* Main */}
       <section
         className={cn(
-          "flex h-full min-w-0 flex-col bg-surface-warm pl-0 transition-[padding-left] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+          "bg-surface-warm flex h-full min-w-0 flex-col pl-0 transition-[padding-left] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
           isSidebarOpen ? "md:pl-[276px]" : "md:pl-[64px]",
         )}
       >
         <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
           <button
             type="button"
-            className="absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-xl text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white md:hidden"
+            className="absolute top-4 left-4 z-10 flex h-10 w-10 items-center justify-center rounded-xl text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 md:hidden dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
             aria-label="사이드바 열기"
             onClick={() => setIsSidebarOpen(true)}
           >
@@ -177,17 +177,17 @@ const ChatPageContent = () => {
                     ref={scrollContainerRef}
                     className="h-full overflow-y-auto"
                   >
-                    <div className="mx-auto min-h-full w-full max-w-[860px] px-6 pb-36 pt-16 md:pt-20">
-                    <div>
-                      <ChatMessageList
-                        isLoading={chatStatus === "loading"}
-                        messages={messages}
-                      />
-                    </div>
+                    <div className="mx-auto min-h-full w-full max-w-[860px] px-6 pt-16 pb-36 md:pt-20">
+                      <div>
+                        <ChatMessageList
+                          isLoading={chatStatus === "loading"}
+                          messages={messages}
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-surface-warm/95 px-6 pb-6 pt-4 backdrop-blur">
+                  <div className="bg-surface-warm/95 pointer-events-none absolute inset-x-0 bottom-0 z-20 px-6 pt-4 pb-6 backdrop-blur">
                     <div className="pointer-events-auto mx-auto w-full max-w-[860px]">
                       <ChatComposer
                         inputRef={chatInputRef}
@@ -200,13 +200,13 @@ const ChatPageContent = () => {
                   </div>
                 </>
               ) : (
-                <div className="mx-auto flex h-full w-full max-w-[860px] flex-col justify-center px-6 pb-10 pt-16">
+                <div className="mx-auto flex h-full w-full max-w-[860px] flex-col justify-center px-6 pt-16 pb-10">
                   <div className="pb-8">
-                    <h1 className="mb-3 text-center text-3xl font-semibold tracking-normal text-text-primary dark:text-white">
+                    <h1 className="text-text-primary mb-3 text-center text-3xl font-semibold tracking-normal dark:text-white">
                       무엇을 도와드릴까요?
                     </h1>
 
-                    <p className="text-center text-sm font-normal text-text-secondary dark:text-gray-400">
+                    <p className="text-text-secondary text-center text-sm font-normal dark:text-gray-400">
                       통신 서비스에 대해 궁금한 내용을 편하게 물어보세요.
                     </p>
                   </div>

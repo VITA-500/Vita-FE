@@ -1,9 +1,4 @@
-import {
-  MapPin,
-  Search,
-  SquarePen,
-  type LucideIcon,
-} from "lucide-react";
+import { MapPin, Search, SquarePen, type LucideIcon } from "lucide-react";
 import type { ChatAnswerSource, ChatMode } from "@/features/chat/types";
 import { routes } from "@/shared/constants/routes";
 
