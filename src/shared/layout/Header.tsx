@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Menu, X } from "lucide-react";
-import HeaderControls from "@/components/HeaderControls";
+import HeaderControls from "@/shared/layout/HeaderControls";
 import { routes } from "@/shared/constants/routes";
 import { Logo } from "@/shared/ui/Logo";
 
@@ -97,6 +97,18 @@ const Header = () => {
       window.removeEventListener("scroll", handleScroll);
     };
   }, [pathname, isMobileMenuOpen]);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isMobileMenuOpen]);
 
   if (pathname === routes.login) {
     return null;
