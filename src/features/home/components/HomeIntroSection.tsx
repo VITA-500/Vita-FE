@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import MotionReveal from "@/common/MotionReveal";
-import { uiText } from "@/constants/uiText";
+import MotionReveal from "@/shared/ui/MotionReveal";
+import { uiText } from "@/shared/constants/uiText";
 import { SectionHeading } from "@/shared/ui/Section";
 
 const HomeIntroSection = () => {
@@ -11,9 +11,9 @@ const HomeIntroSection = () => {
   return (
     <section
       id="service-intro"
-      className="scroll-mt-16 bg-background px-6 py-28 transition-colors dark:bg-black"
+      className="scroll-mt-16 bg-background px-5 py-20 transition-colors sm:px-6 sm:py-24 lg:py-28 dark:bg-black"
     >
-      <div className="mx-auto grid max-w-[1200px] items-center gap-16 lg:grid-cols-[0.86fr_1fr]">
+      <div className="mx-auto grid max-w-[1200px] items-center gap-10 sm:gap-14 lg:grid-cols-[0.86fr_1fr] lg:gap-16">
         <MotionReveal>
           <SectionHeading
             label={t.home.introLabel}
@@ -23,7 +23,7 @@ const HomeIntroSection = () => {
         </MotionReveal>
 
         <MotionReveal delay={0.12}>
-          <div className="relative mx-auto aspect-[1448/1086] w-full max-w-[620px] overflow-hidden rounded-[32px]">
+          <div className="relative mx-auto aspect-[1448/1086] w-full max-w-[620px] overflow-hidden rounded-[24px] sm:rounded-[32px]">
             <Image
               src="/images/intro-chat-preview.webp"
               alt="VITA FAQ 기반 답변 화면"

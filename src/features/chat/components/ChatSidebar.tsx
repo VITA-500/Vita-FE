@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { recentChats, serviceMenus } from "@/features/chat/constants";
+import type { ChatMode } from "@/features/chat/types";
 import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
 import { Logo } from "@/shared/ui/Logo";
@@ -27,9 +28,13 @@ type ChatSidebarProps = {
     label: string,
   ) => (event: MouseEvent<HTMLElement>) => void;
   onHideTooltip: () => void;
+  activeMode: ChatMode;
+  currentChatTitle?: string;
 };
 
 export const ChatSidebar = ({
+  activeMode,
+  currentChatTitle,
   isOpen,
   onClose,
   onHideTooltip,
@@ -37,6 +42,15 @@ export const ChatSidebar = ({
   onShowHeaderTooltip,
   onShowRailTooltip,
 }: ChatSidebarProps) => {
+  const visibleRecentChats = currentChatTitle
+    ? [
+        { title: currentChatTitle, active: true },
+        ...recentChats
+          .filter((chat) => chat.title !== currentChatTitle)
+          .map((chat) => ({ ...chat, active: false })),
+      ]
+    : recentChats;
+
   return (
     <aside
       className={cn(
@@ -141,6 +155,7 @@ export const ChatSidebar = ({
         <nav className="space-y-1">
           {serviceMenus.map((menu) => {
             const Icon = menu.icon;
+            const isActive = menu.mode === activeMode;
             const shortcut =
               menu.label === "새 상담"
                 ? "Ctrl+Shift+O"
@@ -149,7 +164,7 @@ export const ChatSidebar = ({
                   : undefined;
             const itemClassName = cn(
               "group relative flex h-11 w-[276px] items-center pr-3 text-sm font-bold transition-colors duration-150",
-              menu.active
+              isActive
                 ? "text-brand"
                 : menu.disabled
                   ? "cursor-not-allowed text-gray-400 dark:text-gray-600"
@@ -163,7 +178,7 @@ export const ChatSidebar = ({
                     id={menu.label === "매장 지도" ? "vita-store-map-tour" : undefined}
                     className={cn(
                       "absolute inset-y-0 left-2 right-2 rounded-xl transition-colors",
-                      menu.active
+                      isActive
                         ? "bg-white dark:bg-white/10"
                         : menu.disabled
                           ? ""
@@ -176,7 +191,7 @@ export const ChatSidebar = ({
                   <span
                     className={cn(
                       "flex h-10 w-10 items-center justify-center rounded-xl transition",
-                      !isOpen && menu.active
+                      !isOpen && isActive
                         ? "bg-white text-gray-950 dark:bg-white/10 dark:text-white"
                         : !isOpen
                           ? menu.disabled
@@ -252,7 +267,7 @@ export const ChatSidebar = ({
           </p>
 
           <div className="space-y-1">
-            {recentChats.map((chat) => (
+            {visibleRecentChats.map((chat) => (
               <button
                 key={chat.title}
                 type="button"

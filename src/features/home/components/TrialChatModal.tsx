@@ -1,7 +1,7 @@
 import type { FormEvent, RefObject } from "react";
 import { useEffect } from "react";
 import { ArrowRight, ChevronRight, LockKeyhole, X } from "lucide-react";
-import { uiText } from "@/constants/uiText";
+import { uiText } from "@/shared/constants/uiText";
 import type { TrialMessage } from "@/features/home/hooks/useTrialChat";
 import { routes } from "@/shared/constants/routes";
 import { ButtonLink } from "@/shared/ui/Button";

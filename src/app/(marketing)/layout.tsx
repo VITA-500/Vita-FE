@@ -1,6 +1,6 @@
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import ScrollTopButton from "@/components/ScrollTopButton";
+import Footer from "@/shared/layout/Footer";
+import Header from "@/shared/layout/Header";
+import ScrollTopButton from "@/shared/layout/ScrollTopButton";
 
 export default function MarketingLayout({
   children,
