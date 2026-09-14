@@ -14,9 +14,9 @@ const HomeCtaSection = () => {
     <section className="bg-surface-warm px-5 py-16 text-gray-950 sm:px-6 sm:py-20 dark:text-white">
       <MotionReveal>
         <div className="mx-auto flex max-w-[1200px] flex-col items-center text-center">
-          <h2 className="text-[30px] font-extrabold leading-[1.22] sm:text-5xl sm:leading-[1.25]">
+          <h2 className="text-[30px] leading-[1.22] font-extrabold sm:text-5xl sm:leading-[1.25]">
             <span className="block">{titleLead}</span>
-            <span className="block whitespace-nowrap text-brand">
+            <span className="text-brand block whitespace-nowrap">
               {titleHighlight}
             </span>
           </h2>
@@ -24,7 +24,7 @@ const HomeCtaSection = () => {
           <ButtonLink
             href={routes.login}
             size="lg"
-            className="mt-8 inline-flex h-[52px] items-center justify-center gap-3 rounded-2xl px-7 text-base font-bold shadow-xl shadow-brand/25 sm:mt-10 sm:h-14 sm:px-8"
+            className="shadow-brand/25 mt-8 inline-flex h-[52px] items-center justify-center gap-3 rounded-2xl px-7 text-base font-bold shadow-xl sm:mt-10 sm:h-14 sm:px-8"
           >
             {t.home.ctaButton}
             <ArrowRight size={20} />

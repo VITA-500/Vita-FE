@@ -3,9 +3,9 @@ import { ButtonLink } from "@/shared/ui/Button";
 
 const NotFound = () => {
   return (
-    <main className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-background px-6 text-gray-950 transition-colors dark:bg-black dark:text-white">
+    <main className="bg-background flex min-h-[calc(100vh-64px)] items-center justify-center px-6 text-gray-950 transition-colors dark:bg-black dark:text-white">
       <section className="text-center">
-        <p className="text-8xl font-extrabold text-brand sm:text-9xl">404</p>
+        <p className="text-brand text-8xl font-extrabold sm:text-9xl">404</p>
 
         <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
           페이지를 찾을 수 없습니다
@@ -20,7 +20,7 @@ const NotFound = () => {
         <ButtonLink
           href={routes.home}
           size="md"
-          className="mt-8 inline-flex items-center justify-center px-6 py-4 text-sm font-bold shadow-xl shadow-brand/25"
+          className="shadow-brand/25 mt-8 inline-flex items-center justify-center px-6 py-4 text-sm font-bold shadow-xl"
         >
           홈으로 돌아가기
         </ButtonLink>

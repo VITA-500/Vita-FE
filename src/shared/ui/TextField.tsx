@@ -17,7 +17,7 @@ export const TextField = ({
       {label}
     </span>
 
-    <span className="flex h-14 items-center gap-3 rounded-2xl border border-border bg-white px-4 transition focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/10 dark:border-white/10 dark:bg-white/5">
+    <span className="border-border focus-within:border-brand focus-within:ring-brand/10 flex h-14 items-center gap-3 rounded-2xl border bg-white px-4 transition focus-within:ring-2 dark:border-white/10 dark:bg-white/5">
       {icon && <span className="shrink-0 text-gray-400">{icon}</span>}
 
       <input

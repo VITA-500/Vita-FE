@@ -39,7 +39,7 @@ const LoginPage = () => {
   const isLogin = mode === "login";
 
   return (
-    <section className="flex min-h-screen items-center justify-center bg-surface-warm px-6 py-10 text-gray-950 dark:text-white">
+    <section className="bg-surface-warm flex min-h-screen items-center justify-center px-6 py-10 text-gray-950 dark:text-white">
       <div className="w-full max-w-[500px]">
         {/* 돌아가기 */}
         <button
@@ -51,7 +51,7 @@ const LoginPage = () => {
           돌아가기
         </button>
 
-        <div className="w-full rounded-[32px] border border-white bg-white/90 p-6 shadow-[0_24px_80px_rgba(25,31,40,0.12)] backdrop-blur dark:border-white/10 dark:bg-zinc-950/90 sm:p-8">
+        <div className="w-full rounded-[32px] border border-white bg-white/90 p-6 shadow-[0_24px_80px_rgba(25,31,40,0.12)] backdrop-blur sm:p-8 dark:border-white/10 dark:bg-zinc-950/90">
           {/* 로고 */}
           <div className="mb-7 flex justify-center">
             <Logo
@@ -68,7 +68,7 @@ const LoginPage = () => {
               {isLogin ? "로그인" : "회원가입"}
             </h1>
 
-            <p className="mt-2 text-sm font-medium leading-6 text-gray-500 dark:text-gray-400">
+            <p className="mt-2 text-sm leading-6 font-medium text-gray-500 dark:text-gray-400">
               {isLogin
                 ? "계정으로 접속하면 상담 기록을 계속 이어볼 수 있어요."
                 : "간단한 정보만 입력하면 VITA 상담을 시작할 수 있어요."}
@@ -113,7 +113,7 @@ const LoginPage = () => {
             <ButtonLink
               href={routes.chat}
               size="lg"
-              className="mt-2 w-full shadow-lg shadow-brand/20"
+              className="shadow-brand/20 mt-2 w-full shadow-lg"
             >
               {isLogin ? "로그인" : "회원가입"}
             </ButtonLink>
@@ -126,7 +126,7 @@ const LoginPage = () => {
             <button
               type="button"
               onClick={() => setMode(isLogin ? "signup" : "login")}
-              className="ml-2 cursor-pointer font-extrabold text-brand transition hover:text-brand-hover"
+              className="text-brand hover:text-brand-hover ml-2 cursor-pointer font-extrabold transition"
             >
               {isLogin ? "회원가입" : "로그인"}
             </button>

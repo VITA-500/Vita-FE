@@ -11,7 +11,7 @@ const HomeIntroSection = () => {
   return (
     <section
       id="service-intro"
-      className="scroll-mt-16 bg-background px-5 py-20 transition-colors sm:px-6 sm:py-24 lg:py-28 dark:bg-black"
+      className="bg-background scroll-mt-16 px-5 py-20 transition-colors sm:px-6 sm:py-24 lg:py-28 dark:bg-black"
     >
       <div className="mx-auto grid max-w-[1200px] items-center gap-10 sm:gap-14 lg:grid-cols-[0.86fr_1fr] lg:gap-16">
         <MotionReveal>

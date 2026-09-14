@@ -16,7 +16,7 @@ export const StoreMapPanel = () => {
   );
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-[1120px] flex-col px-5 pb-10 pt-16 sm:px-8 md:pt-12">
+    <div className="mx-auto flex min-h-full w-full max-w-[1120px] flex-col px-5 pt-16 pb-10 sm:px-8 md:pt-12">
       <StorePanelHeader />
 
       <div className="grid min-h-[520px] gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">

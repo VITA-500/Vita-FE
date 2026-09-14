@@ -7,7 +7,11 @@ type SectionShellProps = {
   id?: string;
 };
 
-export const SectionShell = ({ children, className, id }: SectionShellProps) => (
+export const SectionShell = ({
+  children,
+  className,
+  id,
+}: SectionShellProps) => (
   <section
     id={id}
     className={cn(
@@ -39,17 +43,15 @@ export const SectionHeading = ({
     )}
   >
     {label && (
-      <p className="text-base font-extrabold text-brand sm:text-lg">
-        {label}
-      </p>
+      <p className="text-brand text-base font-extrabold sm:text-lg">{label}</p>
     )}
 
-    <h2 className="mt-4 whitespace-pre-line text-balance text-[34px] font-extrabold leading-[1.25] text-gray-950 sm:mt-6 sm:text-5xl dark:text-white">
+    <h2 className="mt-4 text-[34px] leading-[1.25] font-extrabold text-balance whitespace-pre-line text-gray-950 sm:mt-6 sm:text-5xl dark:text-white">
       {title}
     </h2>
 
     {description && (
-      <p className="mt-4 whitespace-pre-line text-base leading-7 text-gray-500 sm:mt-5 sm:text-lg sm:leading-8 dark:text-gray-400">
+      <p className="mt-4 text-base leading-7 whitespace-pre-line text-gray-500 sm:mt-5 sm:text-lg sm:leading-8 dark:text-gray-400">
         {description}
       </p>
     )}

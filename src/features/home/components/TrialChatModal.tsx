@@ -62,8 +62,8 @@ export const TrialChatModal = ({
         }
       }}
     >
-      <div className="w-full max-w-[640px] rounded-3xl border border-border bg-white p-4 shadow-[0_22px_70px_rgba(25,31,40,0.22)] dark:border-white/10 dark:bg-zinc-950">
-        <div className="flex items-center justify-between rounded-3xl bg-app-bg p-4 dark:bg-white/5">
+      <div className="border-border w-full max-w-[640px] rounded-3xl border bg-white p-4 shadow-[0_22px_70px_rgba(25,31,40,0.22)] dark:border-white/10 dark:bg-zinc-950">
+        <div className="bg-app-bg flex items-center justify-between rounded-3xl p-4 dark:bg-white/5">
           <div className="flex items-center gap-3">
             <Logo href="" heightClassName="h-9" alt="VITA 로고" />
             <div>
@@ -91,7 +91,7 @@ export const TrialChatModal = ({
             <div>
               <h2
                 id="trial-chat-title"
-                className="text-2xl font-extrabold leading-tight text-gray-950 dark:text-white"
+                className="text-2xl leading-tight font-extrabold text-gray-950 dark:text-white"
               >
                 {isLimitReached ? trial.limitTitle : preview.title}
               </h2>
@@ -100,7 +100,7 @@ export const TrialChatModal = ({
               </p>
             </div>
 
-            <span className="w-fit shrink-0 rounded-full bg-brand-soft px-4 py-2 text-xs font-bold text-brand">
+            <span className="bg-brand-soft text-brand w-fit shrink-0 rounded-full px-4 py-2 text-xs font-bold">
               {trial.remainingLabel.replace("{count}", String(remainingCount))}
             </span>
           </div>
@@ -110,7 +110,7 @@ export const TrialChatModal = ({
               <button
                 type="button"
                 onClick={() => onQuestionChange(preview.suggestionTitle)}
-                className="flex w-full items-center justify-between rounded-2xl bg-white p-5 text-left transition hover:bg-brand-soft dark:bg-zinc-900 dark:hover:bg-white/10"
+                className="hover:bg-brand-soft flex w-full items-center justify-between rounded-2xl bg-white p-5 text-left transition dark:bg-zinc-900 dark:hover:bg-white/10"
               >
                 <span>
                   <span className="block text-sm font-bold text-gray-950 dark:text-white">
@@ -126,9 +126,9 @@ export const TrialChatModal = ({
               messages.map((message, index) => (
                 <div
                   key={`${message.role}-${index}-${message.content}`}
-                  className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm font-medium leading-6 ${
+                  className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-6 font-medium ${
                     message.role === "user"
-                      ? "ml-auto bg-brand text-white"
+                      ? "bg-brand ml-auto text-white"
                       : "mr-auto bg-white text-gray-700 shadow-sm dark:bg-zinc-900 dark:text-gray-200"
                   }`}
                 >
@@ -138,9 +138,9 @@ export const TrialChatModal = ({
             )}
 
             {isLimitReached && (
-              <div className="rounded-2xl border border-brand/20 bg-white p-5 shadow-sm dark:bg-zinc-900">
+              <div className="border-brand/20 rounded-2xl border bg-white p-5 shadow-sm dark:bg-zinc-900">
                 <div className="flex items-start gap-4">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand">
+                  <span className="bg-brand-soft text-brand flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
                     <LockKeyhole size={20} />
                   </span>
                   <div>
@@ -167,7 +167,7 @@ export const TrialChatModal = ({
 
           <form
             onSubmit={onSubmit}
-            className="mt-4 flex h-14 items-center gap-3 rounded-2xl border border-border bg-white px-5 shadow-sm dark:border-white/10 dark:bg-white/5"
+            className="border-border mt-4 flex h-14 items-center gap-3 rounded-2xl border bg-white px-5 shadow-sm dark:border-white/10 dark:bg-white/5"
           >
             <input
               ref={inputRef}
@@ -180,7 +180,7 @@ export const TrialChatModal = ({
             <button
               type="submit"
               disabled={!question.trim() || isLimitReached}
-              className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-brand text-white transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-40"
+              className="bg-brand hover:bg-brand-hover flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-white transition disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="상담 보내기"
             >
               <ArrowRight size={20} />

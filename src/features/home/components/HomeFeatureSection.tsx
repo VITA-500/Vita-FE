@@ -25,7 +25,7 @@ const HomeFeatureSection = () => {
     <section className="bg-app-bg transition-colors dark:bg-zinc-950">
       <div className="mx-auto grid max-w-[1200px] items-center gap-10 px-5 py-20 sm:gap-14 sm:px-6 sm:py-24 lg:grid-cols-[1.08fr_0.92fr] lg:gap-16 lg:py-28">
         <MotionReveal>
-          <div className="relative mx-auto aspect-[1932/889] w-full max-w-[620px] overflow-hidden rounded-[22px] bg-surface-warm sm:rounded-[28px]">
+          <div className="bg-surface-warm relative mx-auto aspect-[1932/889] w-full max-w-[620px] overflow-hidden rounded-[22px] sm:rounded-[28px]">
             <Image
               src="/images/store-map-preview.webp"
               alt="VITA 매장 지도 화면"
@@ -69,7 +69,10 @@ const HomeFeatureSection = () => {
         </div>
       </div>
 
-      <div id="features" className="scroll-mt-16 bg-surface-warm px-5 py-20 sm:px-6 sm:py-24 lg:py-28">
+      <div
+        id="features"
+        className="bg-surface-warm scroll-mt-16 px-5 py-20 sm:px-6 sm:py-24 lg:py-28"
+      >
         <div className="mx-auto max-w-[1200px]">
           <MotionReveal>
             <SectionHeading
@@ -86,11 +89,7 @@ const HomeFeatureSection = () => {
               return (
                 <div key={feature.title} className="text-center md:text-left">
                   <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm sm:mb-8 sm:h-16 sm:w-16 md:mx-0">
-                    <Icon
-                      size={30}
-                      strokeWidth={2.4}
-                      className="text-brand"
-                    />
+                    <Icon size={30} strokeWidth={2.4} className="text-brand" />
                   </div>
 
                   <h3 className="text-2xl font-extrabold text-gray-950">
@@ -101,7 +100,7 @@ const HomeFeatureSection = () => {
                     {feature.description}
                   </p>
 
-                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-brand sm:mt-10">
+                  <span className="text-brand mt-6 inline-flex items-center gap-2 text-sm font-bold sm:mt-10">
                     자세히 보기
                     <ArrowRight size={16} />
                   </span>
@@ -130,9 +129,9 @@ const HomeFeatureSection = () => {
                 return (
                   <div
                     key={step.title}
-                    className="relative rounded-[20px] border border-border-soft bg-white p-5 text-center sm:rounded-[24px] sm:p-6 md:text-left dark:border-white/10 dark:bg-white/5"
+                    className="border-border-soft relative rounded-[20px] border bg-white p-5 text-center sm:rounded-[24px] sm:p-6 md:text-left dark:border-white/10 dark:bg-white/5"
                   >
-                    <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-brand-soft text-brand md:mx-0">
+                    <div className="bg-brand-soft text-brand mx-auto flex h-11 w-11 items-center justify-center rounded-full md:mx-0">
                       <Icon size={21} />
                     </div>
 
@@ -144,7 +143,7 @@ const HomeFeatureSection = () => {
                       {step.description}
                     </p>
 
-                    <span className="absolute right-6 top-6 text-sm font-extrabold text-gray-300">
+                    <span className="absolute top-6 right-6 text-sm font-extrabold text-gray-300">
                       {String(index + 1).padStart(2, "0")}
                     </span>
                   </div>

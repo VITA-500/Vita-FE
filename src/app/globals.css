@@ -67,8 +67,20 @@ body {
       color-mix(in srgb, var(--surface-warm) 78%, transparent) 76%,
       var(--surface-warm) 92%
     ),
-    linear-gradient(90deg, var(--surface-warm), transparent 18%, transparent 82%, var(--surface-warm)),
-    linear-gradient(180deg, var(--surface-warm), transparent 18%, transparent 82%, var(--surface-warm));
+    linear-gradient(
+      90deg,
+      var(--surface-warm),
+      transparent 18%,
+      transparent 82%,
+      var(--surface-warm)
+    ),
+    linear-gradient(
+      180deg,
+      var(--surface-warm),
+      transparent 18%,
+      transparent 82%,
+      var(--surface-warm)
+    );
   content: "";
   pointer-events: none;
 }
@@ -83,13 +95,27 @@ body {
       color-mix(in srgb, var(--surface-warm) 82%, transparent) 76%,
       var(--surface-warm) 92%
     ),
-    linear-gradient(90deg, var(--surface-warm), transparent 20%, transparent 80%, var(--surface-warm)),
-    linear-gradient(180deg, var(--surface-warm), transparent 20%, transparent 80%, var(--surface-warm));
+    linear-gradient(
+      90deg,
+      var(--surface-warm),
+      transparent 20%,
+      transparent 80%,
+      var(--surface-warm)
+    ),
+    linear-gradient(
+      180deg,
+      var(--surface-warm),
+      transparent 20%,
+      transparent 80%,
+      var(--surface-warm)
+    );
 }
 
 button:not(:disabled):not([aria-disabled="true"]):not([class*="cursor-"]),
 a[href]:not([class*="cursor-"]),
-[role="button"]:not(:disabled):not([aria-disabled="true"]):not([class*="cursor-"]),
+[role="button"]:not(:disabled):not([aria-disabled="true"]):not(
+    [class*="cursor-"]
+  ),
 input[type="button"]:not(:disabled):not([class*="cursor-"]),
 input[type="submit"]:not(:disabled):not([class*="cursor-"]),
 input[type="reset"]:not(:disabled):not([class*="cursor-"]) {
