@@ -8,9 +8,11 @@ AI 통신 상담 서비스 구현 프로젝트의 프론트엔드입니다. 사�
 - React 19
 - TypeScript
 - Tailwind CSS 4
+- Storybook 10
 - next-themes
 - motion
 - driver.js
+- lucide-react
 
 ## 실행 방법
 
@@ -19,11 +21,18 @@ npm install
 npm run dev
 ```
 
-프로덕션 검증:
+Storybook 실행:
+
+```bash
+npm run storybook
+```
+
+검증:
 
 ```bash
 npm run lint
 npm run build
+npm run build-storybook
 ```
 
 ## 환경 변수
@@ -56,7 +65,28 @@ src/
     constants/         라우트, 화면 문구
     layout/            Header, Footer 등 레이아웃 컴포넌트
     lib/               공통 유틸
-    ui/                Button, TextField, Logo 등 공통 UI
+    ui/                Button, Card, Modal, SearchInput 등 공통 UI
+```
+
+## 프론트엔드 구조
+
+![VITA frontend architecture](./docs/images/frontend-architecture.svg)
+
+## 화면 및 연동 흐름
+
+![VITA frontend flow](./docs/images/frontend-flow.svg)
+
+## 공통 UI와 Storybook
+
+공통 UI는 `src/shared/ui`에서 관리합니다. 버튼, 카드, 모달, 검색 입력처럼 여러 화면에서 반복되는 컴포넌트와 FAQ/요금제/안내 화면에 활용할 수 있는 정보형 컴포넌트를 포함합니다.
+
+- `Button`: variant, size, loading, icon, fullWidth 옵션 지원
+- `Card`, `Modal`, `SearchInput`: 관리자 화면과 서비스 화면에서 재사용할 수 있는 기본 UI
+- `Accordion`, `PlanCard`, `InfoTable`, `ChecklistCard`, `GuidedStepFlow`, `StepGuideCard`, `WarningNotice`: FAQ, 요금제, 절차 안내 등에 활용할 수 있는 정보형 UI
+- 주요 공통 컴포넌트는 Storybook stories로 확인 가능
+
+```bash
+npm run storybook
 ```
 
 ## 현재 프론트 범위
@@ -68,4 +98,5 @@ src/
 - 다크 모드
 - 체험 상담 모달
 - 카카오맵 연동 준비
+- Storybook 기반 공통 UI 확인
 - 백엔드 API 연결 준비
