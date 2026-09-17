@@ -5,8 +5,50 @@ declare global {
     kakao?: {
       maps?: {
         load: (callback: () => void) => void;
+        LatLng: new (lat: number, lng: number) => KakaoLatLng;
+        Map: new (
+          container: HTMLElement,
+          options: { center: KakaoLatLng; level: number },
+        ) => KakaoMap;
+        Marker: new (options: {
+          map: KakaoMap | null;
+          position: KakaoLatLng;
+          title?: string;
+        }) => KakaoMarker;
+        CustomOverlay: new (options: {
+          content: HTMLElement;
+          map: KakaoMap | null;
+          position: KakaoLatLng;
+          xAnchor?: number;
+          yAnchor?: number;
+          zIndex?: number;
+        }) => KakaoCustomOverlay;
+        event: {
+          addListener: (
+            target: KakaoMarker,
+            eventName: string,
+            callback: () => void,
+          ) => void;
+        };
       };
     };
+  }
+
+  interface KakaoLatLng {
+    readonly __kakaoLatLngBrand?: never;
+  }
+
+  interface KakaoMap {
+    setCenter: (latLng: KakaoLatLng) => void;
+    setLevel: (level: number) => void;
+  }
+
+  interface KakaoMarker {
+    setMap: (map: KakaoMap | null) => void;
+  }
+
+  interface KakaoCustomOverlay {
+    setMap: (map: KakaoMap | null) => void;
   }
 }
 

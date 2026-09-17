@@ -2,11 +2,12 @@
 
 import type { MouseEvent } from "react";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Menu } from "lucide-react";
 import { ChatComposer } from "@/features/chat/components/ChatComposer";
 import { ChatMessageList } from "@/features/chat/components/ChatMessageList";
 import { ChatSidebar } from "@/features/chat/components/ChatSidebar";
+import { ChatSearchDialog } from "@/features/chat/components/ChatSearchDialog";
 import { PromptSuggestions } from "@/features/chat/components/PromptSuggestions";
 import { mockChatAnswers } from "@/features/chat/constants";
 import {
@@ -16,11 +17,16 @@ import {
 import type { ChatMessage, ChatMode } from "@/features/chat/types";
 import { useChatTour } from "@/features/chat/hooks/useChatTour";
 import { StoreMapPanel } from "@/features/store/components/StoreMapPanel";
+import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
+import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
 
 const ChatPageContent = () => {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const { isAuthenticated, isLoading } = useAuthUser();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [chatStatus, setChatStatus] = useState<"idle" | "loading">("idle");
   const [currentChatTitle, setCurrentChatTitle] = useState("");
@@ -33,6 +39,12 @@ const ChatPageContent = () => {
   const hasChatStarted = messages.length > 0;
 
   useChatTour();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace(routes.home);
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
     if (activeMode !== "chat" || messages.length === 0) return;
@@ -123,6 +135,12 @@ const ChatPageContent = () => {
     }, 650);
   };
 
+  if (isLoading || !isAuthenticated) {
+    return (
+      <main className="bg-surface-warm h-screen text-gray-950 dark:text-white" />
+    );
+  }
+
   return (
     <main className="bg-surface-warm relative h-screen overflow-hidden text-gray-950 dark:text-white">
       <button
@@ -141,6 +159,10 @@ const ChatPageContent = () => {
         isOpen={isSidebarOpen}
         onOpen={() => setIsSidebarOpen(true)}
         onClose={() => setIsSidebarOpen(false)}
+        onOpenSearch={() => {
+          setRailTooltip(null);
+          setIsSearchOpen(true);
+        }}
         onShowRailTooltip={showRailTooltip}
         onShowHeaderTooltip={showHeaderTooltip}
         onHideTooltip={() => setRailTooltip(null)}
@@ -158,7 +180,10 @@ const ChatPageContent = () => {
         <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
           <button
             type="button"
-            className="absolute top-4 left-4 z-10 flex h-10 w-10 items-center justify-center rounded-xl text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 md:hidden dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
+            className={cn(
+              "absolute top-4 left-4 z-10 h-10 w-10 items-center justify-center rounded-xl text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 md:hidden dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white",
+              activeMode === "store" ? "hidden" : "flex",
+            )}
             aria-label="사이드바 열기"
             onClick={() => setIsSidebarOpen(true)}
           >
@@ -166,8 +191,8 @@ const ChatPageContent = () => {
           </button>
 
           {activeMode === "store" ? (
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              <StoreMapPanel />
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <StoreMapPanel onOpenSidebar={() => setIsSidebarOpen(true)} />
             </div>
           ) : (
             <div className="relative min-h-0 flex-1">
@@ -230,6 +255,11 @@ const ChatPageContent = () => {
       </section>
 
       {railTooltip && <RailTooltip {...railTooltip} />}
+      <ChatSearchDialog
+        currentChatTitle={currentChatTitle}
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+      />
     </main>
   );
 };

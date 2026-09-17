@@ -1,9 +1,9 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { useTheme } from "@/shared/ui/ThemeProvider";
 
 type ThemeToggleButtonProps = {
   className?: string;

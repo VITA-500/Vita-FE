@@ -36,3 +36,12 @@ export const Default: Story = {
   },
   render: () => <StoreListPreview />,
 };
+
+export const LocationDenied: Story = {
+  args: {
+    stores: mockStores,
+    selectedStoreId: mockStores[0].id,
+    locationStatus: "denied",
+    onSelectStore: () => undefined,
+  },
+};

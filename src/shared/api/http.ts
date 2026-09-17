@@ -4,6 +4,16 @@ type RequestOptions = RequestInit & {
   baseUrl?: string;
 };
 
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 const createUrl = (path: string, baseUrl = env.apiBaseUrl) => {
   if (/^https?:\/\//.test(path)) {
     return path;
@@ -26,7 +36,14 @@ export const requestJson = async <T>(
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+    const errorBody = (await response.json().catch(() => null)) as {
+      message?: string;
+    } | null;
+
+    throw new ApiError(
+      errorBody?.message ?? `API request failed: ${response.status}`,
+      response.status,
+    );
   }
 
   return response.json() as Promise<T>;
