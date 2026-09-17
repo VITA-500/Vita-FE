@@ -1,14 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import { ArrowLeft, LockKeyhole, Mail, UserRound } from "lucide-react";
+import { authService } from "@/features/auth/lib/authService";
+import { tokenStorage } from "@/features/auth/lib/tokenStorage";
 import { TextField } from "@/shared/ui/TextField";
-import { ButtonLink } from "@/shared/ui/Button";
+import { ApiError } from "@/shared/api/http";
+import { Button } from "@/shared/ui/Button";
 import { routes } from "@/shared/constants/routes";
 import { Logo } from "@/shared/ui/Logo";
+import { showToast } from "@/shared/ui/ToastProvider";
 
 type AuthMode = "login" | "signup";
 
@@ -35,8 +38,90 @@ const LoginPage = () => {
   const router = useRouter();
 
   const [mode, setMode] = useState<AuthMode>("login");
+  const [email, setEmail] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const isLogin = mode === "login";
+
+  const resetFeedback = () => {
+    setErrorMessage("");
+    setSuccessMessage("");
+  };
+
+  const handleModeChange = () => {
+    resetFeedback();
+    setMode(isLogin ? "signup" : "login");
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    resetFeedback();
+
+    if (!email.trim() || !password) {
+      setErrorMessage("이메일과 비밀번호를 입력해주세요.");
+      return;
+    }
+
+    if (!isLogin) {
+      if (!name.trim()) {
+        setErrorMessage("이름을 입력해주세요.");
+        return;
+      }
+
+      if (password.length < 8) {
+        setErrorMessage("비밀번호는 8자 이상이어야 합니다.");
+        return;
+      }
+
+      if (password !== passwordConfirm) {
+        setErrorMessage("비밀번호 확인이 일치하지 않습니다.");
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      if (isLogin) {
+        const loginResponse = await authService.login({
+          email: email.trim(),
+          password,
+        });
+
+        tokenStorage.setAccessToken(loginResponse.accessToken);
+        await authService.getMe();
+        window.dispatchEvent(new Event("vita-auth-changed"));
+        showToast("로그인되었습니다.");
+        router.push(routes.chat);
+        return;
+      }
+
+      await authService.signup({
+        email: email.trim(),
+        name: name.trim(),
+        password,
+      });
+
+      setMode("login");
+      setPassword("");
+      setPasswordConfirm("");
+      setSuccessMessage("회원가입이 완료되었습니다. 로그인해주세요.");
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "요청 처리 중 문제가 발생했습니다.";
+
+      setErrorMessage(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <section className="bg-surface-warm flex min-h-screen items-center justify-center px-6 py-10 text-gray-950 dark:text-white">
@@ -76,10 +161,12 @@ const LoginPage = () => {
           </div>
 
           {/* 폼 */}
-          <form className="mt-8 space-y-4">
+          <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
             {!isLogin && (
               <TextField
                 label="이름"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
                 type="text"
                 placeholder="이름을 입력하세요"
                 icon={<UserRound size={19} />}
@@ -88,6 +175,8 @@ const LoginPage = () => {
 
             <TextField
               label="이메일"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
               type="email"
               placeholder="이메일을 입력하세요"
               icon={<Mail size={19} />}
@@ -95,6 +184,8 @@ const LoginPage = () => {
 
             <TextField
               label="비밀번호"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
               type="password"
               placeholder="비밀번호를 입력하세요"
               icon={<LockKeyhole size={19} />}
@@ -103,20 +194,36 @@ const LoginPage = () => {
             {!isLogin && (
               <TextField
                 label="비밀번호 확인"
+                value={passwordConfirm}
+                onChange={(event) => setPasswordConfirm(event.target.value)}
                 type="password"
                 placeholder="비밀번호를 한 번 더 입력하세요"
                 icon={<LockKeyhole size={19} />}
               />
             )}
 
+            {(errorMessage || successMessage) && (
+              <p
+                className={`rounded-2xl px-4 py-3 text-sm font-bold ${
+                  errorMessage
+                    ? "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-300"
+                    : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+                }`}
+                role="status"
+              >
+                {errorMessage || successMessage}
+              </p>
+            )}
+
             {/* 로그인 / 회원가입 버튼 */}
-            <ButtonLink
-              href={routes.chat}
+            <Button
+              type="submit"
+              disabled={isSubmitting}
               size="lg"
               className="shadow-brand/20 mt-2 w-full shadow-lg"
             >
-              {isLogin ? "로그인" : "회원가입"}
-            </ButtonLink>
+              {isSubmitting ? "처리 중..." : isLogin ? "로그인" : "회원가입"}
+            </Button>
           </form>
 
           {/* 로그인 / 회원가입 전환 */}
@@ -125,7 +232,7 @@ const LoginPage = () => {
 
             <button
               type="button"
-              onClick={() => setMode(isLogin ? "signup" : "login")}
+              onClick={handleModeChange}
               className="text-brand hover:text-brand-hover ml-2 cursor-pointer font-extrabold transition"
             >
               {isLogin ? "회원가입" : "로그인"}
@@ -144,11 +251,14 @@ const LoginPage = () => {
           {/* 소셜 로그인 */}
           <div className="flex items-center justify-center gap-4">
             {socialProviders.map((provider) => (
-              <Link
+              <button
                 key={provider.name}
-                href={routes.chat}
                 aria-label={`${provider.name}로 계속하기`}
                 title={`${provider.name}로 계속하기`}
+                type="button"
+                onClick={() =>
+                  setErrorMessage("소셜 로그인은 아직 준비 중입니다.")
+                }
                 className={`flex h-14 w-14 items-center justify-center rounded-full border transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-95 ${provider.className}`}
               >
                 <Image
@@ -158,7 +268,7 @@ const LoginPage = () => {
                   height={24}
                   className="h-6 w-6"
                 />
-              </Link>
+              </button>
             ))}
           </div>
 

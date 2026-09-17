@@ -188,6 +188,69 @@ input[type="reset"]:not(:disabled):not([class*="cursor-"]) {
   color: #4b5563;
 }
 
+.vita-map-marker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 13px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 9999px;
+  background: #ffffff;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);
+  transform: translateY(-8px);
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease,
+    color 150ms ease;
+}
+
+.vita-map-marker::before {
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  content: "";
+  mask:
+    radial-gradient(circle at 50% 42%, transparent 0 3px, #000 3.5px) 0 0 / 100%
+      100%,
+    radial-gradient(circle at 50% 42%, #000 0 100%) 0 0 / 100% 100%;
+  mask-composite: exclude;
+  clip-path: polygon(
+    50% 100%,
+    12% 43%,
+    12% 18%,
+    32% 0,
+    68% 0,
+    88% 18%,
+    88% 43%
+  );
+}
+
+.vita-map-marker:hover,
+.vita-map-marker-selected {
+  border-color: #fdb61d;
+  background: #fdb61d;
+  color: #ffffff;
+  transform: translateY(-10px) scale(1.04);
+}
+
+.vita-current-location-marker {
+  width: 18px;
+  height: 18px;
+  border: 3px solid #ffffff;
+  border-radius: 9999px;
+  background: #2f80ed;
+  box-shadow:
+    0 0 0 7px rgba(47, 128, 237, 0.16),
+    0 8px 18px rgba(15, 23, 42, 0.2);
+}
+
 /* 스크롤바 커스터마이징 */
 html {
   scroll-behavior: auto;

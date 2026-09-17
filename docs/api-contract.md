@@ -74,3 +74,16 @@ Frontend behavior:
 - 프론트는 응답의 `lat`, `lng`로 지도 마커를 표시합니다.
 - 길찾기는 프론트에서 카카오맵 링크를 엽니다.
 - 카카오 REST/Admin 키는 프론트에 넣지 않습니다.
+- 백엔드 연동 전에는 mock 매장 데이터를 사용합니다.
+- 사용자가 위치 권한을 허용하면 프론트에서 haversine 거리 계산 후 거리순으로 정렬합니다.
+- 위치 권한 거부/실패 시 mock 데이터의 기본 `distanceText`를 유지합니다.
+- 매장 검색은 `name`, `address`, `phone`을 대상으로 우선 프론트에서 필터링합니다.
+
+Frontend states:
+
+- `idle`: 위치 요청 전 기본 매장 목록 표시
+- `requesting`: 현재 위치 요청 중
+- `granted`: 현재 위치 기준 거리 계산 및 정렬
+- `denied`: 위치 권한 거부, 기본 거리 기준 표시
+- `unsupported`: 브라우저 위치 API 미지원
+- `error`: 위치 확인 실패

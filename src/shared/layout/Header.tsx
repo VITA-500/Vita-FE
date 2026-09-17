@@ -18,7 +18,11 @@ const HEADER_HIDE_SCROLL_Y = 140;
 const HEADER_SHOW_TOP_Y = 64;
 const HEADER_DELTA_THRESHOLD = 48;
 
-const Header = () => {
+type HeaderProps = {
+  initialHasAccessToken?: boolean;
+};
+
+const Header = ({ initialHasAccessToken = false }: HeaderProps) => {
   const pathname = usePathname();
 
   const [mobileMenuPath, setMobileMenuPath] = useState<string | null>(null);
@@ -146,7 +150,7 @@ const Header = () => {
 
           {/* 데스크탑 테마 / 로그인 컨트롤 */}
           <div className="hidden md:block">
-            <HeaderControls />
+            <HeaderControls initialHasAccessToken={initialHasAccessToken} />
           </div>
 
           {/* 모바일 햄버거 버튼 */}
@@ -195,6 +199,7 @@ const Header = () => {
 
             <div className="mt-5 border-t border-gray-200 pt-5 dark:border-gray-800">
               <HeaderControls
+                initialHasAccessToken={initialHasAccessToken}
                 onSelectComplete={() => setMobileMenuPath(null)}
               />
             </div>
