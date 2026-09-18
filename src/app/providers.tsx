@@ -1,15 +1,13 @@
 "use client";
 
-import { ThemeProvider } from "next-themes";
+import { ThemeProvider } from "@/shared/ui/ThemeProvider";
+import { ToastProvider } from "@/shared/ui/ToastProvider";
 
 const Providers = ({ children }: { children: React.ReactNode }) => {
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="light"
-      disableTransitionOnChange
-    >
+    <ThemeProvider>
       {children}
+      <ToastProvider />
     </ThemeProvider>
   );
 };

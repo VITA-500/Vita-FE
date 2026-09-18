@@ -1,5 +1,5 @@
 import type { FormEvent, RefObject } from "react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ArrowRight, ChevronRight, LockKeyhole, X } from "lucide-react";
 import { uiText } from "@/shared/constants/uiText";
 import type { TrialMessage } from "@/features/home/hooks/useTrialChat";
@@ -30,6 +30,7 @@ export const TrialChatModal = ({
 }: TrialChatModalProps) => {
   const preview = uiText.home.preview;
   const trial = uiText.home.trial;
+  const messageListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -50,9 +51,26 @@ export const TrialChatModal = ({
     };
   }, [onClose]);
 
+  useEffect(() => {
+    const messageList = messageListRef.current;
+
+    if (!messageList) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      messageList.scrollTo({
+        top: messageList.scrollHeight,
+        behavior: "smooth",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [messages.length, isLimitReached]);
+
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-gray-950/45 px-4 py-6 backdrop-blur-sm"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-gray-950/45 px-4 py-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="trial-chat-title"
@@ -62,7 +80,7 @@ export const TrialChatModal = ({
         }
       }}
     >
-      <div className="border-border w-full max-w-[640px] rounded-3xl border bg-white p-4 shadow-[0_22px_70px_rgba(25,31,40,0.22)] dark:border-white/10 dark:bg-zinc-950">
+      <div className="border-border flex max-h-[calc(100svh-48px)] w-full max-w-[640px] flex-col rounded-3xl border bg-white p-4 shadow-[0_22px_70px_rgba(25,31,40,0.22)] dark:border-white/10 dark:bg-zinc-950">
         <div className="bg-app-bg flex items-center justify-between rounded-3xl p-4 dark:bg-white/5">
           <div className="flex items-center gap-3">
             <Logo href="" heightClassName="h-9" alt="VITA 로고" />
@@ -86,7 +104,7 @@ export const TrialChatModal = ({
           </button>
         </div>
 
-        <div className="mt-4 rounded-3xl bg-white p-4 dark:bg-zinc-950">
+        <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-3xl bg-white p-4 dark:bg-zinc-950">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h2
@@ -105,7 +123,10 @@ export const TrialChatModal = ({
             </span>
           </div>
 
-          <div className="mt-5 flex max-h-[260px] min-h-[220px] flex-col gap-3 overflow-y-auto rounded-2xl bg-gray-50 p-4 dark:bg-white/5">
+          <div
+            ref={messageListRef}
+            className="mt-5 flex h-[260px] [scrollbar-gutter:stable] flex-col gap-3 overflow-y-scroll rounded-2xl bg-gray-50 p-4 [overflow-anchor:none] dark:bg-white/5"
+          >
             {messages.length === 0 ? (
               <button
                 type="button"
@@ -167,7 +188,7 @@ export const TrialChatModal = ({
 
           <form
             onSubmit={onSubmit}
-            className="border-border mt-4 flex h-14 items-center gap-3 rounded-2xl border bg-white px-5 shadow-sm dark:border-white/10 dark:bg-white/5"
+            className="border-border mt-4 flex h-14 shrink-0 items-center gap-3 rounded-2xl border bg-white px-5 shadow-sm dark:border-white/10 dark:bg-white/5"
           >
             <input
               ref={inputRef}

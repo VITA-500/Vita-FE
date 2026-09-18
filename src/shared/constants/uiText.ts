@@ -12,7 +12,7 @@ export const uiText = {
     heroTitleHighlight: "VITA에게 물어보세요.",
     heroDescription:
       "궁금한 내용을 자연어로 물어보면 필요한 정보를 찾아 정리하고\n가까운 매장까지 한 번에 안내해요.",
-    heroButton: "지금 시작하기",
+    heroButton: "미리 체험하기",
 
     preview: {
       activeMenu: "AI 상담",

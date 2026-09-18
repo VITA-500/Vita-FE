@@ -1,0 +1,53 @@
+<svg width="1040" height="620" viewBox="0 0 1040 620" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">VITA frontend architecture</title>
+  <desc id="desc">Current dev frontend structure for Next.js app routes, feature modules, shared modules, Storybook, and public assets.</desc>
+  <rect width="1040" height="620" rx="24" fill="#FFFDF8"/>
+  <text x="56" y="58" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="28" font-weight="700">VITA Frontend Architecture</text>
+  <text x="56" y="86" fill="#5F6368" font-family="Arial, sans-serif" font-size="14">origin/dev 기준: App Router, feature modules, shared-ui, Storybook</text>
+  <rect x="56" y="128" width="260" height="356" rx="16" fill="#FFFFFF" stroke="#FFE6D4"/>
+  <text x="84" y="168" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="20" font-weight="700">src/app</text>
+  <text x="84" y="194" fill="#5F6368" font-family="Arial, sans-serif" font-size="13">라우트와 전역 설정</text>
+  <rect x="84" y="224" width="204" height="42" rx="10" fill="#FFF6E5"/>
+  <text x="104" y="251" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="14">(marketing)</text>
+  <rect x="84" y="278" width="204" height="42" rx="10" fill="#FFF6E5"/>
+  <text x="104" y="305" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="14">(auth)/login</text>
+  <rect x="84" y="332" width="204" height="42" rx="10" fill="#FFF6E5"/>
+  <text x="104" y="359" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="14">(service)/layout</text>
+  <rect x="84" y="386" width="204" height="42" rx="10" fill="#FFF6E5"/>
+  <text x="104" y="413" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="14">chat/page</text>
+  <rect x="84" y="440" width="204" height="24" rx="8" fill="#F5F5F5"/>
+  <text x="104" y="457" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">layout, providers, globals</text>
+  <rect x="390" y="128" width="260" height="356" rx="16" fill="#FFFFFF" stroke="#FFE6D4"/>
+  <text x="418" y="168" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="20" font-weight="700">src/features</text>
+  <text x="418" y="194" fill="#5F6368" font-family="Arial, sans-serif" font-size="13">도메인/기능 단위 UI와 상태</text>
+  <rect x="418" y="224" width="204" height="58" rx="10" fill="#FFF6E5"/>
+  <text x="438" y="247" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="14" font-weight="700">home</text>
+  <text x="438" y="266" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">랜딩 섹션, 체험 상담</text>
+  <rect x="418" y="298" width="204" height="58" rx="10" fill="#FFF6E5"/>
+  <text x="438" y="321" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="14" font-weight="700">chat</text>
+  <text x="438" y="340" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">상담 UI, 투어, 타입</text>
+  <rect x="418" y="372" width="204" height="58" rx="10" fill="#FFF6E5"/>
+  <text x="438" y="395" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="14" font-weight="700">store</text>
+  <text x="438" y="414" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">매장 타입, 지도 로더</text>
+  <rect x="724" y="128" width="260" height="356" rx="16" fill="#FFFFFF" stroke="#FFE6D4"/>
+  <text x="752" y="168" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="20" font-weight="700">src/shared</text>
+  <text x="752" y="194" fill="#5F6368" font-family="Arial, sans-serif" font-size="13">전역 재사용 코드</text>
+  <rect x="752" y="224" width="204" height="34" rx="10" fill="#FFF6E5"/>
+  <text x="772" y="246" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="13">api / config</text>
+  <rect x="752" y="270" width="204" height="34" rx="10" fill="#FFF6E5"/>
+  <text x="772" y="292" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="13">constants / lib</text>
+  <rect x="752" y="316" width="204" height="34" rx="10" fill="#FFF6E5"/>
+  <text x="772" y="338" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="13">layout</text>
+  <rect x="752" y="362" width="204" height="68" rx="10" fill="#FFEBC2"/>
+  <text x="772" y="386" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="13" font-weight="700">ui</text>
+  <text x="772" y="406" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">Button, Card, Modal,</text>
+  <text x="772" y="422" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">SearchInput, 정보형 UI</text>
+  <path d="M316 306H390" stroke="#FDB63D" stroke-width="3" stroke-linecap="round"/>
+  <path d="M376 296L390 306L376 316" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M650 306H724" stroke="#FDB63D" stroke-width="3" stroke-linecap="round"/>
+  <path d="M710 296L724 306L710 316" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="56" y="526" width="428" height="52" rx="14" fill="#F5F5F5"/>
+  <text x="82" y="558" fill="#5F6368" font-family="Arial, sans-serif" font-size="14">public/images: 로고, 랜딩/채팅/매장 미리보기 이미지</text>
+  <rect x="556" y="526" width="428" height="52" rx="14" fill="#F5F5F5"/>
+  <text x="582" y="558" fill="#5F6368" font-family="Arial, sans-serif" font-size="14">.storybook: shared-ui와 주요 feature 컴포넌트 확인</text>
+</svg>

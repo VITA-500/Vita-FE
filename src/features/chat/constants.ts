@@ -1,4 +1,4 @@
-import { MapPin, Search, SquarePen, type LucideIcon } from "lucide-react";
+import { MapPin, SquarePen, type LucideIcon } from "lucide-react";
 import type { ChatAnswerSource, ChatMode } from "@/features/chat/types";
 import { routes } from "@/shared/constants/routes";
 
@@ -22,11 +22,6 @@ export const serviceMenus: ServiceMenu[] = [
     href: `${routes.chat}?mode=store`,
     icon: MapPin,
     mode: "store",
-  },
-  {
-    label: "검색",
-    icon: Search,
-    disabled: true,
   },
 ];
 
