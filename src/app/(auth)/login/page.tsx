@@ -88,12 +88,12 @@ const LoginPage = () => {
 
     try {
       if (isLogin) {
-        const loginResponse = await authService.login({
+        await authService.login({
           email: email.trim(),
           password,
         });
 
-        tokenStorage.setAccessToken(loginResponse.accessToken);
+        tokenStorage.setAuthHint();
         await authService.getMe();
         window.dispatchEvent(new Event("vita-auth-changed"));
         showToast("로그인되었습니다.");

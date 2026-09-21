@@ -5,24 +5,20 @@ import type {
   SignupRequest,
   SignupResponse,
 } from "@/features/auth/types";
-import { tokenStorage } from "@/features/auth/lib/tokenStorage";
 import { requestJson } from "@/shared/api/http";
 
 export const authService = {
   getMe: () => {
-    const accessToken = tokenStorage.getAccessToken();
-
-    return requestJson<MyPageResponse>("/users/me", {
-      headers: accessToken
-        ? {
-            Authorization: `Bearer ${accessToken}`,
-          }
-        : undefined,
-    });
+    return requestJson<MyPageResponse>("/users/me");
   },
   login: (request: LoginRequest) => {
     return requestJson<LoginResponse>("/auth/login", {
       body: JSON.stringify(request),
+      method: "POST",
+    });
+  },
+  logout: () => {
+    return requestJson<void>("/auth/logout", {
       method: "POST",
     });
   },

@@ -18,8 +18,9 @@ const HeaderControls = ({
   initialHasAccessToken = false,
   onSelectComplete,
 }: HeaderControlsProps) => {
-  const { hasAccessToken, isAuthenticated, isLoading, logout, user } =
-    useAuthUser({ initialHasAccessToken });
+  const { isAuthenticated, isLoading, logout, user } = useAuthUser({
+    initialHasAccessToken,
+  });
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -34,19 +35,13 @@ const HeaderControls = ({
       <ThemeToggleButton onToggleComplete={onSelectComplete} />
 
       {isLoading ? (
-        hasAccessToken ? (
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-10 items-center gap-2 rounded-full bg-gray-100 px-4 text-sm font-bold text-transparent select-none dark:bg-white/10">
-              <UserRound size={16} />
-              <span>사용자</span>
-            </span>
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 select-none dark:bg-white/10" />
-          </div>
-        ) : (
-          <span className="inline-flex h-10 items-center justify-center rounded-full bg-gray-100 px-5 text-sm font-bold text-transparent select-none dark:bg-white/10">
-            로그인
-          </span>
-        )
+        <Link
+          href={routes.login}
+          onClick={onSelectComplete}
+          className="bg-brand hover:bg-brand-hover inline-flex h-10 items-center justify-center rounded-full px-5 text-sm font-bold text-white shadow-sm transition"
+        >
+          로그인
+        </Link>
       ) : isAuthenticated ? (
         <div className="flex items-center gap-2">
           <Link

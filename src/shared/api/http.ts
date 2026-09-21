@@ -28,6 +28,7 @@ export const requestJson = async <T>(
 ): Promise<T> => {
   const { baseUrl, headers, ...requestOptions } = options;
   const response = await fetch(createUrl(path, baseUrl), {
+    credentials: "include",
     ...requestOptions,
     headers: {
       "Content-Type": "application/json",

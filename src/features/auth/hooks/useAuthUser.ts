@@ -18,20 +18,17 @@ export const useAuthUser = ({
   const [user, setUser] = useState<MyPageResponse | null>(null);
 
   const loadUser = useCallback(async () => {
-    const accessToken = tokenStorage.getAccessToken();
-
-    if (!accessToken) {
-      return null;
-    }
-
     try {
-      return await authService.getMe();
+      const nextUser = await authService.getMe();
+
+      tokenStorage.setAuthHint();
+      return nextUser;
     } catch (error) {
       if (
         error instanceof ApiError &&
         (error.status === 401 || error.status === 403)
       ) {
-        tokenStorage.removeAccessToken();
+        tokenStorage.removeAuthHint();
       }
 
       return null;
@@ -39,7 +36,8 @@ export const useAuthUser = ({
   }, []);
 
   const refreshUser = useCallback(async () => {
-    const nextHasAccessToken = Boolean(tokenStorage.getAccessToken());
+    const nextHasAccessToken =
+      initialHasAccessToken || tokenStorage.hasAccessTokenHint();
 
     setHasAccessToken(nextHasAccessToken);
     setIsLoading(nextHasAccessToken);
@@ -49,23 +47,21 @@ export const useAuthUser = ({
 
       setUser(nextUser);
     } finally {
-      setHasAccessToken(Boolean(tokenStorage.getAccessToken()));
+      setHasAccessToken(tokenStorage.hasAccessTokenHint());
       setIsLoading(false);
     }
-  }, [loadUser]);
+  }, [initialHasAccessToken, loadUser]);
 
-  const logout = useCallback(() => {
-    tokenStorage.removeAccessToken();
+  const logout = useCallback(async () => {
+    await authService.logout().catch(() => undefined);
+    tokenStorage.removeAuthHint();
     setUser(null);
     window.dispatchEvent(new Event("vita-auth-changed"));
   }, []);
 
   useLayoutEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
-      setHasAccessToken(
-        Boolean(tokenStorage.getAccessToken()) ||
-          tokenStorage.hasAccessTokenHint(),
-      );
+      setHasAccessToken(tokenStorage.hasAccessTokenHint());
     });
 
     return () => {
@@ -77,7 +73,8 @@ export const useAuthUser = ({
     let isMounted = true;
 
     const loadInitialUser = async () => {
-      const nextHasAccessToken = Boolean(tokenStorage.getAccessToken());
+      const nextHasAccessToken =
+        initialHasAccessToken || tokenStorage.hasAccessTokenHint();
 
       if (!isMounted) {
         return;
@@ -97,7 +94,7 @@ export const useAuthUser = ({
       }
 
       setUser(nextUser);
-      setHasAccessToken(Boolean(tokenStorage.getAccessToken()));
+      setHasAccessToken(tokenStorage.hasAccessTokenHint());
       setIsLoading(false);
     };
 
