@@ -40,6 +40,7 @@ import { useTheme } from "@/shared/ui/ThemeProvider";
 
 type ChatSidebarProps = {
   isAuthenticated: boolean;
+  isAuthLoading: boolean;
   isOpen: boolean;
   onOpen: () => void;
   onClose: () => void;
@@ -60,6 +61,7 @@ type ChatSidebarProps = {
 export const ChatSidebar = ({
   activeMode,
   currentChatTitle,
+  isAuthLoading,
   isAuthenticated,
   isOpen,
   onClose,
@@ -84,6 +86,7 @@ export const ChatSidebar = ({
   const chatMenuRef = useRef<HTMLDivElement>(null);
   const displayName = user?.name ?? "사용자";
   const isDarkMode = resolvedTheme === "dark";
+  const isGuest = !isAuthenticated && !isAuthLoading;
 
   const visibleRecentChats = currentChatTitle
     ? [
@@ -375,7 +378,7 @@ export const ChatSidebar = ({
               const Icon = menu.icon;
               const isActive =
                 menu.mode === activeMode &&
-                (isAuthenticated || menu.label !== "새 상담");
+                (!isGuest || menu.label !== "새 상담");
               const shortcut =
                 menu.label === "새 상담"
                   ? "Ctrl+Shift+O"
@@ -687,7 +690,7 @@ export const ChatSidebar = ({
             />
           )}
 
-          {!isAuthenticated && isOpen ? (
+          {isGuest && isOpen ? (
             <div className="space-y-3 px-3">
               <div className="space-y-1 border-b border-gray-200/80 pb-3 dark:border-white/10">
                 <button
@@ -728,7 +731,7 @@ export const ChatSidebar = ({
                 </Link>
               </div>
             </div>
-          ) : !isAuthenticated ? (
+          ) : isGuest ? (
             <div className="flex h-12 w-[64px] items-center justify-center">
               <Link
                 href={routes.login}
@@ -738,7 +741,7 @@ export const ChatSidebar = ({
                 V
               </Link>
             </div>
-          ) : isOpen ? (
+          ) : isAuthenticated && isOpen ? (
             <div className="group relative flex h-12 w-[276px] items-center pr-3 text-left transition-colors">
               <span className="absolute inset-y-0 right-2 left-2 rounded-xl transition group-hover:bg-gray-300/70 dark:group-hover:bg-white/10" />
 
@@ -772,7 +775,7 @@ export const ChatSidebar = ({
 
               <ThemeToggleButton className="relative z-10 ml-auto shrink-0" />
             </div>
-          ) : (
+          ) : isAuthenticated ? (
             <div className="flex h-12 w-[64px] items-center justify-center">
               <button
                 type="button"
@@ -788,6 +791,10 @@ export const ChatSidebar = ({
                 </span>
               </button>
             </div>
+          ) : (
+            <div
+              className={cn("h-12 shrink-0", isOpen ? "w-[276px]" : "w-[64px]")}
+            />
           )}
         </div>
       </div>

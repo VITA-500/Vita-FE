@@ -23,7 +23,7 @@ import { cn } from "@/shared/lib/cn";
 
 const ChatPageContent = () => {
   const searchParams = useSearchParams();
-  const { isAuthenticated } = useAuthUser();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuthUser();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isGuestNewChatDialogOpen, setIsGuestNewChatDialogOpen] =
@@ -139,7 +139,7 @@ const ChatPageContent = () => {
   };
 
   const handleNewChat = () => {
-    if (!isAuthenticated && hasChatStarted) {
+    if (!isAuthenticated && !isAuthLoading && hasChatStarted) {
       setIsGuestNewChatDialogOpen(true);
       return;
     }
@@ -163,6 +163,7 @@ const ChatPageContent = () => {
 
       <ChatSidebar
         isAuthenticated={isAuthenticated}
+        isAuthLoading={isAuthLoading}
         isOpen={isSidebarOpen}
         onOpen={() => setIsSidebarOpen(true)}
         onClose={() => setIsSidebarOpen(false)}
