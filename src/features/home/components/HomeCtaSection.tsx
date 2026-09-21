@@ -1,12 +1,14 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { uiText } from "@/shared/constants/uiText";
 import MotionReveal from "@/shared/ui/MotionReveal";
 import { routes } from "@/shared/constants/routes";
-import { ButtonLink } from "@/shared/ui/Button";
+import { Button } from "@/shared/ui/Button";
 
 const HomeCtaSection = () => {
+  const router = useRouter();
   const t = uiText;
   const [titleLead, titleHighlight] = t.home.ctaTitle.split("\n");
 
@@ -21,14 +23,14 @@ const HomeCtaSection = () => {
             </span>
           </h2>
 
-          <ButtonLink
-            href={routes.login}
+          <Button
+            onClick={() => router.push(routes.chat)}
             size="lg"
-            className="shadow-brand/25 mt-8 inline-flex h-[52px] items-center justify-center gap-3 rounded-2xl px-7 text-base font-bold shadow-xl sm:mt-10 sm:h-14 sm:px-8"
+            className="shadow-brand/25 mt-8 inline-flex h-[52px] min-w-[210px] items-center justify-center gap-3 rounded-2xl px-7 text-base font-bold shadow-xl sm:mt-10 sm:h-14 sm:px-8"
           >
-            {t.home.ctaButton}
+            <span>{t.home.ctaButton}</span>
             <ArrowRight size={20} />
-          </ButtonLink>
+          </Button>
         </div>
       </MotionReveal>
     </section>

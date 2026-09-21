@@ -10,6 +10,7 @@ export default async function MarketingLayout({
 }) {
   const cookieStore = await cookies();
   const initialHasAccessToken =
+    Boolean(cookieStore.get("accessToken")?.value) ||
     cookieStore.get("vita_has_access_token")?.value === "1";
 
   return (

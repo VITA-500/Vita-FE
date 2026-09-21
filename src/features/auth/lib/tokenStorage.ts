@@ -1,6 +1,3 @@
-"use client";
-
-const ACCESS_TOKEN_KEY = "vita_access_token";
 const AUTH_HINT_COOKIE = "vita_has_access_token";
 
 const setAuthHintCookie = () => {
@@ -12,13 +9,6 @@ const removeAuthHintCookie = () => {
 };
 
 export const tokenStorage = {
-  getAccessToken: () => {
-    if (typeof window === "undefined") {
-      return null;
-    }
-
-    return window.localStorage.getItem(ACCESS_TOKEN_KEY);
-  },
   hasAccessTokenHint: () => {
     if (typeof window === "undefined") {
       return false;
@@ -28,20 +18,18 @@ export const tokenStorage = {
       .split("; ")
       .some((cookie) => cookie === `${AUTH_HINT_COOKIE}=1`);
   },
-  removeAccessToken: () => {
+  removeAuthHint: () => {
     if (typeof window === "undefined") {
       return;
     }
 
-    window.localStorage.removeItem(ACCESS_TOKEN_KEY);
     removeAuthHintCookie();
   },
-  setAccessToken: (token: string) => {
+  setAuthHint: () => {
     if (typeof window === "undefined") {
       return;
     }
 
-    window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
     setAuthHintCookie();
   },
 };

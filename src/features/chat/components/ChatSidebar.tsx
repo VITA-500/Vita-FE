@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { MouseEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   Archive,
   ChevronRight,
+  CircleHelp,
+  ExternalLink,
   Folder,
   LogOut,
   MessageCircle,
+  Moon,
   MoreHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
@@ -19,6 +21,7 @@ import {
   Settings,
   Share2,
   Sparkles,
+  Sun,
   Search,
   Trash2,
   UserCircle,
@@ -32,11 +35,16 @@ import { cn } from "@/shared/lib/cn";
 import { Logo } from "@/shared/ui/Logo";
 import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
 import { showToast } from "@/shared/ui/ToastProvider";
+import { LogoutConfirmDialog } from "@/shared/ui/LogoutConfirmDialog";
+import { useTheme } from "@/shared/ui/ThemeProvider";
 
 type ChatSidebarProps = {
+  isAuthenticated: boolean;
+  isAuthLoading: boolean;
   isOpen: boolean;
   onOpen: () => void;
   onClose: () => void;
+  onNewChat: () => void;
   onOpenSearch: () => void;
   onShowRailTooltip: (
     label: string,
@@ -53,17 +61,21 @@ type ChatSidebarProps = {
 export const ChatSidebar = ({
   activeMode,
   currentChatTitle,
+  isAuthLoading,
+  isAuthenticated,
   isOpen,
   onClose,
+  onNewChat,
   onHideTooltip,
   onOpen,
   onOpenSearch,
   onShowHeaderTooltip,
   onShowRailTooltip,
 }: ChatSidebarProps) => {
-  const router = useRouter();
   const { logout, user } = useAuthUser();
+  const { resolvedTheme, setTheme } = useTheme();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [chatMenu, setChatMenu] = useState<{
     left: number;
     title: string;
@@ -73,6 +85,8 @@ export const ChatSidebar = ({
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const chatMenuRef = useRef<HTMLDivElement>(null);
   const displayName = user?.name ?? "사용자";
+  const isDarkMode = resolvedTheme === "dark";
+  const isGuest = !isAuthenticated && !isAuthLoading;
 
   const visibleRecentChats = currentChatTitle
     ? [
@@ -96,11 +110,11 @@ export const ChatSidebar = ({
     setIsAccountMenuOpen((current) => !current);
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setIsAccountMenuOpen(false);
+    setIsLogoutConfirmOpen(false);
     showToast("로그아웃되었습니다.");
-    router.replace(routes.home);
   };
 
   const handlePinChat = (title: string) => {
@@ -362,7 +376,9 @@ export const ChatSidebar = ({
           <nav className="space-y-1">
             {serviceMenus.map((menu) => {
               const Icon = menu.icon;
-              const isActive = menu.mode === activeMode;
+              const isActive =
+                menu.mode === activeMode &&
+                (!isGuest || menu.label !== "새 상담");
               const shortcut =
                 menu.label === "새 상담"
                   ? "Ctrl+Shift+O"
@@ -424,15 +440,28 @@ export const ChatSidebar = ({
               );
 
               return menu.href ? (
-                <Link
-                  key={menu.label}
-                  href={menu.href}
-                  className={itemClassName}
-                  onMouseEnter={onShowRailTooltip(menu.label, shortcut)}
-                  onMouseLeave={onHideTooltip}
-                >
-                  {itemContent}
-                </Link>
+                menu.label === "새 상담" ? (
+                  <button
+                    key={menu.label}
+                    type="button"
+                    className={itemClassName}
+                    onClick={onNewChat}
+                    onMouseEnter={onShowRailTooltip(menu.label, shortcut)}
+                    onMouseLeave={onHideTooltip}
+                  >
+                    {itemContent}
+                  </button>
+                ) : (
+                  <Link
+                    key={menu.label}
+                    href={menu.href}
+                    className={itemClassName}
+                    onMouseEnter={onShowRailTooltip(menu.label, shortcut)}
+                    onMouseLeave={onHideTooltip}
+                  >
+                    {itemContent}
+                  </Link>
+                )
               ) : (
                 <button
                   key={menu.label}
@@ -468,106 +497,108 @@ export const ChatSidebar = ({
             )}
           </nav>
 
-          <div
-            className={cn(
-              "mt-8",
-              isOpen
-                ? "pointer-events-auto opacity-100 transition-opacity delay-150 duration-150"
-                : "pointer-events-none opacity-0",
-            )}
-          >
-            <div className="space-y-1">
-              {pinnedChats.length > 0 && (
-                <>
-                  <p className="mb-2 px-3 text-xs font-bold text-gray-400">
-                    고정됨
-                  </p>
-
-                  {pinnedChats.map((chat) => (
-                    <div
-                      key={chat.title}
-                      className="group relative mx-1 flex h-11 w-[calc(100%-0.5rem)] items-center rounded-xl text-left transition-colors duration-150 hover:bg-gray-300/70 dark:hover:bg-white/10"
-                    >
-                      <button
-                        type="button"
-                        className="min-w-0 flex-1 truncate px-5 text-left text-sm font-semibold text-gray-500 transition-colors group-hover:text-gray-950 dark:text-gray-400 dark:group-hover:text-white"
-                      >
-                        {chat.title}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handlePinChat(chat.title)}
-                        className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
-                        aria-label="채팅 고정 해제"
-                      >
-                        <PinOff size={16} />
-                      </button>
-
-                      <button
-                        type="button"
-                        data-chat-menu-trigger="true"
-                        onClick={(event) =>
-                          handleOpenChatMenu(event, chat.title)
-                        }
-                        className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
-                        aria-label="채팅 메뉴"
-                      >
-                        <MoreHorizontal size={17} />
-                      </button>
-                    </div>
-                  ))}
-                </>
+          {isAuthenticated && (
+            <div
+              className={cn(
+                "mt-8",
+                isOpen
+                  ? "pointer-events-auto opacity-100 transition-opacity delay-150 duration-150"
+                  : "pointer-events-none opacity-0",
               )}
+            >
+              <div className="space-y-1">
+                {pinnedChats.length > 0 && (
+                  <>
+                    <p className="mb-2 px-3 text-xs font-bold text-gray-400">
+                      고정됨
+                    </p>
 
-              <p className="mb-2 px-3 pt-4 text-xs font-bold text-gray-400">
-                최근 상담
-              </p>
+                    {pinnedChats.map((chat) => (
+                      <div
+                        key={chat.title}
+                        className="group relative mx-1 flex h-11 w-[calc(100%-0.5rem)] items-center rounded-xl text-left transition-colors duration-150 hover:bg-gray-300/70 dark:hover:bg-white/10"
+                      >
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 truncate px-5 text-left text-sm font-semibold text-gray-500 transition-colors group-hover:text-gray-950 dark:text-gray-400 dark:group-hover:text-white"
+                        >
+                          {chat.title}
+                        </button>
 
-              {unpinnedRecentChats.map((chat) => (
-                <div
-                  key={chat.title}
-                  className={cn(
-                    "group relative mx-1 flex h-11 w-[calc(100%-0.5rem)] items-center rounded-xl text-left transition-colors duration-150",
-                    chat.active
-                      ? "bg-white dark:bg-white/10"
-                      : "hover:bg-gray-300/70 dark:hover:bg-white/10",
-                  )}
-                >
-                  <button
-                    type="button"
+                        <button
+                          type="button"
+                          onClick={() => handlePinChat(chat.title)}
+                          className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
+                          aria-label="채팅 고정 해제"
+                        >
+                          <PinOff size={16} />
+                        </button>
+
+                        <button
+                          type="button"
+                          data-chat-menu-trigger="true"
+                          onClick={(event) =>
+                            handleOpenChatMenu(event, chat.title)
+                          }
+                          className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
+                          aria-label="채팅 메뉴"
+                        >
+                          <MoreHorizontal size={17} />
+                        </button>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <p className="mb-2 px-3 pt-4 text-xs font-bold text-gray-400">
+                  최근 상담
+                </p>
+
+                {unpinnedRecentChats.map((chat) => (
+                  <div
+                    key={chat.title}
                     className={cn(
-                      "focus-visible:ring-brand/30 min-w-0 flex-1 truncate px-5 text-left text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                      "group relative mx-1 flex h-11 w-[calc(100%-0.5rem)] items-center rounded-xl text-left transition-colors duration-150",
                       chat.active
-                        ? "text-brand"
-                        : "text-gray-500 group-hover:text-gray-950 dark:text-gray-400 dark:group-hover:text-white",
+                        ? "bg-white dark:bg-white/10"
+                        : "hover:bg-gray-300/70 dark:hover:bg-white/10",
                     )}
                   >
-                    {chat.title}
-                  </button>
+                    <button
+                      type="button"
+                      className={cn(
+                        "focus-visible:ring-brand/30 min-w-0 flex-1 truncate px-5 text-left text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                        chat.active
+                          ? "text-brand"
+                          : "text-gray-500 group-hover:text-gray-950 dark:text-gray-400 dark:group-hover:text-white",
+                      )}
+                    >
+                      {chat.title}
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => handlePinChat(chat.title)}
-                    className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
-                    aria-label="채팅 고정"
-                  >
-                    <Pin size={16} />
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePinChat(chat.title)}
+                      className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
+                      aria-label="채팅 고정"
+                    >
+                      <Pin size={16} />
+                    </button>
 
-                  <button
-                    type="button"
-                    data-chat-menu-trigger="true"
-                    onClick={(event) => handleOpenChatMenu(event, chat.title)}
-                    className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
-                    aria-label="채팅 메뉴"
-                  >
-                    <MoreHorizontal size={17} />
-                  </button>
-                </div>
-              ))}
+                    <button
+                      type="button"
+                      data-chat-menu-trigger="true"
+                      onClick={(event) => handleOpenChatMenu(event, chat.title)}
+                      className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
+                      aria-label="채팅 메뉴"
+                    >
+                      <MoreHorizontal size={17} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div
@@ -640,7 +671,10 @@ export const ChatSidebar = ({
 
               <button
                 type="button"
-                onClick={handleLogout}
+                onClick={() => {
+                  setIsAccountMenuOpen(false);
+                  setIsLogoutConfirmOpen(true);
+                }}
                 className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
               >
                 <LogOut size={18} />
@@ -649,7 +683,65 @@ export const ChatSidebar = ({
             </div>
           )}
 
-          {isOpen ? (
+          {isLogoutConfirmOpen && (
+            <LogoutConfirmDialog
+              onCancel={() => setIsLogoutConfirmOpen(false)}
+              onConfirm={handleLogout}
+            />
+          )}
+
+          {isGuest && isOpen ? (
+            <div className="space-y-3 px-3">
+              <div className="space-y-1 border-b border-gray-200/80 pb-3 dark:border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setTheme(isDarkMode ? "light" : "dark")}
+                  className="flex h-11 w-full items-center gap-3 rounded-xl px-2 text-left text-sm font-bold text-gray-600 transition hover:bg-gray-300/70 hover:text-gray-950 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
+                >
+                  {isDarkMode ? <Sun size={19} /> : <Moon size={19} />}
+                  {isDarkMode ? "라이트 모드" : "다크 모드"}
+                </button>
+
+                <button
+                  type="button"
+                  className="flex h-11 w-full items-center gap-3 rounded-xl px-2 text-left text-sm font-bold text-gray-600 transition hover:bg-gray-300/70 hover:text-gray-950 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
+                >
+                  <CircleHelp size={19} />
+                  도움말
+                  <ExternalLink size={15} className="ml-auto text-gray-400" />
+                </button>
+              </div>
+
+              <div className="space-y-3 pt-1">
+                <div>
+                  <p className="text-sm font-extrabold text-gray-950 dark:text-white">
+                    내게 맞춘 답변을 받아보세요
+                  </p>
+                  <p className="mt-2 text-sm leading-6 font-medium text-gray-500 dark:text-gray-400">
+                    로그인하면 상담 기록을 저장하고 더 정확한 통신 안내를 받을
+                    수 있어요.
+                  </p>
+                </div>
+
+                <Link
+                  href={routes.login}
+                  className="flex h-12 w-full items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-bold text-gray-950 transition hover:bg-gray-100 dark:border-white/15 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
+                >
+                  로그인
+                </Link>
+              </div>
+            </div>
+          ) : isGuest ? (
+            <div className="flex h-12 w-[64px] items-center justify-center">
+              <Link
+                href={routes.login}
+                className="bg-brand flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-black text-white"
+                aria-label="로그인"
+              >
+                V
+              </Link>
+            </div>
+          ) : isAuthenticated && isOpen ? (
             <div className="group relative flex h-12 w-[276px] items-center pr-3 text-left transition-colors">
               <span className="absolute inset-y-0 right-2 left-2 rounded-xl transition group-hover:bg-gray-300/70 dark:group-hover:bg-white/10" />
 
@@ -683,7 +775,7 @@ export const ChatSidebar = ({
 
               <ThemeToggleButton className="relative z-10 ml-auto shrink-0" />
             </div>
-          ) : (
+          ) : isAuthenticated ? (
             <div className="flex h-12 w-[64px] items-center justify-center">
               <button
                 type="button"
@@ -699,6 +791,10 @@ export const ChatSidebar = ({
                 </span>
               </button>
             </div>
+          ) : (
+            <div
+              className={cn("h-12 shrink-0", isOpen ? "w-[276px]" : "w-[64px]")}
+            />
           )}
         </div>
       </div>

@@ -4,7 +4,10 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { ArrowLeft, LockKeyhole, Mail, UserRound } from "lucide-react";
-import { authService } from "@/features/auth/lib/authService";
+import {
+  authService,
+  type OAuthProvider,
+} from "@/features/auth/lib/authService";
 import { tokenStorage } from "@/features/auth/lib/tokenStorage";
 import { TextField } from "@/shared/ui/TextField";
 import { ApiError } from "@/shared/api/http";
@@ -17,17 +20,20 @@ type AuthMode = "login" | "signup";
 
 const socialProviders = [
   {
+    id: "google",
     name: "Google",
     icon: "/images/icon-google.svg",
     className:
       "border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300",
   },
   {
+    id: "kakao",
     name: "Kakao",
     icon: "/images/icon-kakao.svg",
     className: "border-[#FEE500] bg-[#FEE500] hover:bg-[#F6DD00]",
   },
   {
+    id: "naver",
     name: "Naver",
     icon: "/images/icon-naver.svg",
     className: "border-[#03C75A] bg-[#03C75A] hover:bg-[#02B350]",
@@ -88,12 +94,12 @@ const LoginPage = () => {
 
     try {
       if (isLogin) {
-        const loginResponse = await authService.login({
+        await authService.login({
           email: email.trim(),
           password,
         });
 
-        tokenStorage.setAccessToken(loginResponse.accessToken);
+        tokenStorage.setAuthHint();
         await authService.getMe();
         window.dispatchEvent(new Event("vita-auth-changed"));
         showToast("로그인되었습니다.");
@@ -121,6 +127,11 @@ const LoginPage = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSocialLogin = (provider: OAuthProvider) => {
+    resetFeedback();
+    window.location.assign(authService.createOAuthAuthorizationUrl(provider));
   };
 
   return (
@@ -256,9 +267,7 @@ const LoginPage = () => {
                 aria-label={`${provider.name}로 계속하기`}
                 title={`${provider.name}로 계속하기`}
                 type="button"
-                onClick={() =>
-                  setErrorMessage("소셜 로그인은 아직 준비 중입니다.")
-                }
+                onClick={() => handleSocialLogin(provider.id)}
                 className={`flex h-14 w-14 items-center justify-center rounded-full border transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-95 ${provider.className}`}
               >
                 <Image

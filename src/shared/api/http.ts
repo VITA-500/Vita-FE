@@ -28,6 +28,7 @@ export const requestJson = async <T>(
 ): Promise<T> => {
   const { baseUrl, headers, ...requestOptions } = options;
   const response = await fetch(createUrl(path, baseUrl), {
+    credentials: "include",
     ...requestOptions,
     headers: {
       "Content-Type": "application/json",
@@ -46,5 +47,15 @@ export const requestJson = async <T>(
     );
   }
 
-  return response.json() as Promise<T>;
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  const text = await response.text();
+
+  if (!text) {
+    return undefined as T;
+  }
+
+  return JSON.parse(text) as T;
 };

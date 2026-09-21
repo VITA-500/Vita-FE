@@ -2,12 +2,13 @@
 
 import type { MouseEvent } from "react";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Menu } from "lucide-react";
 import { ChatComposer } from "@/features/chat/components/ChatComposer";
 import { ChatMessageList } from "@/features/chat/components/ChatMessageList";
 import { ChatSidebar } from "@/features/chat/components/ChatSidebar";
 import { ChatSearchDialog } from "@/features/chat/components/ChatSearchDialog";
+import { GuestNewChatDialog } from "@/features/chat/components/GuestNewChatDialog";
 import { PromptSuggestions } from "@/features/chat/components/PromptSuggestions";
 import { mockChatAnswers } from "@/features/chat/constants";
 import {
@@ -18,15 +19,15 @@ import type { ChatMessage, ChatMode } from "@/features/chat/types";
 import { useChatTour } from "@/features/chat/hooks/useChatTour";
 import { StoreMapPanel } from "@/features/store/components/StoreMapPanel";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
-import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
 
 const ChatPageContent = () => {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const { isAuthenticated, isLoading } = useAuthUser();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuthUser();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isGuestNewChatDialogOpen, setIsGuestNewChatDialogOpen] =
+    useState(false);
   const [chatInput, setChatInput] = useState("");
   const [chatStatus, setChatStatus] = useState<"idle" | "loading">("idle");
   const [currentChatTitle, setCurrentChatTitle] = useState("");
@@ -39,12 +40,6 @@ const ChatPageContent = () => {
   const hasChatStarted = messages.length > 0;
 
   useChatTour();
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace(routes.home);
-    }
-  }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
     if (activeMode !== "chat" || messages.length === 0) return;
@@ -135,11 +130,22 @@ const ChatPageContent = () => {
     }, 650);
   };
 
-  if (isLoading || !isAuthenticated) {
-    return (
-      <main className="bg-surface-warm h-screen text-gray-950 dark:text-white" />
-    );
-  }
+  const resetChat = () => {
+    setMessages([]);
+    setChatInput("");
+    setCurrentChatTitle("");
+    setChatStatus("idle");
+    window.requestAnimationFrame(() => chatInputRef.current?.focus());
+  };
+
+  const handleNewChat = () => {
+    if (!isAuthenticated && !isAuthLoading && hasChatStarted) {
+      setIsGuestNewChatDialogOpen(true);
+      return;
+    }
+
+    resetChat();
+  };
 
   return (
     <main className="bg-surface-warm relative h-screen overflow-hidden text-gray-950 dark:text-white">
@@ -156,9 +162,12 @@ const ChatPageContent = () => {
       />
 
       <ChatSidebar
+        isAuthenticated={isAuthenticated}
+        isAuthLoading={isAuthLoading}
         isOpen={isSidebarOpen}
         onOpen={() => setIsSidebarOpen(true)}
         onClose={() => setIsSidebarOpen(false)}
+        onNewChat={handleNewChat}
         onOpenSearch={() => {
           setRailTooltip(null);
           setIsSearchOpen(true);
@@ -260,6 +269,15 @@ const ChatPageContent = () => {
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
       />
+      {isGuestNewChatDialogOpen && (
+        <GuestNewChatDialog
+          onCancel={() => setIsGuestNewChatDialogOpen(false)}
+          onConfirm={() => {
+            resetChat();
+            setIsGuestNewChatDialogOpen(false);
+          }}
+        />
+      )}
     </main>
   );
 };
