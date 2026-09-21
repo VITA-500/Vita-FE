@@ -12,29 +12,7 @@ export const uiText = {
     heroTitleHighlight: "VITA에게 물어보세요.",
     heroDescription:
       "궁금한 내용을 자연어로 물어보면 필요한 정보를 찾아 정리하고\n가까운 매장까지 한 번에 안내해요.",
-    heroButton: "미리 체험하기",
-
-    preview: {
-      activeMenu: "AI 상담",
-      status: "FAQ 기반 답변",
-      title: "무엇을 도와드릴까요?",
-      description: "통신 서비스에 대해 궁금한 내용을 편하게 물어보세요.",
-      input: "예: 휴대폰을 잃어버렸어요",
-      suggestionTitle: "휴대폰을 잃어버렸어요",
-      suggestionText: "분실 신고와 유심 보호 절차를 안내해드려요.",
-    },
-
-    trial: {
-      remainingLabel: "무료 상담 {count}회 남음",
-      limitTitle: "이어서 상담하려면 로그인이 필요해요.",
-      limitDescription:
-        "홈에서는 5회까지 미리 상담해볼 수 있어요. 로그인하면 상담 기록을 이어서 챗봇 화면에서 계속 확인할 수 있습니다.",
-      limitInput: "로그인 후 계속 상담할 수 있어요",
-      loginPromptTitle: "무료 상담 5회를 모두 사용했어요.",
-      loginPromptDescription:
-        "로그인하고 방금 나눈 상담 내용을 이어서 확인해보세요.",
-      loginButton: "로그인하고 계속 상담하기",
-    },
+    heroButton: "지금 시작하기",
 
     introLabel: "01  AI 상담",
     introTitle: "검색하지 않아도,\n그냥 물어보면 돼요.",
@@ -112,7 +90,7 @@ export const uiText = {
         title: "고객지원",
         links: [
           { label: "로그인", href: routes.login },
-          { label: "무료 체험 상담", href: routes.home },
+          { label: "FAQ 상담 시작", href: routes.chat },
           { label: "AI 상담 화면", href: routes.chat },
           { label: "서비스 흐름", href: `${routes.home}#service-flow` },
         ],

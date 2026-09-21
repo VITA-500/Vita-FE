@@ -1,5 +1,3 @@
-"use client";
-
 const ACCESS_TOKEN_KEY = "vita_access_token";
 const AUTH_HINT_COOKIE = "vita_has_access_token";
 

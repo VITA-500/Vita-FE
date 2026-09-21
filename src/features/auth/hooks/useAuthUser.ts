@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { authService } from "@/features/auth/lib/authService";
 import { tokenStorage } from "@/features/auth/lib/tokenStorage";
+import { ApiError } from "@/shared/api/http";
 import type { MyPageResponse } from "@/features/auth/types";
 
 type UseAuthUserOptions = {
@@ -25,8 +26,14 @@ export const useAuthUser = ({
 
     try {
       return await authService.getMe();
-    } catch {
-      tokenStorage.removeAccessToken();
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        (error.status === 401 || error.status === 403)
+      ) {
+        tokenStorage.removeAccessToken();
+      }
+
       return null;
     }
   }, []);
@@ -38,8 +45,11 @@ export const useAuthUser = ({
     setIsLoading(nextHasAccessToken);
 
     try {
-      setUser(await loadUser());
+      const nextUser = await loadUser();
+
+      setUser(nextUser);
     } finally {
+      setHasAccessToken(Boolean(tokenStorage.getAccessToken()));
       setIsLoading(false);
     }
   }, [loadUser]);
@@ -87,6 +97,7 @@ export const useAuthUser = ({
       }
 
       setUser(nextUser);
+      setHasAccessToken(Boolean(tokenStorage.getAccessToken()));
       setIsLoading(false);
     };
 

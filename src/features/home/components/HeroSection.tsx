@@ -1,16 +1,20 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { uiText } from "@/shared/constants/uiText";
+import { routes } from "@/shared/constants/routes";
 import MotionReveal from "@/shared/ui/MotionReveal";
-import { TrialChatModal } from "@/features/home/components/TrialChatModal";
-import { useTrialChat } from "@/features/home/hooks/useTrialChat";
 import { Button } from "@/shared/ui/Button";
 
 const HeroSection = () => {
+  const router = useRouter();
   const t = uiText;
-  const trialChat = useTrialChat();
+
+  const handlePrimaryAction = () => {
+    router.push(routes.chat);
+  };
 
   return (
     <section className="bg-surface-warm relative overflow-hidden px-5 py-8 sm:px-6 sm:py-12 lg:min-h-[calc(100svh-4rem)] lg:py-8">
@@ -41,9 +45,9 @@ const HeroSection = () => {
 
             <div className="mt-7 flex flex-col items-center gap-4 sm:mt-8 sm:flex-row sm:justify-center lg:justify-start">
               <Button
-                onClick={trialChat.openTrial}
+                onClick={handlePrimaryAction}
                 size="lg"
-                className="shadow-brand/25 inline-flex h-[52px] w-full max-w-[230px] items-center justify-center gap-3 rounded-2xl px-6 text-base font-bold shadow-xl sm:h-14 sm:w-auto sm:max-w-[250px] sm:px-7"
+                className="shadow-brand/25 inline-flex h-[52px] w-full max-w-[230px] min-w-[210px] items-center justify-center gap-3 rounded-2xl px-6 text-base font-bold shadow-xl sm:h-14 sm:w-auto sm:max-w-[250px] sm:px-7"
               >
                 <span>{t.home.heroButton}</span>
                 <ArrowRight size={20} />
@@ -67,19 +71,6 @@ const HeroSection = () => {
           </MotionReveal>
         </div>
       </div>
-
-      {trialChat.isTrialOpen && (
-        <TrialChatModal
-          inputRef={trialChat.inputRef}
-          isLimitReached={trialChat.isLimitReached}
-          messages={trialChat.messages}
-          question={trialChat.question}
-          remainingCount={trialChat.remainingCount}
-          onClose={() => trialChat.setIsTrialOpen(false)}
-          onQuestionChange={trialChat.setQuestion}
-          onSubmit={trialChat.handleSubmit}
-        />
-      )}
     </section>
   );
 };
