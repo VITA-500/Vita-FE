@@ -6,8 +6,16 @@ import type {
   SignupResponse,
 } from "@/features/auth/types";
 import { requestJson } from "@/shared/api/http";
+import { env } from "@/shared/config/env";
+
+export type OAuthProvider = "google" | "kakao" | "naver";
+
+const createOAuthAuthorizationUrl = (provider: OAuthProvider) => {
+  return `${env.apiBaseUrl.replace(/\/$/, "")}/oauth2/authorization/${provider}`;
+};
 
 export const authService = {
+  createOAuthAuthorizationUrl,
   getMe: () => {
     return requestJson<MyPageResponse>("/users/me");
   },

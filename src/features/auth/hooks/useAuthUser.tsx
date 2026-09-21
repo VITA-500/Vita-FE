@@ -21,6 +21,7 @@ type UseAuthUserOptions = {
 type AuthContextValue = {
   hasAccessToken: boolean;
   isAuthenticated: boolean;
+  isReady: boolean;
   isLoading: boolean;
   logout: () => Promise<void>;
   refreshUser: (forceRequest?: boolean) => Promise<void>;
@@ -42,6 +43,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     getInitialHasAccessToken,
   );
   const [isLoading, setIsLoading] = useState(getInitialHasAccessToken);
+  const [isReady, setIsReady] = useState(false);
   const [user, setUser] = useState<MyPageResponse | null>(null);
 
   const loadUser = useCallback(async () => {
@@ -72,6 +74,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (!nextHasAccessToken) {
         setUser(null);
         setIsLoading(false);
+        setIsReady(true);
         return;
       }
 
@@ -84,6 +87,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } finally {
         setHasAccessToken(tokenStorage.hasAccessTokenHint());
         setIsLoading(false);
+        setIsReady(true);
       }
     },
     [loadUser],
@@ -93,6 +97,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await authService.logout().catch(() => undefined);
     tokenStorage.removeAuthHint();
     setHasAccessToken(false);
+    setIsReady(true);
     setUser(null);
     window.dispatchEvent(new Event("vita-auth-changed"));
   }, []);
@@ -129,12 +134,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     () => ({
       hasAccessToken,
       isAuthenticated: Boolean(user),
+      isReady,
       isLoading,
       logout,
       refreshUser,
       user,
     }),
-    [hasAccessToken, isLoading, logout, refreshUser, user],
+    [hasAccessToken, isLoading, isReady, logout, refreshUser, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -149,12 +155,19 @@ export const useAuthUser = ({
     throw new Error("useAuthUser must be used within AuthProvider.");
   }
 
-  const { hasAccessToken, isAuthenticated, isLoading, refreshUser, user } =
-    context;
+  const {
+    hasAccessToken,
+    isAuthenticated,
+    isLoading,
+    isReady,
+    refreshUser,
+    user,
+  } = context;
 
   useEffect(() => {
     if (
       !initialHasAccessToken ||
+      isReady ||
       hasAccessToken ||
       isAuthenticated ||
       isLoading
@@ -174,12 +187,13 @@ export const useAuthUser = ({
     initialHasAccessToken,
     isAuthenticated,
     isLoading,
+    isReady,
     refreshUser,
   ]);
 
   return {
     ...context,
-    hasAccessToken: hasAccessToken || initialHasAccessToken,
-    isLoading: isLoading || (initialHasAccessToken && !user),
+    hasAccessToken: hasAccessToken || (!isReady && initialHasAccessToken),
+    isLoading: isLoading || (!isReady && initialHasAccessToken && !user),
   };
 };
