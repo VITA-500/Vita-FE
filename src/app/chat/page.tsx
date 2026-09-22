@@ -2,7 +2,7 @@
 
 import type { MouseEvent } from "react";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Menu } from "lucide-react";
 import { ChatComposer } from "@/features/chat/components/ChatComposer";
 import { ChatMessageList } from "@/features/chat/components/ChatMessageList";
@@ -19,9 +19,11 @@ import type { ChatMessage, ChatMode } from "@/features/chat/types";
 import { useChatTour } from "@/features/chat/hooks/useChatTour";
 import { StoreMapPanel } from "@/features/store/components/StoreMapPanel";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
+import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
 
 const ChatPageContent = () => {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuthUser();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -95,7 +97,31 @@ const ChatPageContent = () => {
     };
   };
 
-  const submitChatPrompt = (prompt: string = chatInput) => {
+  const createStoreGuideMessage = (): ChatMessage => {
+    return {
+      id: `assistant-${Date.now()}`,
+      role: "assistant",
+      content:
+        "가까운 매장은 매장 지도에서 위치 기준으로 확인할 수 있어요. 위치 권한을 허용하면 가까운 매장부터 정렬해서 보여드릴게요.",
+      createdAt: new Date().toISOString(),
+      actions: [
+        {
+          label: "가까운 매장 보기",
+          href: `${routes.chat}?mode=store`,
+        },
+      ],
+    };
+  };
+
+  const createFallbackAssistantMessage = (prompt: string): ChatMessage => {
+    if (/매장|대리점|지점|방문|길찾기/.test(prompt)) {
+      return createStoreGuideMessage();
+    }
+
+    return createAssistantMessage(prompt);
+  };
+
+  const submitChatPrompt = async (prompt: string = chatInput) => {
     const trimmedPrompt = prompt.trim();
 
     if (!trimmedPrompt || chatStatus === "loading") return;
@@ -123,7 +149,7 @@ const ChatPageContent = () => {
     window.setTimeout(() => {
       setMessages((currentMessages) => [
         ...currentMessages,
-        createAssistantMessage(trimmedPrompt),
+        createFallbackAssistantMessage(trimmedPrompt),
       ]);
       setChatStatus("idle");
       window.requestAnimationFrame(() => chatInputRef.current?.focus());
@@ -138,13 +164,21 @@ const ChatPageContent = () => {
     window.requestAnimationFrame(() => chatInputRef.current?.focus());
   };
 
+  const startNewChat = () => {
+    resetChat();
+
+    if (activeMode === "store") {
+      router.replace(routes.chat);
+    }
+  };
+
   const handleNewChat = () => {
     if (!isAuthenticated && !isAuthLoading && hasChatStarted) {
       setIsGuestNewChatDialogOpen(true);
       return;
     }
 
-    resetChat();
+    startNewChat();
   };
 
   return (
@@ -273,7 +307,7 @@ const ChatPageContent = () => {
         <GuestNewChatDialog
           onCancel={() => setIsGuestNewChatDialogOpen(false)}
           onConfirm={() => {
-            resetChat();
+            startNewChat();
             setIsGuestNewChatDialogOpen(false);
           }}
         />

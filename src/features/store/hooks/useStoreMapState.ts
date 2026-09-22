@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useUserLocation } from "@/features/store/hooks/useUserLocation";
 import {
   formatDistance,
@@ -18,6 +18,28 @@ export const useStoreMapState = (stores: StoreLocation[]) => {
     requestLocation,
     status: locationStatus,
   } = useUserLocation();
+
+  useEffect(() => {
+    if (stores.length === 0) {
+      const frameId = window.requestAnimationFrame(() => {
+        setSelectedStoreId("");
+      });
+
+      return () => {
+        window.cancelAnimationFrame(frameId);
+      };
+    }
+
+    if (!stores.some((store) => store.id === selectedStoreId)) {
+      const frameId = window.requestAnimationFrame(() => {
+        setSelectedStoreId(stores[0].id);
+      });
+
+      return () => {
+        window.cancelAnimationFrame(frameId);
+      };
+    }
+  }, [selectedStoreId, stores]);
 
   const sortedStores = useMemo(() => {
     return userLocation
