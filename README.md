@@ -30,6 +30,7 @@ npm run storybook
 검증:
 
 ```bash
+npm run test
 npm run lint
 npm run build
 npm run build-storybook
@@ -55,8 +56,9 @@ src/
     chat/              AI 상담 화면
 
   features/            도메인/기능 단위 코드
-    home/              랜딩 화면 섹션과 체험 상담
-    chat/              채팅 UI, 투어, 채팅 타입
+    auth/              인증 상태, 로그인/회원가입/OAuth API adapter
+    home/              랜딩 화면 섹션
+    chat/              채팅 UI, 투어, 채팅 타입, 비로그인 채팅 UX
     store/             매장 위치 타입, mock 데이터, 카카오맵 로더
 
   shared/              앱 전역에서 재사용되는 코드
@@ -89,14 +91,26 @@ src/
 npm run storybook
 ```
 
+## 문서
+
+- [Architecture](./docs/Architecture.md): FSD-lite 구조, layer 책임, import 규칙
+- [Auth](./docs/Auth.md): 자체 로그인, OAuth, 로그아웃, 인증 상태 관리 흐름
+- [Design System](./docs/DesignSystem.md): 토큰, 공통 UI, 상태 UI 사용 기준
+- [Testing](./docs/Testing.md): 테스트 실행 명령과 자동화/수동 QA 기준
+- [API Contract](./docs/api-contract.md): 백엔드 기능 API 연동 전 계약 메모
+- [Git 브랜치 전략](./docs/Git브랜치전략.md): 브랜치, 커밋, PR 규칙
+
 ## 현재 프론트 범위
 
 - 랜딩 페이지
 - 로그인 화면
+- 회원가입 화면
+- OAuth 콜백 화면
 - AI 상담 화면
+- 비로그인 채팅 진입
 - 모바일/태블릿/데스크톱 반응형
 - 다크 모드
-- 체험 상담 모달
-- 카카오맵 연동 준비
+- 카카오맵 기반 매장 탐색 UI
 - Storybook 기반 공통 UI 확인
-- 백엔드 API 연결 준비
+- 자체 로그인/회원가입/OAuth API 연동
+- 채팅/매장 기능은 Phase 2 백엔드 API 연동 전까지 mock 기반 동작 유지

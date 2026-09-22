@@ -109,7 +109,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
               ref={collapsedSearchRef}
               className="pointer-events-auto absolute top-3 right-3 left-3 md:top-5 md:right-5 md:left-auto md:w-[min(420px,calc(100%-40px))]"
             >
-              <div className="flex h-12 items-center overflow-hidden rounded-sm border-b border-gray-100 bg-white text-left shadow-sm dark:border-white/10 dark:bg-zinc-950">
+              <div className="flex h-12 items-center overflow-hidden rounded-sm text-left shadow-sm">
                 <div className="bg-brand flex h-full w-[132px] shrink-0 items-center text-white md:w-[116px]">
                   {onOpenSidebar && (
                     <button
@@ -136,7 +136,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                     VITA map
                   </button>
                 </div>
-                <label className="flex h-full min-w-0 flex-1 items-center justify-between gap-3 px-4 text-sm font-semibold text-gray-400">
+                <label className="flex h-full min-w-0 flex-1 items-center justify-between gap-3 bg-white px-4 text-sm font-semibold text-gray-400 dark:bg-zinc-950">
                   <input
                     ref={searchInputRef}
                     value={searchQuery}

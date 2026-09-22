@@ -9,7 +9,7 @@
   <text x="92" y="220" fill="#5F6368" font-family="Arial, sans-serif" font-size="13">서비스 이용자</text>
   <rect x="300" y="112" width="200" height="64" rx="14" fill="#FFF6E5"/>
   <text x="334" y="139" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="15" font-weight="700">Landing</text>
-  <text x="334" y="158" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">home feature</text>
+  <text x="334" y="158" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">marketing route</text>
   <rect x="300" y="206" width="200" height="64" rx="14" fill="#FFF6E5"/>
   <text x="334" y="233" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="15" font-weight="700">Login</text>
   <text x="334" y="252" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">auth route</text>
@@ -33,8 +33,8 @@
   <text x="624" y="496" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">매장 지도 링크</text>
   <rect x="854" y="284" width="142" height="84" rx="16" fill="#FFEBC2" stroke="#FDB63D"/>
   <text x="890" y="319" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="17" font-weight="700">BE API</text>
-  <text x="880" y="342" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">localhost:8080</text>
-  <text x="892" y="358" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">연동 준비</text>
+  <text x="882" y="342" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">auth 연동 완료</text>
+  <text x="888" y="358" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">기능 API Phase 2</text>
   <path d="M224 203H300" stroke="#FDB63D" stroke-width="3" stroke-linecap="round"/>
   <path d="M286 193L300 203L286 213" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M224 203C262 203 260 238 300 238" stroke="#FDB63D" stroke-width="3" stroke-linecap="round"/>
