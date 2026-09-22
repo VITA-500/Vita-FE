@@ -733,13 +733,14 @@ export const ChatSidebar = ({
             </div>
           ) : isGuest ? (
             <div className="flex h-12 w-[64px] items-center justify-center">
-              <Link
-                href={routes.login}
-                className="bg-brand flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-black text-white"
-                aria-label="로그인"
-              >
-                V
-              </Link>
+              <ThemeToggleButton
+                className="h-9 w-9"
+                iconSize={18}
+                onMouseEnter={onShowRailTooltip(
+                  isDarkMode ? "라이트 모드" : "다크 모드",
+                )}
+                onMouseLeave={onHideTooltip}
+              />
             </div>
           ) : isAuthenticated && isOpen ? (
             <div className="group relative flex h-12 w-[276px] items-center pr-3 text-left transition-colors">

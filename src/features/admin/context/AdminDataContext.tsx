@@ -18,7 +18,7 @@ import type {
   AdminStoreDetail,
 } from "@/features/admin/types";
 
-type FaqSaveInput = Pick<AdminFaq, "category" | "question"> & {
+type FaqSaveInput = Pick<AdminFaq, "answer" | "category" | "question"> & {
   subcategory?: string;
 };
 

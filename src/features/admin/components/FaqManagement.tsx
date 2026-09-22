@@ -10,6 +10,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
+import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
+import { AdminField } from "@/features/admin/components/AdminField";
 import { FilterDropdown } from "@/features/admin/components/FilterDropdown";
 import { SortDropdown } from "@/features/admin/components/SortDropdown";
 import { useActionStatus } from "@/features/admin/context/ActionStatusContext";
@@ -26,7 +28,7 @@ import { Card } from "@/shared/ui/Card";
 import { ConfirmCheckbox } from "@/shared/ui/ConfirmCheckbox";
 import { Modal } from "@/shared/ui/Modal";
 import { SearchInput } from "@/shared/ui/SearchInput";
-import { Select, type SelectOption } from "@/shared/ui/Select";
+import type { SelectOption } from "@/shared/ui/Select";
 
 const faqCategoryOptions: readonly SelectOption[] = adminFaqCategories.map(
   (category) => ({ label: category, value: category }),
@@ -178,7 +180,133 @@ export const FaqManagement = () => {
         </div>
       </div>
 
-      <Card padding="none" className="overflow-hidden">
+      <div className="space-y-3 md:hidden">
+        {visibleFaqRows.length === 0 ? (
+          <Card>
+            <AdminEmptyState
+              title="조건에 맞는 FAQ가 없습니다."
+              description="검색어와 카테고리 필터를 조정하거나 새 FAQ를 등록해 주세요."
+            />
+          </Card>
+        ) : (
+          paginatedFaqRows.map((faq) => (
+            <Card key={faq.faqId} padding="sm">
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  aria-label={`${faq.faqId}번 FAQ 선택`}
+                  checked={selectedFaqIds.includes(faq.faqId)}
+                  onChange={() => toggleFaq(faq.faqId)}
+                  className="mt-1"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 text-sm font-extrabold text-gray-900 dark:text-white">
+                    {faq.question}
+                  </p>
+                  <div className="text-text-secondary mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold">
+                    <span>{faq.category}</span>
+                    <span>{faq.createdAt.slice(0, 10)}</span>
+                    <span>{faq.status === "ACTIVE" ? "활성" : "비활성"}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 flex justify-end gap-1">
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="h-9 w-9 rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                  aria-label="FAQ 수정"
+                  onClick={() => setEditingFaqId(faq.faqId)}
+                >
+                  <Edit2 size={18} />
+                </Button>
+                {faq.status === "ACTIVE" ? (
+                  <Button
+                    variant="dangerGhost"
+                    size="xs"
+                    className="h-9 w-9 rounded-lg p-0"
+                    aria-label="FAQ 비활성화"
+                    onClick={() => setDeactivatingFaqId(faq.faqId)}
+                  >
+                    <EyeOff size={18} />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="h-9 w-9 rounded-lg p-0 text-green-500 hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-500/10 dark:hover:text-green-300"
+                    aria-label="FAQ 활성화"
+                    onClick={() => setActivatingFaqId(faq.faqId)}
+                  >
+                    <Eye size={18} />
+                  </Button>
+                )}
+                <Button
+                  variant="dangerGhost"
+                  size="xs"
+                  className="h-9 w-9 rounded-lg p-0"
+                  aria-label="FAQ 삭제"
+                  onClick={() => setDeletingFaqId(faq.faqId)}
+                >
+                  <Trash2 size={18} />
+                </Button>
+              </div>
+            </Card>
+          ))
+        )}
+        {visibleFaqRows.length > 0 && (
+          <div className="flex items-center justify-center gap-1 pt-2">
+            <Button
+              variant="ghost"
+              size="xs"
+              className="h-8 w-8 rounded-lg p-0 disabled:pointer-events-none disabled:opacity-30"
+              disabled={currentPage === 1}
+              aria-label="이전 페이지"
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            >
+              <ChevronLeft size={15} />
+            </Button>
+            {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+              (page) => {
+                const isActive = page === currentPage;
+
+                return (
+                  <button
+                    key={page}
+                    type="button"
+                    aria-label={`${page}페이지`}
+                    aria-current={isActive ? "page" : undefined}
+                    onClick={() => setCurrentPage(page)}
+                    className={cn(
+                      "flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-extrabold transition-colors duration-150",
+                      isActive
+                        ? "bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand"
+                        : "text-gray-500 hover:bg-gray-100 hover:text-gray-950 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white",
+                    )}
+                  >
+                    {page}
+                  </button>
+                );
+              },
+            )}
+            <Button
+              variant="ghost"
+              size="xs"
+              className="h-8 w-8 rounded-lg p-0 disabled:pointer-events-none disabled:opacity-30"
+              disabled={currentPage === totalPages}
+              aria-label="다음 페이지"
+              onClick={() =>
+                setCurrentPage((page) => Math.min(totalPages, page + 1))
+              }
+            >
+              <ChevronRight size={15} />
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <Card padding="none" className="hidden overflow-hidden md:block">
         <div
           className={cn(
             "overflow-x-auto",
@@ -212,11 +340,11 @@ export const FaqManagement = () => {
             <tbody className="divide-border-soft divide-y dark:divide-white/10">
               {visibleFaqRows.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={5}
-                    className="px-5 py-10 text-center text-sm font-semibold text-gray-400"
-                  >
-                    조건에 맞는 FAQ가 없습니다.
+                  <td colSpan={5} className="px-5 py-0">
+                    <AdminEmptyState
+                      title="조건에 맞는 FAQ가 없습니다."
+                      description="검색어와 카테고리 필터를 조정하거나 새 FAQ를 등록해 주세요."
+                    />
                   </td>
                 </tr>
               )}
@@ -525,6 +653,7 @@ type FaqFormModalProps = {
   mode: "create" | "edit";
   onClose: () => void;
   onSave?: (input: {
+    answer: string;
     category: AdminFaqCategory;
     question: string;
     subcategory?: string;
@@ -544,11 +673,13 @@ const FaqFormModal = ({
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
+    const answer = String(formData.get("answer") ?? "").trim();
     const category = formData.get("category") as AdminFaqCategory;
     const question = String(formData.get("question") ?? "").trim();
     const subcategory = String(formData.get("subcategory") ?? "").trim();
 
     onSave?.({
+      answer,
       category,
       question,
       subcategory: subcategory || undefined,
@@ -578,97 +709,39 @@ const FaqFormModal = ({
         className="grid gap-5 sm:grid-cols-2"
         onSubmit={handleSubmit}
       >
-        <FaqField
+        <AdminField
           label="카테고리"
           name="category"
-          value={initialValues?.category}
+          defaultValue={initialValues?.category}
           options={faqCategoryOptions}
           placeholder="카테고리 선택"
+          required
         />
-        <FaqField
+        <AdminField
           label="세부 주제"
           name="subcategory"
-          value={initialValues?.subcategory}
+          defaultValue={initialValues?.subcategory}
           placeholder="예: 데이터 로밍, 가족 결합, 유심 재발급"
           description="카테고리 안에서 FAQ를 더 좁혀 구분하는 선택 입력값입니다."
         />
-        <FaqField
+        <AdminField
           label="질문"
           name="question"
-          value={initialValues?.question}
+          defaultValue={initialValues?.question}
           placeholder="예: 해외 로밍 데이터는 언제부터 적용되나요?"
           className="sm:col-span-2"
           required
         />
-        <FaqField
+        <AdminField
           label="답변"
           name="answer"
+          defaultValue={initialValues?.answer}
           placeholder="예: 로밍 요금제는 신청한 시작일 0시부터 적용되며, 국가별 제공량과 요금은 상품에 따라 달라질 수 있습니다."
           className="sm:col-span-2"
           multiline
+          required
         />
       </form>
     </Modal>
   );
 };
-
-type FaqFieldProps = {
-  className?: string;
-  label: string;
-  multiline?: boolean;
-  name: string;
-  options?: readonly SelectOption[];
-  placeholder?: string;
-  required?: boolean;
-  value?: string;
-  description?: string;
-};
-
-const FaqField = ({
-  className,
-  description,
-  label,
-  multiline = false,
-  name,
-  options,
-  placeholder,
-  required = false,
-  value,
-}: FaqFieldProps) => (
-  <label className={className}>
-    <span className="mb-2 block text-xs font-extrabold text-gray-500">
-      {label}
-    </span>
-    {options ? (
-      <Select
-        name={name}
-        options={options}
-        defaultValue={value}
-        placeholder={placeholder}
-        required={required}
-      />
-    ) : multiline ? (
-      <textarea
-        defaultValue={value}
-        name={name}
-        placeholder={placeholder}
-        required={required}
-        rows={5}
-        className="border-border focus:border-brand focus:ring-brand/10 h-auto w-full rounded-xl border bg-white px-3 py-3 text-sm font-semibold text-gray-700 transition outline-none placeholder:font-medium placeholder:text-gray-400 focus:ring-2 dark:border-white/10 dark:bg-white/5 dark:text-gray-100"
-      />
-    ) : (
-      <input
-        defaultValue={value}
-        name={name}
-        placeholder={placeholder}
-        required={required}
-        className="border-border focus:border-brand focus:ring-brand/10 h-10 w-full rounded-xl border bg-white px-3 text-sm font-semibold text-gray-700 transition outline-none placeholder:font-medium placeholder:text-gray-400 focus:ring-2 dark:border-white/10 dark:bg-white/5 dark:text-gray-100"
-      />
-    )}
-    {description && (
-      <span className="mt-2 block text-xs leading-5 font-semibold text-gray-400">
-        {description}
-      </span>
-    )}
-  </label>
-);

@@ -9,6 +9,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
+import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
+import { AdminField } from "@/features/admin/components/AdminField";
 import { SortDropdown } from "@/features/admin/components/SortDropdown";
 import { useActionStatus } from "@/features/admin/context/ActionStatusContext";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
@@ -41,6 +43,29 @@ const toDraft = (store: AdminStoreDetail): StoreDraft => ({
   phone: store.phone ?? "",
   consultServices: store.consultServices.join(", "),
   providedServices: store.providedServices.join(", "),
+});
+
+const parseCoordinate = (value: FormDataEntryValue | string | null) => {
+  const coordinate = Number(String(value ?? "").trim());
+
+  if (!Number.isFinite(coordinate)) {
+    throw new Error("좌표는 숫자로 입력해 주세요.");
+  }
+
+  return coordinate;
+};
+
+const toStoreInput = (
+  draft: StoreDraft,
+): Omit<AdminStoreDetail, "storeId"> => ({
+  name: draft.name,
+  address: draft.address,
+  lat: parseCoordinate(draft.lat),
+  lng: parseCoordinate(draft.lng),
+  businessHours: draft.businessHours,
+  phone: draft.phone,
+  consultServices: toServiceArray(draft.consultServices),
+  providedServices: toServiceArray(draft.providedServices),
 });
 
 export const StoreManagement = () => {
@@ -254,7 +279,66 @@ export const StoreManagement = () => {
             </div>
           </div>
 
-          <Card padding="none" className="overflow-hidden">
+          <div className="space-y-3 md:hidden">
+            {visibleStores.length === 0 ? (
+              <Card>
+                <AdminEmptyState
+                  title="조건에 맞는 매장이 없습니다."
+                  description="검색어를 조정하거나 새 매장을 추가해 주세요."
+                />
+              </Card>
+            ) : (
+              visibleStores.map((store) => (
+                <Card key={store.storeId} padding="sm">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      aria-label={`${store.storeId}번 매장 선택`}
+                      checked={selectedStoreIds.includes(store.storeId)}
+                      onChange={() => toggleStore(store.storeId)}
+                      className="mt-1"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-extrabold text-gray-900 dark:text-white">
+                        {store.name}
+                      </p>
+                      <p className="text-text-secondary mt-2 line-clamp-2 text-xs font-semibold">
+                        {store.address}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      className="h-9 w-9 rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                      aria-label="매장 수정"
+                      onClick={() => setEditingStoreId(store.storeId)}
+                    >
+                      <Edit2 size={18} />
+                    </Button>
+                    <Button
+                      variant="dangerGhost"
+                      size="xs"
+                      className="h-9 w-9 rounded-lg p-0"
+                      aria-label="매장 삭제"
+                      onClick={() => {
+                        void runWithStatus("매장 삭제", () =>
+                          deleteStore(store.storeId),
+                        );
+                        removeStoreFromSelection(store.storeId);
+                      }}
+                    >
+                      <Trash2 size={18} />
+                    </Button>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+
+          <Card padding="none" className="hidden overflow-hidden md:block">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px] table-fixed border-collapse text-sm">
                 <thead className="bg-surface-muted text-xs font-extrabold text-gray-400 dark:bg-white/5">
@@ -277,11 +361,11 @@ export const StoreManagement = () => {
                 <tbody className="divide-border-soft divide-y dark:divide-white/10">
                   {visibleStores.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={4}
-                        className="text-text-secondary px-5 py-10 text-center text-sm font-semibold"
-                      >
-                        조건에 맞는 매장이 없습니다.
+                      <td colSpan={4} className="px-5 py-0">
+                        <AdminEmptyState
+                          title="조건에 맞는 매장이 없습니다."
+                          description="검색어를 조정하거나 새 매장을 추가해 주세요."
+                        />
                       </td>
                     </tr>
                   ) : (
@@ -401,54 +485,70 @@ export const StoreManagement = () => {
               </p>
             ) : (
               <>
-                <StoreField
+                <AdminField
                   label="매장명"
                   value={activeDraft.name}
-                  onChange={(value) => updateActiveDraft("name", value)}
+                  onChange={(event) =>
+                    updateActiveDraft("name", event.target.value)
+                  }
                 />
-                <StoreField
+                <AdminField
                   label="주소"
                   value={activeDraft.address}
-                  onChange={(value) => updateActiveDraft("address", value)}
+                  onChange={(event) =>
+                    updateActiveDraft("address", event.target.value)
+                  }
                 />
 
                 <div className="grid grid-cols-2 gap-3">
-                  <StoreField
+                  <AdminField
                     label="위도"
                     value={activeDraft.lat}
-                    onChange={(value) => updateActiveDraft("lat", value)}
+                    inputMode="decimal"
+                    onChange={(event) =>
+                      updateActiveDraft("lat", event.target.value)
+                    }
+                    step="any"
+                    type="number"
                   />
-                  <StoreField
+                  <AdminField
                     label="경도"
                     value={activeDraft.lng}
-                    onChange={(value) => updateActiveDraft("lng", value)}
+                    inputMode="decimal"
+                    onChange={(event) =>
+                      updateActiveDraft("lng", event.target.value)
+                    }
+                    step="any"
+                    type="number"
                   />
                 </div>
 
-                <StoreField
+                <AdminField
                   label="운영시간"
                   value={activeDraft.businessHours}
-                  onChange={(value) =>
-                    updateActiveDraft("businessHours", value)
+                  onChange={(event) =>
+                    updateActiveDraft("businessHours", event.target.value)
                   }
                 />
-                <StoreField
+                <AdminField
                   label="전화번호"
                   value={activeDraft.phone}
-                  onChange={(value) => updateActiveDraft("phone", value)}
-                />
-                <StoreField
-                  label="상담 가능 업무"
-                  value={activeDraft.consultServices}
-                  onChange={(value) =>
-                    updateActiveDraft("consultServices", value)
+                  onChange={(event) =>
+                    updateActiveDraft("phone", event.target.value)
                   }
                 />
-                <StoreField
+                <AdminField
+                  label="상담 가능 업무"
+                  value={activeDraft.consultServices}
+                  onChange={(event) =>
+                    updateActiveDraft("consultServices", event.target.value)
+                  }
+                />
+                <AdminField
                   label="제공 가능 서비스"
                   value={activeDraft.providedServices}
-                  onChange={(value) =>
-                    updateActiveDraft("providedServices", value)
+                  onChange={(event) =>
+                    updateActiveDraft("providedServices", event.target.value)
                   }
                 />
 
@@ -587,26 +687,17 @@ export const StoreManagement = () => {
             <Button
               size="sm"
               onClick={() => {
-                const count = selectedStores.length;
+                const editedEntries = Object.entries(drafts).filter(
+                  ([storeId]) =>
+                    selectedStoreIds.includes(Number(storeId)) &&
+                    getStoreDetail(Number(storeId)),
+                );
+                const count = editedEntries.length;
                 const payload = Object.fromEntries(
-                  selectedStores.map((store) => {
-                    const draft = drafts[store.storeId] ?? toDraft(store);
-                    return [
-                      store.storeId,
-                      {
-                        name: draft.name,
-                        address: draft.address,
-                        lat: Number(draft.lat),
-                        lng: Number(draft.lng),
-                        businessHours: draft.businessHours,
-                        phone: draft.phone,
-                        consultServices: toServiceArray(draft.consultServices),
-                        providedServices: toServiceArray(
-                          draft.providedServices,
-                        ),
-                      },
-                    ];
-                  }),
+                  editedEntries.map(([storeId, draft]) => [
+                    Number(storeId),
+                    toStoreInput(draft),
+                  ]),
                 );
                 void runWithStatus(`매장 ${count}곳 저장`, () =>
                   saveStores(payload),
@@ -746,8 +837,8 @@ const StoreFormModal = ({
     onSave({
       name: String(formData.get("name") ?? "").trim(),
       address: String(formData.get("address") ?? "").trim(),
-      lat: Number(formData.get("lat")),
-      lng: Number(formData.get("lng")),
+      lat: parseCoordinate(formData.get("lat")),
+      lng: parseCoordinate(formData.get("lng")),
       businessHours: String(formData.get("businessHours") ?? "").trim(),
       phone: String(formData.get("phone") ?? "").trim(),
       consultServices: toServiceArray(formData.get("consultServices")),
@@ -788,8 +879,8 @@ const readStoreForm = (form: HTMLFormElement) => {
   return {
     name: String(formData.get("name") ?? "").trim(),
     address: String(formData.get("address") ?? "").trim(),
-    lat: Number(formData.get("lat")),
-    lng: Number(formData.get("lng")),
+    lat: parseCoordinate(formData.get("lat")),
+    lng: parseCoordinate(formData.get("lng")),
     businessHours: String(formData.get("businessHours") ?? "").trim(),
     phone: String(formData.get("phone") ?? "").trim(),
     consultServices: toServiceArray(formData.get("consultServices")),
@@ -828,7 +919,7 @@ const StoreForm = ({
         className="grid gap-5 sm:grid-cols-2"
         onSubmit={handleSubmit}
       >
-        <StoreField
+        <AdminField
           label="매장명"
           name="name"
           defaultValue={initialStore?.name}
@@ -836,7 +927,7 @@ const StoreForm = ({
           className="sm:col-span-2"
           required
         />
-        <StoreField
+        <AdminField
           label="주소"
           name="address"
           defaultValue={initialStore?.address}
@@ -844,41 +935,47 @@ const StoreForm = ({
           className="sm:col-span-2"
           required
         />
-        <StoreField
+        <AdminField
           label="위도"
           name="lat"
+          inputMode="decimal"
           defaultValue={initialStore ? String(initialStore.lat) : undefined}
           placeholder="37.2660"
           required
+          step="any"
+          type="number"
         />
-        <StoreField
+        <AdminField
           label="경도"
           name="lng"
+          inputMode="decimal"
           defaultValue={initialStore ? String(initialStore.lng) : undefined}
           placeholder="127.0000"
           required
+          step="any"
+          type="number"
         />
-        <StoreField
+        <AdminField
           label="운영시간"
           name="businessHours"
           defaultValue={initialStore?.businessHours}
           placeholder="예: 10:00~20:00"
           required
         />
-        <StoreField
+        <AdminField
           label="전화번호"
           name="phone"
           defaultValue={initialStore?.phone}
           placeholder="예: 02-1234-5678"
         />
-        <StoreField
+        <AdminField
           label="상담 가능 업무"
           name="consultServices"
           defaultValue={initialStore?.consultServices.join(", ")}
           placeholder="휴대폰상담, 요금제변경"
           className="sm:col-span-2"
         />
-        <StoreField
+        <AdminField
           label="제공 가능 서비스"
           name="providedServices"
           defaultValue={initialStore?.providedServices.join(", ")}
@@ -902,43 +999,6 @@ const StoreForm = ({
     </>
   );
 };
-
-type StoreFieldProps = {
-  className?: string;
-  defaultValue?: string;
-  label: string;
-  name?: string;
-  onChange?: (value: string) => void;
-  placeholder?: string;
-  required?: boolean;
-  value?: string;
-};
-
-const StoreField = ({
-  className,
-  defaultValue,
-  label,
-  name,
-  onChange,
-  placeholder,
-  required = false,
-  value,
-}: StoreFieldProps) => (
-  <label className={cn("block", className)}>
-    <span className="mb-2 block text-xs font-extrabold text-gray-500">
-      {label}
-    </span>
-    <input
-      value={value}
-      defaultValue={defaultValue}
-      name={name}
-      placeholder={placeholder}
-      required={required}
-      onChange={onChange ? (event) => onChange(event.target.value) : undefined}
-      className="border-border focus:border-brand focus:ring-brand/10 h-10 w-full rounded-lg border bg-white px-3 text-sm font-semibold text-gray-700 transition outline-none placeholder:font-medium placeholder:text-gray-400 focus:ring-2 dark:border-white/10 dark:bg-white/5 dark:text-gray-100"
-    />
-  </label>
-);
 
 type SummaryRowProps = {
   className?: string;

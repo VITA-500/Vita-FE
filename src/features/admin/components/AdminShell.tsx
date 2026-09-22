@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { useState } from "react";
 import {
   BarChart3,
@@ -12,13 +12,15 @@ import {
   PanelLeftOpen,
   Store,
 } from "lucide-react";
+import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
 import { Logo } from "@/shared/ui/Logo";
+import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
 
 const adminMenus = [
-  { label: "대시보드", href: "/admin", icon: BarChart3 },
-  { label: "FAQ 관리", href: "/admin/faqs", icon: FileQuestion },
-  { label: "매장 관리", href: "/admin/stores", icon: Store },
+  { label: "대시보드", href: routes.admin, icon: BarChart3 },
+  { label: "FAQ 관리", href: routes.adminFaqs, icon: FileQuestion },
+  { label: "매장 관리", href: routes.adminStores, icon: Store },
 ] as const;
 
 type AdminShellProps = {
@@ -31,9 +33,21 @@ export const AdminShell = ({ children }: AdminShellProps) => {
   // 완전히 닫힌 상태로 시작해요. true로 시작하면 모바일 폭에서 배경 딤 처리가
   // 처음부터 opacity-100으로 걸려 있어 화면 전체가 흐릿하게 깨져 보였어요.
   const [isOpen, setIsOpen] = useState(false);
+  const [railTooltip, setRailTooltip] = useState<RailTooltipProps | null>(null);
 
   const isMenuActive = (href: string) =>
-    href === "/admin" ? pathname === href : pathname.startsWith(href);
+    href === routes.admin ? pathname === href : pathname.startsWith(href);
+  const showRailTooltip =
+    (label: string) => (event: MouseEvent<HTMLElement>) => {
+      if (isOpen) return;
+
+      const rect = event.currentTarget.getBoundingClientRect();
+      setRailTooltip({
+        label,
+        y: rect.top + rect.height / 2,
+      });
+    };
+  const hideRailTooltip = () => setRailTooltip(null);
 
   return (
     <main className="bg-surface-warm relative flex min-h-screen text-gray-950 dark:text-white">
@@ -52,16 +66,20 @@ export const AdminShell = ({ children }: AdminShellProps) => {
       <aside
         className={cn(
           "bg-surface-muted fixed inset-y-0 left-0 z-[100] flex overflow-hidden border-r border-gray-200 transition-[width] duration-300 ease-out dark:border-white/10",
-          isOpen ? "w-[220px]" : "w-0 md:w-[64px]",
+          isOpen ? "w-[276px]" : "w-0 md:w-[64px]",
         )}
       >
-        <div className="flex h-full w-[220px] shrink-0 flex-col">
+        <div className="flex h-full w-[276px] shrink-0 flex-col">
           <div className="flex h-16 items-center">
             <div className="flex h-16 w-[64px] shrink-0 items-center justify-center">
               <button
                 type="button"
                 onClick={() => setIsOpen((prev) => !prev)}
-                className="focus-visible:ring-brand/40 flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 transition outline-none hover:bg-white hover:text-gray-950 focus-visible:ring-2 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
+                onMouseEnter={
+                  isOpen ? undefined : showRailTooltip("사이드바 열기")
+                }
+                onMouseLeave={hideRailTooltip}
+                className="focus-visible:ring-brand/40 flex h-10 w-10 items-center justify-center rounded-xl text-gray-500 transition outline-none hover:bg-white hover:text-gray-950 focus-visible:ring-2 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
                 aria-label={isOpen ? "사이드바 닫기" : "사이드바 열기"}
               >
                 {isOpen ? (
@@ -72,25 +90,19 @@ export const AdminShell = ({ children }: AdminShellProps) => {
               </button>
             </div>
 
-            <div
-              className={cn(
-                "flex items-center pr-3",
-                isOpen
-                  ? "pointer-events-auto opacity-100 transition-opacity delay-150 duration-150"
-                  : "pointer-events-none opacity-0",
+            <div className="flex flex-1 items-center pr-3">
+              {isOpen && (
+                <Logo
+                  href="/"
+                  priority
+                  heightClassName="h-8"
+                  alt="VITA 관리자"
+                />
               )}
-            >
-              <Logo href="/" priority heightClassName="h-8" alt="VITA 관리자" />
             </div>
           </div>
 
-          <nav className="flex-1 pt-4 pb-5">
-            {isOpen && (
-              <p className="text-caption mb-3 px-3 font-bold text-gray-400">
-                관리
-              </p>
-            )}
-
+          <nav className="flex-1 overflow-hidden pt-4 pb-5">
             <div className="space-y-1">
               {adminMenus.map((menu) => {
                 const Icon = menu.icon;
@@ -100,8 +112,10 @@ export const AdminShell = ({ children }: AdminShellProps) => {
                   <Link
                     key={menu.href}
                     href={menu.href}
+                    onMouseEnter={showRailTooltip(menu.label)}
+                    onMouseLeave={hideRailTooltip}
                     className={cn(
-                      "group text-body-md relative flex h-11 w-[220px] items-center pr-3 font-bold transition-colors duration-150",
+                      "group relative flex h-11 w-[276px] items-center pr-3 text-sm font-bold transition-colors duration-150",
                       isActive
                         ? "text-brand"
                         : "text-gray-500 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white",
@@ -110,7 +124,7 @@ export const AdminShell = ({ children }: AdminShellProps) => {
                     {isOpen && (
                       <span
                         className={cn(
-                          "absolute inset-y-0 right-2 left-2 rounded-lg transition-colors",
+                          "absolute inset-y-0 right-2 left-2 rounded-xl transition-colors",
                           isActive
                             ? "bg-white dark:bg-white/10"
                             : "group-hover:bg-gray-300/70 dark:group-hover:bg-white/10",
@@ -121,7 +135,7 @@ export const AdminShell = ({ children }: AdminShellProps) => {
                     <span className="relative z-10 flex h-11 w-[64px] shrink-0 items-center justify-center">
                       <span
                         className={cn(
-                          "flex h-10 w-10 items-center justify-center rounded-lg transition",
+                          "flex h-10 w-10 items-center justify-center rounded-xl transition",
                           !isOpen && isActive
                             ? "bg-white text-gray-950 dark:bg-white/10 dark:text-white"
                             : !isOpen
@@ -149,7 +163,7 @@ export const AdminShell = ({ children }: AdminShellProps) => {
       <div
         className={cn(
           "min-w-0 flex-1 transition-[padding-left] duration-300 ease-out",
-          isOpen ? "pl-0 md:pl-[220px]" : "pl-0 md:pl-[64px]",
+          isOpen ? "pl-0 md:pl-[276px]" : "pl-0 md:pl-[64px]",
         )}
       >
         <div className="mx-auto w-full max-w-[1180px] px-5 py-8 sm:px-8 lg:px-12 lg:py-12">
@@ -165,6 +179,7 @@ export const AdminShell = ({ children }: AdminShellProps) => {
           {children}
         </div>
       </div>
+      {railTooltip && <RailTooltip {...railTooltip} />}
     </main>
   );
 };

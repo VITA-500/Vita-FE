@@ -15,6 +15,12 @@ export const faqRows: AdminFaq[] = Array.from({ length: 9 }, (_, index) => ({
       : index % 3 === 1
         ? "유심 재발급은 어떤 서류가 필요한가요?"
         : "해외 로밍 요금제는 언제부터 적용되나요?",
+  answer:
+    index % 3 === 0
+      ? "가족 결합 할인과 멤버십 혜택은 상품 조건에 따라 중복 적용 여부가 달라질 수 있습니다."
+      : index % 3 === 1
+        ? "유심 재발급 시 본인 확인을 위한 신분증과 가입자 정보 확인이 필요합니다."
+        : "해외 로밍 요금제는 신청한 시작일 기준으로 적용되며 국가별 제공량과 요금이 다를 수 있습니다.",
   category: adminFaqCategories[index % adminFaqCategories.length],
   subcategory: index % 2 === 0 ? "기본" : "상세",
   status: index === 7 ? "INACTIVE" : "ACTIVE",

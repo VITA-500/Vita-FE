@@ -11,10 +11,7 @@ import { ChatSearchDialog } from "@/features/chat/components/ChatSearchDialog";
 import { GuestNewChatDialog } from "@/features/chat/components/GuestNewChatDialog";
 import { PromptSuggestions } from "@/features/chat/components/PromptSuggestions";
 import { mockChatAnswers } from "@/features/chat/constants";
-import {
-  RailTooltip,
-  type RailTooltipProps,
-} from "@/features/chat/components/RailTooltip";
+import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
 import type { ChatMessage, ChatMode } from "@/features/chat/types";
 import { useChatTour } from "@/features/chat/hooks/useChatTour";
 import { StoreMapPanel } from "@/features/store/components/StoreMapPanel";

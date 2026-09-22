@@ -51,6 +51,13 @@ Feature UI가 두 곳 이상에서 반복되기 전까지는 `shared/ui`로 올�
 - 단일 입력 필드는 `TextField`를 우선 사용한다.
 - 검색 목적 입력은 `SearchInput`을 우선 사용한다.
 - select UI는 native select wrapping이 필요한 경우 `Select`를 사용한다.
+- feature 전용 form field가 반복되면 먼저 feature 내부 공통 컴포넌트로 묶고, 두 feature 이상에서 반복될 때 `shared/ui`로 올린다.
+
+### Admin
+
+- 관리자 화면은 `Button`, `Card`, `Modal`, `SearchInput`, `Select`를 우선 사용한다.
+- 삭제/비활성화처럼 되돌리기 어려운 액션은 `ConfirmCheckbox`와 danger button variant를 함께 사용한다.
+- 관리자 라우트는 `shared/constants/routes`를 통해 참조한다.
 
 ### Feedback
 

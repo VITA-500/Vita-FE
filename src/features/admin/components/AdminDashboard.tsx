@@ -3,6 +3,7 @@
 import { ChevronRight } from "lucide-react";
 import { popularFaqTags } from "@/features/admin/constants/adminData";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
+import { routes } from "@/shared/constants/routes";
 import { ButtonLink } from "@/shared/ui/Button";
 import { Card, CardContent, CardHeader } from "@/shared/ui/Card";
 import { StatCard } from "@/shared/ui/StatCard";
@@ -113,7 +114,7 @@ export const AdminDashboard = () => {
             <CardHeader title="빠른 관리 바로가기" />
             <CardContent className="space-y-3">
               <ButtonLink
-                href="/admin/faqs"
+                href={routes.adminFaqs}
                 variant="secondary"
                 size="sm"
                 fullWidth
@@ -122,7 +123,7 @@ export const AdminDashboard = () => {
                 FAQ 관리
               </ButtonLink>
               <ButtonLink
-                href="/admin/stores"
+                href={routes.adminStores}
                 size="sm"
                 fullWidth
                 rightIcon={<ChevronRight size={16} />}

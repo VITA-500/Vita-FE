@@ -54,8 +54,10 @@ src/
     (marketing)/       랜딩 페이지 레이아웃
     (service)/         서비스 화면 레이아웃
     chat/              AI 상담 화면
+    admin/             관리자 대시보드, FAQ/매장 관리 화면
 
   features/            도메인/기능 단위 코드
+    admin/             관리자 대시보드, FAQ/매장 관리 mock 상태와 UI
     auth/              인증 상태, 로그인/회원가입/OAuth API adapter
     home/              랜딩 화면 섹션
     chat/              채팅 UI, 투어, 채팅 타입, 비로그인 채팅 UX
@@ -83,7 +85,8 @@ src/
 공통 UI는 `src/shared/ui`에서 관리합니다. 버튼, 카드, 모달, 검색 입력처럼 여러 화면에서 반복되는 컴포넌트와 FAQ/요금제/안내 화면에 활용할 수 있는 정보형 컴포넌트를 포함합니다.
 
 - `Button`: variant, size, loading, icon, fullWidth 옵션 지원
-- `Card`, `Modal`, `SearchInput`: 관리자 화면과 서비스 화면에서 재사용할 수 있는 기본 UI
+- `Card`, `Modal`, `SearchInput`, `Select`, `TextField`: 관리자 화면과 서비스 화면에서 재사용할 수 있는 기본 UI
+- `AnimatedLockIcon`, `ConfirmCheckbox`: 관리자 위험 액션 확인 UI
 - `Accordion`, `PlanCard`, `InfoTable`, `ChecklistCard`, `GuidedStepFlow`, `StepGuideCard`, `WarningNotice`: FAQ, 요금제, 절차 안내 등에 활용할 수 있는 정보형 UI
 - 주요 공통 컴포넌트는 Storybook stories로 확인 가능
 
@@ -108,9 +111,10 @@ npm run storybook
 - OAuth 콜백 화면
 - AI 상담 화면
 - 비로그인 채팅 진입
+- 관리자 대시보드, FAQ 관리, 매장 관리 화면
 - 모바일/태블릿/데스크톱 반응형
 - 다크 모드
 - 카카오맵 기반 매장 탐색 UI
 - Storybook 기반 공통 UI 확인
 - 자체 로그인/회원가입/OAuth API 연동
-- 채팅/매장 기능은 Phase 2 백엔드 API 연동 전까지 mock 기반 동작 유지
+- 채팅/매장/관리자 기능은 Phase 2 백엔드 API 연동 전까지 mock 기반 동작 유지

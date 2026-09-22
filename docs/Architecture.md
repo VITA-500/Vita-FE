@@ -45,6 +45,7 @@ Feature에 강하게 묶인 UI는 `features/{feature}/components`에 둔다.
 
 현재 feature slice:
 
+- `admin`: 관리자 대시보드, FAQ/매장 관리 UI, mock 기반 관리 상태
 - `auth`: 인증 상태, 로그인/회원가입/OAuth service, auth provider
 - `home`: 랜딩 화면 섹션
 - `chat`: 채팅 UI, 사이드바, 검색, 비로그인 채팅 UX
@@ -59,5 +60,5 @@ Feature에 강하게 묶인 UI는 `features/{feature}/components`에 둔다.
 
 ## Current Phase Boundary
 
-- Phase 1: 인증, OAuth, 비로그인 UX, 핵심 화면 UI, mock 기반 동작, 자동화 테스트 기반
+- Phase 1: 인증, OAuth, 비로그인 UX, 핵심 화면 UI, 관리자 화면 뼈대, mock 기반 동작, 자동화 테스트 기반
 - Phase 2: 채팅 세션, 메시지, AI 응답, 매장, FAQ 등 실제 백엔드 기능 API 연동

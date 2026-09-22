@@ -47,5 +47,5 @@
   <path d="M778 326H854" stroke="#FDB63D" stroke-width="3" stroke-linecap="round"/>
   <path d="M840 316L854 326L840 336" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
   <rect x="64" y="530" width="932" height="42" rx="12" fill="#F5F5F5"/>
-  <text x="92" y="556" fill="#5F6368" font-family="Arial, sans-serif" font-size="13">관리자, 마이페이지, 임시 mockup 화면은 아직 dev/main 기준 README 범위에서 제외</text>
+  <text x="92" y="556" fill="#5F6368" font-family="Arial, sans-serif" font-size="13">관리자 화면은 dev 기준 포함, 채팅/매장/관리자 기능 API는 Phase 2에서 실제 연동</text>
 </svg>
