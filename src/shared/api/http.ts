@@ -28,6 +28,8 @@ export const requestJson = async <T>(
   options: RequestOptions = {},
 ): Promise<T> => {
   const { baseUrl, headers, timeoutMs, ...requestOptions } = options;
+  const shouldSetJsonContentType =
+    Boolean(requestOptions.body) || requestOptions.method !== undefined;
   const controller = timeoutMs ? new AbortController() : null;
   const timeoutId = controller
     ? globalThis.setTimeout(() => controller.abort(), timeoutMs)
@@ -39,7 +41,9 @@ export const requestJson = async <T>(
       ...requestOptions,
       signal: controller?.signal ?? requestOptions.signal,
       headers: {
-        "Content-Type": "application/json",
+        ...(shouldSetJsonContentType
+          ? { "Content-Type": "application/json" }
+          : {}),
         ...headers,
       },
     });
