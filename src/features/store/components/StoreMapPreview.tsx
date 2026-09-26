@@ -1,21 +1,73 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useEffect, useRef } from "react";
-import { MapPin, Navigation } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { useKakaoMapReady } from "@/features/store/hooks/useKakaoMapReady";
 import type { UserLocation } from "@/features/store/lib/geo";
-import { getKakaoDirectionUrl } from "@/features/store/lib/mapLinks";
 import type { StoreLocation } from "@/features/store/types";
 import { cn } from "@/shared/lib/cn";
-import { ButtonLink } from "@/shared/ui/Button";
 
-const markerPositions = [
-  "left-[47%] top-[39%]",
-  "left-[34%] top-[58%]",
-  "left-[63%] top-[29%]",
-] as const;
+const clampPercent = (value: number) => Math.min(88, Math.max(12, value));
+
+const getFallbackMarkerStyle = (
+  store: StoreLocation,
+  stores: StoreLocation[],
+  index: number,
+): CSSProperties => {
+  const lats = stores.map((item) => item.lat);
+  const lngs = stores.map((item) => item.lng);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+  const latRange = maxLat - minLat;
+  const lngRange = maxLng - minLng;
+  const duplicateOffset = (index % 5) * 1.8;
+
+  return {
+    left: `${clampPercent(
+      lngRange === 0
+        ? 50 + duplicateOffset
+        : 12 + ((store.lng - minLng) / lngRange) * 76,
+    )}%`,
+    top: `${clampPercent(
+      latRange === 0
+        ? 50 + duplicateOffset
+        : 88 - ((store.lat - minLat) / latRange) * 76,
+    )}%`,
+  };
+};
+
+type MapPoint = {
+  lat: number;
+  lng: number;
+};
+
+type KakaoMapEventApi = {
+  addListener: (
+    target: KakaoMap,
+    eventName: "dragend",
+    callback: () => void,
+  ) => void;
+  removeListener: (
+    target: KakaoMap,
+    eventName: "dragend",
+    callback: () => void,
+  ) => void;
+};
+
+type KakaoMapWithCenter = KakaoMap & {
+  getCenter: () => {
+    getLat: () => number;
+    getLng: () => number;
+  };
+};
+
+type SearchPointRef = MapPoint | null | undefined;
 
 type MapOverlayHandle = {
+  marker?: KakaoMarker;
   overlay: KakaoCustomOverlay;
   cleanup?: () => void;
 };
@@ -26,7 +78,10 @@ type StoreMapPreviewProps = {
   selectedStore?: StoreLocation;
   selectedStoreId: string;
   stores: StoreLocation[];
+  searchPoint?: MapPoint | null;
   userLocation?: UserLocation | null;
+  onMapPointSelect?: (point: MapPoint) => void;
+  onSearchFromMapPoint?: () => void;
   onSelectStore: (storeId: string) => void;
 };
 
@@ -36,13 +91,17 @@ export const StoreMapPreview = ({
   onSelectStore,
   selectedStore,
   selectedStoreId,
+  searchPoint,
   stores,
   userLocation,
+  onMapPointSelect,
+  onSearchFromMapPoint,
 }: StoreMapPreviewProps) => {
   const isKakaoMapReady = useKakaoMapReady();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<KakaoMap | null>(null);
   const overlayRefs = useRef<MapOverlayHandle[]>([]);
+  const searchPointRef = useRef<SearchPointRef>(undefined);
 
   useEffect(() => {
     if (!isKakaoMapReady || !mapContainerRef.current || !window.kakao?.maps) {
@@ -52,22 +111,45 @@ export const StoreMapPreview = ({
     const kakaoMaps = window.kakao.maps;
     const centerStore = selectedStore ?? stores[0];
 
-    if (!centerStore) {
+    if (!searchPoint && !centerStore) {
       return;
     }
 
-    const center = new kakaoMaps.LatLng(centerStore.lat, centerStore.lng);
+    const center = searchPoint
+      ? new kakaoMaps.LatLng(searchPoint.lat, searchPoint.lng)
+      : new kakaoMaps.LatLng(centerStore.lat, centerStore.lng);
 
+    const isNewMap = mapRef.current === null;
     const map =
       mapRef.current ??
       new kakaoMaps.Map(mapContainerRef.current, {
         center,
         level: 4,
       });
+    const shouldRecenterBySearchPoint =
+      Boolean(searchPoint) && searchPointRef.current !== searchPoint;
 
     mapRef.current = map;
-    map.setCenter(center);
-    map.setLevel(4);
+    searchPointRef.current = searchPoint;
+
+    if (isNewMap || shouldRecenterBySearchPoint) {
+      map.setCenter(center);
+      map.setLevel(4);
+    }
+
+    const mapEventApi = kakaoMaps.event as unknown as KakaoMapEventApi;
+    const handleMapDragEnd = () => {
+      const movedCenter = (map as KakaoMapWithCenter).getCenter();
+
+      onMapPointSelect?.({
+        lat: movedCenter.getLat(),
+        lng: movedCenter.getLng(),
+      });
+    };
+
+    if (onMapPointSelect) {
+      mapEventApi.addListener(map, "dragend", handleMapDragEnd);
+    }
 
     overlayRefs.current.forEach(({ cleanup, overlay }) => {
       cleanup?.();
@@ -75,6 +157,12 @@ export const StoreMapPreview = ({
     });
     overlayRefs.current = stores.map((store) => {
       const isSelected = selectedStoreId === store.id;
+      const position = new kakaoMaps.LatLng(store.lat, store.lng);
+      const nativeMarker = new kakaoMaps.Marker({
+        map,
+        position,
+        title: store.name,
+      });
       const marker = document.createElement("button");
       marker.type = "button";
       marker.textContent = store.name.replace("VITA ", "");
@@ -92,13 +180,15 @@ export const StoreMapPreview = ({
       marker.addEventListener("click", handleMarkerClick);
 
       return {
+        marker: nativeMarker,
         cleanup: () => {
           marker.removeEventListener("click", handleMarkerClick);
+          nativeMarker.setMap(null);
         },
         overlay: new kakaoMaps.CustomOverlay({
           content: marker,
           map,
-          position: new kakaoMaps.LatLng(store.lat, store.lng),
+          position,
           xAnchor: 0.5,
           yAnchor: 1,
           zIndex: isSelected ? 20 : 10,
@@ -124,6 +214,10 @@ export const StoreMapPreview = ({
     }
 
     return () => {
+      if (onMapPointSelect) {
+        mapEventApi.removeListener(map, "dragend", handleMapDragEnd);
+      }
+
       overlayRefs.current.forEach(({ cleanup, overlay }) => {
         cleanup?.();
         overlay.setMap(null);
@@ -133,8 +227,11 @@ export const StoreMapPreview = ({
   }, [
     isKakaoMapReady,
     onSelectStore,
+    onMapPointSelect,
+    onSearchFromMapPoint,
     selectedStore,
     selectedStoreId,
+    searchPoint,
     stores,
     userLocation,
   ]);
@@ -159,15 +256,10 @@ export const StoreMapPreview = ({
         </>
       )}
 
-      <div
-        className={cn(
-          "relative h-full min-h-[420px] p-5 sm:p-7",
-          isKakaoMapReady && "pointer-events-none",
-        )}
-      >
+      <div className="pointer-events-none relative h-full min-h-[420px] p-5 sm:p-7">
         {!isKakaoMapReady && (
           <>
-            <div className="bg-brand/15 absolute top-[17%] left-[14%] h-24 w-24 rounded-full blur-2xl" />
+            <div className="bg-brand/15 pointer-events-none absolute top-[17%] left-[14%] h-24 w-24 rounded-full blur-2xl" />
             <div className="absolute right-[16%] bottom-[18%] h-32 w-32 rounded-full bg-orange-300/20 blur-3xl" />
           </>
         )}
@@ -183,12 +275,12 @@ export const StoreMapPreview = ({
                 onClick={() => onSelectStore(store.id)}
                 aria-pressed={isSelected}
                 className={cn(
-                  "absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full border px-3 py-2 text-xs font-extrabold shadow-sm transition",
-                  markerPositions[index % markerPositions.length],
+                  "pointer-events-auto absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full border px-3 py-2 text-xs font-extrabold shadow-sm transition",
                   isSelected
                     ? "border-brand bg-brand text-white"
                     : "text-text-secondary hover:border-brand/50 hover:text-text-primary border-white bg-white dark:border-white/15 dark:bg-zinc-900 dark:text-gray-200",
                 )}
+                style={getFallbackMarkerStyle(store, stores, index)}
               >
                 <MapPin size={15} />
                 {store.name.replace("VITA ", "")}
@@ -196,32 +288,14 @@ export const StoreMapPreview = ({
             );
           })}
 
-        {selectedStore && !isFullBleed && (
-          <div className="border-border pointer-events-auto absolute right-6 bottom-6 left-6 rounded-3xl border bg-white/90 p-4 shadow-sm backdrop-blur dark:border-white/10 dark:bg-zinc-950/86">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-brand text-xs font-bold">추천 매장</p>
-                <p className="text-text-primary mt-1 text-base font-extrabold dark:text-white">
-                  {selectedStore.name}
-                </p>
-                <p className="text-text-secondary mt-1 text-xs leading-5 dark:text-gray-400">
-                  {selectedStore.address}
-                </p>
-              </div>
-
-              <ButtonLink
-                href={getKakaoDirectionUrl(selectedStore)}
-                target="_blank"
-                rel="noreferrer"
-                variant="primary"
-                size="sm"
-                className="rounded-full"
-              >
-                <Navigation size={16} />
-                길찾기
-              </ButtonLink>
-            </div>
-          </div>
+        {searchPoint && onSearchFromMapPoint && (
+          <button
+            type="button"
+            onClick={onSearchFromMapPoint}
+            className="bg-brand hover:bg-brand-hover pointer-events-auto absolute bottom-6 left-1/2 z-30 h-10 -translate-x-1/2 rounded-full px-5 text-sm font-extrabold whitespace-nowrap text-white shadow-lg transition"
+          >
+            현 위치에서 검색
+          </button>
         )}
       </div>
     </section>
