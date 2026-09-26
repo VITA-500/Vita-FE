@@ -5,13 +5,11 @@ import {
   CalendarCheck,
   Check,
   ChevronDown,
-  ChevronUp,
   LocateFixed,
   LocateOff,
   Menu,
   Navigation,
   Search,
-  Store,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { StoreMapPreview } from "@/features/store/components/StoreMapPreview";
@@ -47,46 +45,6 @@ type ServiceFilterOption = {
   label: string;
   value: string;
 };
-
-const SelectedStoreTool = ({
-  isCollapsed,
-  isLoading,
-  isWaitingForPinSelection,
-  onReserve,
-  onToggleCollapse,
-  store,
-}: {
-  isCollapsed: boolean;
-  isLoading: boolean;
-  isWaitingForPinSelection: boolean;
-  onReserve: (store: StoreLocation) => void;
-  onToggleCollapse: () => void;
-  store?: StoreLocation;
-}) => (
-  <div className="group relative h-12 min-w-0">
-    <button
-      type="button"
-      className="border-border text-brand hover:bg-brand-soft focus-visible:ring-brand/40 dark:hover:bg-brand/10 flex h-12 w-12 items-center justify-center rounded-sm bg-white/95 shadow-sm backdrop-blur transition focus-visible:ring-2 focus-visible:outline-none sm:w-[176px] sm:justify-start sm:gap-2 sm:px-4 lg:w-[160px] dark:border-white/10 dark:bg-zinc-950/92"
-      aria-label="선택한 매장 정보 보기"
-    >
-      <Store size={20} className="shrink-0" />
-      <span className="hidden min-w-0 flex-1 text-left text-sm font-extrabold text-gray-700 sm:block dark:text-gray-200">
-        <span className="block truncate">{store?.name ?? "선택한 매장"}</span>
-      </span>
-    </button>
-
-    <div className="absolute top-full right-0 z-20 mt-2 hidden w-[min(320px,calc(100vw-24px))] group-focus-within:block group-hover:block sm:right-auto sm:left-0">
-      <StoreInfoCard
-        isCollapsed={isCollapsed}
-        isLoading={isLoading}
-        isWaitingForPinSelection={isWaitingForPinSelection}
-        onReserve={onReserve}
-        onToggleCollapse={onToggleCollapse}
-        store={store}
-      />
-    </div>
-  </div>
-);
 
 const MultiFilterDropdown = ({
   "aria-label": ariaLabel,
@@ -228,19 +186,15 @@ const ServiceBadges = ({
   );
 };
 
-const StoreInfoCard = ({
-  isCollapsed,
+const StoreInfoBubble = ({
   isLoading,
   isWaitingForPinSelection,
   onReserve,
-  onToggleCollapse,
   store,
 }: {
-  isCollapsed: boolean;
   isLoading: boolean;
   isWaitingForPinSelection: boolean;
   onReserve: (store: StoreLocation) => void;
-  onToggleCollapse: () => void;
   store?: StoreLocation;
 }) => {
   const title = isLoading
@@ -248,126 +202,100 @@ const StoreInfoCard = ({
     : isWaitingForPinSelection || !store
       ? "매장 선택"
       : "선택한 매장";
-  const Icon = isCollapsed ? ChevronDown : ChevronUp;
 
   const header = (
-    <div className="flex items-center justify-between gap-3">
-      <div className="min-w-0">
-        <p className="text-brand text-xs font-bold">{title}</p>
-        {isCollapsed && (
-          <p className="mt-1 truncate text-sm font-extrabold text-gray-950 dark:text-white">
-            {store?.name ?? "지도 위 매장 핀을 선택해 주세요"}
-          </p>
-        )}
-      </div>
-      <button
-        type="button"
-        onClick={onToggleCollapse}
-        className="hover:bg-surface-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 transition hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white"
-        aria-label={isCollapsed ? "정보 카드 펼치기" : "정보 카드 접기"}
-        aria-expanded={!isCollapsed}
-      >
-        <Icon size={18} />
-      </button>
+    <div className="min-w-0">
+      <p className="text-brand text-xs font-bold">{title}</p>
     </div>
   );
 
   if (isLoading) {
     return (
-      <div className="border-border w-full rounded-sm border bg-white/95 p-4 text-sm shadow-sm backdrop-blur dark:border-white/10 dark:bg-zinc-950/92">
+      <div className="border-border relative w-full rounded-sm border bg-white/95 p-4 text-sm shadow-lg backdrop-blur after:absolute after:bottom-[-7px] after:left-1/2 after:h-3.5 after:w-3.5 after:-translate-x-1/2 after:rotate-45 after:border-r after:border-b after:border-border after:bg-white/95 dark:border-white/10 dark:bg-zinc-950/92 dark:after:border-white/10 dark:after:bg-zinc-950/92">
         {header}
-        {!isCollapsed && (
-          <div className="mt-3 flex items-center gap-3">
-            <span
-              aria-hidden="true"
-              className="border-brand size-4 animate-spin rounded-full border-2 border-t-transparent"
-            />
-            <div>
-              <p className="font-extrabold text-gray-950 dark:text-white">
-                근처 매장을 불러오는 중
-              </p>
-              <p className="text-text-secondary mt-1 text-xs font-semibold">
-                새 기준 위치 주변 매장을 찾고 있어요.
-              </p>
-            </div>
+        <div className="mt-3 flex items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="border-brand size-4 animate-spin rounded-full border-2 border-t-transparent"
+          />
+          <div>
+            <p className="font-extrabold text-gray-950 dark:text-white">
+              근처 매장을 불러오는 중
+            </p>
+            <p className="text-text-secondary mt-1 text-xs font-semibold">
+              새 기준 위치 주변 매장을 찾고 있어요.
+            </p>
           </div>
-        )}
+        </div>
       </div>
     );
   }
 
   if (isWaitingForPinSelection || !store) {
     return (
-      <div className="border-border w-full rounded-sm border bg-white/95 p-4 text-sm shadow-sm backdrop-blur dark:border-white/10 dark:bg-zinc-950/92">
+      <div className="border-border relative w-full rounded-sm border bg-white/95 p-4 text-sm shadow-lg backdrop-blur after:absolute after:bottom-[-7px] after:left-1/2 after:h-3.5 after:w-3.5 after:-translate-x-1/2 after:rotate-45 after:border-r after:border-b after:border-border after:bg-white/95 dark:border-white/10 dark:bg-zinc-950/92 dark:after:border-white/10 dark:after:bg-zinc-950/92">
         {header}
-        {!isCollapsed && (
-          <div className="mt-3">
-            <p className="font-extrabold text-gray-950 dark:text-white">
-              매장 핀을 선택해 주세요
-            </p>
-            <p className="text-text-secondary mt-1 text-xs leading-5 font-semibold">
-              지도 위 매장 핀을 누르면 운영시간과 예약 정보를 확인할 수 있어요.
-            </p>
-          </div>
-        )}
+        <div className="mt-3">
+          <p className="font-extrabold text-gray-950 dark:text-white">
+            매장 핀을 선택해 주세요
+          </p>
+          <p className="text-text-secondary mt-1 text-xs leading-5 font-semibold">
+            지도 위 매장 핀을 누르면 운영시간과 예약 정보를 확인할 수 있어요.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="border-border w-full rounded-sm border bg-white/95 p-4 text-left text-sm shadow-sm backdrop-blur dark:border-white/10 dark:bg-zinc-950/92">
+    <div className="border-border relative w-full rounded-sm border bg-white/95 p-4 text-left text-sm shadow-lg backdrop-blur after:absolute after:bottom-[-7px] after:left-1/2 after:h-3.5 after:w-3.5 after:-translate-x-1/2 after:rotate-45 after:border-r after:border-b after:border-border after:bg-white/95 dark:border-white/10 dark:bg-zinc-950/92 dark:after:border-white/10 dark:after:bg-zinc-950/92">
       {header}
-      {!isCollapsed && (
-        <div className="mt-3">
-          <p className="text-base font-extrabold text-gray-950 dark:text-white">
-            {store.name}
-          </p>
+      <div className="mt-3">
+        <p className="text-base font-extrabold text-gray-950 dark:text-white">
+          {store.name}
+        </p>
 
-          <p className="text-text-secondary mt-1 text-xs leading-5 font-semibold">
-            {store.address}
+        <p className="text-text-secondary mt-1 text-xs leading-5 font-semibold">
+          {store.address}
+        </p>
+        {store.phone && (
+          <p className="text-text-secondary mt-2 text-xs font-semibold">
+            {store.phone}
           </p>
-          {store.phone && (
-            <p className="text-text-secondary mt-2 text-xs font-semibold">
-              {store.phone}
-            </p>
-          )}
-          {store.businessHours && (
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold">
-              <span className="text-text-secondary">
-                운영시간 {store.businessHours}
-              </span>
-            </div>
-          )}
-          <ServiceBadges title="상담 가능" services={store.consultServices} />
-          <ServiceBadges
-            title="제공 서비스"
-            services={store.providedServices}
-          />
-
-          <div className="mt-4 flex flex-wrap justify-end gap-2">
-            <ButtonLink
-              href={getKakaoDirectionUrl(store)}
-              target="_blank"
-              rel="noreferrer"
-              variant="primary"
-              size="sm"
-              className="rounded-full"
-            >
-              <Navigation size={16} />
-              길찾기
-            </ButtonLink>
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-full"
-              onClick={() => onReserve(store)}
-            >
-              <CalendarCheck size={16} />
-              예약하기
-            </Button>
+        )}
+        {store.businessHours && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold">
+            <span className="text-text-secondary">
+              운영시간 {store.businessHours}
+            </span>
           </div>
+        )}
+        <ServiceBadges title="상담 가능" services={store.consultServices} />
+        <ServiceBadges title="제공 서비스" services={store.providedServices} />
+
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <ButtonLink
+            href={getKakaoDirectionUrl(store)}
+            target="_blank"
+            rel="noreferrer"
+            variant="primary"
+            size="sm"
+            className="rounded-full"
+          >
+            <Navigation size={16} />
+            길찾기
+          </ButtonLink>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            onClick={() => onReserve(store)}
+          >
+            <CalendarCheck size={16} />
+            예약하기
+          </Button>
         </div>
-      )}
+      </div>
     </div>
   );
 };
@@ -375,12 +303,13 @@ const StoreInfoCard = ({
 export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const [stores, setStores] = useState(() => storeService.getNearbyStores());
   const [, setIsStorePanelOpen] = useState(false);
+  const [focusPoint, setFocusPoint] = useState<MapSearchPoint | null>(null);
   const [isSearchHistoryOpen, setIsSearchHistoryOpen] = useState(false);
   const [searchPoint, setSearchPoint] = useState<MapSearchPoint | null>(null);
   const [isMapSearchLoading, setIsMapSearchLoading] = useState(false);
   const [isWaitingForPinSelection, setIsWaitingForPinSelection] =
     useState(false);
-  const [isInfoCardCollapsed, setIsInfoCardCollapsed] = useState(false);
+  const [hasSelectedStoreInfo, setHasSelectedStoreInfo] = useState(false);
   const [reservationStore, setReservationStore] =
     useState<StoreLocation | null>(null);
   const [isToastBackdropVisible, setIsToastBackdropVisible] = useState(false);
@@ -462,7 +391,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     if (options?.showLoadingCard) {
       setIsMapSearchLoading(true);
       setIsWaitingForPinSelection(false);
-      setIsInfoCardCollapsed(false);
+      setHasSelectedStoreInfo(false);
     }
 
     storeService
@@ -471,6 +400,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         if (isCurrentRequest) {
           setStores(nearbyStores);
           if (options?.showLoadingCard) {
+            setHasSelectedStoreInfo(false);
             setSelectedStoreId("");
             setIsWaitingForPinSelection(true);
           }
@@ -480,6 +410,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         if (isCurrentRequest) {
           setStores(storeService.getNearbyStores());
           if (options?.showLoadingCard) {
+            setHasSelectedStoreInfo(false);
             setSelectedStoreId("");
             setIsWaitingForPinSelection(true);
           }
@@ -496,10 +427,24 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     };
   };
 
-  const handleStoreSelect = (storeId: string) => {
+  const handleStoreSelect = (
+    storeId: string,
+    options?: { focusMap?: boolean },
+  ) => {
+    setHasSelectedStoreInfo(true);
     setIsWaitingForPinSelection(false);
-    setIsInfoCardCollapsed(false);
     setSelectedStoreId(storeId);
+
+    if (options?.focusMap) {
+      const nextStore =
+        categoryDisplayStores.find((store) => store.id === storeId) ??
+        categoryStores.find((store) => store.id === storeId);
+
+      if (nextStore) {
+        setFocusPoint({ lat: nextStore.lat, lng: nextStore.lng });
+        setSearchPoint(null);
+      }
+    }
   };
 
   const handleReservationConfirm = () => {
@@ -514,6 +459,10 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     window.setTimeout(() => {
       setIsToastBackdropVisible(false);
     }, 1700);
+  };
+
+  const closeSelectedStoreInfo = () => {
+    setHasSelectedStoreInfo(false);
   };
 
   useEffect(() => {
@@ -582,13 +531,28 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     <div className="relative h-full min-h-[640px] overflow-hidden">
       <StoreMapPreview
         className="absolute inset-0"
+        focusPoint={focusPoint}
         isFullBleed
-        selectedStore={categorySelectedStore}
-        selectedStoreId={categorySelectedStoreId}
+        isSearchFromMapPointLoading={isMapSearchLoading}
+        selectedStore={hasSelectedStoreInfo ? categorySelectedStore : undefined}
+        selectedStoreCard={
+          hasSelectedStoreInfo ? (
+            <StoreInfoBubble
+              isLoading={isMapSearchLoading}
+              isWaitingForPinSelection={isWaitingForPinSelection}
+              store={
+                isWaitingForPinSelection ? undefined : categorySelectedStore
+              }
+              onReserve={setReservationStore}
+            />
+          ) : null
+        }
+        selectedStoreId={hasSelectedStoreInfo ? categorySelectedStoreId : ""}
         stores={mapStores}
         searchPoint={searchPoint}
         userLocation={userLocation}
         onMapPointSelect={setSearchPoint}
+        onSelectedStoreCardClose={closeSelectedStoreInfo}
         onSearchFromMapPoint={() => {
           if (!searchPoint) {
             return;
@@ -643,6 +607,13 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                     }}
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
+                        const firstStore = categoryDisplayStores[0];
+
+                        if (firstStore) {
+                          handleStoreSelect(firstStore.id, {
+                            focusMap: true,
+                          });
+                        }
                         setIsSearchHistoryOpen(false);
                         setIsStorePanelOpen(true);
                       }
@@ -664,7 +635,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                           key={store.id}
                           type="button"
                           onClick={() => {
-                            handleStoreSelect(store.id);
+                            handleStoreSelect(store.id, { focusMap: true });
                             setIsSearchHistoryOpen(false);
                             setIsStorePanelOpen(true);
                           }}
@@ -726,22 +697,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
               </div>
             </div>
 
-            <div className="flex min-w-0 items-start">
-              <SelectedStoreTool
-                isCollapsed={isInfoCardCollapsed}
-                isLoading={isMapSearchLoading}
-                isWaitingForPinSelection={isWaitingForPinSelection}
-                onToggleCollapse={() =>
-                  setIsInfoCardCollapsed((isCollapsed) => !isCollapsed)
-                }
-                store={
-                  isWaitingForPinSelection ? undefined : categorySelectedStore
-                }
-                onReserve={setReservationStore}
-              />
-            </div>
-
-            <div className="flex w-full max-w-[280px] shrink-0 items-center justify-start gap-2 md:w-auto md:justify-end">
+            <div className="flex w-full max-w-[300px] shrink-0 items-center justify-start gap-2 md:w-auto md:justify-end">
               <div className="relative">
                 <div className="flex h-12 overflow-hidden rounded-sm bg-white text-sm font-extrabold shadow-sm dark:bg-zinc-950">
                   {[
@@ -783,7 +739,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                 ) : (
                   <LocateOff size={16} className="text-gray-400" />
                 )}
-                현재 위치
+                내 위치로 이동
               </button>
             </div>
           </div>
