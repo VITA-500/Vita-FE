@@ -7,7 +7,6 @@ import {
   Archive,
   ChevronRight,
   CircleHelp,
-  ExternalLink,
   Folder,
   LogOut,
   MessageCircle,
@@ -20,11 +19,9 @@ import {
   PinOff,
   Settings,
   Share2,
-  Sparkles,
   Sun,
   Search,
   Trash2,
-  UserCircle,
   X,
 } from "lucide-react";
 import { recentChats, serviceMenus } from "@/features/chat/constants";
@@ -37,15 +34,19 @@ import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
 import { showToast } from "@/shared/ui/ToastProvider";
 import { LogoutConfirmDialog } from "@/shared/ui/LogoutConfirmDialog";
 import { useTheme } from "@/shared/ui/ThemeProvider";
+import { UserAvatar } from "@/shared/ui/UserAvatar";
 
 type ChatSidebarProps = {
   isAuthenticated: boolean;
   isAuthLoading: boolean;
+  isAuthReady: boolean;
   isOpen: boolean;
   onOpen: () => void;
   onClose: () => void;
   onNewChat: () => void;
   onOpenSearch: () => void;
+  onOpenProfile: () => void;
+  onStartTour: () => void;
   onShowRailTooltip: (
     label: string,
     shortcut?: string,
@@ -62,13 +63,16 @@ export const ChatSidebar = ({
   activeMode,
   currentChatTitle,
   isAuthLoading,
+  isAuthReady,
   isAuthenticated,
   isOpen,
   onClose,
   onNewChat,
   onHideTooltip,
   onOpen,
+  onOpenProfile,
   onOpenSearch,
+  onStartTour,
   onShowHeaderTooltip,
   onShowRailTooltip,
 }: ChatSidebarProps) => {
@@ -86,7 +90,7 @@ export const ChatSidebar = ({
   const chatMenuRef = useRef<HTMLDivElement>(null);
   const displayName = user?.name ?? "사용자";
   const isDarkMode = resolvedTheme === "dark";
-  const isGuest = !isAuthenticated && !isAuthLoading;
+  const isGuest = isAuthReady && !isAuthenticated && !isAuthLoading;
 
   const visibleRecentChats = currentChatTitle
     ? [
@@ -108,6 +112,11 @@ export const ChatSidebar = ({
   const handleAccountMenuToggle = () => {
     onHideTooltip();
     setIsAccountMenuOpen((current) => !current);
+  };
+
+  const handleOpenProfile = () => {
+    setIsAccountMenuOpen(false);
+    onOpenProfile();
   };
 
   const handleLogout = async () => {
@@ -207,10 +216,10 @@ export const ChatSidebar = ({
     <aside
       className={cn(
         "bg-surface-muted fixed inset-y-0 left-0 z-[100] flex overflow-hidden border-r border-gray-200 text-gray-950 transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-white/10 dark:text-white",
-        isOpen ? "w-[276px]" : "w-0 border-r-0 md:w-[64px] md:border-r",
+        isOpen ? "w-[296px]" : "w-0 border-r-0 md:w-[64px] md:border-r",
       )}
     >
-      <div className="flex h-full w-[276px] shrink-0 flex-col">
+      <div className="flex h-full w-[296px] shrink-0 flex-col">
         <div className="flex h-16 items-center justify-between">
           <div className="flex h-10 w-[92px] shrink-0 items-center pl-5 md:hidden">
             <Logo
@@ -386,7 +395,7 @@ export const ChatSidebar = ({
                     ? "Ctrl+K"
                     : undefined;
               const itemClassName = cn(
-                "group relative flex h-11 w-[276px] items-center pr-3 text-sm font-bold transition-colors duration-150",
+                "group relative flex h-11 w-[296px] items-center pr-3 text-sm font-bold transition-colors duration-150",
                 isActive
                   ? "text-brand"
                   : menu.disabled
@@ -483,7 +492,7 @@ export const ChatSidebar = ({
             {!isOpen && (
               <button
                 type="button"
-                className="group relative flex h-11 w-[276px] items-center pr-3 text-sm font-bold text-gray-500 transition-colors duration-150 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white"
+                className="group relative flex h-11 w-[296px] items-center pr-3 text-sm font-bold text-gray-500 transition-colors duration-150 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white"
                 aria-label="최근 상담"
                 onMouseEnter={onShowRailTooltip("최근 상담")}
                 onMouseLeave={onHideTooltip}
@@ -609,21 +618,17 @@ export const ChatSidebar = ({
           ref={accountMenuRef}
         >
           {isAccountMenuOpen && (
-            <div className="fixed bottom-[64px] left-3 z-[120] w-[312px] rounded-3xl border border-gray-200 bg-white p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-zinc-900">
+            <div className="fixed bottom-[64px] left-2 z-[120] w-[280px] rounded-3xl border border-gray-200 bg-white p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-zinc-900">
               <button
                 type="button"
-                className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left"
+                onClick={handleOpenProfile}
+                className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-gray-100 dark:hover:bg-white/10"
               >
-                <span className="bg-brand flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[12px] font-black text-white">
-                  V
-                </span>
+                <UserAvatar size="xs" />
 
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-extrabold text-gray-950 dark:text-white">
                     {displayName}
-                  </span>
-                  <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400">
-                    Plus
                   </span>
                 </span>
 
@@ -639,24 +644,8 @@ export const ChatSidebar = ({
                 type="button"
                 className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
               >
-                <Sparkles size={18} />
-                요금제 업그레이드
-              </button>
-
-              <button
-                type="button"
-                className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
-              >
                 <MessageCircle size={18} />
                 개인 맞춤 설정
-              </button>
-
-              <button
-                type="button"
-                className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
-              >
-                <UserCircle size={18} />
-                프로필
               </button>
 
               <button
@@ -668,6 +657,18 @@ export const ChatSidebar = ({
               </button>
 
               <div className="my-2 h-px bg-gray-200 dark:bg-white/10" />
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAccountMenuOpen(false);
+                  onStartTour();
+                }}
+                className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
+              >
+                <CircleHelp size={18} />
+                도움말
+              </button>
 
               <button
                 type="button"
@@ -690,7 +691,11 @@ export const ChatSidebar = ({
             />
           )}
 
-          {isGuest && isOpen ? (
+          {!isAuthReady ? (
+            <div
+              className={cn("h-12 shrink-0", isOpen ? "w-[296px]" : "w-[64px]")}
+            />
+          ) : isGuest && isOpen ? (
             <div className="space-y-3 px-3">
               <div className="space-y-1 border-b border-gray-200/80 pb-3 dark:border-white/10">
                 <button
@@ -704,11 +709,11 @@ export const ChatSidebar = ({
 
                 <button
                   type="button"
+                  onClick={onStartTour}
                   className="flex h-11 w-full items-center gap-3 rounded-xl px-2 text-left text-sm font-bold text-gray-600 transition hover:bg-gray-300/70 hover:text-gray-950 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
                 >
                   <CircleHelp size={19} />
                   도움말
-                  <ExternalLink size={15} className="ml-auto text-gray-400" />
                 </button>
               </div>
 
@@ -743,7 +748,7 @@ export const ChatSidebar = ({
               />
             </div>
           ) : isAuthenticated && isOpen ? (
-            <div className="group relative flex h-12 w-[276px] items-center pr-3 text-left transition-colors">
+            <div className="group relative flex h-12 w-[296px] items-center pr-3 text-left transition-colors">
               <span className="absolute inset-y-0 right-2 left-2 rounded-xl transition group-hover:bg-gray-300/70 dark:group-hover:bg-white/10" />
 
               <button
@@ -757,19 +762,13 @@ export const ChatSidebar = ({
               >
                 <span className="flex h-12 w-[64px] shrink-0 items-center justify-center">
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl">
-                    <span className="bg-brand flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-black text-white">
-                      V
-                    </span>
+                    <UserAvatar size="sm" />
                   </span>
                 </span>
 
                 <span className="min-w-0 opacity-100 transition-opacity delay-150 duration-150">
                   <span className="block truncate text-sm font-bold text-gray-950 dark:text-white">
                     {displayName}
-                  </span>
-
-                  <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400">
-                    VITA 회원
                   </span>
                 </span>
               </button>
@@ -787,14 +786,12 @@ export const ChatSidebar = ({
                 onMouseEnter={onShowRailTooltip(displayName)}
                 onMouseLeave={onHideTooltip}
               >
-                <span className="bg-brand flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-black text-white">
-                  V
-                </span>
+                <UserAvatar size="sm" />
               </button>
             </div>
           ) : (
             <div
-              className={cn("h-12 shrink-0", isOpen ? "w-[276px]" : "w-[64px]")}
+              className={cn("h-12 shrink-0", isOpen ? "w-[296px]" : "w-[64px]")}
             />
           )}
         </div>

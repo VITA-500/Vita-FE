@@ -1,243 +1,122 @@
 "use client";
 
-import {
-  ArrowRight,
-  ChevronLeft,
-  ChevronRight,
-  Edit2,
-  Plus,
-  Trash2,
-} from "lucide-react";
-import { type FormEvent, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Edit2, Plus, Trash2 } from "lucide-react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
 import { AdminField } from "@/features/admin/components/AdminField";
-import { SortDropdown } from "@/features/admin/components/SortDropdown";
 import { useActionStatus } from "@/features/admin/context/ActionStatusContext";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
 import type { AdminStoreDetail } from "@/features/admin/types";
 import { cn } from "@/shared/lib/cn";
-import { AnimatedLockIcon } from "@/shared/ui/AnimatedLockIcon";
 import { Button } from "@/shared/ui/Button";
-import { Card, CardContent, CardHeader } from "@/shared/ui/Card";
-import { ConfirmCheckbox } from "@/shared/ui/ConfirmCheckbox";
+import { Card } from "@/shared/ui/Card";
 import { Modal } from "@/shared/ui/Modal";
 import { SearchInput } from "@/shared/ui/SearchInput";
+import { showToast } from "@/shared/ui/ToastProvider";
 
-type StoreDraft = {
-  name: string;
-  address: string;
-  lat: string;
-  lng: string;
-  businessHours: string;
-  phone: string;
-  consultServices: string;
-  providedServices: string;
-};
+type StoreInput = Omit<AdminStoreDetail, "storeId">;
 
-const toDraft = (store: AdminStoreDetail): StoreDraft => ({
-  name: store.name,
-  address: store.address,
-  lat: String(store.lat),
-  lng: String(store.lng),
-  businessHours: store.businessHours ?? "",
-  phone: store.phone ?? "",
-  consultServices: store.consultServices.join(", "),
-  providedServices: store.providedServices.join(", "),
-});
-
-const parseCoordinate = (value: FormDataEntryValue | string | null) => {
-  const coordinate = Number(String(value ?? "").trim());
-
-  if (!Number.isFinite(coordinate)) {
-    throw new Error("좌표는 숫자로 입력해 주세요.");
-  }
-
-  return coordinate;
-};
-
-const toStoreInput = (
-  draft: StoreDraft,
-): Omit<AdminStoreDetail, "storeId"> => ({
-  name: draft.name,
-  address: draft.address,
-  lat: parseCoordinate(draft.lat),
-  lng: parseCoordinate(draft.lng),
-  businessHours: draft.businessHours,
-  phone: draft.phone,
-  consultServices: toServiceArray(draft.consultServices),
-  providedServices: toServiceArray(draft.providedServices),
-});
+const pageSizeOptions = [20, 50, 100] as const;
+const MIN_TABLE_ROWS = 8;
 
 export const StoreManagement = () => {
   const {
     addStore,
     deleteStore,
     getStoreDetail,
+    isStoreLoading,
     saveStore,
-    saveStores,
+    setStoreKeyword,
+    setStorePage,
+    setStorePageSize,
+    storeError,
+    storeKeyword,
+    storePage,
+    storePageSize,
     stores,
+    storeTotalCount,
+    storeTotalPages,
   } = useAdminData();
   const { runWithStatus } = useActionStatus();
-  const [selectedStoreIds, setSelectedStoreIds] = useState<number[]>([]);
+  const [searchDraft, setSearchDraft] = useState(storeKeyword);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingStoreId, setEditingStoreId] = useState<number | null>(null);
-  const [keyword, setKeyword] = useState("");
-  const [sortLabel, setSortLabel] = useState("이름순");
+  const [deletingStoreId, setDeletingStoreId] = useState<number | null>(null);
+  const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
+  const hasSearchKeyword = storeKeyword.trim().length > 0;
 
-  // 매장정보 수정 카드: 여러 매장을 선택하면 이 인덱스로 하나씩 넘겨보며 수정해요.
-  const [activeSelectionIndex, setActiveSelectionIndex] = useState(0);
-  const [visitedIndices, setVisitedIndices] = useState<Set<number>>(new Set());
-  const [drafts, setDrafts] = useState<Record<number, StoreDraft>>({});
-  const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
-  // 매장별로 따로 기억해요. 이렇게 안 하면 여러 매장을 삭제하려고 화살표로
-  // 넘나들 때마다 이미 체크했던 매장의 체크가 풀려 보여서, 매번 다시
-  // 체크해야 했어요.
-  const [deleteAcknowledgedIds, setDeleteAcknowledgedIds] = useState<
-    Set<number>
-  >(new Set());
-
-  const visibleStores = useMemo(() => {
-    const normalizedKeyword = keyword.trim().toLowerCase();
-
-    return stores
-      .filter((store) => {
-        if (!normalizedKeyword) return true;
-        return [store.name, store.address]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedKeyword);
-      })
-      .toSorted((a, b) =>
-        sortLabel === "주소순"
-          ? a.address.localeCompare(b.address, "ko")
-          : a.name.localeCompare(b.name, "ko"),
-      );
-  }, [keyword, sortLabel, stores]);
-
-  const isAllSelected =
-    visibleStores.length > 0 &&
-    visibleStores.every((store) => selectedStoreIds.includes(store.storeId));
-
-  const editingStore = stores.find((store) => store.storeId === editingStoreId);
-  const editingStoreDetail = editingStore
-    ? getStoreDetail(editingStore.storeId)
+  const editingStore = editingStoreId
+    ? getStoreDetail(editingStoreId)
     : undefined;
+  const deletingStore = useMemo(
+    () => stores.find((store) => store.storeId === deletingStoreId),
+    [deletingStoreId, stores],
+  );
+  const rangeStart = storeTotalCount === 0 ? 0 : storePage * storePageSize + 1;
+  const rangeEnd = Math.min(storeTotalCount, rangeStart + stores.length - 1);
+  const shouldShowSkeletonRows = isStoreLoading;
+  const visibleSkeletonRows = shouldShowSkeletonRows
+    ? Math.min(storePageSize, MIN_TABLE_ROWS)
+    : 0;
+  const fillerRowCount = !shouldShowSkeletonRows
+    ? Math.max(0, MIN_TABLE_ROWS - stores.length)
+    : 0;
 
-  const selectedStores = selectedStoreIds
-    .map((storeId) => getStoreDetail(storeId))
-    .filter((store): store is AdminStoreDetail => Boolean(store));
-
-  const resetSelectionReview = (nextSelectedIds: number[]) => {
-    setActiveSelectionIndex(0);
-    setVisitedIndices(nextSelectedIds.length > 0 ? new Set([0]) : new Set());
-    // 선택에서 빠진 매장의 체크만 지워서, 계속 선택돼 있는 매장의 체크는
-    // 유지합니다.
-    setDeleteAcknowledgedIds((prev) => {
-      const next = new Set(prev);
-      for (const id of next) {
-        if (!nextSelectedIds.includes(id)) next.delete(id);
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      if (searchDraft !== storeKeyword) {
+        setStoreKeyword(searchDraft);
       }
-      return next;
-    });
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchDraft, setStoreKeyword, storeKeyword]);
+
+  const handleCreate = async (input: StoreInput) => {
+    await runWithStatus("매장 추가", () => addStore(input));
+    setIsAddModalOpen(false);
   };
 
-  const activeStore = selectedStores[activeSelectionIndex];
-  const isDeleteAcknowledged = activeStore
-    ? deleteAcknowledgedIds.has(activeStore.storeId)
-    : false;
-  const activeDraft = activeStore
-    ? (drafts[activeStore.storeId] ?? toDraft(activeStore))
-    : null;
+  const handleUpdate = async (input: StoreInput) => {
+    if (!editingStore) return;
 
-  // 두 draft가 필드 값까지 완전히 같은지 봐요. 수정했다가 원래 값으로 다시
-  // 되돌린 경우를 잡아내기 위한 용도예요.
-  const isDraftUnchanged = (original: StoreDraft, draft: StoreDraft) =>
-    (Object.keys(original) as (keyof StoreDraft)[]).every(
-      (key) => original[key] === draft[key],
+    await runWithStatus("매장 수정", () =>
+      saveStore(editingStore.storeId, input),
     );
-
-  const updateActiveDraft = (field: keyof StoreDraft, value: string) => {
-    if (!activeStore || !activeDraft) return;
-    const nextDraft = { ...activeDraft, [field]: value };
-
-    setDrafts((prev) => {
-      const next = { ...prev };
-      // 원래 값으로 다시 돌아왔으면 "수정한 내용"에서 아예 빼요. 그래야
-      // 진짜로 고친 게 하나도 없을 때는 저장 버튼이 계속 잠겨 있어요.
-      if (isDraftUnchanged(toDraft(activeStore), nextDraft)) {
-        delete next[activeStore.storeId];
-      } else {
-        next[activeStore.storeId] = nextDraft;
-      }
-      return next;
-    });
+    setEditingStoreId(null);
   };
 
-  const resetActiveDraft = () => {
-    if (!activeStore) return;
-    setDrafts((prev) => {
-      const next = { ...prev };
-      delete next[activeStore.storeId];
-      return next;
-    });
+  const handleDelete = async () => {
+    if (!deletingStore || isDeleteSubmitting) return;
+
+    setIsDeleteSubmitting(true);
+
+    try {
+      await runWithStatus("매장 삭제", () =>
+        deleteStore(deletingStore.storeId),
+      );
+      setDeletingStoreId(null);
+    } finally {
+      setIsDeleteSubmitting(false);
+    }
   };
 
-  const goToIndex = (index: number) => {
-    setActiveSelectionIndex(index);
-    setVisitedIndices((prev) => new Set(prev).add(index));
+  const openEditModal = (storeId: number) => {
+    const storeDetail = getStoreDetail(storeId);
+
+    if (!storeDetail) {
+      showToast("매장 상세 정보를 불러오지 못했습니다.");
+      return;
+    }
+
+    setEditingStoreId(storeId);
   };
 
-  // 화살표는 한 칸씩만 이동하므로, 마지막 매장까지 도달했다는 건 처음부터
-  // 순서대로 다 확인했다는 뜻이에요. 다만 "다 확인함"만으로는 저장을 풀어주면
-  // 안 돼요 - 실제로 값을 하나도 안 고쳤는데도 화살표만 넘기면 저장 버튼이
-  // 풀리던 문제가 있었어서, drafts에 실제 수정 내역이 있는지도 함께 봅니다.
-  const hasEdits = Object.keys(drafts).length > 0;
-  const isAllReviewed =
-    selectedStores.length > 0 && visitedIndices.size >= selectedStores.length;
-  const isSaveEnabled = isAllReviewed && hasEdits;
-
-  const toggleAllStores = () => {
-    setSelectedStoreIds((currentIds) => {
-      const nextSelectedIds = isAllSelected
-        ? currentIds.filter(
-            (id) => !visibleStores.some((store) => store.storeId === id),
-          )
-        : Array.from(
-            new Set([
-              ...currentIds,
-              ...visibleStores.map((store) => store.storeId),
-            ]),
-          );
-
-      resetSelectionReview(nextSelectedIds);
-      return nextSelectedIds;
-    });
-  };
-
-  const toggleStore = (storeId: number) => {
-    setSelectedStoreIds((currentIds) => {
-      const nextSelectedIds = currentIds.includes(storeId)
-        ? currentIds.filter((currentId) => currentId !== storeId)
-        : [...currentIds, storeId];
-
-      resetSelectionReview(nextSelectedIds);
-      return nextSelectedIds;
-    });
-  };
-
-  // 삭제 후에는 선택 목록/임시 수정본에서도 함께 빼고, 리뷰 순서를 처음부터
-  // 다시 세요.
-  const removeStoreFromSelection = (storeId: number) => {
-    setSelectedStoreIds((currentIds) => {
-      const nextSelectedIds = currentIds.filter((id) => id !== storeId);
-      setDrafts((prevDrafts) => {
-        const nextDrafts = { ...prevDrafts };
-        delete nextDrafts[storeId];
-        return nextDrafts;
-      });
-      resetSelectionReview(nextSelectedIds);
-      return nextSelectedIds;
-    });
+  const clearSearch = () => {
+    setSearchDraft("");
+    setStoreKeyword("");
   };
 
   return (
@@ -248,7 +127,7 @@ export const StoreManagement = () => {
             매장 관리
           </h1>
           <p className="text-text-secondary mt-2 text-sm font-medium">
-            매장 데이터를 수정, 삭제, 추가할 수 있습니다.
+            관리자 API 기준으로 매장 정보를 추가, 수정, 삭제합니다.
           </p>
         </div>
 
@@ -261,621 +140,630 @@ export const StoreManagement = () => {
         </Button>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div>
-          <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <SearchInput
-              className="max-w-[380px]"
-              placeholder="매장명이나 주소를 검색하세요"
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
+      <div className="mb-7 grid gap-3 lg:grid-cols-[minmax(280px,420px)_auto] lg:items-start lg:justify-between">
+        <div className="flex gap-2">
+          <SearchInput
+            placeholder="매장명이나 주소를 검색하세요"
+            value={searchDraft}
+            onChange={(event) => setSearchDraft(event.target.value)}
+          />
+          {hasSearchKeyword && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-12 shrink-0 rounded-2xl"
+              onClick={clearSearch}
+            >
+              초기화
+            </Button>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <span className="text-text-secondary text-sm font-bold">
+            페이지당
+          </span>
+          <div className="flex rounded-2xl border border-gray-200 bg-white p-1 shadow-sm dark:border-white/10 dark:bg-white/5">
+            {pageSizeOptions.map((pageSize) => {
+              const isActive = pageSize === storePageSize;
+
+              return (
+                <button
+                  key={pageSize}
+                  type="button"
+                  aria-pressed={isActive}
+                  onClick={() => setStorePageSize(pageSize)}
+                  className={cn(
+                    "h-9 rounded-xl px-3 text-sm font-extrabold transition",
+                    isActive
+                      ? "bg-brand text-white"
+                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-950 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white",
+                  )}
+                >
+                  {pageSize}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {storeError && (
+        <div className="mb-7 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+          {storeError}
+        </div>
+      )}
+
+      <div className="space-y-3 md:hidden">
+        {shouldShowSkeletonRows ? (
+          Array.from(
+            { length: Math.min(visibleSkeletonRows, 4) },
+            (_, index) => (
+              <StoreSkeletonCard key={`store-card-skeleton-${index}`} />
+            ),
+          )
+        ) : stores.length === 0 ? (
+          <Card>
+            <AdminEmptyState
+              title="매장이 없습니다."
+              description="검색어를 조정하거나 새 매장을 추가해 주세요."
             />
-            <div className="flex items-center gap-2">
-              <SortDropdown
-                options={["이름순", "주소순"]}
-                value={sortLabel}
-                onChange={setSortLabel}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-3 md:hidden">
-            {visibleStores.length === 0 ? (
-              <Card>
-                <AdminEmptyState
-                  title="조건에 맞는 매장이 없습니다."
-                  description="검색어를 조정하거나 새 매장을 추가해 주세요."
+          </Card>
+        ) : (
+          stores.map((store) => (
+            <Card key={store.storeId} padding="sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-extrabold text-gray-900 dark:text-white">
+                    {store.name}
+                  </p>
+                  <p className="text-text-secondary mt-2 line-clamp-2 text-xs font-semibold">
+                    {store.address}
+                  </p>
+                </div>
+                <StoreRowActions
+                  compact
+                  onDelete={() => setDeletingStoreId(store.storeId)}
+                  onEdit={() => openEditModal(store.storeId)}
                 />
-              </Card>
-            ) : (
-              visibleStores.map((store) => (
-                <Card key={store.storeId} padding="sm">
-                  <div className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      aria-label={`${store.storeId}번 매장 선택`}
-                      checked={selectedStoreIds.includes(store.storeId)}
-                      onChange={() => toggleStore(store.storeId)}
-                      className="mt-1"
+              </div>
+            </Card>
+          ))
+        )}
+        {!shouldShowSkeletonRows && stores.length > 0 && (
+          <StorePagination
+            currentPage={storePage + 1}
+            disabled={isStoreLoading}
+            totalPages={storeTotalPages}
+            onPageChange={(page) => setStorePage(page - 1)}
+          />
+        )}
+      </div>
+
+      <Card padding="none" className="hidden overflow-hidden md:block">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] table-fixed border-collapse text-sm">
+            <thead className="bg-surface-muted text-xs font-extrabold text-gray-400 dark:bg-white/5">
+              <tr>
+                <th className="w-[88px] px-5 py-4 text-left">ID</th>
+                <th className="w-[26%] px-4 py-4 text-left">매장명</th>
+                <th className="px-4 py-4 text-left">주소</th>
+                <th className="w-[128px] px-4 py-4 text-center">등록일</th>
+                <th className="w-[160px] px-5 py-4 text-center">관리</th>
+              </tr>
+            </thead>
+            <tbody className="divide-border-soft divide-y dark:divide-white/10">
+              {shouldShowSkeletonRows ? (
+                Array.from({ length: visibleSkeletonRows }, (_, index) => (
+                  <StoreSkeletonRow key={`store-skeleton-${index}`} />
+                ))
+              ) : stores.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="h-[640px] px-5 py-0">
+                    <AdminEmptyState
+                      title="조건에 맞는 매장이 없습니다."
+                      description="검색어를 조정하거나 새 매장을 추가해 주세요."
                     />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-extrabold text-gray-900 dark:text-white">
+                  </td>
+                </tr>
+              ) : (
+                <>
+                  {stores.map((store) => (
+                    <tr
+                      key={store.storeId}
+                      className={cn(
+                        "hover:bg-surface-muted/70 h-20 transition dark:hover:bg-white/5",
+                      )}
+                    >
+                      <td className="px-5 py-4 font-bold text-gray-400">
+                        #{store.storeId}
+                      </td>
+                      <td className="truncate px-4 py-4 font-extrabold text-gray-800 dark:text-gray-100">
                         {store.name}
-                      </p>
-                      <p className="text-text-secondary mt-2 line-clamp-2 text-xs font-semibold">
+                      </td>
+                      <td className="truncate px-4 py-4 font-semibold text-gray-500">
                         {store.address}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      className="h-9 w-9 rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white"
-                      aria-label="매장 수정"
-                      onClick={() => setEditingStoreId(store.storeId)}
-                    >
-                      <Edit2 size={18} />
-                    </Button>
-                    <Button
-                      variant="dangerGhost"
-                      size="xs"
-                      className="h-9 w-9 rounded-lg p-0"
-                      aria-label="매장 삭제"
-                      onClick={() => {
-                        void runWithStatus("매장 삭제", () =>
-                          deleteStore(store.storeId),
-                        );
-                        removeStoreFromSelection(store.storeId);
-                      }}
-                    >
-                      <Trash2 size={18} />
-                    </Button>
-                  </div>
-                </Card>
-              ))
-            )}
-          </div>
-
-          <Card padding="none" className="hidden overflow-hidden md:block">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] table-fixed border-collapse text-sm">
-                <thead className="bg-surface-muted text-xs font-extrabold text-gray-400 dark:bg-white/5">
-                  <tr>
-                    <th className="w-12 px-5 py-4 text-left">
-                      <div className="pl-3">
-                        <input
-                          type="checkbox"
-                          aria-label="전체 매장 선택"
-                          checked={isAllSelected}
-                          onChange={toggleAllStores}
-                        />
-                      </div>
-                    </th>
-                    <th className="w-[28%] px-4 py-4 text-left">매장명</th>
-                    <th className="w-[44%] px-4 py-4 text-left">주소</th>
-                    <th className="w-[20%] px-5 py-4 text-center">관리</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-border-soft divide-y dark:divide-white/10">
-                  {visibleStores.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="px-5 py-0">
-                        <AdminEmptyState
-                          title="조건에 맞는 매장이 없습니다."
-                          description="검색어를 조정하거나 새 매장을 추가해 주세요."
+                      </td>
+                      <td className="px-4 py-4 text-center font-semibold text-gray-400">
+                        {formatDate(store.createdAt)}
+                      </td>
+                      <td className="px-5 py-4 text-center">
+                        <StoreRowActions
+                          onDelete={() => setDeletingStoreId(store.storeId)}
+                          onEdit={() => openEditModal(store.storeId)}
                         />
                       </td>
                     </tr>
-                  ) : (
-                    visibleStores.map((store) => {
-                      return (
-                        <tr
-                          key={store.storeId}
-                          className="hover:bg-surface-muted/70 transition dark:hover:bg-white/5"
-                        >
-                          <td className="px-5 py-4">
-                            <div className="pl-3">
-                              <input
-                                type="checkbox"
-                                aria-label={`${store.storeId}번 매장 선택`}
-                                checked={selectedStoreIds.includes(
-                                  store.storeId,
-                                )}
-                                onChange={() => toggleStore(store.storeId)}
-                              />
-                            </div>
-                          </td>
-                          <td className="truncate px-4 py-4 font-extrabold text-gray-800 dark:text-gray-100">
-                            {store.name}
-                          </td>
-                          <td className="truncate px-4 py-4 font-semibold text-gray-500">
-                            {store.address}
-                          </td>
-                          <td className="px-5 py-4 text-center">
-                            <div className="inline-flex items-center gap-2 pr-3">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-12 w-12 rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white"
-                                aria-label="매장 수정"
-                                onClick={() => setEditingStoreId(store.storeId)}
-                              >
-                                <Edit2 size={30} />
-                              </Button>
-                              <Button
-                                variant="dangerGhost"
-                                size="sm"
-                                className="h-12 w-12 rounded-lg p-0"
-                                aria-label="매장 삭제"
-                                onClick={() => {
-                                  void runWithStatus("매장 삭제", () =>
-                                    deleteStore(store.storeId),
-                                  );
-                                  removeStoreFromSelection(store.storeId);
-                                }}
-                              >
-                                <Trash2 size={30} />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+                  ))}
+                  {Array.from({ length: fillerRowCount }, (_, index) => (
+                    <tr
+                      key={`store-filler-${index}`}
+                      aria-hidden="true"
+                      className="h-20"
+                    >
+                      <td colSpan={5} />
+                    </tr>
+                  ))}
+                </>
+              )}
+            </tbody>
+          </table>
         </div>
 
-        <Card className="self-start">
-          {/* 몇 곳을 선택했는지는 카운터/화살표로 이미 보이고, 아무것도
-              선택 안 했을 때는 아래 CardContent에 안내 문구가 따로 있어서
-              이 자리에 별도 설명 문구는 넣지 않기로 했어요. */}
-          <CardHeader
-            title="매장정보 수정"
-            action={
-              // 매장을 1곳(또는 0곳) 선택했을 때는 카운터/화살표를 안
-              // 보여주는 게 맞지만, 아예 안 그리면 헤더 높이가 줄면서
-              // 그 아래 border-b(외곽선) 위치가 위아래로 움직여 보였어요.
-              // 그래서 항상 같은 자리를 차지하게 두고, 1곳 이하일 때는
-              // invisible로 안 보이기만 하도록 했습니다.
-              <div
-                className={cn(
-                  "flex items-center gap-1",
-                  selectedStores.length <= 1 && "invisible",
-                )}
-                aria-hidden={selectedStores.length <= 1}
-              >
-                <span className="text-text-secondary mr-1 text-xs font-bold whitespace-nowrap">
-                  {activeSelectionIndex + 1} / {selectedStores.length}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  aria-label="이전 매장"
-                  disabled={activeSelectionIndex === 0}
-                  onClick={() => goToIndex(activeSelectionIndex - 1)}
-                  className="h-8 w-8 rounded-lg p-0 disabled:pointer-events-none disabled:opacity-30"
-                >
-                  <ChevronLeft size={15} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  aria-label="다음 매장"
-                  disabled={activeSelectionIndex === selectedStores.length - 1}
-                  onClick={() => goToIndex(activeSelectionIndex + 1)}
-                  className="h-8 w-8 rounded-lg p-0 disabled:pointer-events-none disabled:opacity-30"
-                >
-                  <ChevronRight size={15} />
-                </Button>
-              </div>
-            }
-          />
+        <div className="border-border-soft flex min-h-[65px] items-center justify-center gap-1 border-t px-5 py-4 dark:border-white/10">
+          {!shouldShowSkeletonRows && stores.length > 0 && (
+            <StorePagination
+              currentPage={storePage + 1}
+              disabled={isStoreLoading}
+              totalPages={storeTotalPages}
+              onPageChange={(page) => setStorePage(page - 1)}
+            />
+          )}
+        </div>
+      </Card>
 
-          <CardContent className="space-y-5">
-            {!activeStore || !activeDraft ? (
-              <p className="text-text-secondary py-6 text-center text-sm leading-6 font-medium">
-                목록에서 매장을 선택하면
-                <br />
-                정보를 수정할 수 있어요.
-              </p>
-            ) : (
-              <>
-                <AdminField
-                  label="매장명"
-                  value={activeDraft.name}
-                  onChange={(event) =>
-                    updateActiveDraft("name", event.target.value)
-                  }
-                />
-                <AdminField
-                  label="주소"
-                  value={activeDraft.address}
-                  onChange={(event) =>
-                    updateActiveDraft("address", event.target.value)
-                  }
-                />
-
-                <div className="grid grid-cols-2 gap-3">
-                  <AdminField
-                    label="위도"
-                    value={activeDraft.lat}
-                    inputMode="decimal"
-                    onChange={(event) =>
-                      updateActiveDraft("lat", event.target.value)
-                    }
-                    step="any"
-                    type="number"
-                  />
-                  <AdminField
-                    label="경도"
-                    value={activeDraft.lng}
-                    inputMode="decimal"
-                    onChange={(event) =>
-                      updateActiveDraft("lng", event.target.value)
-                    }
-                    step="any"
-                    type="number"
-                  />
-                </div>
-
-                <AdminField
-                  label="운영시간"
-                  value={activeDraft.businessHours}
-                  onChange={(event) =>
-                    updateActiveDraft("businessHours", event.target.value)
-                  }
-                />
-                <AdminField
-                  label="전화번호"
-                  value={activeDraft.phone}
-                  onChange={(event) =>
-                    updateActiveDraft("phone", event.target.value)
-                  }
-                />
-                <AdminField
-                  label="상담 가능 업무"
-                  value={activeDraft.consultServices}
-                  onChange={(event) =>
-                    updateActiveDraft("consultServices", event.target.value)
-                  }
-                />
-                <AdminField
-                  label="제공 가능 서비스"
-                  value={activeDraft.providedServices}
-                  onChange={(event) =>
-                    updateActiveDraft("providedServices", event.target.value)
-                  }
-                />
-
-                <p className="text-xs leading-5 font-semibold text-gray-400">
-                  주소와 좌표는 테스트용 가상 데이터입니다.
-                </p>
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    fullWidth
-                    onClick={resetActiveDraft}
-                  >
-                    취소
-                  </Button>
-                  <Button
-                    variant={isSaveEnabled ? "primary" : "secondary"}
-                    size="sm"
-                    fullWidth
-                    disabled={!isSaveEnabled}
-                    leftIcon={
-                      <AnimatedLockIcon show={!isSaveEnabled} size={16} />
-                    }
-                    onClick={() => setIsSaveConfirmOpen(true)}
-                  >
-                    변경사항 저장
-                  </Button>
-                </div>
-
-                {selectedStores.length > 0 && !isSaveEnabled && (
-                  <p className="text-text-secondary text-xs leading-5 font-semibold">
-                    {!isAllReviewed
-                      ? "화살표로 남은 매장을 모두 확인하면 저장할 수 있어요."
-                      : "수정한 내용이 있어야 저장할 수 있어요."}
-                  </p>
-                )}
-
-                <ConfirmCheckbox
-                  checked={isDeleteAcknowledged}
-                  onChange={(event) => {
-                    if (!activeStore) return;
-                    const storeId = activeStore.storeId;
-                    setDeleteAcknowledgedIds((prev) => {
-                      const next = new Set(prev);
-                      if (event.target.checked) {
-                        next.add(storeId);
-                      } else {
-                        next.delete(storeId);
-                      }
-                      return next;
-                    });
-                  }}
-                >
-                  매장을 삭제할 시 취소할 수 없습니다. 위 사항을 확인하였습니다.
-                </ConfirmCheckbox>
-
-                <div className="text-right">
-                  <Button
-                    variant="danger"
-                    size="xs"
-                    disabled={!isDeleteAcknowledged}
-                    // 체크 전에는 눌러도 막혀 있다는 게 바로 보이도록 자물쇠
-                    // 아이콘을 같이 보여줍니다 ("변경사항 저장" 버튼과 동일한
-                    // 패턴). 체크 여부가 바뀔 때 아이콘이 부드럽게 사라지고
-                    // 나타나도록 애니메이션을 줘요.
-                    leftIcon={
-                      <AnimatedLockIcon
-                        show={!isDeleteAcknowledged}
-                        size={14}
-                      />
-                    }
-                    onClick={() => {
-                      if (!activeStore || !isDeleteAcknowledged) return;
-                      const storeId = activeStore.storeId;
-                      void runWithStatus("매장 삭제", () =>
-                        deleteStore(storeId),
-                      );
-                      removeStoreFromSelection(storeId);
-                    }}
-                  >
-                    매장 삭제
-                  </Button>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Modal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title="매장 추가"
-        description="새로 오픈한 매장의 지도 노출 정보를 입력해 주세요."
-      >
-        <StoreForm
-          formId="store-create-form"
-          submitLabel="추가"
-          onCancel={() => setIsAddModalOpen(false)}
-          onSave={(input) => {
-            void runWithStatus("매장 추가", () => addStore(input));
-            setIsAddModalOpen(false);
-            setSortLabel("이름순");
-          }}
-        />
-      </Modal>
+      <p className="text-text-secondary mt-4 text-sm font-bold">
+        {hasSearchKeyword && `"${storeKeyword.trim()}" 검색 결과 `}
+        {rangeStart.toLocaleString("ko-KR")}-{rangeEnd.toLocaleString("ko-KR")}{" "}
+        / 총 {storeTotalCount.toLocaleString("ko-KR")}개
+      </p>
 
       <StoreFormModal
-        isOpen={editingStoreDetail !== undefined}
-        store={editingStoreDetail}
+        key={isAddModalOpen ? "create-open" : "create-closed"}
+        isOpen={isAddModalOpen}
+        mode="create"
+        onClose={() => setIsAddModalOpen(false)}
+        onSave={handleCreate}
+      />
+
+      <StoreFormModal
+        key={editingStore?.storeId ?? "edit-closed"}
+        isOpen={editingStore !== undefined}
+        mode="edit"
+        store={editingStore}
         onClose={() => setEditingStoreId(null)}
-        onSave={(input) => {
-          if (!editingStoreDetail) return;
-          const storeId = editingStoreDetail.storeId;
-          void runWithStatus("매장 수정", () => saveStore(storeId, input));
-          setEditingStoreId(null);
-        }}
+        onSave={handleUpdate}
       />
 
       <Modal
-        isOpen={isSaveConfirmOpen}
-        onClose={() => setIsSaveConfirmOpen(false)}
-        title="변경사항을 저장할까요?"
-        description="아래 내용으로 저장됩니다. 한 번 더 확인해 주세요."
-        size="lg"
+        isOpen={deletingStore !== undefined}
+        onClose={() => setDeletingStoreId(null)}
+        title="매장을 삭제할까요?"
+        description={
+          deletingStore
+            ? `#${deletingStore.storeId} ${deletingStore.name} 매장이 관리자 목록에서 삭제됩니다.`
+            : "선택한 매장이 삭제됩니다."
+        }
         actions={
           <>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setIsSaveConfirmOpen(false)}
+              onClick={() => setDeletingStoreId(null)}
+              disabled={isDeleteSubmitting}
             >
               취소
             </Button>
             <Button
+              variant="danger"
               size="sm"
-              onClick={() => {
-                const editedEntries = Object.entries(drafts).filter(
-                  ([storeId]) =>
-                    selectedStoreIds.includes(Number(storeId)) &&
-                    getStoreDetail(Number(storeId)),
-                );
-                const count = editedEntries.length;
-                const payload = Object.fromEntries(
-                  editedEntries.map(([storeId, draft]) => [
-                    Number(storeId),
-                    toStoreInput(draft),
-                  ]),
-                );
-                void runWithStatus(`매장 ${count}곳 저장`, () =>
-                  saveStores(payload),
-                );
-                setIsSaveConfirmOpen(false);
-                setSelectedStoreIds([]);
-                setDrafts({});
-              }}
+              isLoading={isDeleteSubmitting}
+              onClick={() => void handleDelete()}
             >
-              확인
+              삭제
             </Button>
           </>
         }
       >
         <div className="space-y-3">
-          <p className="flex items-center gap-1.5 text-xs leading-5 font-semibold text-gray-400">
-            <span
-              aria-hidden="true"
-              className="bg-brand inline-block h-1.5 w-1.5 shrink-0 rounded-full"
-            />
-            표시는 기존 값과 달라진 항목이에요.
+          {deletingStore && (
+            <div className="bg-surface-muted rounded-2xl px-4 py-3 text-sm font-bold text-gray-700 dark:bg-white/5 dark:text-gray-200">
+              <p>{deletingStore.name}</p>
+              <p className="text-text-secondary mt-1 text-xs">
+                {deletingStore.address}
+              </p>
+            </div>
+          )}
+          <p className="text-text-secondary text-sm leading-6 font-semibold">
+            삭제 후에는 목록에서 바로 사라집니다.
           </p>
-
-          <div className="max-h-[420px] space-y-4 overflow-y-auto pr-1">
-            {selectedStores.map((store) => {
-              const original = toDraft(store);
-              const draft = drafts[store.storeId] ?? original;
-              const isNameChanged = draft.name !== original.name;
-              return (
-                <Card key={store.storeId} variant="muted" padding="sm">
-                  {isNameChanged ? (
-                    <Card variant="warm" padding="sm">
-                      <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="truncate text-sm font-semibold text-gray-400 line-through decoration-gray-400/70 dark:text-gray-500">
-                          {original.name}
-                        </span>
-                        <ArrowRight
-                          size={14}
-                          className="text-brand shrink-0"
-                          aria-hidden="true"
-                        />
-                        <span className="truncate text-sm font-extrabold text-gray-950 dark:text-white">
-                          {draft.name}
-                        </span>
-                      </div>
-                    </Card>
-                  ) : (
-                    <p className="text-sm font-extrabold text-gray-950 dark:text-white">
-                      {draft.name}
-                    </p>
-                  )}
-                  <dl className="mt-3 grid grid-cols-2 gap-x-5 gap-y-3 text-xs">
-                    <SummaryRow
-                      label="주소"
-                      value={draft.address}
-                      previousValue={original.address}
-                      changed={draft.address !== original.address}
-                      className="col-span-2"
-                    />
-                    <SummaryRow
-                      label="위도"
-                      value={draft.lat}
-                      previousValue={original.lat}
-                      changed={draft.lat !== original.lat}
-                    />
-                    <SummaryRow
-                      label="경도"
-                      value={draft.lng}
-                      previousValue={original.lng}
-                      changed={draft.lng !== original.lng}
-                    />
-                    <SummaryRow
-                      label="운영시간"
-                      value={draft.businessHours}
-                      previousValue={original.businessHours}
-                      changed={draft.businessHours !== original.businessHours}
-                    />
-                    <SummaryRow
-                      label="전화번호"
-                      value={draft.phone}
-                      previousValue={original.phone}
-                      changed={draft.phone !== original.phone}
-                    />
-                    <SummaryRow
-                      label="상담 가능 업무"
-                      value={draft.consultServices}
-                      previousValue={original.consultServices}
-                      changed={
-                        draft.consultServices !== original.consultServices
-                      }
-                      className="col-span-2"
-                    />
-                    <SummaryRow
-                      label="제공 가능 서비스"
-                      value={draft.providedServices}
-                      previousValue={original.providedServices}
-                      changed={
-                        draft.providedServices !== original.providedServices
-                      }
-                      className="col-span-2"
-                    />
-                  </dl>
-                </Card>
-              );
-            })}
-          </div>
         </div>
       </Modal>
     </div>
   );
 };
 
+type StoreRowActionsProps = {
+  compact?: boolean;
+  onDelete: () => void;
+  onEdit: () => void;
+};
+
+const StoreRowActions = ({
+  compact = false,
+  onDelete,
+  onEdit,
+}: StoreRowActionsProps) => (
+  <div
+    className={cn("inline-flex items-center", compact ? "gap-1" : "gap-2 pr-3")}
+  >
+    <Button
+      variant="ghost"
+      size={compact ? "xs" : "sm"}
+      className={cn(
+        "rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white",
+        compact ? "h-9 w-9" : "h-12 w-12",
+      )}
+      aria-label="매장 수정"
+      onClick={onEdit}
+    >
+      <Edit2 size={compact ? 18 : 30} />
+    </Button>
+    <Button
+      variant="dangerGhost"
+      size={compact ? "xs" : "sm"}
+      className={cn("rounded-lg p-0", compact ? "h-9 w-9" : "h-12 w-12")}
+      aria-label="매장 삭제"
+      onClick={onDelete}
+    >
+      <Trash2 size={compact ? 18 : 30} />
+    </Button>
+  </div>
+);
+
+const StoreSkeletonRow = () => (
+  <tr className="h-20" aria-hidden="true">
+    <td className="px-5 py-4">
+      <div className="bg-surface-muted h-4 w-12 animate-pulse rounded-full dark:bg-white/10" />
+    </td>
+    <td className="px-4 py-4">
+      <div className="bg-surface-muted h-4 w-32 animate-pulse rounded-full dark:bg-white/10" />
+    </td>
+    <td className="px-4 py-4">
+      <div className="bg-surface-muted h-4 w-[min(360px,80%)] animate-pulse rounded-full dark:bg-white/10" />
+    </td>
+    <td className="px-4 py-4">
+      <div className="bg-surface-muted mx-auto h-4 w-20 animate-pulse rounded-full dark:bg-white/10" />
+    </td>
+    <td className="px-5 py-4">
+      <div className="mx-auto flex justify-center gap-3">
+        <div className="bg-surface-muted h-10 w-10 animate-pulse rounded-lg dark:bg-white/10" />
+        <div className="bg-surface-muted h-10 w-10 animate-pulse rounded-lg dark:bg-white/10" />
+      </div>
+    </td>
+  </tr>
+);
+
+const StoreSkeletonCard = () => (
+  <Card padding="sm" aria-hidden="true">
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1 space-y-3">
+        <div className="bg-surface-muted h-4 w-28 animate-pulse rounded-full dark:bg-white/10" />
+        <div className="bg-surface-muted h-3 w-full animate-pulse rounded-full dark:bg-white/10" />
+      </div>
+      <div className="flex gap-1">
+        <div className="bg-surface-muted h-9 w-9 animate-pulse rounded-lg dark:bg-white/10" />
+        <div className="bg-surface-muted h-9 w-9 animate-pulse rounded-lg dark:bg-white/10" />
+      </div>
+    </div>
+  </Card>
+);
+
+type StorePaginationProps = {
+  currentPage: number;
+  disabled?: boolean;
+  onPageChange: (page: number) => void;
+  totalPages: number;
+};
+
+const StorePagination = ({
+  currentPage,
+  disabled = false,
+  onPageChange,
+  totalPages,
+}: StorePaginationProps) => {
+  const pages = getVisiblePages(currentPage, totalPages);
+  const [jumpValue, setJumpValue] = useState("");
+
+  const handleJumpSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const nextPage = Number(jumpValue);
+
+    if (!Number.isInteger(nextPage)) return;
+
+    onPageChange(Math.min(totalPages, Math.max(1, nextPage)));
+    setJumpValue("");
+  };
+
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 pt-2 md:pt-0">
+      <div className="flex items-center justify-center gap-1">
+        <Button
+          variant="ghost"
+          size="xs"
+          className="h-8 w-8 rounded-lg p-0 disabled:pointer-events-none disabled:opacity-30"
+          disabled={currentPage === 1 || disabled}
+          aria-label="이전 페이지"
+          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+        >
+          <ChevronLeft size={15} />
+        </Button>
+        {pages.map((page, index) =>
+          page === "ellipsis" ? (
+            <span
+              key={`ellipsis-${index}`}
+              className="flex h-8 min-w-8 items-center justify-center px-1 text-sm font-extrabold text-gray-400"
+            >
+              ...
+            </span>
+          ) : (
+            <PaginationPageButton
+              key={page}
+              disabled={disabled}
+              isActive={page === currentPage}
+              page={page}
+              onClick={() => onPageChange(page)}
+            />
+          ),
+        )}
+        <Button
+          variant="ghost"
+          size="xs"
+          className="h-8 w-8 rounded-lg p-0 disabled:pointer-events-none disabled:opacity-30"
+          disabled={currentPage === totalPages || disabled}
+          aria-label="다음 페이지"
+          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+        >
+          <ChevronRight size={15} />
+        </Button>
+      </div>
+
+      {totalPages > 7 && (
+        <form className="flex items-center gap-1.5" onSubmit={handleJumpSubmit}>
+          <input
+            type="number"
+            min={1}
+            max={totalPages}
+            value={jumpValue}
+            disabled={disabled}
+            placeholder="페이지"
+            onChange={(event) => setJumpValue(event.target.value)}
+            className="border-border focus:border-brand h-8 w-20 rounded-lg border bg-white px-2 text-center text-xs font-bold text-gray-700 transition outline-none dark:border-white/10 dark:bg-white/5 dark:text-gray-200"
+          />
+          <Button
+            variant="secondary"
+            size="xs"
+            type="submit"
+            disabled={disabled || !jumpValue}
+            className="h-8 rounded-lg px-2"
+          >
+            이동
+          </Button>
+        </form>
+      )}
+    </div>
+  );
+};
+
+type PaginationItem = number | "ellipsis";
+
+const getVisiblePages = (
+  currentPage: number,
+  totalPages: number,
+): PaginationItem[] => {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const start = Math.max(2, currentPage - 1);
+  const end = Math.min(totalPages - 1, currentPage + 1);
+  const pages: PaginationItem[] = [1];
+
+  if (start > 2) {
+    pages.push("ellipsis");
+  }
+
+  for (let page = start; page <= end; page += 1) {
+    pages.push(page);
+  }
+
+  if (end < totalPages - 1) {
+    pages.push("ellipsis");
+  }
+
+  pages.push(totalPages);
+  return pages;
+};
+
+type PaginationPageButtonProps = {
+  disabled?: boolean;
+  isActive: boolean;
+  onClick: () => void;
+  page: number;
+};
+
+const PaginationPageButton = ({
+  disabled,
+  isActive,
+  onClick,
+  page,
+}: PaginationPageButtonProps) => (
+  <button
+    type="button"
+    aria-label={`${page}페이지`}
+    aria-current={isActive ? "page" : undefined}
+    disabled={disabled}
+    onClick={onClick}
+    className={cn(
+      "flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-extrabold transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50",
+      isActive
+        ? "bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand"
+        : "text-gray-500 hover:bg-gray-100 hover:text-gray-950 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white",
+    )}
+  >
+    {page}
+  </button>
+);
+
 type StoreFormModalProps = {
   isOpen: boolean;
+  mode: "create" | "edit";
   onClose: () => void;
-  onSave: (input: Omit<AdminStoreDetail, "storeId">) => void;
+  onSave: (input: StoreInput) => Promise<void>;
   store?: AdminStoreDetail;
 };
 
-/**
- * 목록에서 펜 아이콘을 눌렀을 때 매장 하나만 빠르게 수정하는 모달입니다.
- * 여러 매장을 한 번에 넘겨가며 수정하려면 체크박스로 선택 후 오른쪽 카드를
- * 쓰면 되고, 이건 그와 별개인 단건 수정용 진입점이에요.
- */
 const StoreFormModal = ({
   isOpen,
+  mode,
   onClose,
   onSave,
   store,
 }: StoreFormModalProps) => {
-  const formId = "store-edit-form";
+  const formId = mode === "create" ? "store-create-form" : "store-edit-form";
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setErrorMessage(null);
+    setIsSubmitting(true);
 
-    const formData = new FormData(event.currentTarget);
-    onSave({
-      name: String(formData.get("name") ?? "").trim(),
-      address: String(formData.get("address") ?? "").trim(),
-      lat: parseCoordinate(formData.get("lat")),
-      lng: parseCoordinate(formData.get("lng")),
-      businessHours: String(formData.get("businessHours") ?? "").trim(),
-      phone: String(formData.get("phone") ?? "").trim(),
-      consultServices: toServiceArray(formData.get("consultServices")),
-      providedServices: toServiceArray(formData.get("providedServices")),
-    });
+    try {
+      await onSave(readStoreForm(event.currentTarget));
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "매장 정보를 저장하지 못했습니다.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="매장 수정"
-      description="이 매장 하나만 빠르게 수정합니다. 여러 매장을 한 번에 수정하려면 왼쪽 목록에서 체크박스로 선택해 주세요."
+      title={mode === "create" ? "매장 추가" : `${store?.name ?? "매장"} 수정`}
+      description="백엔드 관리자 매장 API에 저장할 정보를 입력해 주세요."
       size="lg"
     >
-      <StoreForm
-        formId={formId}
-        initialStore={store}
-        submitLabel="저장"
-        onCancel={onClose}
+      <form
+        id={formId}
+        className="grid gap-5 sm:grid-cols-2"
         onSubmit={handleSubmit}
-      />
+      >
+        <AdminField
+          label="매장명"
+          name="name"
+          defaultValue={store?.name}
+          placeholder="예: VITA 강남점"
+          className="sm:col-span-2"
+          required
+        />
+        <AdminField
+          label="주소"
+          name="address"
+          defaultValue={store?.address}
+          placeholder="예: 서울 강남구 테헤란로 111"
+          className="sm:col-span-2"
+          required
+        />
+        <AdminField
+          label="위도"
+          name="lat"
+          inputMode="decimal"
+          defaultValue={store ? String(store.lat) : undefined}
+          placeholder="37.2660"
+          required
+          step="any"
+          type="number"
+        />
+        <AdminField
+          label="경도"
+          name="lng"
+          inputMode="decimal"
+          defaultValue={store ? String(store.lng) : undefined}
+          placeholder="127.0000"
+          required
+          step="any"
+          type="number"
+        />
+        <AdminField
+          label="운영시간"
+          name="businessHours"
+          defaultValue={store?.businessHours}
+          placeholder="예: 10:00~20:00"
+        />
+        <AdminField
+          label="전화번호"
+          name="phone"
+          defaultValue={store?.phone}
+          placeholder="예: 02-1234-5678"
+        />
+        <AdminField
+          label="상담 가능 업무"
+          name="consultServices"
+          defaultValue={store?.consultServices.join(", ")}
+          placeholder="휴대폰상담, 요금제변경"
+          className="sm:col-span-2"
+        />
+        <AdminField
+          label="제공 가능 서비스"
+          name="providedServices"
+          defaultValue={store?.providedServices.join(", ")}
+          placeholder="유심발급, 기기변경"
+          className="sm:col-span-2"
+        />
+      </form>
+
+      {errorMessage && (
+        <p className="mt-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+          {errorMessage}
+        </p>
+      )}
+
+      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClose}
+          disabled={isSubmitting}
+        >
+          취소
+        </Button>
+        <Button size="sm" form={formId} type="submit" isLoading={isSubmitting}>
+          {mode === "create" ? "추가" : "저장"}
+        </Button>
+      </div>
     </Modal>
   );
 };
 
-type StoreFormProps = {
-  formId: string;
-  initialStore?: AdminStoreDetail;
-  onCancel: () => void;
-  onSave?: (input: Omit<AdminStoreDetail, "storeId">) => void;
-  onSubmit?: (event: FormEvent<HTMLFormElement>) => void;
-  submitLabel: string;
-};
-
-const readStoreForm = (form: HTMLFormElement) => {
+const readStoreForm = (form: HTMLFormElement): StoreInput => {
   const formData = new FormData(form);
+
   return {
     name: String(formData.get("name") ?? "").trim(),
     address: String(formData.get("address") ?? "").trim(),
@@ -888,156 +776,34 @@ const readStoreForm = (form: HTMLFormElement) => {
   };
 };
 
+const parseCoordinate = (value: FormDataEntryValue | string | null) => {
+  const coordinate = Number(String(value ?? "").trim());
+
+  if (!Number.isFinite(coordinate)) {
+    throw new Error("좌표는 숫자로 입력해 주세요.");
+  }
+
+  return coordinate;
+};
+
+const formatDate = (value?: string) => {
+  if (!value) return "-";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value.slice(0, 10);
+  }
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+};
+
 const toServiceArray = (value: FormDataEntryValue | string | null) =>
   String(value ?? "")
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
-
-const StoreForm = ({
-  formId,
-  initialStore,
-  onCancel,
-  onSave,
-  onSubmit,
-  submitLabel,
-}: StoreFormProps) => {
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    if (onSubmit) {
-      onSubmit(event);
-      return;
-    }
-
-    event.preventDefault();
-    onSave?.(readStoreForm(event.currentTarget));
-  };
-
-  return (
-    <>
-      <form
-        id={formId}
-        className="grid gap-5 sm:grid-cols-2"
-        onSubmit={handleSubmit}
-      >
-        <AdminField
-          label="매장명"
-          name="name"
-          defaultValue={initialStore?.name}
-          placeholder="예: VITA 강남점"
-          className="sm:col-span-2"
-          required
-        />
-        <AdminField
-          label="주소"
-          name="address"
-          defaultValue={initialStore?.address}
-          placeholder="예: 서울 강남구 테헤란로 111"
-          className="sm:col-span-2"
-          required
-        />
-        <AdminField
-          label="위도"
-          name="lat"
-          inputMode="decimal"
-          defaultValue={initialStore ? String(initialStore.lat) : undefined}
-          placeholder="37.2660"
-          required
-          step="any"
-          type="number"
-        />
-        <AdminField
-          label="경도"
-          name="lng"
-          inputMode="decimal"
-          defaultValue={initialStore ? String(initialStore.lng) : undefined}
-          placeholder="127.0000"
-          required
-          step="any"
-          type="number"
-        />
-        <AdminField
-          label="운영시간"
-          name="businessHours"
-          defaultValue={initialStore?.businessHours}
-          placeholder="예: 10:00~20:00"
-          required
-        />
-        <AdminField
-          label="전화번호"
-          name="phone"
-          defaultValue={initialStore?.phone}
-          placeholder="예: 02-1234-5678"
-        />
-        <AdminField
-          label="상담 가능 업무"
-          name="consultServices"
-          defaultValue={initialStore?.consultServices.join(", ")}
-          placeholder="휴대폰상담, 요금제변경"
-          className="sm:col-span-2"
-        />
-        <AdminField
-          label="제공 가능 서비스"
-          name="providedServices"
-          defaultValue={initialStore?.providedServices.join(", ")}
-          placeholder="유심발급, 기기변경"
-          className="sm:col-span-2"
-        />
-      </form>
-
-      <p className="mt-5 text-xs leading-5 font-semibold text-gray-400">
-        주소와 좌표는 테스트용 가상 데이터입니다.
-      </p>
-
-      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button variant="ghost" size="sm" onClick={onCancel}>
-          취소
-        </Button>
-        <Button size="sm" form={formId} type="submit">
-          {submitLabel}
-        </Button>
-      </div>
-    </>
-  );
-};
-
-type SummaryRowProps = {
-  className?: string;
-  label: string;
-  value: string;
-  changed?: boolean;
-  previousValue?: string;
-};
-
-const SummaryRow = ({
-  className,
-  label,
-  value,
-  changed,
-  previousValue,
-}: SummaryRowProps) => (
-  <div className={cn("flex flex-col gap-1", className)}>
-    <dt className="flex items-center gap-1 font-semibold text-gray-400">
-      {changed && (
-        <span
-          aria-hidden="true"
-          className="bg-brand inline-block h-1.5 w-1.5 shrink-0 rounded-full"
-        />
-      )}
-      {label}
-    </dt>
-    <dd
-      className={cn(
-        "font-bold text-gray-700 dark:text-gray-200",
-        changed &&
-          "-mx-1.5 -my-0.5 space-y-0.5 rounded-md border border-gray-100 bg-gray-100 px-1.5 py-1 dark:bg-white/5",
-      )}
-    >
-      {changed && previousValue && (
-        <p className="truncate text-[11px] font-semibold text-gray-500 line-through decoration-gray-500/70 dark:text-gray-400 dark:decoration-gray-400/70">
-          {previousValue}
-        </p>
-      )}
-      <p className="truncate">{value}</p>
-    </dd>
-  </div>
-);

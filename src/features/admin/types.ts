@@ -36,6 +36,10 @@ export type AdminStore = {
   storeId: number;
   name: string;
   address: string;
+  createdAt?: string;
+  createdBy?: string;
+  updatedAt?: string;
+  updatedBy?: string;
 };
 
 export type AdminStoreDetail = AdminStore & {
