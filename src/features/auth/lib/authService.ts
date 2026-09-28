@@ -2,6 +2,8 @@ import type {
   LoginRequest,
   LoginResponse,
   MyPageResponse,
+  MyPageUpdateRequest,
+  MyPageUpdateResponse,
   SignupRequest,
   SignupResponse,
 } from "@/features/auth/types";
@@ -34,6 +36,12 @@ export const authService = {
     return requestJson<SignupResponse>("/auth/signup", {
       body: JSON.stringify(request),
       method: "POST",
+    });
+  },
+  updateMe: (request: MyPageUpdateRequest) => {
+    return requestJson<MyPageUpdateResponse>("/users/me", {
+      body: JSON.stringify(request),
+      method: "PATCH",
     });
   },
 };

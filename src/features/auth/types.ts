@@ -32,3 +32,14 @@ export type MyPageResponse = AuthUser & {
   hasPassword: boolean;
   linkedProviders: string[];
 };
+
+export type MyPageUpdateRequest = {
+  name?: string;
+  password?: string;
+};
+
+export type MyPageUpdateResponse = {
+  userId: number;
+  name: string;
+  updatedAt: string;
+};

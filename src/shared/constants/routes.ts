@@ -2,6 +2,7 @@ export const routes = {
   home: "/",
   login: "/login",
   chat: "/chat",
+  myPage: "/chat?mode=profile",
   admin: "/admin",
   adminFaqs: "/admin/faqs",
   adminStores: "/admin/stores",
