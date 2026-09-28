@@ -17,6 +17,7 @@ export const useStoreMapState = (stores: StoreLocation[]) => {
     location: userLocation,
     requestLocation,
     status: locationStatus,
+    watchLocation,
   } = useUserLocation();
 
   useEffect(() => {
@@ -91,5 +92,6 @@ export const useStoreMapState = (stores: StoreLocation[]) => {
     sortedStores,
     userLocation,
     visibleSelectedStoreId: selectedStore?.id ?? selectedStoreId,
+    watchLocation,
   };
 };

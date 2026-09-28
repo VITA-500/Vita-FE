@@ -10,3 +10,17 @@ export type StoreLocation = {
   lng: number;
   distanceText?: string;
 };
+
+export type StoreRoutePoint = {
+  lat: number;
+  lng: number;
+};
+
+export type StoreRouteMode = "walk" | "car" | "bicycle" | "transit";
+
+export type StoreRoute = {
+  distanceMeters: number;
+  durationSeconds: number;
+  mode: StoreRouteMode;
+  path: StoreRoutePoint[];
+};

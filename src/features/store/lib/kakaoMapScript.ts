@@ -6,6 +6,7 @@ declare global {
       maps?: {
         load: (callback: () => void) => void;
         LatLng: new (lat: number, lng: number) => KakaoLatLng;
+        LatLngBounds: new () => KakaoLatLngBounds;
         Map: new (
           container: HTMLElement,
           options: { center: KakaoLatLng; level: number },
@@ -14,7 +15,19 @@ declare global {
           map: KakaoMap | null;
           position: KakaoLatLng;
           title?: string;
+          zIndex?: number;
         }) => KakaoMarker;
+        Polyline: new (options: {
+          clickable?: boolean;
+          endArrow?: boolean;
+          map: KakaoMap | null;
+          path: KakaoLatLng[];
+          strokeColor?: string;
+          strokeOpacity?: number;
+          strokeStyle?: string;
+          strokeWeight?: number;
+          zIndex?: number;
+        }) => KakaoPolyline;
         CustomOverlay: new (options: {
           content: HTMLElement;
           map: KakaoMap | null;
@@ -36,11 +49,25 @@ declare global {
 
   interface KakaoLatLng {
     readonly __kakaoLatLngBrand?: never;
+    getLat: () => number;
+    getLng: () => number;
+  }
+
+  interface KakaoLatLngBounds {
+    extend: (latLng: KakaoLatLng) => void;
   }
 
   interface KakaoMap {
+    getLevel: () => number;
     setCenter: (latLng: KakaoLatLng) => void;
     setLevel: (level: number) => void;
+    setBounds: (
+      bounds: KakaoLatLngBounds,
+      paddingTop?: number,
+      paddingRight?: number,
+      paddingBottom?: number,
+      paddingLeft?: number,
+    ) => void;
   }
 
   interface KakaoMarker {
@@ -48,6 +75,10 @@ declare global {
   }
 
   interface KakaoCustomOverlay {
+    setMap: (map: KakaoMap | null) => void;
+  }
+
+  interface KakaoPolyline {
     setMap: (map: KakaoMap | null) => void;
   }
 }
