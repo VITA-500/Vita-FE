@@ -294,7 +294,7 @@ export const StoreMapPreview = ({
     selectedStore,
     selectedStoreId,
     searchPoint,
-    stores,f
+    stores,
     userLocation,
   ]);
 
