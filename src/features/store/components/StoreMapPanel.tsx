@@ -3,17 +3,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bike,
+  Bus,
   CalendarCheck,
   Car,
   Check,
   ChevronDown,
-  LocateFixed,
-  LocateOff,
+  CornerUpRight,
   Menu,
-  Route,
   Search,
+  SportShoe,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
 import { StoreMapPreview } from "@/features/store/components/StoreMapPreview";
 import { useStoreMapState } from "@/features/store/hooks/useStoreMapState";
 import {
@@ -21,6 +22,7 @@ import {
   formatRemainingDistance,
   formatWalkingTime,
   getDistanceMeters,
+  matchesStoreSearch,
 } from "@/features/store/lib/geo";
 import { storeService } from "@/features/store/lib/storeService";
 import type {
@@ -28,8 +30,9 @@ import type {
   StoreRoute,
   StoreRouteMode,
 } from "@/features/store/types";
+import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
-import { Button } from "@/shared/ui/Button";
+import { Button, ButtonLink } from "@/shared/ui/Button";
 import { Modal } from "@/shared/ui/Modal";
 import { showToast } from "@/shared/ui/ToastProvider";
 
@@ -53,18 +56,28 @@ const serviceBadgeClassName =
   "bg-surface-muted text-text-secondary rounded-full px-2.5 py-1 text-[11px] font-bold dark:bg-white/10 dark:text-gray-300";
 
 const routeModeOptions: {
-  icon: typeof Route | typeof Car | typeof Bike;
+  icon: typeof SportShoe | typeof Car | typeof Bike | typeof Bus;
   label: string;
-  value: Extract<StoreRouteMode, "walk" | "car" | "bicycle">;
+  value: StoreRouteMode;
 }[] = [
-  { icon: Route, label: "도보", value: "walk" },
+  { icon: SportShoe, label: "도보", value: "walk" },
   { icon: Car, label: "자동차", value: "car" },
   { icon: Bike, label: "자전거", value: "bicycle" },
+  { icon: Bus, label: "대중교통", value: "transit" },
 ];
+
+const noRouteResultMessage =
+  "해당 교통 수단의 길찾기 결과가 없습니다.\n다른 이동 수단을 선택해주세요";
 
 type ServiceFilterOption = {
   label: string;
   value: string;
+};
+
+type RouteSummary = {
+  isLoading?: boolean;
+  remainingDistanceText: string;
+  travelTimeText: string;
 };
 
 const MultiFilterDropdown = ({
@@ -212,6 +225,7 @@ const StoreInfoBubble = ({
   isWaitingForPinSelection,
   onStartRoute,
   onReserve,
+  routeResultMessage,
   routeSummary,
   selectedRouteMode,
   onRouteModeChange,
@@ -221,15 +235,10 @@ const StoreInfoBubble = ({
   isWaitingForPinSelection: boolean;
   onStartRoute: (store: StoreLocation) => void;
   onReserve: (store: StoreLocation) => void;
-  onRouteModeChange: (
-    mode: Extract<StoreRouteMode, "walk" | "car" | "bicycle">,
-  ) => void;
-  routeSummary?: {
-    isLoading?: boolean;
-    remainingDistanceText: string;
-    travelTimeText: string;
-  } | null;
-  selectedRouteMode: Extract<StoreRouteMode, "walk" | "car" | "bicycle">;
+  onRouteModeChange: (mode: StoreRouteMode) => void;
+  routeResultMessage?: string | null;
+  routeSummary?: RouteSummary | null;
+  selectedRouteMode: StoreRouteMode;
   store?: StoreLocation;
 }) => {
   const title = isLoading
@@ -243,6 +252,38 @@ const StoreInfoBubble = ({
       <p className="text-brand text-xs font-bold">{title}</p>
     </div>
   );
+  const routeModeControl =
+    routeSummary || routeResultMessage ? (
+      <div className="ml-3 flex shrink-0 gap-1 rounded-sm border border-gray-200 bg-white p-1 text-[11px] font-extrabold shadow-md shadow-gray-950/10 dark:border-white/10 dark:bg-zinc-950 dark:shadow-black/30">
+        {routeModeOptions.map((option) => {
+          const Icon = option.icon;
+          const isSelected = selectedRouteMode === option.value;
+          const isUnavailable = Boolean(routeResultMessage && isSelected);
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              disabled={isUnavailable}
+              onClick={() => onRouteModeChange(option.value)}
+              title={option.label}
+              className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-sm transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none",
+                isUnavailable
+                  ? "cursor-not-allowed bg-gray-100 text-gray-300 opacity-70 shadow-none dark:bg-white/5 dark:text-gray-600"
+                  : isSelected
+                    ? "bg-brand text-white shadow-sm"
+                    : "text-text-secondary hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand",
+              )}
+              aria-label={`${option.label} 길찾기`}
+              aria-pressed={isSelected}
+            >
+              <Icon size={13} />
+            </button>
+          );
+        })}
+      </div>
+    ) : null;
 
   if (isLoading) {
     return (
@@ -284,7 +325,10 @@ const StoreInfoBubble = ({
 
   return (
     <div className="border-border after:border-border relative w-full rounded-sm border bg-white/95 p-4 text-left text-sm shadow-lg backdrop-blur after:absolute after:bottom-[-7px] after:left-1/2 after:h-3.5 after:w-3.5 after:-translate-x-1/2 after:rotate-45 after:border-r after:border-b after:bg-white/95 dark:border-white/10 dark:bg-zinc-950/92 dark:after:border-white/10 dark:after:bg-zinc-950/92">
-      {header}
+      <div className="flex items-start justify-between gap-2">
+        {header}
+        {routeModeControl}
+      </div>
       <div className="mt-3">
         <p className="text-base font-extrabold text-gray-950 dark:text-white">
           {store.name}
@@ -308,66 +352,45 @@ const StoreInfoBubble = ({
         <ServiceBadges title="상담 가능" services={store.consultServices} />
         <ServiceBadges title="제공 서비스" services={store.providedServices} />
 
-        {routeSummary && (
-          <div className="mt-4 space-y-3">
-            <div className="bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand grid grid-cols-2 gap-2 rounded-sm p-3 text-xs font-extrabold">
-              <span>
-                남은 거리
-                <strong className="mt-1 block text-sm">
-                  {routeSummary.isLoading
-                    ? "계산 중"
-                    : routeSummary.remainingDistanceText}
-                </strong>
-              </span>
-              <span>
-                예상 시간
-                <strong className="mt-1 block text-sm">
-                  {routeSummary.isLoading
-                    ? "계산 중"
-                    : routeSummary.travelTimeText}
-                </strong>
-              </span>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {routeModeOptions.map((option) => {
-                const Icon = option.icon;
-                const isSelected = selectedRouteMode === option.value;
-
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => onRouteModeChange(option.value)}
-                    className={cn(
-                      "flex h-9 items-center justify-center gap-1.5 rounded-full border text-xs font-extrabold transition",
-                      isSelected
-                        ? "border-brand bg-brand text-white"
-                        : "border-border text-text-secondary hover:border-brand/50 hover:text-brand dark:border-white/10",
-                    )}
-                  >
-                    <Icon size={15} />
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
+        {routeResultMessage ? (
+          <div className="bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand mt-4 rounded-sm p-3 text-xs leading-5 font-extrabold whitespace-pre-line">
+            {routeResultMessage}
           </div>
-        )}
+        ) : routeSummary ? (
+          <div className="bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand mt-4 grid grid-cols-2 gap-2 rounded-sm p-3 text-xs font-extrabold">
+            <span>
+              남은 거리
+              <strong className="mt-1 block text-sm">
+                {routeSummary.isLoading
+                  ? "계산 중"
+                  : routeSummary.remainingDistanceText}
+              </strong>
+            </span>
+            <span>
+              예상 시간
+              <strong className="mt-1 block text-sm">
+                {routeSummary.isLoading
+                  ? "계산 중"
+                  : routeSummary.travelTimeText}
+              </strong>
+            </span>
+          </div>
+        ) : null}
 
         <div className="mt-4 flex flex-wrap justify-end gap-2">
           <Button
             variant="primary"
             size="sm"
-            className="rounded-full"
+            className="rounded-sm shadow-sm transition-shadow hover:shadow-md"
             onClick={() => onStartRoute(store)}
           >
-            <Route size={16} />
+            <CornerUpRight size={16} />
             길찾기
           </Button>
           <Button
             variant="outline"
             size="sm"
-            className="rounded-full"
+            className="rounded-sm shadow-sm transition-shadow hover:shadow-md"
             onClick={() => onReserve(store)}
           >
             <CalendarCheck size={16} />
@@ -380,8 +403,8 @@ const StoreInfoBubble = ({
 };
 
 export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuthUser();
   const [stores, setStores] = useState(() => storeService.getNearbyStores());
-  const [, setIsStorePanelOpen] = useState(false);
   const [focusPoint, setFocusPoint] = useState<MapSearchPoint | null>(null);
   const [isSearchHistoryOpen, setIsSearchHistoryOpen] = useState(false);
   const [searchPoint, setSearchPoint] = useState<MapSearchPoint | null>(null);
@@ -391,6 +414,11 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const [hasSelectedStoreInfo, setHasSelectedStoreInfo] = useState(false);
   const [reservationStore, setReservationStore] =
     useState<StoreLocation | null>(null);
+  const [isLocationPermissionModalOpen, setIsLocationPermissionModalOpen] =
+    useState(true);
+  const [isLoginRequiredModalOpen, setIsLoginRequiredModalOpen] =
+    useState(false);
+  const [isStoreListCollapsed, setIsStoreListCollapsed] = useState(false);
   const [isToastBackdropVisible, setIsToastBackdropVisible] = useState(false);
   const [consultServiceFilters, setConsultServiceFilters] = useState<string[]>(
     [],
@@ -418,8 +446,10 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   } = useStoreMapState(stores);
   const [routeDestinationStoreId, setRouteDestinationStoreId] = useState("");
   const [walkingRoute, setWalkingRoute] = useState<StoreRoute | null>(null);
-  const [routeMode, setRouteMode] =
-    useState<Extract<StoreRouteMode, "walk" | "car" | "bicycle">>("walk");
+  const [routeMode, setRouteMode] = useState<StoreRouteMode>("walk");
+  const [routeResultMessage, setRouteResultMessage] = useState<string | null>(
+    null,
+  );
   const [isRouteLoading, setIsRouteLoading] = useState(false);
   const consultServiceFilterOptions = useMemo(
     () =>
@@ -461,14 +491,27 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         categoryStores.find((store) => store.id === selectedStore?.id) ??
         categoryStores[0])
       : undefined;
-  const categorySelectedStoreId =
-    activeMapCategory === "store" ? (categorySelectedStore?.id ?? "") : "";
   const hasActiveServiceFilter =
     consultServiceFilters.length > 0 || providedServiceFilters.length > 0;
   const mapStores =
     searchQuery || hasActiveServiceFilter
       ? categoryDisplayStores
       : categoryStores;
+  const searchableStores = useMemo(() => {
+    const storeMap = new Map<string, StoreLocation>();
+
+    [...stores, ...storeService.getNearbyStores()].forEach((store) => {
+      storeMap.set(store.id, store);
+    });
+
+    return Array.from(storeMap.values());
+  }, [stores]);
+  const searchResultStores =
+    activeMapCategory === "store"
+      ? filterStoresByServices(searchableStores).filter((store) =>
+          matchesStoreSearch(store, searchQuery),
+        )
+      : [];
   const routeDestinationStore =
     categoryStores.find((store) => store.id === routeDestinationStoreId) ??
     stores.find((store) => store.id === routeDestinationStoreId);
@@ -494,7 +537,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     };
   }, [isRouteLoading, routeDestinationStore, userLocation, walkingRoute]);
   const routePreview = useMemo(() => {
-    if (!userLocation || !routeDestinationStore) {
+    if (!userLocation || !routeDestinationStore || routeResultMessage) {
       return null;
     }
 
@@ -507,11 +550,12 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       ? [userLocation, ...walkingRoute.path, destination]
       : fallbackPath;
     const routeKey = walkingRoute?.path.length
-      ? `route:${routeDestinationStoreId}`
-      : `fallback:${routeDestinationStoreId}`;
+      ? `route:${routeDestinationStoreId}:${walkingRoute.mode}`
+      : `fallback:${routeDestinationStoreId}:${routeMode}`;
 
     return {
       destination,
+      mode: routeMode,
       origin: userLocation,
       path: routePath,
       routeKey,
@@ -519,6 +563,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   }, [
     routeDestinationStore,
     routeDestinationStoreId,
+    routeMode,
+    routeResultMessage,
     userLocation,
     walkingRoute,
   ]);
@@ -602,11 +648,17 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     setIsWaitingForPinSelection(false);
     setSelectedStoreId(storeId);
 
-    if (options?.focusMap) {
-      const nextStore =
-        categoryDisplayStores.find((store) => store.id === storeId) ??
-        categoryStores.find((store) => store.id === storeId);
+    const nextStore =
+      categoryDisplayStores.find((store) => store.id === storeId) ??
+      categoryStores.find((store) => store.id === storeId) ??
+      searchableStores.find((store) => store.id === storeId) ??
+      stores.find((store) => store.id === storeId);
 
+    if (nextStore && !stores.some((store) => store.id === nextStore.id)) {
+      setStores((prevStores) => [...prevStores, nextStore]);
+    }
+
+    if (options?.focusMap) {
       if (nextStore) {
         setFocusPoint({ lat: nextStore.lat, lng: nextStore.lng });
         setSearchPoint(null);
@@ -617,15 +669,22 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const handleRouteStart = (store: StoreLocation) => {
     setRouteDestinationStoreId(store.id);
     setWalkingRoute(null);
+    setRouteResultMessage(null);
     setIsRouteLoading(true);
     handleStoreSelect(store.id, { focusMap: true });
     watchLocation();
 
     if (!userLocation) {
+      setIsLocationPermissionModalOpen(true);
       showToast("현재 위치를 확인한 뒤 경로를 표시할게요.");
     }
   };
-
+  const changeRouteMode = (nextMode: StoreRouteMode) => {
+    setRouteMode(nextMode);
+    setWalkingRoute(null);
+    setRouteResultMessage(null);
+    setIsRouteLoading(Boolean(routeDestinationStoreId));
+  };
   useEffect(() => {
     if (!routeDestinationStoreId || !userLocation) {
       return;
@@ -638,16 +697,13 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       .then((route) => {
         if (isCurrentRequest) {
           setWalkingRoute(route);
+          setRouteResultMessage(null);
         }
       })
-      .catch((error: unknown) => {
+      .catch(() => {
         if (isCurrentRequest) {
           setWalkingRoute(null);
-          if (!(
-            error instanceof Error && error.message === "NON_API_STORE_ID"
-          )) {
-            showToast("실제 이동 경로를 불러오지 못해 직선 경로로 표시해요.");
-          }
+          setRouteResultMessage(noRouteResultMessage);
         }
       })
       .finally(() => {
@@ -674,16 +730,98 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       setIsToastBackdropVisible(false);
     }, 1700);
   };
+  const handleReserve = (store: StoreLocation) => {
+    if (isAuthLoading) {
+      showToast("로그인 상태를 확인하고 있어요.");
+      return;
+    }
+
+    if (!isAuthenticated) {
+      setIsLoginRequiredModalOpen(true);
+      return;
+    }
+
+    setReservationStore(store);
+  };
 
   const closeSelectedStoreInfo = () => {
     setHasSelectedStoreInfo(false);
   };
+  const resetRouteState = () => {
+    setRouteDestinationStoreId("");
+    setWalkingRoute(null);
+    setRouteResultMessage(null);
+    setIsRouteLoading(false);
+  };
+  const focusUserLocation = () => {
+    shouldFocusUserLocationRef.current = true;
+    requestLocation();
 
-  useEffect(() => {
-    if (locationStatus === "idle") {
-      requestLocation();
+    if (userLocation) {
+      setFocusPoint({
+        lat: userLocation.lat,
+        lng: userLocation.lng,
+      });
+      setSearchPoint({
+        lat: userLocation.lat,
+        lng: userLocation.lng,
+      });
+      hasFocusedInitialLocationRef.current = true;
+      shouldFocusUserLocationRef.current = false;
     }
-  }, [locationStatus, requestLocation]);
+
+    if (routeDestinationStoreId) {
+      watchLocation();
+    }
+  };
+  const requestUserLocationFromModal = () => {
+    setIsLocationPermissionModalOpen(false);
+    focusUserLocation();
+  };
+  const showStoresFromUserLocation = () => {
+    setActiveMapCategory("store");
+    setSearchQuery("");
+    setIsSearchHistoryOpen(false);
+    setHasSelectedStoreInfo(false);
+    setIsWaitingForPinSelection(false);
+    setSelectedStoreId("");
+    resetRouteState();
+
+    if (!userLocation) {
+      setIsLocationPermissionModalOpen(true);
+      return;
+    }
+
+    const currentPoint = {
+      lat: userLocation.lat,
+      lng: userLocation.lng,
+    };
+
+    setFocusPoint(currentPoint);
+    setSearchPoint(currentPoint);
+    hasFocusedInitialLocationRef.current = true;
+    shouldFocusUserLocationRef.current = false;
+    updateStoresByLocation(currentPoint, { showLoadingCard: true });
+  };
+  const mapSelectedStore = categorySelectedStore ?? routeDestinationStore;
+  const mapSelectedStoreId =
+    categorySelectedStore?.id ?? routeDestinationStore?.id ?? "";
+  const showStoreInfoCard =
+    hasSelectedStoreInfo &&
+    (isWaitingForPinSelection || Boolean(mapSelectedStore));
+  const handleStoreHover = (storeId: string) => {
+    const hoveredStore =
+      visibleMapStores.find((store) => store.id === storeId) ??
+      stores.find((store) => store.id === storeId);
+
+    if (!hoveredStore) {
+      return;
+    }
+
+    setSelectedStoreId(storeId);
+    setIsWaitingForPinSelection(false);
+    setHasSelectedStoreInfo(true);
+  };
 
   useEffect(() => {
     if (!userLocation) {
@@ -770,38 +908,41 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         isFullBleed
         isSearchFromMapPointLoading={isMapSearchLoading}
         routePreview={routePreview}
-        isRouteCardDocked={
-          routeDestinationStoreId === categorySelectedStore?.id
-        }
-        selectedStore={hasSelectedStoreInfo ? categorySelectedStore : undefined}
+        isRouteCardDocked={Boolean(
+          routeDestinationStoreId &&
+          routeDestinationStoreId === mapSelectedStore?.id,
+        )}
+        selectedStore={showStoreInfoCard ? mapSelectedStore : undefined}
         selectedStoreCard={
-          hasSelectedStoreInfo ? (
+          showStoreInfoCard ? (
             <StoreInfoBubble
               isLoading={isMapSearchLoading}
               isWaitingForPinSelection={isWaitingForPinSelection}
               routeSummary={
-                routeDestinationStoreId === categorySelectedStore?.id
+                routeDestinationStoreId === mapSelectedStore?.id
                   ? routeSummary
                   : null
               }
-              selectedRouteMode={routeMode}
-              store={
-                isWaitingForPinSelection ? undefined : categorySelectedStore
+              routeResultMessage={
+                routeDestinationStoreId === mapSelectedStore?.id
+                  ? routeResultMessage
+                  : null
               }
+              selectedRouteMode={routeMode}
+              store={isWaitingForPinSelection ? undefined : mapSelectedStore}
               onStartRoute={handleRouteStart}
-              onRouteModeChange={(nextMode) => {
-                setRouteMode(nextMode);
-                setWalkingRoute(null);
-                setIsRouteLoading(Boolean(routeDestinationStoreId));
-              }}
-              onReserve={setReservationStore}
+              onRouteModeChange={changeRouteMode}
+              onReserve={handleReserve}
             />
           ) : null
         }
-        selectedStoreId={hasSelectedStoreInfo ? categorySelectedStoreId : ""}
+        selectedStoreCardLeftInset={isStoreListCollapsed ? 0 : 452}
+        selectedStoreId={showStoreInfoCard ? mapSelectedStoreId : ""}
         stores={visibleMapStores}
         searchPoint={searchPoint}
         userLocation={userLocation}
+        isUserLocationLoading={locationStatus === "requesting"}
+        onFocusUserLocation={focusUserLocation}
         onMapPointSelect={setSearchPoint}
         onSelectedStoreCardClose={closeSelectedStoreInfo}
         onSearchFromMapPoint={() => {
@@ -811,14 +952,18 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
 
           updateStoresByLocation(searchPoint, { showLoadingCard: true });
         }}
+        onStoreHover={handleStoreHover}
         onSelectStore={handleStoreSelect}
       />
 
       <div className="pointer-events-none absolute inset-0 z-10 pt-16 md:pt-0">
         <div className="pointer-events-auto absolute top-3 right-3 left-3 flex flex-col gap-3 md:top-5 md:right-5 md:left-5 md:flex-row md:flex-wrap md:items-start">
           <div className="flex min-w-0 flex-col gap-3 md:flex-row md:flex-wrap md:items-start">
-            <div ref={collapsedSearchRef} className="min-w-0 md:w-[420px]">
-              <div className="flex h-12 items-center overflow-hidden rounded-sm text-left shadow-sm">
+            <div
+              ref={collapsedSearchRef}
+              className="relative min-w-0 md:w-[420px]"
+            >
+              <div className="relative z-30 flex h-12 items-center overflow-hidden rounded-sm text-left shadow-sm">
                 <div className="bg-brand flex h-full w-[132px] shrink-0 items-center text-white md:w-[116px]">
                   {onOpenSidebar && (
                     <button
@@ -835,17 +980,14 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                   )}
                   <button
                     type="button"
-                    onClick={() => {
-                      setIsSearchHistoryOpen(false);
-                      setIsStorePanelOpen(true);
-                    }}
+                    onClick={showStoresFromUserLocation}
                     className="hover:bg-brand-hover flex h-full min-w-0 flex-1 items-center justify-center px-2 text-sm font-extrabold transition md:px-0"
-                    aria-label="매장 검색 패널 열기"
+                    aria-label="내 위치 기준 매장 보기"
                   >
                     VITA map
                   </button>
                 </div>
-                <label className="flex h-full min-w-0 flex-1 items-center justify-between gap-3 bg-white px-4 text-sm font-semibold text-gray-400 dark:bg-zinc-950">
+                <label className="flex h-full min-w-0 flex-1 items-center justify-between gap-3 bg-white px-3.5 text-sm font-semibold text-gray-400 dark:bg-zinc-950">
                   <input
                     ref={searchInputRef}
                     value={searchQuery}
@@ -858,15 +1000,12 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                     }}
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
-                        const firstStore = categoryDisplayStores[0];
+                        const firstStore = searchResultStores[0];
 
                         if (firstStore) {
-                          handleStoreSelect(firstStore.id, {
-                            focusMap: true,
-                          });
+                          handleStoreSelect(firstStore.id, { focusMap: true });
                         }
                         setIsSearchHistoryOpen(false);
-                        setIsStorePanelOpen(true);
                       }
                     }}
                     placeholder="매장명, 주소, 전화번호 검색"
@@ -878,17 +1017,16 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
               </div>
 
               {isSearchHistoryOpen && (
-                <div className="ml-[116px] w-[calc(100%-116px)] overflow-hidden bg-white text-sm shadow-sm dark:bg-zinc-950">
+                <div className="absolute top-12 left-0 z-20 ml-[116px] w-[calc(100%-116px)] overflow-hidden bg-white text-sm shadow-sm dark:bg-zinc-950">
                   {searchQuery ? (
                     <div className="max-h-48 overflow-y-auto py-1">
-                      {categoryDisplayStores.slice(0, 4).map((store) => (
+                      {searchResultStores.slice(0, 4).map((store) => (
                         <button
                           key={store.id}
                           type="button"
                           onClick={() => {
                             handleStoreSelect(store.id, { focusMap: true });
                             setIsSearchHistoryOpen(false);
-                            setIsStorePanelOpen(true);
                           }}
                           className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-white/[0.04]"
                         >
@@ -901,7 +1039,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                         </button>
                       ))}
 
-                      {categoryDisplayStores.length === 0 && (
+                      {searchResultStores.length === 0 && (
                         <div className="flex h-14 cursor-default items-center justify-center text-sm font-medium text-gray-400/85">
                           검색 결과가 없어요.
                         </div>
@@ -927,6 +1065,96 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                   </div>
                 </div>
               )}
+
+              <div
+                className={cn(
+                  "relative z-0 mt-2 overflow-hidden rounded-sm bg-white/95 shadow-sm backdrop-blur transition-[max-height] duration-200 dark:bg-zinc-950/95",
+                  isStoreListCollapsed ? "max-h-11" : "max-h-[min(48vh,420px)]",
+                  isSearchHistoryOpen && "pointer-events-auto",
+                )}
+              >
+                <div className="border-border flex h-11 items-center justify-between border-b px-4 dark:border-white/10">
+                  <span className="text-sm font-extrabold text-gray-950 dark:text-white">
+                    매장 목록
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setIsStoreListCollapsed((isCollapsed) => !isCollapsed)
+                    }
+                    className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-8 items-center gap-1.5 rounded-sm px-2 text-xs font-bold text-gray-400 transition"
+                    aria-expanded={!isStoreListCollapsed}
+                    aria-label={
+                      isStoreListCollapsed
+                        ? "매장 목록 펼치기"
+                        : "매장 목록 접기"
+                    }
+                  >
+                    <span>{mapStores.length}개</span>
+                    <ChevronDown
+                      size={14}
+                      className={cn(
+                        "transition-transform",
+                        !isStoreListCollapsed && "rotate-180",
+                      )}
+                    />
+                  </button>
+                </div>
+                <div
+                  className={cn(
+                    "max-h-[calc(min(48vh,420px)-44px)] overflow-y-auto py-1 transition-opacity duration-150",
+                    isStoreListCollapsed && "pointer-events-none opacity-0",
+                  )}
+                >
+                  {mapStores.map((store) => (
+                    <button
+                      key={store.id}
+                      type="button"
+                      onClick={() =>
+                        handleStoreSelect(store.id, { focusMap: true })
+                      }
+                      className={cn(
+                        "flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-gray-50 dark:hover:bg-white/[0.04]",
+                        mapSelectedStoreId === store.id &&
+                          "bg-brand-soft dark:bg-brand/10",
+                      )}
+                      aria-pressed={mapSelectedStoreId === store.id}
+                    >
+                      <span
+                        className={cn(
+                          "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-xs font-black",
+                          mapSelectedStoreId === store.id
+                            ? "bg-brand text-white"
+                            : "bg-brand/10 text-brand",
+                        )}
+                      >
+                        {store.name.slice(0, 1)}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="truncate text-sm font-extrabold text-gray-800 dark:text-white">
+                            {store.name}
+                          </span>
+                          {store.distanceText && (
+                            <span className="shrink-0 text-[11px] font-bold text-gray-400">
+                              {store.distanceText}
+                            </span>
+                          )}
+                        </span>
+                        <span className="mt-1 block truncate text-xs font-medium text-gray-400">
+                          {store.address}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+
+                  {mapStores.length === 0 && (
+                    <div className="flex h-20 items-center justify-center text-sm font-semibold text-gray-400">
+                      표시할 매장이 없어요.
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="min-w-0 md:w-[340px]">
@@ -978,206 +1206,9 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                   </div>
                 )}
               </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  shouldFocusUserLocationRef.current = true;
-                  requestLocation();
-                  if (userLocation) {
-                    setFocusPoint({
-                      lat: userLocation.lat,
-                      lng: userLocation.lng,
-                    });
-                    setSearchPoint({
-                      lat: userLocation.lat,
-                      lng: userLocation.lng,
-                    });
-                    hasFocusedInitialLocationRef.current = true;
-                    shouldFocusUserLocationRef.current = false;
-                  }
-
-                  if (routeDestinationStoreId) {
-                    watchLocation();
-                  }
-                }}
-                disabled={locationStatus === "requesting"}
-                className="flex h-12 items-center gap-2 rounded-sm bg-white px-4 text-sm font-extrabold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60 dark:bg-zinc-950 dark:text-gray-200 dark:hover:bg-zinc-900"
-              >
-                {locationStatus === "granted" ? (
-                  <LocateFixed size={16} className="text-brand" />
-                ) : (
-                  <LocateOff size={16} className="text-gray-400" />
-                )}
-                내 위치로 이동
-              </button>
             </div>
           </div>
         </div>
-
-        {/* 오른쪽 사이드바는 지도 UI 재배치 중 임시 비활성화
-        {isStorePanelOpen ? (
-          <div className="pointer-events-auto absolute right-0 bottom-0 left-0 h-[min(78vh,620px)] md:top-0 md:bottom-0 md:left-auto md:h-auto md:w-[min(420px,100%)]">
-            <button
-              type="button"
-              onClick={() => setIsStorePanelOpen(false)}
-              className="absolute top-px left-1/2 z-20 flex h-5 w-14 -translate-x-1/2 -translate-y-full items-center justify-center rounded-t-sm bg-white shadow-[0_-1px_3px_rgba(15,23,42,0.12)] transition hover:bg-gray-50 md:top-1/2 md:left-px md:h-14 md:w-5 md:-translate-x-full md:-translate-y-1/2 md:rounded-t-none md:rounded-l-sm md:shadow-[-1px_0_3px_rgba(15,23,42,0.12)] dark:bg-zinc-950 dark:hover:bg-zinc-900"
-              aria-label="매장 패널 접기"
-            >
-              <span
-                className="bg-brand h-2 w-3 [clip-path:polygon(0_0,100%_0,50%_100%)] md:h-3 md:w-2 md:[clip-path:polygon(0_0,100%_50%,0_100%)]"
-                aria-hidden="true"
-              />
-            </button>
-
-            <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-t-3xl bg-white shadow-[0_-12px_32px_rgba(15,23,42,0.10)] transition-transform duration-300 ease-out md:rounded-none md:shadow-[-12px_0_32px_rgba(15,23,42,0.08)] dark:bg-zinc-950">
-              <div className="border-border flex h-14 shrink-0 items-center border-b px-4 dark:border-white/10">
-                <span className="text-sm font-extrabold text-gray-950 dark:text-white">
-                  매장 탐색
-                </span>
-              </div>
-
-              <StoreList
-                activeFilter={activeFilter}
-                locationStatus={locationStatus}
-                onActiveFilterChange={setActiveFilter}
-                onQueryChange={setSearchQuery}
-                onRefreshLocation={requestLocation}
-                query={searchQuery}
-                variant="docked"
-                selectedStoreId={categorySelectedStoreId}
-                stores={categorySortedStores}
-                onSelectStore={setSelectedStoreId}
-              />
-            </div>
-          </div>
-        ) : (
-          <>
-            <div
-              ref={collapsedSearchRef}
-              className="pointer-events-auto absolute top-3 right-3 left-3 md:top-5 md:right-5 md:left-auto md:w-[min(420px,calc(100%-40px))]"
-            >
-              <div className="flex h-12 items-center overflow-hidden rounded-sm text-left shadow-sm">
-                <div className="bg-brand flex h-full w-[132px] shrink-0 items-center text-white md:w-[116px]">
-                  {onOpenSidebar && (
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onOpenSidebar();
-                      }}
-                      className="ml-2 flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-white/15 md:hidden"
-                      aria-label="사이드바 열기"
-                    >
-                      <Menu size={20} />
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsSearchHistoryOpen(false);
-                      setIsStorePanelOpen(true);
-                    }}
-                    className="hover:bg-brand-hover flex h-full min-w-0 flex-1 items-center justify-center px-2 text-sm font-extrabold transition md:px-0"
-                    aria-label="매장 검색 패널 열기"
-                  >
-                    VITA map
-                  </button>
-                </div>
-                <label className="flex h-full min-w-0 flex-1 items-center justify-between gap-3 bg-white px-4 text-sm font-semibold text-gray-400 dark:bg-zinc-950">
-                  <input
-                    ref={searchInputRef}
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    onFocus={() => setIsSearchHistoryOpen(true)}
-                    onMouseDown={() => {
-                      if (document.activeElement === searchInputRef.current) {
-                        setIsSearchHistoryOpen((isOpen) => !isOpen);
-                      }
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        setIsSearchHistoryOpen(false);
-                        setIsStorePanelOpen(true);
-                      }
-                    }}
-                    placeholder="매장명, 주소, 전화번호 검색"
-                    className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-gray-700 outline-none placeholder:text-gray-400/85 dark:text-white"
-                    aria-label="매장명, 주소, 전화번호 검색"
-                  />
-                  <Search size={22} className="shrink-0 text-gray-300/90" />
-                </label>
-              </div>
-
-              {isSearchHistoryOpen && (
-                <div className="ml-[116px] w-[calc(100%-116px)] overflow-hidden bg-white text-sm shadow-sm dark:bg-zinc-950">
-                  {searchQuery ? (
-                    <div className="max-h-48 overflow-y-auto py-1">
-                      {categoryDisplayStores.slice(0, 4).map((store) => (
-                        <button
-                          key={store.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedStoreId(store.id);
-                            setIsSearchHistoryOpen(false);
-                            setIsStorePanelOpen(true);
-                          }}
-                          className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-white/[0.04]"
-                        >
-                          <span className="min-w-0 truncate">{store.name}</span>
-                          {store.distanceText && (
-                            <span className="shrink-0 text-xs text-gray-400">
-                              {store.distanceText}
-                            </span>
-                          )}
-                        </button>
-                      ))}
-
-                      {categoryDisplayStores.length === 0 && (
-                        <div className="flex h-14 cursor-default items-center justify-center text-sm font-medium text-gray-400/85">
-                          검색 결과가 없어요.
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex h-14 cursor-default items-center justify-center gap-2 text-gray-400/85">
-                      <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-gray-300/80 text-[11px] leading-none font-bold text-gray-300">
-                        i
-                      </span>
-                      <span className="text-sm font-medium">
-                        히스토리가 없어요.
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex h-12 cursor-default items-center bg-gray-50 px-5 dark:bg-white/[0.04]">
-                    <button
-                      type="button"
-                      className="cursor-pointer text-sm font-medium text-gray-400/90"
-                    >
-                      히스토리 끄기
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                setIsSearchHistoryOpen(false);
-                setIsStorePanelOpen(true);
-              }}
-              className="pointer-events-auto absolute bottom-0 left-1/2 z-20 flex h-5 w-14 -translate-x-1/2 items-center justify-center rounded-t-sm bg-white shadow-[0_-1px_3px_rgba(15,23,42,0.12)] transition hover:bg-gray-50 md:top-1/2 md:right-0 md:bottom-auto md:left-auto md:h-14 md:w-5 md:translate-x-0 md:-translate-y-1/2 md:rounded-t-none md:rounded-l-sm md:shadow-[-1px_0_3px_rgba(15,23,42,0.12)] dark:bg-zinc-950 dark:hover:bg-zinc-900"
-              aria-label="매장 검색 패널 열기"
-            >
-              <span
-                className="bg-brand h-2 w-3 [clip-path:polygon(50%_0,0_100%,100%_100%)] md:h-3 md:w-2 md:[clip-path:polygon(100%_0,0_50%,100%_100%)]"
-                aria-hidden="true"
-              />
-            </button>
-          </>
-        )}
-        */}
       </div>
 
       {isToastBackdropVisible && (
@@ -1206,6 +1237,34 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       )}
 
       <Modal
+        isOpen={isLocationPermissionModalOpen}
+        onClose={() => setIsLocationPermissionModalOpen(false)}
+        title="내 위치를 사용할까요?"
+        description="현재 위치 주변의 VITA 매장을 지도에서 바로 확인할 수 있어요."
+        size="sm"
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsLocationPermissionModalOpen(false)}
+            >
+              나중에
+            </Button>
+            <Button
+              size="sm"
+              onClick={requestUserLocationFromModal}
+              disabled={locationStatus === "requesting"}
+            >
+              위치 허용
+            </Button>
+          </>
+        }
+      >
+        위치 정보는 근처 매장 조회와 길찾기 출발지 계산에만 사용됩니다.
+      </Modal>
+
+      <Modal
         isOpen={reservationStore !== null}
         onClose={() => setReservationStore(null)}
         title="예약 확인"
@@ -1232,6 +1291,30 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       >
         예약 후 매장 방문 전 운영시간과 상담 가능 서비스를 한 번 더 확인해
         주세요.
+      </Modal>
+
+      <Modal
+        isOpen={isLoginRequiredModalOpen}
+        onClose={() => setIsLoginRequiredModalOpen(false)}
+        title="로그인이 필요해요"
+        description="매장 방문 예약은 로그인 후 이용할 수 있어요."
+        size="sm"
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsLoginRequiredModalOpen(false)}
+            >
+              닫기
+            </Button>
+            <ButtonLink href={routes.login} size="sm">
+              로그인하기
+            </ButtonLink>
+          </>
+        }
+      >
+        매장 위치 확인과 길찾기는 로그인 없이 계속 이용할 수 있습니다.
       </Modal>
     </div>
   );

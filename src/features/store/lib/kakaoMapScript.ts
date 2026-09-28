@@ -49,6 +49,8 @@ declare global {
 
   interface KakaoLatLng {
     readonly __kakaoLatLngBrand?: never;
+    getLat: () => number;
+    getLng: () => number;
   }
 
   interface KakaoLatLngBounds {
@@ -56,6 +58,7 @@ declare global {
   }
 
   interface KakaoMap {
+    getLevel: () => number;
     setCenter: (latLng: KakaoLatLng) => void;
     setLevel: (level: number) => void;
     setBounds: (

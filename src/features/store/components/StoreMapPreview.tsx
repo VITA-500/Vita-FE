@@ -2,14 +2,61 @@
 
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { MapPin, RotateCcw } from "lucide-react";
+import {
+  LocateFixed,
+  LocateOff,
+  MapPin,
+  Minus,
+  Plus,
+  RotateCcw,
+} from "lucide-react";
 import { useKakaoMapReady } from "@/features/store/hooks/useKakaoMapReady";
 import type { UserLocation } from "@/features/store/lib/geo";
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation, StoreRouteMode } from "@/features/store/types";
 import { cn } from "@/shared/lib/cn";
 
 const clampPercent = (value: number) => Math.min(88, Math.max(12, value));
-const routeStrokeColor = "#fdb61d";
+const clampValue = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
+const routeStyleByMode: Record<
+  StoreRouteMode,
+  {
+    color: string;
+    glow: string;
+    opacity: number;
+    strokeStyle: "solid" | "shortdot";
+    weight: number;
+  }
+> = {
+  walk: {
+    color: "#fdb61d",
+    glow: "rgba(253, 182, 29, 0.22)",
+    opacity: 1,
+    strokeStyle: "shortdot",
+    weight: 10,
+  },
+  car: {
+    color: "#2563eb",
+    glow: "rgba(37, 99, 235, 0.2)",
+    opacity: 0.92,
+    strokeStyle: "solid",
+    weight: 7,
+  },
+  bicycle: {
+    color: "#16a34a",
+    glow: "rgba(22, 163, 74, 0.2)",
+    opacity: 0.92,
+    strokeStyle: "solid",
+    weight: 7,
+  },
+  transit: {
+    color: "#7c3aed",
+    glow: "rgba(124, 58, 237, 0.2)",
+    opacity: 0.92,
+    strokeStyle: "solid",
+    weight: 7,
+  },
+};
 
 type MapPoint = {
   lat: number;
@@ -138,6 +185,7 @@ type MapOverlayHandle = {
 
 type RoutePreview = {
   destination: MapPoint;
+  mode: StoreRouteMode;
   origin: MapPoint;
   path: MapPoint[];
   routeKey: string;
@@ -153,14 +201,18 @@ type StoreMapPreviewProps = {
   isSearchFromMapPointLoading?: boolean;
   selectedStore?: StoreLocation;
   selectedStoreCard?: ReactNode;
+  selectedStoreCardLeftInset?: number;
   selectedStoreId: string;
   stores: StoreLocation[];
   searchPoint?: MapPoint | null;
   routePreview?: RoutePreview | null;
   userLocation?: UserLocation | null;
+  isUserLocationLoading?: boolean;
   onMapPointSelect?: (point: MapPoint) => void;
+  onFocusUserLocation?: () => void;
   onSelectedStoreCardClose?: () => void;
   onSearchFromMapPoint?: () => void;
+  onStoreHover?: (storeId: string) => void;
   onSelectStore: (storeId: string) => void;
 };
 
@@ -173,14 +225,18 @@ export const StoreMapPreview = ({
   onSelectStore,
   selectedStore,
   selectedStoreCard,
+  selectedStoreCardLeftInset = 0,
   selectedStoreId,
   searchPoint,
   routePreview,
   stores,
   userLocation,
+  isUserLocationLoading = false,
+  onFocusUserLocation,
   onMapPointSelect,
   onSelectedStoreCardClose,
   onSearchFromMapPoint,
+  onStoreHover,
 }: StoreMapPreviewProps) => {
   const isKakaoMapReady = useKakaoMapReady();
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -194,6 +250,7 @@ export const StoreMapPreview = ({
   });
   const [selectedStoreCardPosition, setSelectedStoreCardPosition] =
     useState<CSSProperties | null>(null);
+  const fittedRouteKeyRef = useRef("");
   const focusPointRef = useRef<FocusPointRef>(undefined);
   const searchPointRef = useRef<SearchPointRef>(undefined);
   const routePreviewRef = useRef<RoutePreviewRef>(undefined);
@@ -203,6 +260,21 @@ export const StoreMapPreview = ({
       ? routeDrawState.progress
       : 0;
   const routePreviewKey = routePreview?.routeKey ?? "";
+  const adjustZoomLevel = (direction: "in" | "out") => {
+    const map = mapRef.current;
+
+    if (!map) {
+      return;
+    }
+
+    const currentLevel = map.getLevel();
+    const nextLevel =
+      direction === "in"
+        ? Math.max(1, currentLevel - 1)
+        : Math.min(14, currentLevel + 1);
+
+    map.setLevel(nextLevel);
+  };
 
   useEffect(() => {
     if (!routePreviewKey) {
@@ -258,13 +330,11 @@ export const StoreMapPreview = ({
         center: initialCenter,
         level: 4,
       });
-    const shouldRecenterBySearchPoint =
-      Boolean(searchPoint) && searchPointRef.current !== searchPoint;
     const shouldRecenterByFocusPoint =
       Boolean(focusPoint) && focusPointRef.current !== focusPoint;
     const shouldFitRoute =
       Boolean(routePreview) &&
-      routePreviewRef.current?.routeKey !== routePreview?.routeKey;
+      fittedRouteKeyRef.current !== routePreview?.routeKey;
 
     mapRef.current = map;
     focusPointRef.current = focusPoint;
@@ -273,29 +343,34 @@ export const StoreMapPreview = ({
 
     if (routePreview && (isNewMap || shouldFitRoute)) {
       const bounds = new kakaoMaps.LatLngBounds();
+      const containerWidth =
+        mapContainerRef.current?.getBoundingClientRect().width ?? 0;
+      const routeLeftPadding =
+        containerWidth >= 768 && selectedStoreCardLeftInset
+          ? selectedStoreCardLeftInset + 24
+          : 48;
 
       routePreview.path.forEach((point) => {
         bounds.extend(new kakaoMaps.LatLng(point.lat, point.lng));
       });
-      map.setBounds(bounds, 120, 48, selectedStoreCard ? 230 : 72, 48);
-    } else if (
-      isNewMap ||
-      shouldRecenterByFocusPoint ||
-      shouldRecenterBySearchPoint
-    ) {
+      map.setBounds(
+        bounds,
+        120,
+        routePreview ? 390 : 48,
+        routePreview ? 280 : selectedStoreCard ? 230 : 72,
+        routeLeftPadding,
+      );
+      fittedRouteKeyRef.current = routePreview.routeKey;
+    } else if (isNewMap || shouldRecenterByFocusPoint) {
       const recenterPoint =
-        shouldRecenterBySearchPoint && searchPoint
-          ? searchPoint
-          : shouldRecenterByFocusPoint && focusPoint
-            ? focusPoint
-            : null;
+        shouldRecenterByFocusPoint && focusPoint ? focusPoint : null;
 
       if (recenterPoint) {
         map.setCenter(
           new kakaoMaps.LatLng(recenterPoint.lat, recenterPoint.lng),
         );
+        map.setLevel(4);
       }
-      map.setLevel(4);
     }
 
     const mapEventApi = kakaoMaps.event as unknown as KakaoMapEventApi;
@@ -317,9 +392,31 @@ export const StoreMapPreview = ({
         return;
       }
 
+      const containerRect = mapContainerRef.current.getBoundingClientRect();
+      const effectiveLeftInset =
+        containerRect.width >= 768 ? selectedStoreCardLeftInset : 0;
+      const availableWidth = containerRect.width - effectiveLeftInset - 24;
+      const cardWidth = Math.min(320, Math.max(0, availableWidth));
+      const cardHeightEstimate = 260;
+      const horizontalPadding = 12;
+      const topPadding = 20;
+      const bottomPadding = 12;
+      const minX = effectiveLeftInset + horizontalPadding + cardWidth / 2;
+      const maxX = containerRect.width - horizontalPadding - cardWidth / 2;
+      const clampedX = clampValue(
+        point.x,
+        Math.min(minX, maxX),
+        Math.max(minX, maxX),
+      );
+      const clampedY = clampValue(
+        point.y,
+        topPadding + cardHeightEstimate,
+        containerRect.height - bottomPadding,
+      );
+
       setSelectedStoreCardPosition({
-        left: `${point.x}px`,
-        top: `${point.y}px`,
+        left: `${clampedX}px`,
+        top: `${clampedY}px`,
       });
     };
     const handleMapDragEnd = () => {
@@ -367,13 +464,18 @@ export const StoreMapPreview = ({
       const handleMarkerClick = () => {
         onSelectStore(store.id);
       };
+      const handleMarkerMouseEnter = () => {
+        onStoreHover?.(store.id);
+      };
 
       marker.addEventListener("click", handleMarkerClick);
+      marker.addEventListener("mouseenter", handleMarkerMouseEnter);
 
       return {
         marker: nativeMarker,
         cleanup: () => {
           marker.removeEventListener("click", handleMarkerClick);
+          marker.removeEventListener("mouseenter", handleMarkerMouseEnter);
           nativeMarker.setMap(null);
         },
         overlay: new kakaoMaps.CustomOverlay({
@@ -422,12 +524,14 @@ export const StoreMapPreview = ({
     focusPoint,
     isKakaoMapReady,
     onSelectStore,
+    onStoreHover,
     onMapPointSelect,
     onSelectedStoreCardClose,
     onSearchFromMapPoint,
     routePreview,
     selectedStore,
     selectedStoreCard,
+    selectedStoreCardLeftInset,
     selectedStoreId,
     searchPoint,
     stores,
@@ -456,6 +560,7 @@ export const StoreMapPreview = ({
       routeDrawProgress,
     );
     const routeHead = animatedRoutePath[animatedRoutePath.length - 1];
+    const routeStyle = routeStyleByMode[routePreview.mode];
 
     routeLineRef.current = new kakaoMaps.Polyline({
       clickable: false,
@@ -463,50 +568,80 @@ export const StoreMapPreview = ({
       path: animatedRoutePath.map(
         (point) => new kakaoMaps.LatLng(point.lat, point.lng),
       ),
-      strokeColor: routeStrokeColor,
-      strokeOpacity: 0.95,
-      strokeStyle: "solid",
-      strokeWeight: 8,
+      strokeColor: routeStyle.color,
+      strokeOpacity: routeStyle.opacity,
+      strokeStyle: routeStyle.strokeStyle,
+      strokeWeight: routeStyle.weight,
       zIndex: 35,
     });
 
-    [
-      routePreview.path[0],
-      routeDrawProgress >= 1
-        ? routePreview.path[routePreview.path.length - 1]
-        : null,
-    ].forEach((point, index) => {
-      if (!point) {
-        return;
-      }
+    const originMarker = document.createElement("span");
+    originMarker.setAttribute("aria-label", "경로 시작점");
+    originMarker.style.display = "block";
+    originMarker.style.width = "16px";
+    originMarker.style.height = "16px";
+    originMarker.style.border = `4px solid ${routeStyle.color}`;
+    originMarker.style.borderRadius = "9999px";
+    originMarker.style.background = "#ffffff";
+    originMarker.style.boxShadow =
+      "0 4px 12px rgba(15, 23, 42, 0.18), inset 0 0 0 2px #ffffff";
+    originMarker.style.pointerEvents = "none";
 
-      const routeCap = document.createElement("span");
-      routeCap.setAttribute(
-        "aria-label",
-        index === 0 ? "경로 시작점" : "경로 도착점",
-      );
-      routeCap.style.display = "block";
-      routeCap.style.width = "14px";
-      routeCap.style.height = "14px";
-      routeCap.style.border = "3px solid #ffffff";
-      routeCap.style.borderRadius = "9999px";
-      routeCap.style.background = routeStrokeColor;
-      routeCap.style.boxShadow = "0 4px 12px rgba(15, 23, 42, 0.16)";
-      routeCap.style.pointerEvents = "none";
+    routeOverlayRefs.current.push(
+      new kakaoMaps.CustomOverlay({
+        content: originMarker,
+        map,
+        position: new kakaoMaps.LatLng(
+          routePreview.path[0].lat,
+          routePreview.path[0].lng,
+        ),
+        xAnchor: 0.5,
+        yAnchor: 0.5,
+        zIndex: 36,
+      }),
+    );
+
+    if (routeDrawProgress >= 1) {
+      const destinationMarker = document.createElement("span");
+      const destinationMarkerDot = document.createElement("span");
+
+      destinationMarker.setAttribute("aria-label", "경로 도착점");
+      destinationMarker.style.display = "flex";
+      destinationMarker.style.width = "24px";
+      destinationMarker.style.height = "24px";
+      destinationMarker.style.alignItems = "center";
+      destinationMarker.style.justifyContent = "center";
+      destinationMarker.style.border = "3px solid #ffffff";
+      destinationMarker.style.borderRadius = "50% 50% 50% 0";
+      destinationMarker.style.background = routeStyle.color;
+      destinationMarker.style.boxShadow = "0 6px 16px rgba(15, 23, 42, 0.22)";
+      destinationMarker.style.pointerEvents = "none";
+      destinationMarker.style.transform = "rotate(-45deg)";
+
+      destinationMarkerDot.style.display = "block";
+      destinationMarkerDot.style.width = "8px";
+      destinationMarkerDot.style.height = "8px";
+      destinationMarkerDot.style.borderRadius = "9999px";
+      destinationMarkerDot.style.background = "#ffffff";
+      destinationMarkerDot.style.transform = "rotate(45deg)";
+      destinationMarker.appendChild(destinationMarkerDot);
 
       routeOverlayRefs.current.push(
         new kakaoMaps.CustomOverlay({
-          content: routeCap,
+          content: destinationMarker,
           map,
-          position: new kakaoMaps.LatLng(point.lat, point.lng),
+          position: new kakaoMaps.LatLng(
+            routePreview.path[routePreview.path.length - 1].lat,
+            routePreview.path[routePreview.path.length - 1].lng,
+          ),
           xAnchor: 0.5,
-          yAnchor: 0.5,
-          zIndex: 36,
+          yAnchor: 1,
+          zIndex: 38,
         }),
       );
-    });
+    }
 
-    if (routeHead) {
+    if (routeHead && routeDrawProgress < 1) {
       const routeHeadMarker = document.createElement("span");
       routeHeadMarker.setAttribute("aria-label", "경로 진행 지점");
       routeHeadMarker.style.display = "block";
@@ -514,9 +649,8 @@ export const StoreMapPreview = ({
       routeHeadMarker.style.height = "18px";
       routeHeadMarker.style.border = "4px solid #ffffff";
       routeHeadMarker.style.borderRadius = "9999px";
-      routeHeadMarker.style.background = routeStrokeColor;
-      routeHeadMarker.style.boxShadow =
-        "0 0 0 7px rgba(253, 182, 29, 0.22), 0 8px 18px rgba(15, 23, 42, 0.2)";
+      routeHeadMarker.style.background = routeStyle.color;
+      routeHeadMarker.style.boxShadow = `0 0 0 7px ${routeStyle.glow}, 0 8px 18px rgba(15, 23, 42, 0.2)`;
       routeHeadMarker.style.pointerEvents = "none";
 
       routeOverlayRefs.current.push(
@@ -591,6 +725,42 @@ export const StoreMapPreview = ({
             );
           })}
 
+        <div className="pointer-events-auto absolute top-1/2 right-4 z-30 flex -translate-y-1/2 flex-col gap-1 rounded-sm border border-gray-200 bg-white p-1 shadow-md shadow-gray-950/10 dark:border-white/10 dark:bg-zinc-950 dark:shadow-black/30">
+          {onFocusUserLocation && (
+            <>
+              <button
+                type="button"
+                onClick={onFocusUserLocation}
+                disabled={isUserLocationLoading}
+                className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none disabled:cursor-wait disabled:opacity-60 dark:text-gray-200"
+                aria-label="내 위치로 이동"
+              >
+                {userLocation ? (
+                  <LocateFixed size={18} className="text-brand" />
+                ) : (
+                  <LocateOff size={18} />
+                )}
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={() => adjustZoomLevel("in")}
+            className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none dark:text-gray-200"
+            aria-label="지도 확대"
+          >
+            <Plus size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={() => adjustZoomLevel("out")}
+            className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none dark:text-gray-200"
+            aria-label="지도 축소"
+          >
+            <Minus size={18} />
+          </button>
+        </div>
+
         {selectedStore && selectedStoreCard && (
           <button
             type="button"
@@ -607,7 +777,7 @@ export const StoreMapPreview = ({
               className={cn(
                 "pointer-events-auto absolute z-40 w-[min(320px,calc(100%-24px))]",
                 isRouteCardDocked
-                  ? "right-3 bottom-6 md:right-6 md:bottom-6"
+                  ? "top-24 right-3 md:top-28 md:right-6"
                   : "-translate-x-1/2 -translate-y-[calc(100%+18px)]",
               )}
               onClick={(event) => event.stopPropagation()}
