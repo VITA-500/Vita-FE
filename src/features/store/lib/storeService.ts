@@ -12,6 +12,8 @@ type StoreDetailResponse = {
   lng: number;
   businessHours: string;
   phone: string;
+  consultServices: string[];
+  providedServices: string[];
 };
 
 type StoreNearbyItemResponse = {
@@ -33,7 +35,10 @@ const toStoreLocation = (
   id: String(store.storeId),
   name: store.name,
   address: store.address,
-  phone: store.phone,
+  businessHours: store.businessHours,
+  consultServices: store.consultServices,
+  phone: store.phone ?? "",
+  providedServices: store.providedServices,
   lat: Number(store.lat),
   lng: Number(store.lng),
   distanceText:
@@ -63,7 +68,7 @@ export const storeService = {
     );
 
     const stores = await Promise.all(
-      response.stores.slice(0, 12).map(async (store) => {
+      response.stores.slice(0, 20).map(async (store) => {
         const detail = await requestJson<StoreDetailResponse>(
           `/stores/${store.storeId}`,
           {
