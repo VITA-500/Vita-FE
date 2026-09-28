@@ -3,7 +3,9 @@
 import {
   createContext,
   type ReactNode,
+  useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -12,11 +14,13 @@ import {
   storeDetails,
   storeRows,
 } from "@/features/admin/constants/adminData";
+import { adminStoreService } from "@/features/admin/lib/adminStoreService";
 import type {
   AdminFaq,
   AdminStore,
   AdminStoreDetail,
 } from "@/features/admin/types";
+import { env } from "@/shared/config/env";
 
 type FaqSaveInput = Pick<AdminFaq, "answer" | "category" | "question"> & {
   subcategory?: string;
@@ -30,22 +34,96 @@ type AdminDataContextValue = {
   saveFaq: (faqId: number, input: FaqSaveInput) => void;
   setFaqStatus: (faqId: number, status: AdminFaq["status"]) => void;
   deleteFaq: (faqId: number) => void;
-  addStore: (input: StoreSaveInput) => void;
+  addStore: (input: StoreSaveInput) => Promise<void>;
   stores: AdminStore[];
   storeDetails: AdminStoreDetail[];
+  storeError: string | null;
+  storeKeyword: string;
+  storePage: number;
+  storePageSize: number;
+  storeTotalCount: number;
+  storeTotalPages: number;
+  isStoreLoading: boolean;
   getStoreDetail: (storeId: number) => AdminStoreDetail | undefined;
-  saveStore: (storeId: number, input: StoreSaveInput) => void;
-  saveStores: (inputs: Record<number, StoreSaveInput>) => void;
-  deleteStore: (storeId: number) => void;
+  refreshStores: () => Promise<void>;
+  saveStore: (storeId: number, input: StoreSaveInput) => Promise<void>;
+  saveStores: (inputs: Record<number, StoreSaveInput>) => Promise<void>;
+  setStoreKeyword: (keyword: string) => void;
+  setStorePage: (page: number) => void;
+  setStorePageSize: (pageSize: number) => void;
+  deleteStore: (storeId: number) => Promise<void>;
 };
 
 const AdminDataContext = createContext<AdminDataContextValue | null>(null);
 
 export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
   const [faqs, setFaqs] = useState<AdminFaq[]>(faqRows);
-  const [stores, setStores] = useState<AdminStore[]>(storeRows);
-  const [storeDetailRows, setStoreDetailRows] =
-    useState<AdminStoreDetail[]>(storeDetails);
+  const [stores, setStores] = useState<AdminStore[]>(
+    env.apiBaseUrl ? [] : storeRows,
+  );
+  const [storeDetailRows, setStoreDetailRows] = useState<AdminStoreDetail[]>(
+    env.apiBaseUrl ? [] : storeDetails,
+  );
+  const [storeError, setStoreError] = useState<string | null>(null);
+  const [storeKeyword, setStoreKeywordState] = useState("");
+  const [storePage, setStorePage] = useState(0);
+  const [storePageSize, setStorePageSizeState] = useState(20);
+  const [storeTotalCount, setStoreTotalCount] = useState(
+    env.apiBaseUrl ? 0 : storeRows.length,
+  );
+  const [storeTotalPages, setStoreTotalPages] = useState(1);
+  const [isStoreLoading, setIsStoreLoading] = useState(Boolean(env.apiBaseUrl));
+
+  const refreshStores = useCallback(async () => {
+    if (!env.apiBaseUrl) return;
+
+    setIsStoreLoading(true);
+    setStoreError(null);
+
+    try {
+      const nextStoreData = await adminStoreService.fetchStores({
+        keyword: storeKeyword,
+        page: storePage,
+        size: storePageSize,
+        sortBy: "createdAt,desc",
+      });
+      setStores(nextStoreData.stores);
+      setStoreDetailRows(nextStoreData.details);
+      setStoreTotalCount(nextStoreData.totalCount);
+      setStoreTotalPages(Math.max(1, nextStoreData.totalPages));
+    } catch (error) {
+      setStoreError(
+        error instanceof Error
+          ? error.message
+          : "매장 데이터를 불러오지 못했습니다.",
+      );
+      throw error;
+    } finally {
+      setIsStoreLoading(false);
+    }
+  }, [storeKeyword, storePage, storePageSize]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void refreshStores().catch(() => {
+        // API 연결 전 환경에서는 기존 데모 데이터를 유지합니다.
+      });
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [refreshStores]);
+
+  const setStoreKeyword = useCallback((keyword: string) => {
+    setStoreKeywordState(keyword);
+    setStorePage(0);
+  }, []);
+
+  const setStorePageSize = useCallback((pageSize: number) => {
+    setStorePageSizeState(pageSize);
+    setStorePage(0);
+  }, []);
 
   const value = useMemo<AdminDataContextValue>(
     () => ({
@@ -87,79 +165,57 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
           ),
         );
       },
-      addStore: (input) => {
-        setStores((currentStores) => {
-          const nextStoreId =
-            Math.max(0, ...currentStores.map((store) => store.storeId)) + 1;
-          const nextStore = {
-            storeId: nextStoreId,
-            name: input.name,
-            address: input.address,
-          };
-
-          setStoreDetailRows((currentDetails) => [
-            {
-              ...nextStore,
-              lat: input.lat,
-              lng: input.lng,
-              businessHours: input.businessHours,
-              phone: input.phone,
-              consultServices: input.consultServices,
-              providedServices: input.providedServices,
-            },
-            ...currentDetails,
-          ]);
-          return [nextStore, ...currentStores];
-        });
+      addStore: async (input) => {
+        await adminStoreService.createStore(input);
+        await refreshStores();
       },
       stores,
       storeDetails: storeDetailRows,
+      storeError,
+      storeKeyword,
+      storePage,
+      storePageSize,
+      storeTotalCount,
+      storeTotalPages,
+      isStoreLoading,
       getStoreDetail: (storeId) =>
         storeDetailRows.find((store) => store.storeId === storeId),
-      saveStore: (storeId, input) => {
-        setStores((currentStores) =>
-          currentStores.map((store) =>
-            store.storeId === storeId
-              ? { ...store, name: input.name, address: input.address }
-              : store,
-          ),
-        );
-        setStoreDetailRows((currentDetails) =>
-          currentDetails.map((store) =>
-            store.storeId === storeId ? { ...store, ...input } : store,
-          ),
-        );
+      refreshStores,
+      saveStore: async (storeId, input) => {
+        await adminStoreService.updateStore(storeId, input);
+        await refreshStores();
       },
-      saveStores: (inputs) => {
-        setStores((currentStores) =>
-          currentStores.map((store) =>
-            inputs[store.storeId]
-              ? {
-                  ...store,
-                  name: inputs[store.storeId].name,
-                  address: inputs[store.storeId].address,
-                }
-              : store,
+      saveStores: async (inputs) => {
+        await Promise.all(
+          Object.entries(inputs).map(([storeId, input]) =>
+            adminStoreService.updateStore(Number(storeId), input),
           ),
         );
-        setStoreDetailRows((currentDetails) =>
-          currentDetails.map((store) =>
-            inputs[store.storeId]
-              ? { ...store, ...inputs[store.storeId] }
-              : store,
-          ),
-        );
+        await refreshStores();
       },
-      deleteStore: (storeId) => {
-        setStores((currentStores) =>
-          currentStores.filter((store) => store.storeId !== storeId),
-        );
-        setStoreDetailRows((currentDetails) =>
-          currentDetails.filter((store) => store.storeId !== storeId),
-        );
+      setStoreKeyword,
+      setStorePage,
+      setStorePageSize,
+      deleteStore: async (storeId) => {
+        await adminStoreService.deleteStore(storeId);
+        await refreshStores();
       },
     }),
-    [faqs, storeDetailRows, stores],
+    [
+      faqs,
+      isStoreLoading,
+      refreshStores,
+      setStoreKeyword,
+      setStorePageSize,
+      storeDetailRows,
+      storeError,
+      storeKeyword,
+      storePage,
+      storePageSize,
+      stores,
+      storeTotalCount,
+      storeTotalPages,
+    ],
   );
 
   return (

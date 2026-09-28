@@ -55,7 +55,7 @@ const HeaderControls = ({
       ) : isAuthenticated ? (
         <div className="flex items-center gap-2">
           <Link
-            href={routes.chat}
+            href={routes.myPage}
             onClick={onSelectComplete}
             className="inline-flex h-10 max-w-[148px] items-center gap-2 rounded-full bg-gray-100 px-4 text-sm font-bold text-gray-800 transition hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
           >

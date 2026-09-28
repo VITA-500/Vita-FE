@@ -11,6 +11,7 @@ import { ChatSearchDialog } from "@/features/chat/components/ChatSearchDialog";
 import { GuestNewChatDialog } from "@/features/chat/components/GuestNewChatDialog";
 import { PromptSuggestions } from "@/features/chat/components/PromptSuggestions";
 import { mockChatAnswers } from "@/features/chat/constants";
+import { ProfilePanel } from "@/features/auth/components/ProfilePanel";
 import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
 import type { ChatMessage, ChatMode } from "@/features/chat/types";
 import { useChatTour } from "@/features/chat/hooks/useChatTour";
@@ -22,7 +23,11 @@ import { cn } from "@/shared/lib/cn";
 const ChatPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuthUser();
+  const {
+    isAuthenticated,
+    isLoading: isAuthLoading,
+    isReady: isAuthReady,
+  } = useAuthUser();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isGuestNewChatDialogOpen, setIsGuestNewChatDialogOpen] =
@@ -34,11 +39,13 @@ const ChatPageContent = () => {
   const [railTooltip, setRailTooltip] = useState<RailTooltipProps | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const chatInputRef = useRef<HTMLInputElement | null>(null);
-  const activeMode: ChatMode =
-    searchParams.get("mode") === "store" ? "store" : "chat";
+  const modeParam = searchParams.get("mode");
+  const routeMode: ChatMode =
+    modeParam === "store" || modeParam === "profile" ? modeParam : "chat";
+  const activeMode: ChatMode = routeMode;
   const hasChatStarted = messages.length > 0;
 
-  useChatTour();
+  const startChatTour = useChatTour();
 
   useEffect(() => {
     if (activeMode !== "chat" || messages.length === 0) return;
@@ -164,7 +171,7 @@ const ChatPageContent = () => {
   const startNewChat = () => {
     resetChat();
 
-    if (activeMode === "store") {
+    if (activeMode !== "chat") {
       router.replace(routes.chat);
     }
   };
@@ -195,6 +202,7 @@ const ChatPageContent = () => {
       <ChatSidebar
         isAuthenticated={isAuthenticated}
         isAuthLoading={isAuthLoading}
+        isAuthReady={isAuthReady}
         isOpen={isSidebarOpen}
         onOpen={() => setIsSidebarOpen(true)}
         onClose={() => setIsSidebarOpen(false)}
@@ -202,6 +210,21 @@ const ChatPageContent = () => {
         onOpenSearch={() => {
           setRailTooltip(null);
           setIsSearchOpen(true);
+        }}
+        onOpenProfile={() => {
+          setRailTooltip(null);
+          router.push(routes.myPage);
+        }}
+        onStartTour={() => {
+          setRailTooltip(null);
+
+          if (activeMode !== "chat") {
+            router.replace(routes.chat);
+          }
+
+          window.setTimeout(() => {
+            void startChatTour();
+          }, 120);
         }}
         onShowRailTooltip={showRailTooltip}
         onShowHeaderTooltip={showHeaderTooltip}
@@ -214,7 +237,7 @@ const ChatPageContent = () => {
       <section
         className={cn(
           "bg-surface-warm flex h-full min-w-0 flex-col pl-0 transition-[padding-left] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-          isSidebarOpen ? "md:pl-[276px]" : "md:pl-[64px]",
+          isSidebarOpen ? "md:pl-[296px]" : "md:pl-[64px]",
         )}
       >
         <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -233,6 +256,10 @@ const ChatPageContent = () => {
           {activeMode === "store" ? (
             <div className="min-h-0 flex-1 overflow-hidden">
               <StoreMapPanel onOpenSidebar={() => setIsSidebarOpen(true)} />
+            </div>
+          ) : activeMode === "profile" ? (
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <ProfilePanel />
             </div>
           ) : (
             <div className="relative min-h-0 flex-1">

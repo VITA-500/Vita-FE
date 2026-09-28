@@ -22,4 +22,4 @@ export type ChatAction = {
   href: string;
 };
 
-export type ChatMode = "chat" | "store";
+export type ChatMode = "chat" | "profile" | "store";
