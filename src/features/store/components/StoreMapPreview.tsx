@@ -9,6 +9,63 @@ import type { StoreLocation } from "@/features/store/types";
 import { cn } from "@/shared/lib/cn";
 
 const clampPercent = (value: number) => Math.min(88, Math.max(12, value));
+const routeStrokeColor = "#fdb61d";
+
+type MapPoint = {
+  lat: number;
+  lng: number;
+};
+
+const getPathDistance = (from: MapPoint, to: MapPoint) => {
+  const latDistance = to.lat - from.lat;
+  const lngDistance = to.lng - from.lng;
+
+  return Math.sqrt(latDistance ** 2 + lngDistance ** 2);
+};
+
+const getPartialRoutePath = (path: MapPoint[], progress: number) => {
+  if (path.length <= 1 || progress >= 1) {
+    return path;
+  }
+
+  const segmentDistances = path.slice(0, -1).map((point, index) => {
+    return getPathDistance(point, path[index + 1]);
+  });
+  const totalDistance = segmentDistances.reduce(
+    (sum, distance) => sum + distance,
+    0,
+  );
+
+  if (totalDistance === 0) {
+    return [path[0]];
+  }
+
+  let remainingDistance = totalDistance * Math.max(0, progress);
+  const partialPath = [path[0]];
+
+  for (let index = 0; index < segmentDistances.length; index += 1) {
+    const segmentDistance = segmentDistances[index];
+    const from = path[index];
+    const to = path[index + 1];
+
+    if (remainingDistance >= segmentDistance) {
+      partialPath.push(to);
+      remainingDistance -= segmentDistance;
+      continue;
+    }
+
+    const segmentProgress =
+      segmentDistance === 0 ? 0 : remainingDistance / segmentDistance;
+
+    partialPath.push({
+      lat: from.lat + (to.lat - from.lat) * segmentProgress,
+      lng: from.lng + (to.lng - from.lng) * segmentProgress,
+    });
+    break;
+  }
+
+  return partialPath;
+};
 
 const getFallbackMarkerStyle = (
   store: StoreLocation,
@@ -37,11 +94,6 @@ const getFallbackMarkerStyle = (
         : 88 - ((store.lat - minLat) / latRange) * 76,
     )}%`,
   };
-};
-
-type MapPoint = {
-  lat: number;
-  lng: number;
 };
 
 type KakaoMapEventApi = {
@@ -84,9 +136,19 @@ type MapOverlayHandle = {
   cleanup?: () => void;
 };
 
+type RoutePreview = {
+  destination: MapPoint;
+  origin: MapPoint;
+  path: MapPoint[];
+  routeKey: string;
+};
+
+type RoutePreviewRef = RoutePreview | null | undefined;
+
 type StoreMapPreviewProps = {
   className?: string;
   isFullBleed?: boolean;
+  isRouteCardDocked?: boolean;
   focusPoint?: MapPoint | null;
   isSearchFromMapPointLoading?: boolean;
   selectedStore?: StoreLocation;
@@ -94,6 +156,7 @@ type StoreMapPreviewProps = {
   selectedStoreId: string;
   stores: StoreLocation[];
   searchPoint?: MapPoint | null;
+  routePreview?: RoutePreview | null;
   userLocation?: UserLocation | null;
   onMapPointSelect?: (point: MapPoint) => void;
   onSelectedStoreCardClose?: () => void;
@@ -105,12 +168,14 @@ export const StoreMapPreview = ({
   className,
   focusPoint,
   isFullBleed = false,
+  isRouteCardDocked = false,
   isSearchFromMapPointLoading = false,
   onSelectStore,
   selectedStore,
   selectedStoreCard,
   selectedStoreId,
   searchPoint,
+  routePreview,
   stores,
   userLocation,
   onMapPointSelect,
@@ -121,10 +186,52 @@ export const StoreMapPreview = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<KakaoMap | null>(null);
   const overlayRefs = useRef<MapOverlayHandle[]>([]);
+  const routeOverlayRefs = useRef<KakaoCustomOverlay[]>([]);
+  const routeLineRef = useRef<KakaoPolyline | null>(null);
+  const [routeDrawState, setRouteDrawState] = useState({
+    progress: 1,
+    routeKey: "",
+  });
   const [selectedStoreCardPosition, setSelectedStoreCardPosition] =
     useState<CSSProperties | null>(null);
   const focusPointRef = useRef<FocusPointRef>(undefined);
   const searchPointRef = useRef<SearchPointRef>(undefined);
+  const routePreviewRef = useRef<RoutePreviewRef>(undefined);
+
+  const routeDrawProgress =
+    routePreview && routeDrawState.routeKey === routePreview.routeKey
+      ? routeDrawState.progress
+      : 0;
+  const routePreviewKey = routePreview?.routeKey ?? "";
+
+  useEffect(() => {
+    if (!routePreviewKey) {
+      return;
+    }
+
+    const startedAt = window.performance.now();
+    const durationMs = 1400;
+    let frameId = 0;
+
+    const drawFrame = (timestamp: number) => {
+      const nextProgress = Math.min((timestamp - startedAt) / durationMs, 1);
+
+      setRouteDrawState({
+        progress: nextProgress,
+        routeKey: routePreviewKey,
+      });
+
+      if (nextProgress < 1) {
+        frameId = window.requestAnimationFrame(drawFrame);
+      }
+    };
+
+    frameId = window.requestAnimationFrame(drawFrame);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [routePreviewKey]);
 
   useEffect(() => {
     if (!isKakaoMapReady || !mapContainerRef.current || !window.kakao?.maps) {
@@ -138,7 +245,7 @@ export const StoreMapPreview = ({
       return;
     }
 
-    const center = focusPoint
+    const initialCenter = focusPoint
       ? new kakaoMaps.LatLng(focusPoint.lat, focusPoint.lng)
       : searchPoint
         ? new kakaoMaps.LatLng(searchPoint.lat, searchPoint.lng)
@@ -148,20 +255,46 @@ export const StoreMapPreview = ({
     const map =
       mapRef.current ??
       new kakaoMaps.Map(mapContainerRef.current, {
-        center,
+        center: initialCenter,
         level: 4,
       });
     const shouldRecenterBySearchPoint =
       Boolean(searchPoint) && searchPointRef.current !== searchPoint;
     const shouldRecenterByFocusPoint =
       Boolean(focusPoint) && focusPointRef.current !== focusPoint;
+    const shouldFitRoute =
+      Boolean(routePreview) &&
+      routePreviewRef.current?.routeKey !== routePreview?.routeKey;
 
     mapRef.current = map;
     focusPointRef.current = focusPoint;
     searchPointRef.current = searchPoint;
+    routePreviewRef.current = routePreview;
 
-    if (isNewMap || shouldRecenterByFocusPoint || shouldRecenterBySearchPoint) {
-      map.setCenter(center);
+    if (routePreview && (isNewMap || shouldFitRoute)) {
+      const bounds = new kakaoMaps.LatLngBounds();
+
+      routePreview.path.forEach((point) => {
+        bounds.extend(new kakaoMaps.LatLng(point.lat, point.lng));
+      });
+      map.setBounds(bounds, 120, 48, selectedStoreCard ? 230 : 72, 48);
+    } else if (
+      isNewMap ||
+      shouldRecenterByFocusPoint ||
+      shouldRecenterBySearchPoint
+    ) {
+      const recenterPoint =
+        shouldRecenterBySearchPoint && searchPoint
+          ? searchPoint
+          : shouldRecenterByFocusPoint && focusPoint
+            ? focusPoint
+            : null;
+
+      if (recenterPoint) {
+        map.setCenter(
+          new kakaoMaps.LatLng(recenterPoint.lat, recenterPoint.lng),
+        );
+      }
       map.setLevel(4);
     }
 
@@ -219,6 +352,7 @@ export const StoreMapPreview = ({
         map,
         position,
         title: store.name,
+        zIndex: isSelected ? 20 : 10,
       });
       const marker = document.createElement("button");
       marker.type = "button";
@@ -291,12 +425,119 @@ export const StoreMapPreview = ({
     onMapPointSelect,
     onSelectedStoreCardClose,
     onSearchFromMapPoint,
+    routePreview,
     selectedStore,
+    selectedStoreCard,
     selectedStoreId,
     searchPoint,
     stores,
     userLocation,
   ]);
+
+  useEffect(() => {
+    if (!isKakaoMapReady || !window.kakao?.maps || !mapRef.current) {
+      return;
+    }
+
+    const kakaoMaps = window.kakao.maps;
+    const map = mapRef.current;
+
+    routeLineRef.current?.setMap(null);
+    routeLineRef.current = null;
+    routeOverlayRefs.current.forEach((overlay) => overlay.setMap(null));
+    routeOverlayRefs.current = [];
+
+    if (!routePreview) {
+      return;
+    }
+
+    const animatedRoutePath = getPartialRoutePath(
+      routePreview.path,
+      routeDrawProgress,
+    );
+    const routeHead = animatedRoutePath[animatedRoutePath.length - 1];
+
+    routeLineRef.current = new kakaoMaps.Polyline({
+      clickable: false,
+      map,
+      path: animatedRoutePath.map(
+        (point) => new kakaoMaps.LatLng(point.lat, point.lng),
+      ),
+      strokeColor: routeStrokeColor,
+      strokeOpacity: 0.95,
+      strokeStyle: "solid",
+      strokeWeight: 8,
+      zIndex: 35,
+    });
+
+    [
+      routePreview.path[0],
+      routeDrawProgress >= 1
+        ? routePreview.path[routePreview.path.length - 1]
+        : null,
+    ].forEach((point, index) => {
+      if (!point) {
+        return;
+      }
+
+      const routeCap = document.createElement("span");
+      routeCap.setAttribute(
+        "aria-label",
+        index === 0 ? "경로 시작점" : "경로 도착점",
+      );
+      routeCap.style.display = "block";
+      routeCap.style.width = "14px";
+      routeCap.style.height = "14px";
+      routeCap.style.border = "3px solid #ffffff";
+      routeCap.style.borderRadius = "9999px";
+      routeCap.style.background = routeStrokeColor;
+      routeCap.style.boxShadow = "0 4px 12px rgba(15, 23, 42, 0.16)";
+      routeCap.style.pointerEvents = "none";
+
+      routeOverlayRefs.current.push(
+        new kakaoMaps.CustomOverlay({
+          content: routeCap,
+          map,
+          position: new kakaoMaps.LatLng(point.lat, point.lng),
+          xAnchor: 0.5,
+          yAnchor: 0.5,
+          zIndex: 36,
+        }),
+      );
+    });
+
+    if (routeHead) {
+      const routeHeadMarker = document.createElement("span");
+      routeHeadMarker.setAttribute("aria-label", "경로 진행 지점");
+      routeHeadMarker.style.display = "block";
+      routeHeadMarker.style.width = "18px";
+      routeHeadMarker.style.height = "18px";
+      routeHeadMarker.style.border = "4px solid #ffffff";
+      routeHeadMarker.style.borderRadius = "9999px";
+      routeHeadMarker.style.background = routeStrokeColor;
+      routeHeadMarker.style.boxShadow =
+        "0 0 0 7px rgba(253, 182, 29, 0.22), 0 8px 18px rgba(15, 23, 42, 0.2)";
+      routeHeadMarker.style.pointerEvents = "none";
+
+      routeOverlayRefs.current.push(
+        new kakaoMaps.CustomOverlay({
+          content: routeHeadMarker,
+          map,
+          position: new kakaoMaps.LatLng(routeHead.lat, routeHead.lng),
+          xAnchor: 0.5,
+          yAnchor: 0.5,
+          zIndex: 42,
+        }),
+      );
+    }
+
+    return () => {
+      routeLineRef.current?.setMap(null);
+      routeLineRef.current = null;
+      routeOverlayRefs.current.forEach((overlay) => overlay.setMap(null));
+      routeOverlayRefs.current = [];
+    };
+  }, [isKakaoMapReady, routeDrawProgress, routePreview]);
 
   return (
     <section
@@ -363,15 +604,24 @@ export const StoreMapPreview = ({
           selectedStoreCard &&
           (selectedStoreCardPosition || !isKakaoMapReady) && (
             <div
-              className="pointer-events-auto absolute z-40 w-[min(320px,calc(100%-24px))] -translate-x-1/2 -translate-y-[calc(100%+18px)]"
+              className={cn(
+                "pointer-events-auto absolute z-40 w-[min(320px,calc(100%-24px))]",
+                isRouteCardDocked
+                  ? "right-3 bottom-6 md:right-6 md:bottom-6"
+                  : "-translate-x-1/2 -translate-y-[calc(100%+18px)]",
+              )}
               onClick={(event) => event.stopPropagation()}
               style={
-                selectedStoreCardPosition ??
-                getFallbackMarkerStyle(
-                  selectedStore,
-                  stores,
-                  stores.findIndex((store) => store.id === selectedStore.id),
-                )
+                isRouteCardDocked
+                  ? undefined
+                  : (selectedStoreCardPosition ??
+                    getFallbackMarkerStyle(
+                      selectedStore,
+                      stores,
+                      stores.findIndex(
+                        (store) => store.id === selectedStore.id,
+                      ),
+                    ))
               }
             >
               {selectedStoreCard}

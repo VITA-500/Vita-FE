@@ -1,20 +1,8 @@
 import { mockStores } from "@/features/store/constants";
 import { formatDistance } from "@/features/store/lib/geo";
 import type { UserLocation } from "@/features/store/lib/geo";
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation, StoreRoute } from "@/features/store/types";
 import { requestJson } from "@/shared/api/http";
-
-type StoreDetailResponse = {
-  storeId: number;
-  name: string;
-  address: string;
-  lat: number;
-  lng: number;
-  businessHours: string;
-  phone: string;
-  consultServices: string[];
-  providedServices: string[];
-};
 
 type StoreNearbyItemResponse = {
   storeId: number;
@@ -22,29 +10,35 @@ type StoreNearbyItemResponse = {
   lat: number;
   lng: number;
   distanceKm: number;
+  consultServices?: string[];
+  providedServices?: string[];
 };
 
 type NearbyStoresResponse = {
   stores: StoreNearbyItemResponse[];
 };
 
-const toStoreLocation = (
-  store: StoreDetailResponse,
-  distanceKm?: number,
+type RouteResponse = {
+  distanceMeters: number;
+  durationSeconds: number;
+  mode: string;
+  path: { lat: number; lng: number }[];
+};
+
+const isApiStoreId = (storeId: string) => /^\d+$/.test(storeId);
+
+const toNearbyStoreLocation = (
+  store: StoreNearbyItemResponse,
 ): StoreLocation => ({
   id: String(store.storeId),
   name: store.name,
-  address: store.address,
-  businessHours: store.businessHours,
+  address: "상세 주소 확인 중",
   consultServices: store.consultServices,
-  phone: store.phone ?? "",
+  phone: "",
   providedServices: store.providedServices,
   lat: Number(store.lat),
   lng: Number(store.lng),
-  distanceText:
-    typeof distanceKm === "number"
-      ? formatDistance(distanceKm * 1000)
-      : undefined,
+  distanceText: formatDistance(store.distanceKm * 1000),
 });
 
 export const storeService = {
@@ -63,23 +57,43 @@ export const storeService = {
     const response = await requestJson<NearbyStoresResponse>(
       `/stores/nearby?${params.toString()}`,
       {
-        timeoutMs: 5000,
+        timeoutMs: 12000,
       },
     );
 
-    const stores = await Promise.all(
-      response.stores.slice(0, 20).map(async (store) => {
-        const detail = await requestJson<StoreDetailResponse>(
-          `/stores/${store.storeId}`,
-          {
-            timeoutMs: 5000,
-          },
-        );
-
-        return toStoreLocation(detail, store.distanceKm);
-      }),
-    );
+    const stores = response.stores.slice(0, 20).map(toNearbyStoreLocation);
 
     return stores.length > 0 ? stores : mockStores;
+  },
+  fetchWalkingRoute: async (
+    storeId: string,
+    location: UserLocation,
+  ): Promise<StoreRoute> => {
+    if (!isApiStoreId(storeId)) {
+      throw new Error("NON_API_STORE_ID");
+    }
+
+    const params = new URLSearchParams({
+      fromLat: String(location.lat),
+      fromLng: String(location.lng),
+      mode: "walk",
+    });
+
+    const response = await requestJson<RouteResponse>(
+      `/stores/${storeId}/directions?${params.toString()}`,
+      {
+        timeoutMs: 7000,
+      },
+    );
+
+    return {
+      distanceMeters: response.distanceMeters,
+      durationSeconds: response.durationSeconds,
+      mode: "walk",
+      path: response.path.map((point) => ({
+        lat: Number(point.lat),
+        lng: Number(point.lng),
+      })),
+    };
   },
 };

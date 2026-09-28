@@ -8,17 +8,22 @@ import {
   LocateFixed,
   LocateOff,
   Menu,
-  Navigation,
+  Route,
   Search,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { StoreMapPreview } from "@/features/store/components/StoreMapPreview";
 import { useStoreMapState } from "@/features/store/hooks/useStoreMapState";
-import { getKakaoDirectionUrl } from "@/features/store/lib/mapLinks";
+import {
+  formatDurationSeconds,
+  formatRemainingDistance,
+  formatWalkingTime,
+  getDistanceMeters,
+} from "@/features/store/lib/geo";
 import { storeService } from "@/features/store/lib/storeService";
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation, StoreRoute } from "@/features/store/types";
 import { cn } from "@/shared/lib/cn";
-import { Button, ButtonLink } from "@/shared/ui/Button";
+import { Button } from "@/shared/ui/Button";
 import { Modal } from "@/shared/ui/Modal";
 import { showToast } from "@/shared/ui/ToastProvider";
 
@@ -189,12 +194,20 @@ const ServiceBadges = ({
 const StoreInfoBubble = ({
   isLoading,
   isWaitingForPinSelection,
+  onStartRoute,
   onReserve,
+  routeSummary,
   store,
 }: {
   isLoading: boolean;
   isWaitingForPinSelection: boolean;
+  onStartRoute: (store: StoreLocation) => void;
   onReserve: (store: StoreLocation) => void;
+  routeSummary?: {
+    isLoading?: boolean;
+    remainingDistanceText: string;
+    walkingTimeText: string;
+  } | null;
   store?: StoreLocation;
 }) => {
   const title = isLoading
@@ -211,7 +224,7 @@ const StoreInfoBubble = ({
 
   if (isLoading) {
     return (
-      <div className="border-border relative w-full rounded-sm border bg-white/95 p-4 text-sm shadow-lg backdrop-blur after:absolute after:bottom-[-7px] after:left-1/2 after:h-3.5 after:w-3.5 after:-translate-x-1/2 after:rotate-45 after:border-r after:border-b after:border-border after:bg-white/95 dark:border-white/10 dark:bg-zinc-950/92 dark:after:border-white/10 dark:after:bg-zinc-950/92">
+      <div className="border-border after:border-border relative w-full rounded-sm border bg-white/95 p-4 text-sm shadow-lg backdrop-blur after:absolute after:bottom-[-7px] after:left-1/2 after:h-3.5 after:w-3.5 after:-translate-x-1/2 after:rotate-45 after:border-r after:border-b after:bg-white/95 dark:border-white/10 dark:bg-zinc-950/92 dark:after:border-white/10 dark:after:bg-zinc-950/92">
         {header}
         <div className="mt-3 flex items-center gap-3">
           <span
@@ -233,7 +246,7 @@ const StoreInfoBubble = ({
 
   if (isWaitingForPinSelection || !store) {
     return (
-      <div className="border-border relative w-full rounded-sm border bg-white/95 p-4 text-sm shadow-lg backdrop-blur after:absolute after:bottom-[-7px] after:left-1/2 after:h-3.5 after:w-3.5 after:-translate-x-1/2 after:rotate-45 after:border-r after:border-b after:border-border after:bg-white/95 dark:border-white/10 dark:bg-zinc-950/92 dark:after:border-white/10 dark:after:bg-zinc-950/92">
+      <div className="border-border after:border-border relative w-full rounded-sm border bg-white/95 p-4 text-sm shadow-lg backdrop-blur after:absolute after:bottom-[-7px] after:left-1/2 after:h-3.5 after:w-3.5 after:-translate-x-1/2 after:rotate-45 after:border-r after:border-b after:bg-white/95 dark:border-white/10 dark:bg-zinc-950/92 dark:after:border-white/10 dark:after:bg-zinc-950/92">
         {header}
         <div className="mt-3">
           <p className="font-extrabold text-gray-950 dark:text-white">
@@ -248,7 +261,7 @@ const StoreInfoBubble = ({
   }
 
   return (
-    <div className="border-border relative w-full rounded-sm border bg-white/95 p-4 text-left text-sm shadow-lg backdrop-blur after:absolute after:bottom-[-7px] after:left-1/2 after:h-3.5 after:w-3.5 after:-translate-x-1/2 after:rotate-45 after:border-r after:border-b after:border-border after:bg-white/95 dark:border-white/10 dark:bg-zinc-950/92 dark:after:border-white/10 dark:after:bg-zinc-950/92">
+    <div className="border-border after:border-border relative w-full rounded-sm border bg-white/95 p-4 text-left text-sm shadow-lg backdrop-blur after:absolute after:bottom-[-7px] after:left-1/2 after:h-3.5 after:w-3.5 after:-translate-x-1/2 after:rotate-45 after:border-r after:border-b after:bg-white/95 dark:border-white/10 dark:bg-zinc-950/92 dark:after:border-white/10 dark:after:bg-zinc-950/92">
       {header}
       <div className="mt-3">
         <p className="text-base font-extrabold text-gray-950 dark:text-white">
@@ -273,18 +286,37 @@ const StoreInfoBubble = ({
         <ServiceBadges title="상담 가능" services={store.consultServices} />
         <ServiceBadges title="제공 서비스" services={store.providedServices} />
 
+        {routeSummary && (
+          <div className="bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand mt-4 grid grid-cols-2 gap-2 rounded-sm p-3 text-xs font-extrabold">
+            <span>
+              남은 거리
+              <strong className="mt-1 block text-sm">
+                {routeSummary.isLoading
+                  ? "계산 중"
+                  : routeSummary.remainingDistanceText}
+              </strong>
+            </span>
+            <span>
+              예상 시간
+              <strong className="mt-1 block text-sm">
+                {routeSummary.isLoading
+                  ? "계산 중"
+                  : routeSummary.walkingTimeText}
+              </strong>
+            </span>
+          </div>
+        )}
+
         <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <ButtonLink
-            href={getKakaoDirectionUrl(store)}
-            target="_blank"
-            rel="noreferrer"
+          <Button
             variant="primary"
             size="sm"
             className="rounded-full"
+            onClick={() => onStartRoute(store)}
           >
-            <Navigation size={16} />
+            <Route size={16} />
             길찾기
-          </ButtonLink>
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -322,6 +354,9 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const [activeMapCategory, setActiveMapCategory] =
     useState<MapCategory>("store");
   const collapsedSearchRef = useRef<HTMLDivElement>(null);
+  const hasFocusedInitialLocationRef = useRef(false);
+  const lastNearbyLookupKeyRef = useRef("");
+  const shouldFocusUserLocationRef = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const {
     displayStores,
@@ -332,7 +367,11 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     setSearchQuery,
     setSelectedStoreId,
     userLocation,
+    watchLocation,
   } = useStoreMapState(stores);
+  const [routeDestinationStoreId, setRouteDestinationStoreId] = useState("");
+  const [walkingRoute, setWalkingRoute] = useState<StoreRoute | null>(null);
+  const [isRouteLoading, setIsRouteLoading] = useState(false);
   const consultServiceFilterOptions = useMemo(
     () =>
       Array.from(
@@ -381,6 +420,85 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     searchQuery || hasActiveServiceFilter
       ? categoryDisplayStores
       : categoryStores;
+  const routeDestinationStore =
+    categoryStores.find((store) => store.id === routeDestinationStoreId) ??
+    stores.find((store) => store.id === routeDestinationStoreId);
+  const visibleMapStores =
+    routeDestinationStoreId && routeDestinationStore
+      ? [routeDestinationStore]
+      : mapStores;
+  const routeSummary = useMemo(() => {
+    if (!userLocation || !routeDestinationStore) {
+      return null;
+    }
+
+    const remainingDistanceMeters =
+      walkingRoute?.distanceMeters ??
+      getDistanceMeters(userLocation, routeDestinationStore);
+
+    return {
+      isLoading: isRouteLoading,
+      remainingDistanceText: formatRemainingDistance(remainingDistanceMeters),
+      walkingTimeText: walkingRoute
+        ? formatDurationSeconds(walkingRoute.durationSeconds)
+        : formatWalkingTime(remainingDistanceMeters),
+    };
+  }, [isRouteLoading, routeDestinationStore, userLocation, walkingRoute]);
+  const routePreview = useMemo(() => {
+    if (!userLocation || !routeDestinationStore) {
+      return null;
+    }
+
+    const destination = {
+      lat: routeDestinationStore.lat,
+      lng: routeDestinationStore.lng,
+    };
+    const fallbackPath = [userLocation, destination];
+    const routePath = walkingRoute?.path.length
+      ? [userLocation, ...walkingRoute.path, destination]
+      : fallbackPath;
+    const routeKey = walkingRoute?.path.length
+      ? `route:${routeDestinationStoreId}`
+      : `fallback:${routeDestinationStoreId}`;
+
+    return {
+      destination,
+      origin: userLocation,
+      path: routePath,
+      routeKey,
+    };
+  }, [
+    routeDestinationStore,
+    routeDestinationStoreId,
+    userLocation,
+    walkingRoute,
+  ]);
+  const isRouteSearchOverlayVisible =
+    isRouteLoading &&
+    locationStatus !== "denied" &&
+    locationStatus !== "error" &&
+    locationStatus !== "unsupported";
+  const nearbyLookup = useMemo(() => {
+    const lookupLocation =
+      userLocation ??
+      (locationStatus === "denied" ||
+      locationStatus === "error" ||
+      locationStatus === "unsupported"
+        ? defaultMapLocation
+        : null);
+
+    if (!lookupLocation) {
+      return null;
+    }
+
+    const lat = Number(lookupLocation.lat.toFixed(3));
+    const lng = Number(lookupLocation.lng.toFixed(3));
+
+    return {
+      key: `${lat}:${lng}`,
+      location: { lat, lng },
+    };
+  }, [locationStatus, userLocation]);
 
   const updateStoresByLocation = (
     lookupLocation: MapSearchPoint,
@@ -447,6 +565,53 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     }
   };
 
+  const handleRouteStart = (store: StoreLocation) => {
+    setRouteDestinationStoreId(store.id);
+    setWalkingRoute(null);
+    setIsRouteLoading(true);
+    handleStoreSelect(store.id, { focusMap: true });
+    watchLocation();
+
+    if (!userLocation) {
+      showToast("현재 위치를 확인한 뒤 경로를 표시할게요.");
+    }
+  };
+
+  useEffect(() => {
+    if (!routeDestinationStoreId || !userLocation) {
+      return;
+    }
+
+    let isCurrentRequest = true;
+
+    storeService
+      .fetchWalkingRoute(routeDestinationStoreId, userLocation)
+      .then((route) => {
+        if (isCurrentRequest) {
+          setWalkingRoute(route);
+        }
+      })
+      .catch((error: unknown) => {
+        if (isCurrentRequest) {
+          setWalkingRoute(null);
+          if (!(
+            error instanceof Error && error.message === "NON_API_STORE_ID"
+          )) {
+            showToast("실제 보행 경로를 불러오지 못해 직선 경로로 표시해요.");
+          }
+        }
+      })
+      .finally(() => {
+        if (isCurrentRequest) {
+          setIsRouteLoading(false);
+        }
+      });
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [routeDestinationStoreId, userLocation]);
+
   const handleReservationConfirm = () => {
     if (!reservationStore) {
       return;
@@ -472,22 +637,43 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   }, [locationStatus, requestLocation]);
 
   useEffect(() => {
-    const lookupLocation =
-      userLocation ??
-      (locationStatus === "denied" ||
-      locationStatus === "error" ||
-      locationStatus === "unsupported"
-        ? defaultMapLocation
-        : null);
-
-    if (!lookupLocation) {
+    if (!userLocation) {
       return;
     }
+
+    if (
+      !hasFocusedInitialLocationRef.current ||
+      shouldFocusUserLocationRef.current
+    ) {
+      const shouldShowCurrentLocationSearch =
+        shouldFocusUserLocationRef.current;
+
+      setFocusPoint({ lat: userLocation.lat, lng: userLocation.lng });
+      setSearchPoint(
+        shouldShowCurrentLocationSearch
+          ? { lat: userLocation.lat, lng: userLocation.lng }
+          : null,
+      );
+      hasFocusedInitialLocationRef.current = true;
+      shouldFocusUserLocationRef.current = false;
+    }
+  }, [userLocation]);
+
+  useEffect(() => {
+    if (!nearbyLookup) {
+      return;
+    }
+
+    if (lastNearbyLookupKeyRef.current === nearbyLookup.key) {
+      return;
+    }
+
+    lastNearbyLookupKeyRef.current = nearbyLookup.key;
 
     let isCurrentRequest = true;
 
     storeService
-      .fetchNearbyStores(lookupLocation)
+      .fetchNearbyStores(nearbyLookup.location)
       .then((nearbyStores) => {
         if (isCurrentRequest) {
           setStores(nearbyStores);
@@ -502,7 +688,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     return () => {
       isCurrentRequest = false;
     };
-  }, [locationStatus, userLocation]);
+  }, [nearbyLookup]);
 
   useEffect(() => {
     if (!isSearchHistoryOpen) {
@@ -534,21 +720,31 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         focusPoint={focusPoint}
         isFullBleed
         isSearchFromMapPointLoading={isMapSearchLoading}
+        routePreview={routePreview}
+        isRouteCardDocked={
+          routeDestinationStoreId === categorySelectedStore?.id
+        }
         selectedStore={hasSelectedStoreInfo ? categorySelectedStore : undefined}
         selectedStoreCard={
           hasSelectedStoreInfo ? (
             <StoreInfoBubble
               isLoading={isMapSearchLoading}
               isWaitingForPinSelection={isWaitingForPinSelection}
+              routeSummary={
+                routeDestinationStoreId === categorySelectedStore?.id
+                  ? routeSummary
+                  : null
+              }
               store={
                 isWaitingForPinSelection ? undefined : categorySelectedStore
               }
+              onStartRoute={handleRouteStart}
               onReserve={setReservationStore}
             />
           ) : null
         }
         selectedStoreId={hasSelectedStoreInfo ? categorySelectedStoreId : ""}
-        stores={mapStores}
+        stores={visibleMapStores}
         searchPoint={searchPoint}
         userLocation={userLocation}
         onMapPointSelect={setSearchPoint}
@@ -730,7 +926,26 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
 
               <button
                 type="button"
-                onClick={requestLocation}
+                onClick={() => {
+                  shouldFocusUserLocationRef.current = true;
+                  requestLocation();
+                  if (userLocation) {
+                    setFocusPoint({
+                      lat: userLocation.lat,
+                      lng: userLocation.lng,
+                    });
+                    setSearchPoint({
+                      lat: userLocation.lat,
+                      lng: userLocation.lng,
+                    });
+                    hasFocusedInitialLocationRef.current = true;
+                    shouldFocusUserLocationRef.current = false;
+                  }
+
+                  if (routeDestinationStoreId) {
+                    watchLocation();
+                  }
+                }}
                 disabled={locationStatus === "requesting"}
                 className="flex h-12 items-center gap-2 rounded-sm bg-white px-4 text-sm font-extrabold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60 dark:bg-zinc-950 dark:text-gray-200 dark:hover:bg-zinc-900"
               >
@@ -915,6 +1130,24 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
           className="pointer-events-none fixed inset-0 z-[990] bg-gray-950/20 transition-opacity"
           aria-hidden="true"
         />
+      )}
+
+      {isRouteSearchOverlayVisible && (
+        <div className="pointer-events-auto absolute inset-0 z-50 flex items-center justify-center bg-gray-950/45 px-6 backdrop-blur-[2px]">
+          <div className="border-border w-full max-w-[320px] rounded-sm border bg-white/95 p-5 text-center shadow-2xl dark:border-white/10 dark:bg-zinc-950/95">
+            <span
+              aria-hidden="true"
+              className="border-brand mx-auto block size-8 animate-spin rounded-full border-4 border-t-transparent"
+            />
+            <p className="mt-4 text-sm font-extrabold text-gray-950 dark:text-white">
+              보행 경로 탐색 중
+            </p>
+            <p className="text-text-secondary mt-2 text-xs leading-5 font-semibold">
+              현재 위치에서 선택한 매장까지의 경로와 예상 시간을 계산하고
+              있어요.
+            </p>
+          </div>
+        </div>
       )}
 
       <Modal
