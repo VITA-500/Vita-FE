@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Bike,
   CalendarCheck,
+  Car,
   Check,
   ChevronDown,
   LocateFixed,
@@ -21,7 +23,11 @@ import {
   getDistanceMeters,
 } from "@/features/store/lib/geo";
 import { storeService } from "@/features/store/lib/storeService";
-import type { StoreLocation, StoreRoute } from "@/features/store/types";
+import type {
+  StoreLocation,
+  StoreRoute,
+  StoreRouteMode,
+} from "@/features/store/types";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/Button";
 import { Modal } from "@/shared/ui/Modal";
@@ -45,6 +51,16 @@ type MapSearchPoint = {
 
 const serviceBadgeClassName =
   "bg-surface-muted text-text-secondary rounded-full px-2.5 py-1 text-[11px] font-bold dark:bg-white/10 dark:text-gray-300";
+
+const routeModeOptions: {
+  icon: typeof Route | typeof Car | typeof Bike;
+  label: string;
+  value: Extract<StoreRouteMode, "walk" | "car" | "bicycle">;
+}[] = [
+  { icon: Route, label: "도보", value: "walk" },
+  { icon: Car, label: "자동차", value: "car" },
+  { icon: Bike, label: "자전거", value: "bicycle" },
+];
 
 type ServiceFilterOption = {
   label: string;
@@ -197,17 +213,23 @@ const StoreInfoBubble = ({
   onStartRoute,
   onReserve,
   routeSummary,
+  selectedRouteMode,
+  onRouteModeChange,
   store,
 }: {
   isLoading: boolean;
   isWaitingForPinSelection: boolean;
   onStartRoute: (store: StoreLocation) => void;
   onReserve: (store: StoreLocation) => void;
+  onRouteModeChange: (
+    mode: Extract<StoreRouteMode, "walk" | "car" | "bicycle">,
+  ) => void;
   routeSummary?: {
     isLoading?: boolean;
     remainingDistanceText: string;
-    walkingTimeText: string;
+    travelTimeText: string;
   } | null;
+  selectedRouteMode: Extract<StoreRouteMode, "walk" | "car" | "bicycle">;
   store?: StoreLocation;
 }) => {
   const title = isLoading
@@ -287,23 +309,48 @@ const StoreInfoBubble = ({
         <ServiceBadges title="제공 서비스" services={store.providedServices} />
 
         {routeSummary && (
-          <div className="bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand mt-4 grid grid-cols-2 gap-2 rounded-sm p-3 text-xs font-extrabold">
-            <span>
-              남은 거리
-              <strong className="mt-1 block text-sm">
-                {routeSummary.isLoading
-                  ? "계산 중"
-                  : routeSummary.remainingDistanceText}
-              </strong>
-            </span>
-            <span>
-              예상 시간
-              <strong className="mt-1 block text-sm">
-                {routeSummary.isLoading
-                  ? "계산 중"
-                  : routeSummary.walkingTimeText}
-              </strong>
-            </span>
+          <div className="mt-4 space-y-3">
+            <div className="bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand grid grid-cols-2 gap-2 rounded-sm p-3 text-xs font-extrabold">
+              <span>
+                남은 거리
+                <strong className="mt-1 block text-sm">
+                  {routeSummary.isLoading
+                    ? "계산 중"
+                    : routeSummary.remainingDistanceText}
+                </strong>
+              </span>
+              <span>
+                예상 시간
+                <strong className="mt-1 block text-sm">
+                  {routeSummary.isLoading
+                    ? "계산 중"
+                    : routeSummary.travelTimeText}
+                </strong>
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {routeModeOptions.map((option) => {
+                const Icon = option.icon;
+                const isSelected = selectedRouteMode === option.value;
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => onRouteModeChange(option.value)}
+                    className={cn(
+                      "flex h-9 items-center justify-center gap-1.5 rounded-full border text-xs font-extrabold transition",
+                      isSelected
+                        ? "border-brand bg-brand text-white"
+                        : "border-border text-text-secondary hover:border-brand/50 hover:text-brand dark:border-white/10",
+                    )}
+                  >
+                    <Icon size={15} />
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -371,6 +418,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   } = useStoreMapState(stores);
   const [routeDestinationStoreId, setRouteDestinationStoreId] = useState("");
   const [walkingRoute, setWalkingRoute] = useState<StoreRoute | null>(null);
+  const [routeMode, setRouteMode] =
+    useState<Extract<StoreRouteMode, "walk" | "car" | "bicycle">>("walk");
   const [isRouteLoading, setIsRouteLoading] = useState(false);
   const consultServiceFilterOptions = useMemo(
     () =>
@@ -439,7 +488,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     return {
       isLoading: isRouteLoading,
       remainingDistanceText: formatRemainingDistance(remainingDistanceMeters),
-      walkingTimeText: walkingRoute
+      travelTimeText: walkingRoute
         ? formatDurationSeconds(walkingRoute.durationSeconds)
         : formatWalkingTime(remainingDistanceMeters),
     };
@@ -585,7 +634,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     let isCurrentRequest = true;
 
     storeService
-      .fetchWalkingRoute(routeDestinationStoreId, userLocation)
+      .fetchRoute(routeDestinationStoreId, userLocation, routeMode)
       .then((route) => {
         if (isCurrentRequest) {
           setWalkingRoute(route);
@@ -597,7 +646,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
           if (!(
             error instanceof Error && error.message === "NON_API_STORE_ID"
           )) {
-            showToast("실제 보행 경로를 불러오지 못해 직선 경로로 표시해요.");
+            showToast("실제 이동 경로를 불러오지 못해 직선 경로로 표시해요.");
           }
         }
       })
@@ -610,7 +659,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     return () => {
       isCurrentRequest = false;
     };
-  }, [routeDestinationStoreId, userLocation]);
+  }, [routeDestinationStoreId, routeMode, userLocation]);
 
   const handleReservationConfirm = () => {
     if (!reservationStore) {
@@ -735,10 +784,16 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                   ? routeSummary
                   : null
               }
+              selectedRouteMode={routeMode}
               store={
                 isWaitingForPinSelection ? undefined : categorySelectedStore
               }
               onStartRoute={handleRouteStart}
+              onRouteModeChange={(nextMode) => {
+                setRouteMode(nextMode);
+                setWalkingRoute(null);
+                setIsRouteLoading(Boolean(routeDestinationStoreId));
+              }}
               onReserve={setReservationStore}
             />
           ) : null
@@ -1140,7 +1195,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
               className="border-brand mx-auto block size-8 animate-spin rounded-full border-4 border-t-transparent"
             />
             <p className="mt-4 text-sm font-extrabold text-gray-950 dark:text-white">
-              보행 경로 탐색 중
+              이동 경로 탐색 중
             </p>
             <p className="text-text-secondary mt-2 text-xs leading-5 font-semibold">
               현재 위치에서 선택한 매장까지의 경로와 예상 시간을 계산하고

@@ -16,9 +16,11 @@ export type StoreRoutePoint = {
   lng: number;
 };
 
+export type StoreRouteMode = "walk" | "car" | "bicycle" | "transit";
+
 export type StoreRoute = {
   distanceMeters: number;
   durationSeconds: number;
-  mode: "walk";
+  mode: StoreRouteMode;
   path: StoreRoutePoint[];
 };

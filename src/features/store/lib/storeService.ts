@@ -1,7 +1,11 @@
 import { mockStores } from "@/features/store/constants";
 import { formatDistance } from "@/features/store/lib/geo";
 import type { UserLocation } from "@/features/store/lib/geo";
-import type { StoreLocation, StoreRoute } from "@/features/store/types";
+import type {
+  StoreLocation,
+  StoreRoute,
+  StoreRouteMode,
+} from "@/features/store/types";
 import { requestJson } from "@/shared/api/http";
 
 type StoreNearbyItemResponse = {
@@ -21,7 +25,7 @@ type NearbyStoresResponse = {
 type RouteResponse = {
   distanceMeters: number;
   durationSeconds: number;
-  mode: string;
+  mode: StoreRouteMode;
   path: { lat: number; lng: number }[];
 };
 
@@ -65,9 +69,10 @@ export const storeService = {
 
     return stores.length > 0 ? stores : mockStores;
   },
-  fetchWalkingRoute: async (
+  fetchRoute: async (
     storeId: string,
     location: UserLocation,
+    mode: StoreRouteMode,
   ): Promise<StoreRoute> => {
     if (!isApiStoreId(storeId)) {
       throw new Error("NON_API_STORE_ID");
@@ -76,7 +81,7 @@ export const storeService = {
     const params = new URLSearchParams({
       fromLat: String(location.lat),
       fromLng: String(location.lng),
-      mode: "walk",
+      mode,
     });
 
     const response = await requestJson<RouteResponse>(
@@ -89,7 +94,7 @@ export const storeService = {
     return {
       distanceMeters: response.distanceMeters,
       durationSeconds: response.durationSeconds,
-      mode: "walk",
+      mode: response.mode,
       path: response.path.map((point) => ({
         lat: Number(point.lat),
         lng: Number(point.lng),
