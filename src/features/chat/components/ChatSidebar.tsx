@@ -57,7 +57,6 @@ type ChatSidebarProps = {
   onHideTooltip: () => void;
   activeMode: ChatMode;
   currentChatTitle?: string;
-  /** GET /chat/sessions 결과. 로그인 전 대화도 claim 뒤 여기에 포함된다. */
   chatSessions?: readonly ChatSessionSummary[];
   activeSessionId?: number | null;
   onSelectChat?: (sessionId: number) => void;
@@ -75,7 +74,6 @@ const formatSessionTitle = (session: ChatSessionSummary) => {
     return session.title;
   }
 
-  // BE가 아직 제목을 만들지 않아(title=null) 마지막 대화 시각으로 대신한다.
   const updatedAt = new Date(session.updatedAt);
 
   if (Number.isNaN(updatedAt.getTime())) {
@@ -92,7 +90,6 @@ export const ChatSidebar = ({
   activeSessionId = null,
   chatSessions = [],
   currentChatTitle,
-  onSelectChat,
   isAuthLoading,
   isAuthReady,
   isAuthenticated,
@@ -103,6 +100,7 @@ export const ChatSidebar = ({
   onOpen,
   onOpenProfile,
   onOpenSearch,
+  onSelectChat,
   onStartTour,
   onShowHeaderTooltip,
   onShowRailTooltip,
@@ -128,7 +126,6 @@ export const ChatSidebar = ({
 
     return {
       key: `session-${session.sessionId}`,
-      // 보고 있는 대화는 첫 질문으로 만든 제목을 우선 보여준다.
       title:
         isActive && currentChatTitle
           ? currentChatTitle
@@ -138,7 +135,6 @@ export const ChatSidebar = ({
     };
   });
   const hasActiveSessionInList = sessionChats.some((chat) => chat.active);
-  // 방금 시작해 목록 새로고침 전인 대화도 맨 위에 보이게 한다.
   const visibleRecentChats: SidebarChatItem[] =
     currentChatTitle && !hasActiveSessionInList
       ? [

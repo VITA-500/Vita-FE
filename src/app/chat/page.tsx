@@ -11,18 +11,16 @@ import { ChatSearchDialog } from "@/features/chat/components/ChatSearchDialog";
 import { GuestNewChatDialog } from "@/features/chat/components/GuestNewChatDialog";
 import { PromptSuggestions } from "@/features/chat/components/PromptSuggestions";
 import {
-  chatService,
-  claimGuestChatSessions,
-} from "@/features/chat/lib/chatService";
-import {
-  guestChatStorage,
-  type ChatSessionOwner,
-} from "@/features/chat/lib/guestChatStorage";
+  chatConversationStorage,
+  createGuestId,
+  getChatConversationOwnerKey,
+  getGuestChatConversationOwnerKey,
+} from "@/features/chat/lib/chatConversationStorage";
+import { chatService } from "@/features/chat/lib/chatService";
 import { ProfilePanel } from "@/features/auth/components/ProfilePanel";
 import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
 import type {
   ChatMessage,
-  ChatMessageApiResponse,
   ChatMode,
   ChatSessionSummary,
   SessionMessage,
@@ -32,24 +30,14 @@ import { StoreMapPanel } from "@/features/store/components/StoreMapPanel";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
 import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
-import { ApiError } from "@/shared/api/http";
 import { showToast } from "@/shared/ui/ToastProvider";
 
-const STORE_PROMPT_PATTERN = /매장|대리점|지점|방문|길찾기/;
 const FAILED_ANSWER_MESSAGE =
   "답변을 생성하지 못했어요. 잠시 후 다시 시도해 주세요.";
 
 const toChatTitle = (prompt: string) =>
   prompt.length > 18 ? `${prompt.slice(0, 18)}...` : prompt;
 
-const storeGuideActions = [
-  {
-    label: "가까운 매장 보기",
-    href: `${routes.chat}?mode=store`,
-  },
-] as const;
-
-/** BE 메시지 기록을 화면용 메시지로 바꾼다. 실패·생성 중 메시지는 content가 null이다. */
 const toChatMessage = (message: SessionMessage): ChatMessage => {
   const isUser = message.role === "USER";
 
@@ -61,20 +49,6 @@ const toChatMessage = (message: SessionMessage): ChatMessage => {
   };
 };
 
-const toAssistantMessage = (
-  response: ChatMessageApiResponse,
-  prompt: string,
-): ChatMessage => ({
-  id: `assistant-${response.messageId}`,
-  role: "assistant",
-  content:
-    response.status === "COMPLETED" && response.answer
-      ? response.answer
-      : FAILED_ANSWER_MESSAGE,
-  createdAt: response.createAt,
-  actions: STORE_PROMPT_PATTERN.test(prompt) ? storeGuideActions : undefined,
-});
-
 const ChatPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -82,6 +56,7 @@ const ChatPageContent = () => {
     isAuthenticated,
     isLoading: isAuthLoading,
     isReady: isAuthReady,
+    user,
   } = useAuthUser();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -90,14 +65,17 @@ const ChatPageContent = () => {
   const [chatInput, setChatInput] = useState("");
   const [chatStatus, setChatStatus] = useState<"idle" | "loading">("idle");
   const [currentChatTitle, setCurrentChatTitle] = useState("");
+  const [currentGuestId, setCurrentGuestId] = useState<string | undefined>();
+  const [currentSessionId, setCurrentSessionId] = useState<
+    number | undefined
+  >();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  /** 현재 대화의 BE 세션 id. 렌더에 쓰이지 않아 ref로만 둔다. */
-  const sessionIdRef = useRef<number | null>(null);
-  const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
   const [chatSessions, setChatSessions] = useState<ChatSessionSummary[]>([]);
   const [railTooltip, setRailTooltip] = useState<RailTooltipProps | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const chatInputRef = useRef<HTMLInputElement | null>(null);
+  const activeConversationOwnerKeyRef = useRef("");
+  const hasHydratedConversationRef = useRef(false);
   const modeParam = searchParams.get("mode");
   const routeMode: ChatMode =
     modeParam === "store" || modeParam === "profile" ? modeParam : "chat";
@@ -105,6 +83,120 @@ const ChatPageContent = () => {
   const hasChatStarted = messages.length > 0;
 
   const startChatTour = useChatTour();
+
+  const refreshChatSessions = useCallback(async () => {
+    if (!isAuthenticated) {
+      setChatSessions([]);
+      return;
+    }
+
+    try {
+      const { sessions } = await chatService.getSessions();
+      setChatSessions(sessions);
+    } catch {
+      setChatSessions([]);
+    }
+  }, [isAuthenticated]);
+
+  const loadChatSession = useCallback(async (targetSessionId: number) => {
+    const response = await chatService.getMessages(targetSessionId);
+    const nextMessages = response.messages.map(toChatMessage);
+    const firstPrompt = response.messages.find(
+      (message) => message.role === "USER" && message.content,
+    )?.content;
+
+    setCurrentSessionId(response.sessionId);
+    setCurrentGuestId(undefined);
+    setMessages(nextMessages);
+    setCurrentChatTitle(firstPrompt ? toChatTitle(firstPrompt) : "");
+    setChatStatus("idle");
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthReady) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const hydrateConversation = async () => {
+      const ownerKey = getChatConversationOwnerKey(user);
+      let nextConversation = chatConversationStorage.load(ownerKey);
+
+      if (user) {
+        const guestConversation = chatConversationStorage.load(
+          getGuestChatConversationOwnerKey(),
+        );
+
+        if (guestConversation?.sessionId && guestConversation.guestId) {
+          await chatService
+            .claimGuestSession(
+              guestConversation.sessionId,
+              guestConversation.guestId,
+            )
+            .then(() => {
+              nextConversation =
+                chatConversationStorage.migrateGuestToUser(ownerKey) ??
+                nextConversation;
+            })
+            .catch(() => undefined);
+        }
+
+        void refreshChatSessions();
+      } else {
+        setChatSessions([]);
+      }
+
+      if (isCancelled) {
+        return;
+      }
+
+      activeConversationOwnerKeyRef.current = ownerKey;
+      hasHydratedConversationRef.current = true;
+
+      const frameId = window.requestAnimationFrame(() => {
+        setMessages(nextConversation?.messages ?? []);
+        setCurrentChatTitle(nextConversation?.title ?? "");
+        setCurrentGuestId(user ? undefined : nextConversation?.guestId);
+        setCurrentSessionId(nextConversation?.sessionId);
+        setChatStatus("idle");
+      });
+
+      return () => {
+        window.cancelAnimationFrame(frameId);
+      };
+    };
+
+    let cancelFrame: (() => void) | undefined;
+
+    void hydrateConversation().then((nextCancelFrame) => {
+      cancelFrame = nextCancelFrame;
+    });
+
+    return () => {
+      isCancelled = true;
+      cancelFrame?.();
+    };
+  }, [isAuthReady, refreshChatSessions, user]);
+
+  useEffect(() => {
+    if (!hasHydratedConversationRef.current) {
+      return;
+    }
+
+    const ownerKey = activeConversationOwnerKeyRef.current;
+
+    if (!ownerKey) {
+      return;
+    }
+
+    chatConversationStorage.save(ownerKey, {
+      guestId: currentGuestId,
+      messages,
+      sessionId: currentSessionId,
+      title: currentChatTitle,
+    });
+  }, [currentChatTitle, currentGuestId, currentSessionId, messages]);
 
   useEffect(() => {
     if (activeMode !== "chat" || messages.length === 0) return;
@@ -145,163 +237,33 @@ const ChatPageContent = () => {
       });
     };
 
-  const applySessionId = useCallback((nextSessionId: number | null) => {
-    sessionIdRef.current = nextSessionId;
-    setActiveSessionId(nextSessionId);
-  }, []);
-
-  /** 회원의 상담 목록(GET /chat/sessions). 게스트는 BE가 빈 목록을 준다. */
-  const refreshChatSessions = useCallback(async () => {
-    try {
-      const { sessions } = await chatService.getSessions();
-      setChatSessions(sessions);
-    } catch {
-      setChatSessions([]);
-    }
-  }, []);
-
-  /** 세션 하나의 대화 기록을 불러와 화면에 띄운다. */
-  const loadChatSession = useCallback(
-    async (targetSessionId: number) => {
-      const response = await chatService.getMessages(targetSessionId);
-      const firstPrompt = response.messages.find(
-        (message) => message.role === "USER" && message.content,
-      )?.content;
-
-      applySessionId(response.sessionId);
-      setMessages(response.messages.map(toChatMessage));
-      setCurrentChatTitle(firstPrompt ? toChatTitle(firstPrompt) : "");
-    },
-    [applySessionId],
-  );
-
-  /**
-   * 로그인 상태가 정해지면
-   * 1) 회원이면 게스트로 나눈 대화를 계정에 귀속(claim)하고
-   * 2) 보고 있던 세션(activeSession)의 대화 기록을 다시 불러온다.
-   * 로그인 페이지나 소셜 로그인을 다녀와도 같은 대화로 돌아오게 하기 위함이다.
-   */
-  useEffect(() => {
-    if (!isAuthReady || isAuthLoading) return;
-
-    let isCancelled = false;
-    const owner: ChatSessionOwner = isAuthenticated ? "member" : "guest";
-
-    const syncChatSession = async () => {
-      if (isAuthenticated) {
-        const { claimedSessionIds } = await claimGuestChatSessions();
-
-        if (!isCancelled && claimedSessionIds.length > 0) {
-          showToast("로그인 전 나눈 대화를 계정에 저장했어요.");
-        }
-
-        // 귀속된 세션이 사이드바 '최근 상담'에 바로 보이도록 claim 뒤에 불러온다.
-        if (!isCancelled) {
-          void refreshChatSessions();
-        }
-      } else {
-        setChatSessions([]);
-      }
-
-      const activeSession = guestChatStorage.getActiveSession();
-
-      if (isCancelled) return;
-
-      if (!activeSession || activeSession.owner !== owner) {
-        // 로그아웃 뒤 회원 대화가 게스트 화면에 남지 않도록 비운다.
-        if (activeSession) {
-          guestChatStorage.clearActiveSession();
-        }
-
-        if (sessionIdRef.current !== null) {
-          applySessionId(null);
-          setMessages([]);
-          setCurrentChatTitle("");
-        }
-        return;
-      }
-
-      if (sessionIdRef.current === activeSession.sessionId) return;
-
-      setChatStatus("loading");
-
-      try {
-        if (isCancelled) return;
-
-        await loadChatSession(activeSession.sessionId);
-      } catch (error) {
-        if (
-          error instanceof ApiError &&
-          [401, 403, 404].includes(error.status)
-        ) {
-          guestChatStorage.clearActiveSession();
-        }
-      } finally {
-        // 취소된 실행이라도 로딩 표시는 풀어 둔다 — 다음 실행이 곧바로 반환하면 멈춰 보인다.
-        setChatStatus("idle");
-      }
+  const createStoreGuideMessage = (): ChatMessage => {
+    return {
+      id: `assistant-${Date.now()}`,
+      role: "assistant",
+      content:
+        "가까운 매장은 매장 지도에서 위치 기준으로 확인할 수 있어요. 위치 권한을 허용하면 가까운 매장부터 정렬해서 보여드릴게요.",
+      createdAt: new Date().toISOString(),
+      actions: [
+        {
+          label: "가까운 매장 보기",
+          href: `${routes.chat}?mode=store`,
+        },
+      ],
     };
-
-    // useAuthUser와 같은 방식으로 한 프레임 뒤에 실행한다 — effect 본문에서 곧바로
-    // setState가 불리지 않게 해 react-hooks(set-state-in-effect) 규칙과 연쇄 렌더를 피한다.
-    const frameId = window.requestAnimationFrame(() => {
-      void syncChatSession();
-    });
-
-    return () => {
-      isCancelled = true;
-      window.cancelAnimationFrame(frameId);
-    };
-  }, [
-    applySessionId,
-    isAuthLoading,
-    isAuthReady,
-    isAuthenticated,
-    loadChatSession,
-    refreshChatSessions,
-  ]);
-
-  const handleSelectChat = async (targetSessionId: number) => {
-    if (activeMode !== "chat") {
-      router.replace(routes.chat);
-    }
-
-    if (targetSessionId === sessionIdRef.current || chatStatus === "loading") {
-      return;
-    }
-
-    setChatStatus("loading");
-
-    try {
-      await loadChatSession(targetSessionId);
-      guestChatStorage.setActiveSession({
-        sessionId: targetSessionId,
-        owner: "member",
-      });
-    } catch {
-      showToast("상담 내역을 불러오지 못했어요.");
-    } finally {
-      setChatStatus("idle");
-    }
   };
 
-  /** 세션이 없으면 새로 만든다. 게스트가 만든 세션은 로그인 시 귀속 대상으로 기록한다. */
-  const ensureSession = async () => {
-    if (sessionIdRef.current !== null) {
-      return sessionIdRef.current;
+  const createFallbackAssistantMessage = (prompt: string): ChatMessage => {
+    if (/매장|대리점|지점|방문|길찾기/.test(prompt)) {
+      return createStoreGuideMessage();
     }
-
-    const { sessionId: createdSessionId } = await chatService.createSession();
-    const owner: ChatSessionOwner = isAuthenticated ? "member" : "guest";
-
-    if (owner === "guest") {
-      guestChatStorage.addPendingGuestSession(createdSessionId);
-    }
-
-    guestChatStorage.setActiveSession({ sessionId: createdSessionId, owner });
-    applySessionId(createdSessionId);
-
-    return createdSessionId;
+    return {
+      id: `assistant-${Date.now()}`,
+      role: "assistant",
+      content:
+        "일시적으로 상담 응답을 불러오지 못했어요. 잠시 후 다시 질문해 주세요.",
+      createdAt: new Date().toISOString(),
+    };
   };
 
   const submitChatPrompt = async (prompt: string = chatInput) => {
@@ -326,35 +288,33 @@ const ChatPageContent = () => {
     window.requestAnimationFrame(() => chatInputRef.current?.focus());
 
     try {
-      const targetSessionId = await ensureSession();
-      const response = await chatService.sendMessage(
-        targetSessionId,
-        trimmedPrompt,
-      );
+      const nextGuestId =
+        isAuthenticated || user
+          ? undefined
+          : (currentGuestId ?? createGuestId());
+      const nextSessionId =
+        currentSessionId ??
+        (await chatService.createSession(nextGuestId)).sessionId;
 
-      setMessages((currentMessages) => [
-        ...currentMessages,
-        toAssistantMessage(response, trimmedPrompt),
-      ]);
+      setCurrentGuestId(nextGuestId);
+      setCurrentSessionId(nextSessionId);
+
+      const assistantMessage = await chatService.sendMessage({
+        content: trimmedPrompt,
+        guestId: nextGuestId,
+        sessionId: nextSessionId,
+      });
+
+      setMessages((currentMessages) => [...currentMessages, assistantMessage]);
 
       if (isAuthenticated) {
         void refreshChatSessions();
       }
     } catch (error) {
-      // 세션이 사라졌거나 내 세션이 아니면 다음 질문에서 새 세션을 만들도록 비운다.
-      if (error instanceof ApiError && [403, 404].includes(error.status)) {
-        guestChatStorage.clearActiveSession();
-        applySessionId(null);
-      }
-
+      console.error("Chat API request failed", error);
       setMessages((currentMessages) => [
         ...currentMessages,
-        {
-          id: `assistant-error-${Date.now()}`,
-          role: "assistant",
-          content: FAILED_ANSWER_MESSAGE,
-          createdAt: new Date().toISOString(),
-        },
+        createFallbackAssistantMessage(trimmedPrompt),
       ]);
     } finally {
       setChatStatus("idle");
@@ -363,20 +323,33 @@ const ChatPageContent = () => {
   };
 
   const resetChat = () => {
-    const previousSessionId = sessionIdRef.current;
-
-    // 게스트의 새 채팅은 "현재 대화가 삭제됩니다" 안내를 거친다 — 귀속 대상에서도 뺀다.
-    if (previousSessionId !== null && !isAuthenticated) {
-      guestChatStorage.removePendingGuestSession(previousSessionId);
-    }
-
-    guestChatStorage.clearActiveSession();
-    applySessionId(null);
     setMessages([]);
     setChatInput("");
     setCurrentChatTitle("");
+    setCurrentGuestId(undefined);
+    setCurrentSessionId(undefined);
     setChatStatus("idle");
+    chatConversationStorage.clear(activeConversationOwnerKeyRef.current);
     window.requestAnimationFrame(() => chatInputRef.current?.focus());
+  };
+
+  const handleSelectChat = async (targetSessionId: number) => {
+    if (activeMode !== "chat") {
+      router.replace(routes.chat);
+    }
+
+    if (targetSessionId === currentSessionId || chatStatus === "loading") {
+      return;
+    }
+
+    setChatStatus("loading");
+
+    try {
+      await loadChatSession(targetSessionId);
+    } catch {
+      showToast("상담 내역을 불러오지 못했어요.");
+      setChatStatus("idle");
+    }
   };
 
   const startNewChat = () => {
@@ -443,7 +416,7 @@ const ChatPageContent = () => {
         activeMode={activeMode}
         currentChatTitle={currentChatTitle}
         chatSessions={chatSessions}
-        activeSessionId={activeSessionId}
+        activeSessionId={currentSessionId ?? null}
         onSelectChat={(targetSessionId) => {
           void handleSelectChat(targetSessionId);
         }}

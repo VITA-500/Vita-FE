@@ -24,17 +24,7 @@ export type ChatAction = {
 
 export type ChatMode = "chat" | "profile" | "store";
 
-/* ---------- Chat API (BE: /chat/sessions) ---------- */
-
 export type ChatApiMessageRole = "USER" | "ASSISTANT";
-
-export type ChatApiMessageStatus =
-  "PENDING" | "COMPLETED" | "FAILED" | "RETRYING";
-
-export type ChatSessionCreateResponse = {
-  sessionId: number;
-  createdAt: string;
-};
 
 export type ChatSessionSummary = {
   sessionId: number;
@@ -44,21 +34,6 @@ export type ChatSessionSummary = {
 
 export type ChatSessionListResponse = {
   sessions: ChatSessionSummary[];
-};
-
-export type ChatSessionClaimResponse = {
-  sessionId: number;
-  claimedAt: string;
-};
-
-/** POST /chat/sessions/{id}/messages 응답 (BE 필드명 createAt 그대로) */
-export type ChatMessageApiResponse = {
-  messageId: number;
-  status: ChatApiMessageStatus;
-  answer: string | null;
-  relatedFaqIds: number[];
-  createAt: string;
-  latencyMs: number;
 };
 
 export type SessionMessage = {
