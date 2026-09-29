@@ -156,9 +156,13 @@ const ChatPageContent = () => {
               if (!isCancelled) {
                 showToast("로그인 전 상담 내역을 계정에 저장했어요.");
               }
-              nextConversation =
-                chatConversationStorage.migrateGuestToUser(ownerKey) ??
-                nextConversation;
+              nextConversation = {
+                ...guestConversation,
+                guestId: undefined,
+                sessionId: response.sessionId,
+              };
+              chatConversationStorage.save(ownerKey, nextConversation);
+              chatConversationStorage.clear(getGuestChatConversationOwnerKey());
             })
             .catch((error) => {
               console.error("Guest chat claim failed", {
