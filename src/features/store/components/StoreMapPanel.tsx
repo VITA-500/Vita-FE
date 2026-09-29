@@ -9,6 +9,7 @@ import {
   Check,
   ChevronDown,
   CornerUpRight,
+  MapPinned,
   Menu,
   Search,
   SportShoe,
@@ -41,8 +42,8 @@ type StoreMapPanelProps = {
 };
 
 const defaultMapLocation = {
-  lat: 37.5665,
-  lng: 126.978,
+  lat: 37.50312732327876,
+  lng: 127.04987850743296,
 };
 
 type MapCategory = "store" | "benefit";
@@ -223,6 +224,8 @@ const ServiceBadges = ({
 const StoreInfoBubble = ({
   isLoading,
   isWaitingForPinSelection,
+  isRouteDestination,
+  onShowNearbyStores,
   onStartRoute,
   onReserve,
   routeResultMessage,
@@ -233,6 +236,8 @@ const StoreInfoBubble = ({
 }: {
   isLoading: boolean;
   isWaitingForPinSelection: boolean;
+  isRouteDestination: boolean;
+  onShowNearbyStores: () => void;
   onStartRoute: (store: StoreLocation) => void;
   onReserve: (store: StoreLocation) => void;
   onRouteModeChange: (mode: StoreRouteMode) => void;
@@ -266,9 +271,8 @@ const StoreInfoBubble = ({
               type="button"
               disabled={isUnavailable}
               onClick={() => onRouteModeChange(option.value)}
-              title={option.label}
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-sm transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none",
+                "group relative flex h-8 w-8 items-center justify-center rounded-sm transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none",
                 isUnavailable
                   ? "cursor-not-allowed bg-gray-100 text-gray-300 opacity-70 shadow-none dark:bg-white/5 dark:text-gray-600"
                   : isSelected
@@ -279,6 +283,9 @@ const StoreInfoBubble = ({
               aria-pressed={isSelected}
             >
               <Icon size={13} />
+              <span className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-50 flex -translate-x-1/2 translate-y-1 items-center rounded-full bg-gray-900 px-3 py-1.5 text-xs font-extrabold whitespace-nowrap text-white opacity-0 shadow-xl transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
+                {option.label}
+              </span>
             </button>
           );
         })}
@@ -378,15 +385,27 @@ const StoreInfoBubble = ({
         ) : null}
 
         <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <Button
-            variant="primary"
-            size="sm"
-            className="rounded-sm shadow-sm transition-shadow hover:shadow-md"
-            onClick={() => onStartRoute(store)}
-          >
-            <CornerUpRight size={16} />
-            길찾기
-          </Button>
+          {isRouteDestination ? (
+            <Button
+              variant="primary"
+              size="sm"
+              className="rounded-sm shadow-sm transition-shadow hover:shadow-md"
+              onClick={onShowNearbyStores}
+            >
+              <MapPinned size={16} />
+              다른 매장 보기
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              size="sm"
+              className="rounded-sm shadow-sm transition-shadow hover:shadow-md"
+              onClick={() => onStartRoute(store)}
+            >
+              <CornerUpRight size={16} />
+              길찾기
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -404,8 +423,10 @@ const StoreInfoBubble = ({
 
 export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuthUser();
-  const [stores, setStores] = useState(() => storeService.getNearbyStores());
-  const [focusPoint, setFocusPoint] = useState<MapSearchPoint | null>(null);
+  const [stores, setStores] = useState<StoreLocation[]>([]);
+  const [focusPoint, setFocusPoint] = useState<MapSearchPoint | null>(
+    defaultMapLocation,
+  );
   const [isSearchHistoryOpen, setIsSearchHistoryOpen] = useState(false);
   const [searchPoint, setSearchPoint] = useState<MapSearchPoint | null>(null);
   const [isMapSearchLoading, setIsMapSearchLoading] = useState(false);
@@ -418,7 +439,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     useState(true);
   const [isLoginRequiredModalOpen, setIsLoginRequiredModalOpen] =
     useState(false);
-  const [isStoreListCollapsed, setIsStoreListCollapsed] = useState(false);
+  const [isStoreListCollapsed, setIsStoreListCollapsed] = useState(true);
   const [isToastBackdropVisible, setIsToastBackdropVisible] = useState(false);
   const [consultServiceFilters, setConsultServiceFilters] = useState<string[]>(
     [],
@@ -500,7 +521,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const searchableStores = useMemo(() => {
     const storeMap = new Map<string, StoreLocation>();
 
-    [...stores, ...storeService.getNearbyStores()].forEach((store) => {
+    stores.forEach((store) => {
       storeMap.set(store.id, store);
     });
 
@@ -541,6 +562,13 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       return null;
     }
 
+    // 경로를 불러오는 동안에는 선을 그리지 않는다. 대체 경로(내 위치→매장 직선)를 먼저 그리면
+    // 건물을 가로지르는 직선이 보였다가 실제 경로로 바뀌어, 잘못된 경로처럼 보인다.
+    // 로딩 상태는 경로 검색 오버레이(isRouteSearchOverlayVisible)가 대신 보여준다.
+    if (isRouteLoading && !walkingRoute?.path.length) {
+      return null;
+    }
+
     const destination = {
       lat: routeDestinationStore.lat,
       lng: routeDestinationStore.lng,
@@ -559,8 +587,10 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       origin: userLocation,
       path: routePath,
       routeKey,
+      segments: walkingRoute?.segments,
     };
   }, [
+    isRouteLoading,
     routeDestinationStore,
     routeDestinationStoreId,
     routeMode,
@@ -574,13 +604,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     locationStatus !== "error" &&
     locationStatus !== "unsupported";
   const nearbyLookup = useMemo(() => {
-    const lookupLocation =
-      userLocation ??
-      (locationStatus === "denied" ||
-      locationStatus === "error" ||
-      locationStatus === "unsupported"
-        ? defaultMapLocation
-        : null);
+    const lookupLocation = userLocation ?? defaultMapLocation;
 
     if (!lookupLocation) {
       return null;
@@ -593,7 +617,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       key: `${lat}:${lng}`,
       location: { lat, lng },
     };
-  }, [locationStatus, userLocation]);
+  }, [userLocation]);
 
   const updateStoresByLocation = (
     lookupLocation: MapSearchPoint,
@@ -621,7 +645,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       })
       .catch(() => {
         if (isCurrentRequest) {
-          setStores(storeService.getNearbyStores());
+          setStores([]);
           if (options?.showLoadingCard) {
             setHasSelectedStoreInfo(false);
             setSelectedStoreId("");
@@ -657,6 +681,37 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     if (nextStore && !stores.some((store) => store.id === nextStore.id)) {
       setStores((prevStores) => [...prevStores, nextStore]);
     }
+
+    storeService
+      .fetchStoreDetail(storeId, nextStore)
+      .then((storeDetail) => {
+        if (!storeDetail) {
+          return;
+        }
+
+        setStores((prevStores) => {
+          const hasStore = prevStores.some((store) => store.id === storeId);
+
+          if (!hasStore) {
+            return [...prevStores, storeDetail];
+          }
+
+          return prevStores.map((store) =>
+            store.id === storeId
+              ? {
+                  ...store,
+                  ...storeDetail,
+                  distanceText: storeDetail.distanceText ?? store.distanceText,
+                }
+              : store,
+          );
+        });
+      })
+      .catch(() => {
+        if (!nextStore) {
+          showToast("매장 정보를 불러오지 못했어요.");
+        }
+      });
 
     if (options?.focusMap) {
       if (nextStore) {
@@ -753,6 +808,24 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     setRouteResultMessage(null);
     setIsRouteLoading(false);
   };
+  const showNearbyStoresAfterRoute = () => {
+    const currentPoint = routeDestinationStore
+      ? { lat: routeDestinationStore.lat, lng: routeDestinationStore.lng }
+      : userLocation
+        ? { lat: userLocation.lat, lng: userLocation.lng }
+        : defaultMapLocation;
+
+    resetRouteState();
+    setActiveMapCategory("store");
+    setSearchQuery("");
+    setIsSearchHistoryOpen(false);
+    setHasSelectedStoreInfo(false);
+    setIsWaitingForPinSelection(true);
+    setSelectedStoreId("");
+    setFocusPoint(currentPoint);
+    setSearchPoint(currentPoint);
+    updateStoresByLocation(currentPoint, { showLoadingCard: true });
+  };
   const focusUserLocation = () => {
     shouldFocusUserLocationRef.current = true;
     requestLocation();
@@ -809,19 +882,6 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const showStoreInfoCard =
     hasSelectedStoreInfo &&
     (isWaitingForPinSelection || Boolean(mapSelectedStore));
-  const handleStoreHover = (storeId: string) => {
-    const hoveredStore =
-      visibleMapStores.find((store) => store.id === storeId) ??
-      stores.find((store) => store.id === storeId);
-
-    if (!hoveredStore) {
-      return;
-    }
-
-    setSelectedStoreId(storeId);
-    setIsWaitingForPinSelection(false);
-    setHasSelectedStoreInfo(true);
-  };
 
   useEffect(() => {
     if (!userLocation) {
@@ -868,7 +928,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       })
       .catch(() => {
         if (isCurrentRequest) {
-          setStores(storeService.getNearbyStores());
+          setStores([]);
         }
       });
 
@@ -918,6 +978,10 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
             <StoreInfoBubble
               isLoading={isMapSearchLoading}
               isWaitingForPinSelection={isWaitingForPinSelection}
+              isRouteDestination={Boolean(
+                routeDestinationStoreId &&
+                routeDestinationStoreId === mapSelectedStore?.id,
+              )}
               routeSummary={
                 routeDestinationStoreId === mapSelectedStore?.id
                   ? routeSummary
@@ -930,6 +994,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
               }
               selectedRouteMode={routeMode}
               store={isWaitingForPinSelection ? undefined : mapSelectedStore}
+              onShowNearbyStores={showNearbyStoresAfterRoute}
               onStartRoute={handleRouteStart}
               onRouteModeChange={changeRouteMode}
               onReserve={handleReserve}
@@ -952,7 +1017,6 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
 
           updateStoresByLocation(searchPoint, { showLoadingCard: true });
         }}
-        onStoreHover={handleStoreHover}
         onSelectStore={handleStoreSelect}
       />
 

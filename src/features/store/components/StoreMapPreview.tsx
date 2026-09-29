@@ -12,7 +12,11 @@ import {
 } from "lucide-react";
 import { useKakaoMapReady } from "@/features/store/hooks/useKakaoMapReady";
 import type { UserLocation } from "@/features/store/lib/geo";
-import type { StoreLocation, StoreRouteMode } from "@/features/store/types";
+import type {
+  StoreLocation,
+  StoreRouteMode,
+  StoreRouteSegmentKind,
+} from "@/features/store/types";
 import { cn } from "@/shared/lib/cn";
 
 const clampPercent = (value: number) => Math.min(88, Math.max(12, value));
@@ -33,7 +37,7 @@ const routeStyleByMode: Record<
     glow: "rgba(253, 182, 29, 0.22)",
     opacity: 1,
     strokeStyle: "shortdot",
-    weight: 10,
+    weight: 6,
   },
   car: {
     color: "#2563eb",
@@ -189,9 +193,202 @@ type RoutePreview = {
   origin: MapPoint;
   path: MapPoint[];
   routeKey: string;
+  segments?: RoutePreviewSegment[];
+};
+
+type RoutePreviewSegment = {
+  color?: string;
+  kind: StoreRouteSegmentKind;
+  lineName?: string;
+  path: MapPoint[];
 };
 
 type RoutePreviewRef = RoutePreview | null | undefined;
+
+const getRoutePathDistance = (path: MapPoint[]) => {
+  return path
+    .slice(0, -1)
+    .reduce(
+      (sum, point, index) => sum + getPathDistance(point, path[index + 1]),
+      0,
+    );
+};
+
+const getSequentialRouteSegments = (
+  segments: RoutePreviewSegment[],
+  progress: number,
+) => {
+  const segmentDistances = segments.map((segment) =>
+    getRoutePathDistance(segment.path),
+  );
+  const totalDistance = segmentDistances.reduce(
+    (sum, distance) => sum + distance,
+    0,
+  );
+  let remainingDistance = totalDistance * Math.max(0, Math.min(progress, 1));
+
+  if (totalDistance === 0) {
+    return progress >= 1 ? segments : [];
+  }
+
+  return segments
+    .map((segment, index) => {
+      const segmentDistance = segmentDistances[index];
+
+      if (remainingDistance <= 0) {
+        return {
+          ...segment,
+          path: [],
+        };
+      }
+
+      if (remainingDistance >= segmentDistance) {
+        remainingDistance -= segmentDistance;
+        return segment;
+      }
+
+      const segmentProgress =
+        segmentDistance === 0 ? 1 : remainingDistance / segmentDistance;
+      remainingDistance = 0;
+
+      return {
+        ...segment,
+        path: getPartialRoutePath(segment.path, segmentProgress),
+      };
+    })
+    .filter((segment) => segment.path.length >= 2);
+};
+
+const getFlatTransitFallbackSegments = (path: MapPoint[]) => {
+  if (path.length < 4) {
+    return [
+      {
+        color: routeStyleByMode.transit.color,
+        kind: "transit" as const,
+        path,
+      },
+    ];
+  }
+
+  const firstTransferIndex = Math.max(1, Math.floor(path.length * 0.08));
+  const lastTransferIndex = Math.min(
+    path.length - 2,
+    Math.ceil(path.length * 0.92),
+  );
+
+  if (firstTransferIndex >= lastTransferIndex) {
+    return [
+      {
+        color: routeStyleByMode.transit.color,
+        kind: "transit" as const,
+        path,
+      },
+    ];
+  }
+
+  return [
+    {
+      kind: "walk" as const,
+      path: path.slice(0, firstTransferIndex + 1),
+    },
+    {
+      color: routeStyleByMode.transit.color,
+      kind: "transit" as const,
+      path: path.slice(firstTransferIndex, lastTransferIndex + 1),
+    },
+    {
+      kind: "walk" as const,
+      path: path.slice(lastTransferIndex),
+    },
+  ];
+};
+
+const getTransferStops = (
+  segments: RoutePreviewSegment[],
+  fallbackMode: StoreRouteMode,
+) => {
+  const totalDistance = segments.reduce(
+    (sum, segment) => sum + getRoutePathDistance(segment.path),
+    0,
+  );
+  let passedDistance = 0;
+  const stops = new Map<
+    string,
+    {
+      color: string;
+      point: MapPoint;
+      progress: number;
+    }
+  >();
+
+  segments.forEach((segment, index) => {
+    const segmentDistance = getRoutePathDistance(segment.path);
+    const point = segment.path[segment.path.length - 1];
+
+    passedDistance += segmentDistance;
+
+    if (!point || index === segments.length - 1) {
+      return;
+    }
+
+    const nextSegment = segments[index + 1];
+    const nextSegmentStyle = getTransitSegmentStyle(nextSegment, fallbackMode);
+    const key = `${point.lat.toFixed(6)}:${point.lng.toFixed(6)}`;
+
+    stops.set(key, {
+      color: nextSegmentStyle.color,
+      point,
+      progress: totalDistance === 0 ? 1 : passedDistance / totalDistance,
+    });
+  });
+
+  return Array.from(stops.values());
+};
+
+const getTransitSegmentStyle = (
+  segment: RoutePreviewSegment,
+  fallbackMode: StoreRouteMode,
+) => {
+  if (segment.kind === "walk") {
+    if (fallbackMode === "transit") {
+      return {
+        ...routeStyleByMode.transit,
+        color: "#a78bfa",
+        glow: "rgba(167, 139, 250, 0.18)",
+        opacity: 0.82,
+        strokeStyle: "shortdot" as const,
+        weight: 6,
+      };
+    }
+
+    return {
+      ...routeStyleByMode.walk,
+      strokeStyle: "shortdot" as const,
+      weight: 9,
+    };
+  }
+
+  if (segment.kind === "subway") {
+    return {
+      ...routeStyleByMode.transit,
+      color: segment.color ?? routeStyleByMode.transit.color,
+      weight: 8,
+    };
+  }
+
+  if (segment.kind === "bus") {
+    return {
+      ...routeStyleByMode.transit,
+      color: segment.color ?? "#2563eb",
+      weight: 7,
+    };
+  }
+
+  return {
+    ...routeStyleByMode[fallbackMode],
+    color: segment.color ?? routeStyleByMode[fallbackMode].color,
+  };
+};
 
 type StoreMapPreviewProps = {
   className?: string;
@@ -212,7 +409,6 @@ type StoreMapPreviewProps = {
   onFocusUserLocation?: () => void;
   onSelectedStoreCardClose?: () => void;
   onSearchFromMapPoint?: () => void;
-  onStoreHover?: (storeId: string) => void;
   onSelectStore: (storeId: string) => void;
 };
 
@@ -236,14 +432,13 @@ export const StoreMapPreview = ({
   onMapPointSelect,
   onSelectedStoreCardClose,
   onSearchFromMapPoint,
-  onStoreHover,
 }: StoreMapPreviewProps) => {
   const isKakaoMapReady = useKakaoMapReady();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<KakaoMap | null>(null);
   const overlayRefs = useRef<MapOverlayHandle[]>([]);
   const routeOverlayRefs = useRef<KakaoCustomOverlay[]>([]);
-  const routeLineRef = useRef<KakaoPolyline | null>(null);
+  const routeLineRefs = useRef<KakaoPolyline[]>([]);
   const [routeDrawState, setRouteDrawState] = useState({
     progress: 1,
     routeKey: "",
@@ -349,15 +544,18 @@ export const StoreMapPreview = ({
         containerWidth >= 768 && selectedStoreCardLeftInset
           ? selectedStoreCardLeftInset + 24
           : 48;
+      const routeTopPadding = selectedStoreCard ? 300 : 160;
+      const routeRightPadding = selectedStoreCard ? 400 : 72;
+      const routeBottomPadding = selectedStoreCard ? 180 : 96;
 
       routePreview.path.forEach((point) => {
         bounds.extend(new kakaoMaps.LatLng(point.lat, point.lng));
       });
       map.setBounds(
         bounds,
-        120,
-        routePreview ? 390 : 48,
-        routePreview ? 280 : selectedStoreCard ? 230 : 72,
+        routeTopPadding,
+        routeRightPadding,
+        routeBottomPadding,
         routeLeftPadding,
       );
       fittedRouteKeyRef.current = routePreview.routeKey;
@@ -397,7 +595,7 @@ export const StoreMapPreview = ({
         containerRect.width >= 768 ? selectedStoreCardLeftInset : 0;
       const availableWidth = containerRect.width - effectiveLeftInset - 24;
       const cardWidth = Math.min(320, Math.max(0, availableWidth));
-      const cardHeightEstimate = 260;
+      const cardHeightEstimate = 340;
       const horizontalPadding = 12;
       const topPadding = 20;
       const bottomPadding = 12;
@@ -464,18 +662,13 @@ export const StoreMapPreview = ({
       const handleMarkerClick = () => {
         onSelectStore(store.id);
       };
-      const handleMarkerMouseEnter = () => {
-        onStoreHover?.(store.id);
-      };
 
       marker.addEventListener("click", handleMarkerClick);
-      marker.addEventListener("mouseenter", handleMarkerMouseEnter);
 
       return {
         marker: nativeMarker,
         cleanup: () => {
           marker.removeEventListener("click", handleMarkerClick);
-          marker.removeEventListener("mouseenter", handleMarkerMouseEnter);
           nativeMarker.setMap(null);
         },
         overlay: new kakaoMaps.CustomOverlay({
@@ -524,7 +717,6 @@ export const StoreMapPreview = ({
     focusPoint,
     isKakaoMapReady,
     onSelectStore,
-    onStoreHover,
     onMapPointSelect,
     onSelectedStoreCardClose,
     onSearchFromMapPoint,
@@ -546,8 +738,8 @@ export const StoreMapPreview = ({
     const kakaoMaps = window.kakao.maps;
     const map = mapRef.current;
 
-    routeLineRef.current?.setMap(null);
-    routeLineRef.current = null;
+    routeLineRefs.current.forEach((line) => line.setMap(null));
+    routeLineRefs.current = [];
     routeOverlayRefs.current.forEach((overlay) => overlay.setMap(null));
     routeOverlayRefs.current = [];
 
@@ -555,24 +747,85 @@ export const StoreMapPreview = ({
       return;
     }
 
+    const routeStyle = routeStyleByMode[routePreview.mode];
+    const routeSegments =
+      routePreview.segments && routePreview.segments.length > 0
+        ? routePreview.segments
+        : routePreview.mode === "transit"
+          ? getFlatTransitFallbackSegments(routePreview.path)
+          : [
+              {
+                kind: routePreview.mode,
+                path: routePreview.path,
+              },
+            ];
+    const animatedRouteSegments = getSequentialRouteSegments(
+      routeSegments,
+      routeDrawProgress,
+    );
+    const transferStops = getTransferStops(
+      routeSegments,
+      routePreview.mode,
+    ).filter((stop) => routeDrawProgress >= stop.progress);
     const animatedRoutePath = getPartialRoutePath(
       routePreview.path,
       routeDrawProgress,
     );
     const routeHead = animatedRoutePath[animatedRoutePath.length - 1];
-    const routeStyle = routeStyleByMode[routePreview.mode];
 
-    routeLineRef.current = new kakaoMaps.Polyline({
-      clickable: false,
-      map,
-      path: animatedRoutePath.map(
-        (point) => new kakaoMaps.LatLng(point.lat, point.lng),
-      ),
-      strokeColor: routeStyle.color,
-      strokeOpacity: routeStyle.opacity,
-      strokeStyle: routeStyle.strokeStyle,
-      strokeWeight: routeStyle.weight,
-      zIndex: 35,
+    animatedRouteSegments.forEach((segment, index) => {
+      const segmentStyle = getTransitSegmentStyle(segment, routePreview.mode);
+
+      routeLineRefs.current.push(
+        new kakaoMaps.Polyline({
+          clickable: false,
+          map,
+          path: segment.path.map(
+            (point) => new kakaoMaps.LatLng(point.lat, point.lng),
+          ),
+          strokeColor: segmentStyle.color,
+          strokeOpacity: segmentStyle.opacity,
+          strokeStyle: segmentStyle.strokeStyle,
+          strokeWeight: segmentStyle.weight,
+          zIndex: 35 + index,
+        }),
+      );
+    });
+
+    transferStops.forEach((stop) => {
+      const transferMarker = document.createElement("span");
+      const transferMarkerDot = document.createElement("span");
+
+      transferMarker.setAttribute("aria-label", "교통수단 승하차 지점");
+      transferMarker.style.display = "flex";
+      transferMarker.style.width = "20px";
+      transferMarker.style.height = "20px";
+      transferMarker.style.alignItems = "center";
+      transferMarker.style.justifyContent = "center";
+      transferMarker.style.border = `4px solid ${stop.color}`;
+      transferMarker.style.borderRadius = "9999px";
+      transferMarker.style.background = stop.color;
+      transferMarker.style.boxShadow =
+        "0 6px 16px rgba(15, 23, 42, 0.2), 0 0 0 4px rgba(255, 255, 255, 0.9)";
+      transferMarker.style.pointerEvents = "none";
+
+      transferMarkerDot.style.display = "block";
+      transferMarkerDot.style.width = "8px";
+      transferMarkerDot.style.height = "8px";
+      transferMarkerDot.style.borderRadius = "9999px";
+      transferMarkerDot.style.background = "#ffffff";
+      transferMarker.appendChild(transferMarkerDot);
+
+      routeOverlayRefs.current.push(
+        new kakaoMaps.CustomOverlay({
+          content: transferMarker,
+          map,
+          position: new kakaoMaps.LatLng(stop.point.lat, stop.point.lng),
+          xAnchor: 0.5,
+          yAnchor: 0.5,
+          zIndex: 43,
+        }),
+      );
     });
 
     const originMarker = document.createElement("span");
@@ -666,8 +919,8 @@ export const StoreMapPreview = ({
     }
 
     return () => {
-      routeLineRef.current?.setMap(null);
-      routeLineRef.current = null;
+      routeLineRefs.current.forEach((line) => line.setMap(null));
+      routeLineRefs.current = [];
       routeOverlayRefs.current.forEach((overlay) => overlay.setMap(null));
       routeOverlayRefs.current = [];
     };
