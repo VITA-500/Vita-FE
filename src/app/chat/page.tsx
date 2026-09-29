@@ -16,7 +16,10 @@ import {
   getChatConversationOwnerKey,
   getGuestChatConversationOwnerKey,
 } from "@/features/chat/lib/chatConversationStorage";
-import { chatService } from "@/features/chat/lib/chatService";
+import {
+  chatService,
+  isPermanentClaimError,
+} from "@/features/chat/lib/chatService";
 import { ProfilePanel } from "@/features/auth/components/ProfilePanel";
 import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
 import type {
@@ -112,6 +115,10 @@ const ChatPageContent = () => {
     setChatStatus("idle");
   }, []);
 
+  // user 객체는 로그인 정보가 갱신될 때마다 새로 만들어진다. 객체를 의존성으로 두면
+  // 대화 복원·claim이 여러 번 실행되므로 변하지 않는 userId만 본다.
+  const currentUserId = user?.userId;
+
   useEffect(() => {
     if (!isAuthReady) {
       return;
@@ -120,13 +127,19 @@ const ChatPageContent = () => {
     let isCancelled = false;
 
     const hydrateConversation = async () => {
-      const ownerKey = getChatConversationOwnerKey(user);
+      const ownerKey = getChatConversationOwnerKey(
+        currentUserId === undefined ? null : { userId: currentUserId },
+      );
       let nextConversation = chatConversationStorage.load(ownerKey);
 
-      if (user) {
-        const guestConversation = chatConversationStorage.load(
-          getGuestChatConversationOwnerKey(),
-        );
+      if (currentUserId !== undefined) {
+        const guestConversation =
+          chatConversationStorage.load(getGuestChatConversationOwnerKey()) ??
+          chatConversationStorage.loadGuestBackup();
+
+        if (guestConversation?.messages.length) {
+          nextConversation = guestConversation;
+        }
 
         if (guestConversation?.sessionId && guestConversation.guestId) {
           await chatService
@@ -134,12 +147,48 @@ const ChatPageContent = () => {
               guestConversation.sessionId,
               guestConversation.guestId,
             )
-            .then(() => {
+            .then((response) => {
+              console.info("Guest chat claim succeeded", {
+                guestId: guestConversation.guestId,
+                response,
+                sessionId: guestConversation.sessionId,
+              });
+              if (!isCancelled) {
+                showToast("로그인 전 상담 내역을 계정에 저장했어요.");
+              }
               nextConversation =
                 chatConversationStorage.migrateGuestToUser(ownerKey) ??
                 nextConversation;
             })
-            .catch(() => undefined);
+            .catch((error) => {
+              console.error("Guest chat claim failed", {
+                error,
+                guestId: guestConversation.guestId,
+                sessionId: guestConversation.sessionId,
+              });
+
+              // 세션이 없거나 남의 세션(403/404)이면 다시 시도해도 같다 — 게스트 기록을 정리해
+              // 로그인할 때마다 같은 실패 안내가 반복되지 않게 한다.
+              if (isPermanentClaimError(error)) {
+                chatConversationStorage.clear(
+                  getGuestChatConversationOwnerKey(),
+                );
+              }
+
+              if (isCancelled) {
+                return;
+              }
+
+              showToast(
+                "로그인 전 상담 화면은 유지했지만 저장 연동은 실패했어요.",
+              );
+              nextConversation = {
+                ...guestConversation,
+                guestId: undefined,
+                sessionId: undefined,
+              };
+              chatConversationStorage.save(ownerKey, nextConversation);
+            });
         }
 
         void refreshChatSessions();
@@ -157,7 +206,9 @@ const ChatPageContent = () => {
       const frameId = window.requestAnimationFrame(() => {
         setMessages(nextConversation?.messages ?? []);
         setCurrentChatTitle(nextConversation?.title ?? "");
-        setCurrentGuestId(user ? undefined : nextConversation?.guestId);
+        setCurrentGuestId(
+          currentUserId !== undefined ? undefined : nextConversation?.guestId,
+        );
         setCurrentSessionId(nextConversation?.sessionId);
         setChatStatus("idle");
       });
@@ -177,7 +228,7 @@ const ChatPageContent = () => {
       isCancelled = true;
       cancelFrame?.();
     };
-  }, [isAuthReady, refreshChatSessions, user]);
+  }, [currentUserId, isAuthReady, refreshChatSessions]);
 
   useEffect(() => {
     if (!hasHydratedConversationRef.current) {

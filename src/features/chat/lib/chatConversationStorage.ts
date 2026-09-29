@@ -9,6 +9,7 @@ export type StoredChatConversation = {
 
 const CHAT_CONVERSATION_KEY_PREFIX = "vita-chat-conversation";
 const GUEST_OWNER_KEY = "guest";
+const GUEST_BACKUP_OWNER_KEY = "guest-backup";
 
 const getStorageKey = (ownerKey: string) =>
   `${CHAT_CONVERSATION_KEY_PREFIX}:${ownerKey}`;
@@ -51,6 +52,10 @@ export const createGuestId = () => {
 export const chatConversationStorage = {
   clear: (ownerKey: string) => {
     window.localStorage.removeItem(getStorageKey(ownerKey));
+
+    if (ownerKey === GUEST_OWNER_KEY) {
+      window.localStorage.removeItem(getStorageKey(GUEST_BACKUP_OWNER_KEY));
+    }
   },
   load: (ownerKey: string): StoredChatConversation | null => {
     const rawValue = window.localStorage.getItem(getStorageKey(ownerKey));
@@ -80,8 +85,12 @@ export const chatConversationStorage = {
 
     chatConversationStorage.save(ownerKey, guestConversation);
     chatConversationStorage.clear(GUEST_OWNER_KEY);
+    chatConversationStorage.clear(GUEST_BACKUP_OWNER_KEY);
 
     return guestConversation;
+  },
+  loadGuestBackup: () => {
+    return chatConversationStorage.load(GUEST_BACKUP_OWNER_KEY);
   },
   save: (ownerKey: string, conversation: StoredChatConversation) => {
     if (conversation.messages.length === 0 && !conversation.title) {
@@ -93,5 +102,12 @@ export const chatConversationStorage = {
       getStorageKey(ownerKey),
       JSON.stringify(conversation),
     );
+
+    if (ownerKey === GUEST_OWNER_KEY) {
+      window.localStorage.setItem(
+        getStorageKey(GUEST_BACKUP_OWNER_KEY),
+        JSON.stringify(conversation),
+      );
+    }
   },
 };
