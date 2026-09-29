@@ -24,8 +24,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { recentChats, serviceMenus } from "@/features/chat/constants";
-import type { ChatMode } from "@/features/chat/types";
+import { serviceMenus } from "@/features/chat/constants";
+import type { ChatMode, ChatSessionSummary } from "@/features/chat/types";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
 import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
@@ -57,11 +57,42 @@ type ChatSidebarProps = {
   onHideTooltip: () => void;
   activeMode: ChatMode;
   currentChatTitle?: string;
+  /** GET /chat/sessions 결과. 로그인 전 대화도 claim 뒤 여기에 포함된다. */
+  chatSessions?: readonly ChatSessionSummary[];
+  activeSessionId?: number | null;
+  onSelectChat?: (sessionId: number) => void;
+};
+
+type SidebarChatItem = {
+  key: string;
+  title: string;
+  active: boolean;
+  sessionId: number | null;
+};
+
+const formatSessionTitle = (session: ChatSessionSummary) => {
+  if (session.title) {
+    return session.title;
+  }
+
+  // BE가 아직 제목을 만들지 않아(title=null) 마지막 대화 시각으로 대신한다.
+  const updatedAt = new Date(session.updatedAt);
+
+  if (Number.isNaN(updatedAt.getTime())) {
+    return `상담 #${session.sessionId}`;
+  }
+
+  return `${updatedAt.getMonth() + 1}월 ${updatedAt.getDate()}일 ${String(
+    updatedAt.getHours(),
+  ).padStart(2, "0")}:${String(updatedAt.getMinutes()).padStart(2, "0")} 상담`;
 };
 
 export const ChatSidebar = ({
   activeMode,
+  activeSessionId = null,
+  chatSessions = [],
   currentChatTitle,
+  onSelectChat,
   isAuthLoading,
   isAuthReady,
   isAuthenticated,
@@ -92,22 +123,45 @@ export const ChatSidebar = ({
   const isDarkMode = resolvedTheme === "dark";
   const isGuest = isAuthReady && !isAuthenticated && !isAuthLoading;
 
-  const visibleRecentChats = currentChatTitle
-    ? [
-        { title: currentChatTitle, active: true },
-        ...recentChats
-          .filter((chat) => chat.title !== currentChatTitle)
-          .map((chat) => ({ ...chat, active: false })),
-      ]
-    : recentChats;
+  const sessionChats: SidebarChatItem[] = chatSessions.map((session) => {
+    const isActive = session.sessionId === activeSessionId;
+
+    return {
+      key: `session-${session.sessionId}`,
+      // 보고 있는 대화는 첫 질문으로 만든 제목을 우선 보여준다.
+      title:
+        isActive && currentChatTitle
+          ? currentChatTitle
+          : formatSessionTitle(session),
+      active: isActive,
+      sessionId: session.sessionId,
+    };
+  });
+  const hasActiveSessionInList = sessionChats.some((chat) => chat.active);
+  // 방금 시작해 목록 새로고침 전인 대화도 맨 위에 보이게 한다.
+  const visibleRecentChats: SidebarChatItem[] =
+    currentChatTitle && !hasActiveSessionInList
+      ? [
+          {
+            key: `current-${activeSessionId ?? "new"}`,
+            title: currentChatTitle,
+            active: true,
+            sessionId: activeSessionId,
+          },
+          ...sessionChats,
+        ]
+      : sessionChats;
   const pinnedChats = pinnedChatTitles
     .map((title) => visibleRecentChats.find((chat) => chat.title === title))
-    .filter((chat): chat is (typeof visibleRecentChats)[number] =>
-      Boolean(chat),
-    );
+    .filter((chat): chat is SidebarChatItem => Boolean(chat));
   const unpinnedRecentChats = visibleRecentChats.filter(
     (chat) => !pinnedChatTitles.includes(chat.title),
   );
+  const selectChat = (chat: SidebarChatItem) => {
+    if (chat.sessionId !== null) {
+      onSelectChat?.(chat.sessionId);
+    }
+  };
 
   const handleAccountMenuToggle = () => {
     onHideTooltip();
@@ -524,11 +578,12 @@ export const ChatSidebar = ({
 
                     {pinnedChats.map((chat) => (
                       <div
-                        key={chat.title}
+                        key={chat.key}
                         className="group relative mx-1 flex h-11 w-[calc(100%-0.5rem)] items-center rounded-xl text-left transition-colors duration-150 hover:bg-gray-300/70 dark:hover:bg-white/10"
                       >
                         <button
                           type="button"
+                          onClick={() => selectChat(chat)}
                           className="min-w-0 flex-1 truncate px-5 text-left text-sm font-semibold text-gray-500 transition-colors group-hover:text-gray-950 dark:text-gray-400 dark:group-hover:text-white"
                         >
                           {chat.title}
@@ -563,9 +618,15 @@ export const ChatSidebar = ({
                   최근 상담
                 </p>
 
+                {unpinnedRecentChats.length === 0 && (
+                  <p className="px-5 py-2 text-xs font-medium text-gray-400">
+                    아직 상담 내역이 없어요.
+                  </p>
+                )}
+
                 {unpinnedRecentChats.map((chat) => (
                   <div
-                    key={chat.title}
+                    key={chat.key}
                     className={cn(
                       "group relative mx-1 flex h-11 w-[calc(100%-0.5rem)] items-center rounded-xl text-left transition-colors duration-150",
                       chat.active
@@ -575,6 +636,8 @@ export const ChatSidebar = ({
                   >
                     <button
                       type="button"
+                      onClick={() => selectChat(chat)}
+                      aria-current={chat.active ? "true" : undefined}
                       className={cn(
                         "focus-visible:ring-brand/30 min-w-0 flex-1 truncate px-5 text-left text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
                         chat.active
