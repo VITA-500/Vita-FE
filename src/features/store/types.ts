@@ -18,9 +18,20 @@ export type StoreRoutePoint = {
 
 export type StoreRouteMode = "walk" | "car" | "bicycle" | "transit";
 
+export type StoreRouteSegmentKind =
+  "walk" | "car" | "bicycle" | "bus" | "subway" | "transit";
+
+export type StoreRouteSegment = {
+  kind: StoreRouteSegmentKind;
+  lineName?: string;
+  color?: string;
+  path: StoreRoutePoint[];
+};
+
 export type StoreRoute = {
   distanceMeters: number;
   durationSeconds: number;
   mode: StoreRouteMode;
   path: StoreRoutePoint[];
+  segments?: StoreRouteSegment[];
 };
