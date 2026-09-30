@@ -1,5 +1,8 @@
+import Image from "next/image";
 import type { ChatMessage } from "@/features/chat/types";
 import { ButtonLink } from "@/shared/ui/Button";
+
+const ASSISTANT_PROFILE_IMAGE = "/images/chatbot/profile-robot.png";
 
 type ChatMessageListProps = {
   isLoading: boolean;
@@ -7,9 +10,15 @@ type ChatMessageListProps = {
 };
 
 const AssistantProfile = () => (
-  <div className="bg-brand shadow-brand/20 mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black text-white shadow-sm">
-    V
-  </div>
+  <span className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fffbdc]">
+    <Image
+      src={ASSISTANT_PROFILE_IMAGE}
+      alt="VITA 상담사"
+      width={28}
+      height={28}
+      className="h-7 w-7 object-contain"
+    />
+  </span>
 );
 
 export const ChatMessageList = ({

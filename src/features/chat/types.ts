@@ -22,4 +22,28 @@ export type ChatAction = {
   href: string;
 };
 
-export type ChatMode = "chat" | "store";
+export type ChatMode = "chat" | "profile" | "store";
+
+export type ChatApiMessageRole = "USER" | "ASSISTANT";
+
+export type ChatSessionSummary = {
+  sessionId: number;
+  title: string | null;
+  updatedAt: string;
+};
+
+export type ChatSessionListResponse = {
+  sessions: ChatSessionSummary[];
+};
+
+export type SessionMessage = {
+  messageId: number;
+  role: ChatApiMessageRole;
+  content: string | null;
+  createdAt: string;
+};
+
+export type SessionMessagesResponse = {
+  sessionId: number;
+  messages: SessionMessage[];
+};

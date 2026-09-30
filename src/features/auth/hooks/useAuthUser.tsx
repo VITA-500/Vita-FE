@@ -30,19 +30,9 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const getInitialHasAccessToken = () => {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  return tokenStorage.hasAccessTokenHint();
-};
-
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [hasAccessToken, setHasAccessToken] = useState(
-    getInitialHasAccessToken,
-  );
-  const [isLoading, setIsLoading] = useState(getInitialHasAccessToken);
+  const [hasAccessToken, setHasAccessToken] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [user, setUser] = useState<MyPageResponse | null>(null);
 

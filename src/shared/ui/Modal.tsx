@@ -57,7 +57,7 @@ export const Modal = ({
     >
       <button
         type="button"
-        className="absolute inset-0 bg-gray-950/45 backdrop-blur-sm"
+        className="absolute inset-0 bg-gray-950/35"
         aria-label="모달 닫기"
         onClick={onClose}
       />

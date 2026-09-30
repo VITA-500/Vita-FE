@@ -6,15 +6,15 @@
 
 ```
 main        ← 배포(prod) 브랜치, 항상 안정 상태 유지
-  └─ develop   ← 개발 통합(dev) 브랜치, 팀 전체 작업이 모이는 곳
+  └─ dev       ← 개발 통합 브랜치, 팀 전체 작업이 모이는 곳
         └─ feat/*   ← 기능별 작업 브랜치 (담당자별로 생성)
 ```
 
-| 브랜치    | 용도                   | 배포 대상                 | 직접 push 가능 여부 |
-| --------- | ---------------------- | ------------------------- | ------------------- |
-| `main`    | 발표/데모용 안정 버전  | EC2 prod                  | 불가 (PR 병합만)    |
-| `develop` | 팀 전체 통합 개발 버전 | EC2 dev                   | 불가 (PR 병합만)    |
-| `feat/*`  | 개별 기능 개발         | 없음 (로컬/개인 테스트용) | 가능                |
+| 브랜치   | 용도                   | 배포 대상                 | 직접 push 가능 여부 |
+| -------- | ---------------------- | ------------------------- | ------------------- |
+| `main`   | 발표/데모용 안정 버전  | EC2 prod                  | 불가 (PR 병합만)    |
+| `dev`    | 팀 전체 통합 개발 버전 | EC2 dev                   | 불가 (PR 병합만)    |
+| `feat/*` | 개별 기능 개발         | 없음 (로컬/개인 테스트용) | 가능                |
 
 ## 2. 브랜치 네이밍 규칙
 
@@ -38,9 +38,9 @@ feat/{담당영역}-{기능명}
 ## 3. 작업 흐름
 
 ```
-1. develop에서 최신 상태 pull
-   git checkout develop
-   git pull origin develop
+1. dev에서 최신 상태 pull
+   git checkout dev
+   git pull origin dev
 
 2. feat 브랜치 생성
    git checkout -b feat/be2-faq-embedding
@@ -50,13 +50,13 @@ feat/{담당영역}-{기능명}
 4. 원격에 push
    git push origin feat/be2-faq-embedding
 
-5. GitHub에서 develop ← feat 으로 Pull Request 생성
+5. GitHub에서 dev ← feat 으로 Pull Request 생성
 
 6. 코드 리뷰 후 병합 (Squash and Merge 권장)
 
-7. develop에 병합되면 GitHub Actions가 자동으로 EC2 dev에 배포
+7. dev에 병합되면 GitHub Actions가 자동으로 EC2 dev에 배포
 
-8. develop이 일정 수준 안정화되면, develop → main으로 PR 생성
+8. dev가 일정 수준 안정화되면, dev → main으로 PR 생성
 
 9. main 병합 시 GitHub Actions가 자동으로 EC2 prod에 배포
 ```
@@ -65,7 +65,7 @@ feat/{담당영역}-{기능명}
 
 | 항목         | 규칙                                                          |
 | ------------ | ------------------------------------------------------------- |
-| PR 대상      | 원칙적으로 `feat/* → develop`                                 |
+| PR 대상      | 원칙적으로 `feat/* → dev`                                     |
 | 리뷰어       | 최소 1명 이상 승인 후 병합 (같은 영역 담당자 또는 BE6)        |
 | 병합 방식    | Squash and Merge                                              |
 | PR 제목      | `{type}: {변경 내용 요약}` 형식 (커밋 컨벤션과 동일)          |
@@ -158,7 +158,7 @@ Phase: `Phase 1` / `Phase 2` / `Phase 3` (택1, 지우고 남기기)
 
 제목은 명령형/현재형, 간결하게. 여러 변경사항을 한 커밋에 욱여넣지 않는다.
 
-## 6. develop → main 병합 시점
+## 6. dev → main 병합 시점
 
 - BE6이 진행하는 통합 테스트(Phase 2) 완료 후 병합을 원칙으로 함
 - 발표/데모 일정에 맞춰 사전에 main 동결(freeze) 시점을 팀 전체에 공지
@@ -169,7 +169,7 @@ Phase: `Phase 1` / `Phase 2` / `Phase 3` (택1, 지우고 남기기)
 ```
 git checkout feat/be2-faq-embedding
 git fetch origin
-git merge origin/develop
+git merge origin/dev
 # 충돌 해결 후
 git push origin feat/be2-faq-embedding
 ```
