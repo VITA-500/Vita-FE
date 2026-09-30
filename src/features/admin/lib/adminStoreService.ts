@@ -1,7 +1,10 @@
 import type { AdminStore, AdminStoreDetail } from "@/features/admin/types";
 import { requestJson } from "@/shared/api/http";
 
-type AdminStoreRequest = Omit<AdminStoreDetail, "storeId">;
+type AdminStoreRequest = Omit<
+  AdminStoreDetail,
+  "createdAt" | "storeId" | "updatedAt"
+>;
 
 type StoreListResponse = {
   totalCount: number;

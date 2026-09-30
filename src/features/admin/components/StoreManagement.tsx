@@ -14,10 +14,15 @@ import { Modal } from "@/shared/ui/Modal";
 import { SearchInput } from "@/shared/ui/SearchInput";
 import { showToast } from "@/shared/ui/ToastProvider";
 
-type StoreInput = Omit<AdminStoreDetail, "storeId">;
+type StoreInput = Omit<AdminStoreDetail, "createdAt" | "storeId" | "updatedAt">;
 
 const pageSizeOptions = [20, 50, 100] as const;
 const MIN_TABLE_ROWS = 8;
+const sortOptions = [
+  { label: "최신 등록순", field: "createdAt", direction: "desc" },
+  { label: "최근 수정순", field: "updatedAt", direction: "desc" },
+  { label: "매장명순", field: "name", direction: "asc" },
+] as const;
 
 export const StoreManagement = () => {
   const {
@@ -29,10 +34,13 @@ export const StoreManagement = () => {
     setStoreKeyword,
     setStorePage,
     setStorePageSize,
+    setStoreSort,
     storeError,
     storeKeyword,
     storePage,
     storePageSize,
+    storeSortDirection,
+    storeSortField,
     stores,
     storeTotalCount,
     storeTotalPages,
@@ -140,7 +148,7 @@ export const StoreManagement = () => {
         </Button>
       </div>
 
-      <div className="mb-7 grid gap-3 lg:grid-cols-[minmax(280px,420px)_auto] lg:items-start lg:justify-between">
+      <div className="mb-7 grid gap-3 xl:grid-cols-[minmax(280px,420px)_auto] xl:items-start xl:justify-between">
         <div className="flex gap-2">
           <SearchInput
             placeholder="매장명이나 주소를 검색하세요"
@@ -158,31 +166,61 @@ export const StoreManagement = () => {
             </Button>
           )}
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <span className="text-text-secondary text-sm font-bold">
-            페이지당
-          </span>
-          <div className="flex rounded-2xl border border-gray-200 bg-white p-1 shadow-sm dark:border-white/10 dark:bg-white/5">
-            {pageSizeOptions.map((pageSize) => {
-              const isActive = pageSize === storePageSize;
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-text-secondary text-sm font-bold">정렬</span>
+            <div className="flex rounded-2xl border border-gray-200 bg-white p-1 shadow-sm dark:border-white/10 dark:bg-white/5">
+              {sortOptions.map((option) => {
+                const isActive =
+                  option.field === storeSortField &&
+                  option.direction === storeSortDirection;
 
-              return (
-                <button
-                  key={pageSize}
-                  type="button"
-                  aria-pressed={isActive}
-                  onClick={() => setStorePageSize(pageSize)}
-                  className={cn(
-                    "h-9 rounded-xl px-3 text-sm font-extrabold transition",
-                    isActive
-                      ? "bg-brand text-white"
-                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-950 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white",
-                  )}
-                >
-                  {pageSize}
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={`${option.field}-${option.direction}`}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => setStoreSort(option.field, option.direction)}
+                    className={cn(
+                      "h-9 rounded-xl px-3 text-sm font-extrabold transition",
+                      isActive
+                        ? "bg-brand text-white"
+                        : "text-gray-500 hover:bg-gray-100 hover:text-gray-950 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white",
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-text-secondary text-sm font-bold">
+              페이지당
+            </span>
+            <div className="flex rounded-2xl border border-gray-200 bg-white p-1 shadow-sm dark:border-white/10 dark:bg-white/5">
+              {pageSizeOptions.map((pageSize) => {
+                const isActive = pageSize === storePageSize;
+
+                return (
+                  <button
+                    key={pageSize}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => setStorePageSize(pageSize)}
+                    className={cn(
+                      "h-9 rounded-xl px-3 text-sm font-extrabold transition",
+                      isActive
+                        ? "bg-brand text-white"
+                        : "text-gray-500 hover:bg-gray-100 hover:text-gray-950 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white",
+                    )}
+                  >
+                    {pageSize}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -219,6 +257,10 @@ export const StoreManagement = () => {
                   <p className="text-text-secondary mt-2 line-clamp-2 text-xs font-semibold">
                     {store.address}
                   </p>
+                  <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-bold text-gray-400">
+                    <span>등록 {formatDate(store.createdAt)}</span>
+                    <span>수정 {formatDate(store.updatedAt)}</span>
+                  </div>
                 </div>
                 <StoreRowActions
                   compact
@@ -241,13 +283,14 @@ export const StoreManagement = () => {
 
       <Card padding="none" className="hidden overflow-hidden md:block">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] table-fixed border-collapse text-sm">
+          <table className="w-full min-w-[920px] table-fixed border-collapse text-sm">
             <thead className="bg-surface-muted text-xs font-extrabold text-gray-400 dark:bg-white/5">
               <tr>
                 <th className="w-[88px] px-5 py-4 text-left">ID</th>
-                <th className="w-[26%] px-4 py-4 text-left">매장명</th>
+                <th className="w-[22%] px-4 py-4 text-left">매장명</th>
                 <th className="px-4 py-4 text-left">주소</th>
                 <th className="w-[128px] px-4 py-4 text-center">등록일</th>
+                <th className="w-[128px] px-4 py-4 text-center">수정일</th>
                 <th className="w-[160px] px-5 py-4 text-center">관리</th>
               </tr>
             </thead>
@@ -258,7 +301,7 @@ export const StoreManagement = () => {
                 ))
               ) : stores.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="h-[640px] px-5 py-0">
+                  <td colSpan={6} className="h-[640px] px-5 py-0">
                     <AdminEmptyState
                       title="조건에 맞는 매장이 없습니다."
                       description="검색어를 조정하거나 새 매장을 추가해 주세요."
@@ -286,6 +329,9 @@ export const StoreManagement = () => {
                       <td className="px-4 py-4 text-center font-semibold text-gray-400">
                         {formatDate(store.createdAt)}
                       </td>
+                      <td className="px-4 py-4 text-center font-semibold text-gray-400">
+                        {formatDate(store.updatedAt)}
+                      </td>
                       <td className="px-5 py-4 text-center">
                         <StoreRowActions
                           onDelete={() => setDeletingStoreId(store.storeId)}
@@ -300,7 +346,7 @@ export const StoreManagement = () => {
                       aria-hidden="true"
                       className="h-20"
                     >
-                      <td colSpan={5} />
+                      <td colSpan={6} />
                     </tr>
                   ))}
                 </>
@@ -440,6 +486,9 @@ const StoreSkeletonRow = () => (
     </td>
     <td className="px-4 py-4">
       <div className="bg-surface-muted h-4 w-[min(360px,80%)] animate-pulse rounded-full dark:bg-white/10" />
+    </td>
+    <td className="px-4 py-4">
+      <div className="bg-surface-muted mx-auto h-4 w-20 animate-pulse rounded-full dark:bg-white/10" />
     </td>
     <td className="px-4 py-4">
       <div className="bg-surface-muted mx-auto h-4 w-20 animate-pulse rounded-full dark:bg-white/10" />
