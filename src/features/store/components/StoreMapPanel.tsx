@@ -1915,10 +1915,6 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     }
   };
   /**
-   * VITA map 버튼: 길찾기·검색·필터를 모두 초기화하고 내 위치 기준 주변 매장을 보여준다.
-   * 위치가 아직 없으면 권한 상태에 맞춰 위치를 요청한다(허용됨 → 바로 조회, 미결정 → 모달, 차단 → 안내).
-   */
-  /**
    * 텍스트 검색을 지울 때 검색 중에 쌓인 데이터를 정리한다.
    * - 검색 결과에서 골라 매장 묶음(stores)에 추가된 매장을 뺀다(원래 조회 지역 목록으로 복원)
    * - 검색용 매장 풀(allStores)을 비운다(다음 검색 때 그 지역을 다시 불러온다)
@@ -1943,54 +1939,6 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       setHasSelectedStoreInfo(false);
       setSoloStoreId("");
     }
-  };
-  const showStoresFromUserLocation = () => {
-    setSearchAnchorSource("user");
-    resetRouteState();
-    setActiveMapCategory("store");
-    setSearchQuery("");
-    setIsSearchHistoryOpen(false);
-    setSubmittedSearchStores(null);
-    clearTextSearchSession();
-    setConsultServiceFilters([]);
-    setProvidedServiceFilters([]);
-    setSoloStoreId("");
-    setHasSelectedStoreInfo(false);
-    setIsWaitingForPinSelection(false);
-    setSelectedStoreId("");
-    setSearchPoint(null);
-    // 처음 화면으로 돌아가면 바로 검색할 수 있도록 검색창에 포커스
-    searchInputRef.current?.focus();
-
-    if (userLocation) {
-      const currentPoint = { lat: userLocation.lat, lng: userLocation.lng };
-
-      hasFocusedInitialLocationRef.current = true;
-      shouldFocusUserLocationRef.current = false;
-      setFocusPoint(currentPoint);
-      updateStoresByLocation(currentPoint);
-      return;
-    }
-
-    void getGeolocationPermissionState().then((permissionState) => {
-      if (permissionState === "denied") {
-        showToast(
-          "브라우저 설정에서 위치 권한을 허용하면 내 위치 주변 매장을 볼 수 있어요.",
-        );
-        return;
-      }
-
-      if (
-        permissionState === "granted" ||
-        (permissionState === null &&
-          readStorage("local", LOCATION_CONSENT_STORAGE_KEY) === "granted")
-      ) {
-        focusUserLocation();
-        return;
-      }
-
-      setIsLocationPermissionModalOpen(true);
-    });
   };
   const requestUserLocationFromModal = () => {
     setIsLocationPermissionModalOpen(false);
@@ -2368,35 +2316,23 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
           <div className="flex min-w-0 flex-col gap-3 md:flex-1 md:flex-row md:flex-nowrap md:items-start">
             <div
               ref={collapsedSearchRef}
-              className="relative w-[min(420px,calc(100vw-48px))] max-w-full min-w-0 shrink-0 self-center sm:self-start md:w-[clamp(320px,30vw,440px)]"
+              className="relative w-[min(420px,calc(100vw-48px))] max-w-full min-w-0 shrink-0 self-center sm:self-start md:w-[360px] lg:w-[420px]"
             >
               <div className="relative z-30 flex h-12 items-center rounded-sm bg-white text-left shadow-sm dark:bg-zinc-950">
-                {/* 좌측 VITA map 버튼: 길찾기·검색을 초기화하고 내 위치 기준 매장을 보여준다 */}
-                <div className="bg-brand flex h-full w-[132px] shrink-0 items-center overflow-hidden rounded-l-sm text-white md:w-[116px]">
-                  {onOpenSidebar && (
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onOpenSidebar();
-                      }}
-                      className="ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-sm transition hover:bg-white/15 md:hidden"
-                      aria-label="사이드바 열기"
-                    >
-                      <Menu size={20} />
-                    </button>
-                  )}
+                {onOpenSidebar && (
                   <button
                     type="button"
-                    onClick={showStoresFromUserLocation}
-                    className="hover:bg-brand-hover flex h-full min-w-0 flex-1 items-center justify-center px-2 text-sm font-extrabold whitespace-nowrap transition md:px-0"
-                    aria-label="길찾기 초기화하고 내 위치 기준 매장 보기"
-                    title="내 위치 기준 매장 보기"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpenSidebar();
+                    }}
+                    className="text-brand hover:bg-brand-soft ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-sm transition md:hidden"
+                    aria-label="사이드바 열기"
                   >
-                    VITA map
+                    <Menu size={20} />
                   </button>
-                </div>
-                <label className="flex h-full min-w-0 flex-1 items-center justify-between gap-3 bg-white px-3.5 text-sm font-semibold text-gray-400 dark:bg-zinc-950">
+                )}
+                <label className="flex h-full min-w-0 flex-1 items-center justify-between gap-3 rounded-l-sm bg-white px-3.5 text-sm font-semibold text-gray-400 dark:bg-zinc-950">
                   <input
                     ref={searchInputRef}
                     value={searchQuery}
