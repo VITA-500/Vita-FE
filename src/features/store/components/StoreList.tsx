@@ -67,7 +67,7 @@ const StoreCard = ({
         </span>
 
         <span className="text-text-secondary mt-2 block text-xs leading-5 dark:text-gray-400">
-          {store.address}
+          {store.address || "상세 주소 확인 중"}
         </span>
 
         <span className="text-text-secondary mt-3 flex items-center gap-1.5 text-xs font-semibold dark:text-gray-400">

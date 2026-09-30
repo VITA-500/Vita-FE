@@ -2,11 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useUserLocation } from "@/features/store/hooks/useUserLocation";
-import {
-  formatDistance,
-  getDistanceMeters,
-  matchesStoreSearch,
-} from "@/features/store/lib/geo";
+import { formatDistance, getDistanceMeters } from "@/features/store/lib/geo";
 import type { StoreLocation } from "@/features/store/types";
 
 export const useStoreMapState = (stores: StoreLocation[]) => {
@@ -60,14 +56,13 @@ export const useStoreMapState = (stores: StoreLocation[]) => {
       : stores;
   }, [stores, userLocation]);
 
+  // 검색어는 지도 핀을 바로 거르지 않는다. 검색 결과는 드롭다운에서 고를 때만 지도에 반영된다.
   const displayStores = useMemo(() => {
-    return sortedStores.filter((store) => {
-      const matchesFilter =
-        activeFilter === "전체" || store.address.includes(activeFilter);
-
-      return matchesFilter && matchesStoreSearch(store, searchQuery);
-    });
-  }, [activeFilter, searchQuery, sortedStores]);
+    return sortedStores.filter(
+      (store) =>
+        activeFilter === "전체" || store.address.includes(activeFilter),
+    );
+  }, [activeFilter, sortedStores]);
 
   const selectedStore = useMemo(() => {
     return (
