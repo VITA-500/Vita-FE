@@ -26,7 +26,12 @@ type FaqSaveInput = Pick<AdminFaq, "answer" | "category" | "question"> & {
   subcategory?: string;
 };
 
-type StoreSaveInput = Omit<AdminStoreDetail, "storeId">;
+type StoreSaveInput = Omit<
+  AdminStoreDetail,
+  "createdAt" | "storeId" | "updatedAt"
+>;
+type StoreSortField = "createdAt" | "name" | "updatedAt";
+type StoreSortDirection = "asc" | "desc";
 
 type AdminDataContextValue = {
   faqs: AdminFaq[];
@@ -41,6 +46,8 @@ type AdminDataContextValue = {
   storeKeyword: string;
   storePage: number;
   storePageSize: number;
+  storeSortDirection: StoreSortDirection;
+  storeSortField: StoreSortField;
   storeTotalCount: number;
   storeTotalPages: number;
   isStoreLoading: boolean;
@@ -51,6 +58,7 @@ type AdminDataContextValue = {
   setStoreKeyword: (keyword: string) => void;
   setStorePage: (page: number) => void;
   setStorePageSize: (pageSize: number) => void;
+  setStoreSort: (field: StoreSortField, direction: StoreSortDirection) => void;
   deleteStore: (storeId: number) => Promise<void>;
 };
 
@@ -68,6 +76,10 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
   const [storeKeyword, setStoreKeywordState] = useState("");
   const [storePage, setStorePage] = useState(0);
   const [storePageSize, setStorePageSizeState] = useState(20);
+  const [storeSortField, setStoreSortField] =
+    useState<StoreSortField>("createdAt");
+  const [storeSortDirection, setStoreSortDirection] =
+    useState<StoreSortDirection>("desc");
   const [storeTotalCount, setStoreTotalCount] = useState(
     env.apiBaseUrl ? 0 : storeRows.length,
   );
@@ -85,7 +97,7 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
         keyword: storeKeyword,
         page: storePage,
         size: storePageSize,
-        sortBy: "createdAt,desc",
+        sortBy: `${storeSortField},${storeSortDirection}`,
       });
       setStores(nextStoreData.stores);
       setStoreDetailRows(nextStoreData.details);
@@ -101,7 +113,13 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsStoreLoading(false);
     }
-  }, [storeKeyword, storePage, storePageSize]);
+  }, [
+    storeKeyword,
+    storePage,
+    storePageSize,
+    storeSortDirection,
+    storeSortField,
+  ]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -124,6 +142,15 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
     setStorePageSizeState(pageSize);
     setStorePage(0);
   }, []);
+
+  const setStoreSort = useCallback(
+    (field: StoreSortField, direction: StoreSortDirection) => {
+      setStoreSortField(field);
+      setStoreSortDirection(direction);
+      setStorePage(0);
+    },
+    [],
+  );
 
   const value = useMemo<AdminDataContextValue>(
     () => ({
@@ -175,6 +202,8 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
       storeKeyword,
       storePage,
       storePageSize,
+      storeSortDirection,
+      storeSortField,
       storeTotalCount,
       storeTotalPages,
       isStoreLoading,
@@ -196,6 +225,7 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
       setStoreKeyword,
       setStorePage,
       setStorePageSize,
+      setStoreSort,
       deleteStore: async (storeId) => {
         await adminStoreService.deleteStore(storeId);
         await refreshStores();
@@ -207,11 +237,14 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
       refreshStores,
       setStoreKeyword,
       setStorePageSize,
+      setStoreSort,
       storeDetailRows,
       storeError,
       storeKeyword,
       storePage,
       storePageSize,
+      storeSortDirection,
+      storeSortField,
       stores,
       storeTotalCount,
       storeTotalPages,
