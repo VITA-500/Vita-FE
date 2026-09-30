@@ -61,7 +61,10 @@ const ChatPageContent = () => {
     isReady: isAuthReady,
     user,
   } = useAuthUser();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // 매장 지도(?mode=store)로 바로 들어오면 사이드바를 닫은 상태로 시작한다.
+  const [isSidebarOpen, setIsSidebarOpen] = useState(
+    () => searchParams.get("mode") !== "store",
+  );
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isGuestNewChatDialogOpen, setIsGuestNewChatDialogOpen] =
     useState(false);
@@ -83,6 +86,16 @@ const ChatPageContent = () => {
   const routeMode: ChatMode =
     modeParam === "store" || modeParam === "profile" ? modeParam : "chat";
   const activeMode: ChatMode = routeMode;
+  // 채팅 등 다른 화면에서 매장 지도로 전환될 때도 지도를 넓게 보도록 사이드바를 닫는다.
+  const [sidebarModeSnapshot, setSidebarModeSnapshot] = useState(activeMode);
+
+  if (sidebarModeSnapshot !== activeMode) {
+    setSidebarModeSnapshot(activeMode);
+
+    if (activeMode === "store") {
+      setIsSidebarOpen(false);
+    }
+  }
   const hasChatStarted = messages.length > 0;
 
   const startChatTour = useChatTour();

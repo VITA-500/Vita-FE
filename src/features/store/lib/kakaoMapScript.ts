@@ -75,6 +75,7 @@ declare global {
   }
 
   interface KakaoCustomOverlay {
+    setZIndex?: (zIndex: number) => void;
     setMap: (map: KakaoMap | null) => void;
   }
 

@@ -2,14 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import {
-  LocateFixed,
-  LocateOff,
-  MapPin,
-  Minus,
-  Plus,
-  RotateCcw,
-} from "lucide-react";
+import { LocateFixed, LocateOff, Minus, Plus, RotateCcw } from "lucide-react";
 import { useKakaoMapReady } from "@/features/store/hooks/useKakaoMapReady";
 import type { UserLocation } from "@/features/store/lib/geo";
 import type {
@@ -22,6 +15,14 @@ import { cn } from "@/shared/lib/cn";
 const clampPercent = (value: number) => Math.min(88, Math.max(12, value));
 const clampValue = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
+// 매장 핀: 원형 헤드 + 길게 뻗은 하단 꼬리 (흰 테두리 없음, 끝부분 radius 최소화)
+const STORE_PIN_PATH = "M17 44 L4.16 22.75 A15 15 0 1 1 29.84 22.75 Z";
+const STORE_PIN_SVG_MARKUP = `<svg viewBox="0 0 34 46" width="34" height="46" aria-hidden="true" style="display:block"><path d="${STORE_PIN_PATH}" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" /></svg>`;
+const STORE_PIN_SHAPE_CLASS_NAME =
+  "text-brand absolute inset-x-0 top-0 mx-auto block h-[46px] w-[34px] drop-shadow-[0_8px_14px_rgba(15,23,42,0.2)] transition group-hover:text-[#f5a400]";
+
+const getStoreMarkerLabel = (index: number) =>
+  String.fromCharCode(65 + (index % 26));
 const routeStyleByMode: Record<
   StoreRouteMode,
   {
@@ -150,12 +151,12 @@ const getFallbackMarkerStyle = (
 type KakaoMapEventApi = {
   addListener: (
     target: KakaoMap,
-    eventName: "dragend" | "zoom_changed",
+    eventName: "dragend" | "zoom_changed" | "idle",
     callback: () => void,
   ) => void;
   removeListener: (
     target: KakaoMap,
-    eventName: "dragend" | "zoom_changed",
+    eventName: "dragend" | "zoom_changed" | "idle",
     callback: () => void,
   ) => void;
 };
@@ -399,6 +400,8 @@ type StoreMapPreviewProps = {
   selectedStore?: StoreLocation;
   selectedStoreCard?: ReactNode;
   selectedStoreCardLeftInset?: number;
+  /** 길찾기 경로를 맞출 때 비워 둘 왼쪽 폭(검색/매장 목록 패널 영역, px). */
+  routeLeftInset?: number;
   selectedStoreId: string;
   stores: StoreLocation[];
   searchPoint?: MapPoint | null;
@@ -406,6 +409,12 @@ type StoreMapPreviewProps = {
   userLocation?: UserLocation | null;
   isUserLocationLoading?: boolean;
   onMapPointSelect?: (point: MapPoint) => void;
+  /** 지도 이동·확대/축소가 끝날 때마다 현재 지도 중심을 알려준다. */
+  onCenterChange?: (point: MapPoint) => void;
+  /** 매장 id별 핀 글자. 없으면 stores 순서대로 A, B, C… */
+  markerLabelById?: Record<string, string>;
+  /** key가 바뀔 때마다 points가 모두 보이도록 지도 범위를 맞춘다(검색 결과 표시용). */
+  fitTarget?: { key: string; points: MapPoint[] } | null;
   onFocusUserLocation?: () => void;
   onSelectedStoreCardClose?: () => void;
   onSearchFromMapPoint?: () => void;
@@ -422,6 +431,7 @@ export const StoreMapPreview = ({
   selectedStore,
   selectedStoreCard,
   selectedStoreCardLeftInset = 0,
+  routeLeftInset = 0,
   selectedStoreId,
   searchPoint,
   routePreview,
@@ -430,6 +440,9 @@ export const StoreMapPreview = ({
   isUserLocationLoading = false,
   onFocusUserLocation,
   onMapPointSelect,
+  onCenterChange,
+  markerLabelById,
+  fitTarget,
   onSelectedStoreCardClose,
   onSearchFromMapPoint,
 }: StoreMapPreviewProps) => {
@@ -439,13 +452,17 @@ export const StoreMapPreview = ({
   const overlayRefs = useRef<MapOverlayHandle[]>([]);
   const routeOverlayRefs = useRef<KakaoCustomOverlay[]>([]);
   const routeLineRefs = useRef<KakaoPolyline[]>([]);
+  const selectedStoreCardRef = useRef<HTMLDivElement | null>(null);
   const [routeDrawState, setRouteDrawState] = useState({
     progress: 1,
     routeKey: "",
   });
   const [selectedStoreCardPosition, setSelectedStoreCardPosition] =
     useState<CSSProperties | null>(null);
+  const [selectedStoreCardLayoutKey, setSelectedStoreCardLayoutKey] =
+    useState(0);
   const fittedRouteKeyRef = useRef("");
+  const fittedTargetKeyRef = useRef("");
   const focusPointRef = useRef<FocusPointRef>(undefined);
   const searchPointRef = useRef<SearchPointRef>(undefined);
   const routePreviewRef = useRef<RoutePreviewRef>(undefined);
@@ -455,6 +472,24 @@ export const StoreMapPreview = ({
       ? routeDrawState.progress
       : 0;
   const routePreviewKey = routePreview?.routeKey ?? "";
+  useEffect(() => {
+    const selectedStoreCardElement = selectedStoreCardRef.current;
+
+    if (!selectedStoreCardElement) {
+      return;
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      setSelectedStoreCardLayoutKey((layoutKey) => layoutKey + 1);
+    });
+
+    resizeObserver.observe(selectedStoreCardElement);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [selectedStoreCard]);
+
   const adjustZoomLevel = (direction: "in" | "out") => {
     const map = mapRef.current;
 
@@ -541,8 +576,13 @@ export const StoreMapPreview = ({
       const containerWidth =
         mapContainerRef.current?.getBoundingClientRect().width ?? 0;
       const routeLeftPadding =
-        containerWidth >= 768 && selectedStoreCardLeftInset
-          ? selectedStoreCardLeftInset + 24
+        containerWidth >= 768
+          ? Math.max(
+              48,
+              selectedStoreCardLeftInset ? selectedStoreCardLeftInset + 24 : 0,
+              // 출발-경로-도착이 왼쪽 매장 목록 패널 아래로 가려지지 않도록 패널 폭만큼 비운다.
+              routeLeftInset ? routeLeftInset + 32 : 0,
+            )
           : 48;
       const routeTopPadding = selectedStoreCard ? 300 : 160;
       const routeRightPadding = selectedStoreCard ? 400 : 72;
@@ -568,6 +608,55 @@ export const StoreMapPreview = ({
           new kakaoMaps.LatLng(recenterPoint.lat, recenterPoint.lng),
         );
         map.setLevel(4);
+
+        // 선택 매장으로 이동할 때는 핀과 정보 카드가 왼쪽 패널에 가리지 않는 영역
+        // (패널 오른쪽)의 가운데에 함께 보이도록 지도 중심을 보정한다.
+        const isRecenteringToSelectedStore =
+          Boolean(selectedStore && selectedStoreCard) &&
+          selectedStore?.lat === recenterPoint.lat &&
+          selectedStore?.lng === recenterPoint.lng;
+        const projection = (map as KakaoMapWithProjection).getProjection?.();
+        const containerRect = mapContainerRef.current?.getBoundingClientRect();
+
+        if (
+          isRecenteringToSelectedStore &&
+          projection?.containerPointFromCoords &&
+          containerRect
+        ) {
+          const leftInset =
+            containerRect.width >= 768 ? selectedStoreCardLeftInset : 0;
+          const topInset = containerRect.width >= 768 ? 80 : 140;
+          const cardHeight =
+            selectedStoreCardRef.current?.getBoundingClientRect().height ?? 320;
+          const cardGap = 18;
+          const targetX = leftInset + (containerRect.width - leftInset) / 2;
+          const targetY =
+            (topInset + containerRect.height) / 2 + (cardHeight + cardGap) / 2;
+          const deltaDegree = 0.001;
+          const basePoint = projection.containerPointFromCoords(
+            new kakaoMaps.LatLng(recenterPoint.lat, recenterPoint.lng),
+          );
+          const offsetPoint = projection.containerPointFromCoords(
+            new kakaoMaps.LatLng(
+              recenterPoint.lat + deltaDegree,
+              recenterPoint.lng + deltaDegree,
+            ),
+          );
+          const pxPerLat = (basePoint.y - offsetPoint.y) / deltaDegree;
+          const pxPerLng = (offsetPoint.x - basePoint.x) / deltaDegree;
+
+          if (pxPerLat > 0 && pxPerLng > 0) {
+            const dx = targetX - containerRect.width / 2;
+            const dy = targetY - containerRect.height / 2;
+
+            map.setCenter(
+              new kakaoMaps.LatLng(
+                recenterPoint.lat + dy / pxPerLat,
+                recenterPoint.lng - dx / pxPerLng,
+              ),
+            );
+          }
+        }
       }
     }
 
@@ -595,10 +684,12 @@ export const StoreMapPreview = ({
         containerRect.width >= 768 ? selectedStoreCardLeftInset : 0;
       const availableWidth = containerRect.width - effectiveLeftInset - 24;
       const cardWidth = Math.min(320, Math.max(0, availableWidth));
-      const cardHeightEstimate = 340;
+      const cardHeight =
+        selectedStoreCardRef.current?.getBoundingClientRect().height ?? 340;
       const horizontalPadding = 12;
       const topPadding = 20;
       const bottomPadding = 12;
+      const markerGap = 18;
       const minX = effectiveLeftInset + horizontalPadding + cardWidth / 2;
       const maxX = containerRect.width - horizontalPadding - cardWidth / 2;
       const clampedX = clampValue(
@@ -606,11 +697,9 @@ export const StoreMapPreview = ({
         Math.min(minX, maxX),
         Math.max(minX, maxX),
       );
-      const clampedY = clampValue(
-        point.y,
-        topPadding + cardHeightEstimate,
-        containerRect.height - bottomPadding,
-      );
+      const maxY = containerRect.height - bottomPadding;
+      const minY = Math.min(topPadding + cardHeight + markerGap, maxY);
+      const clampedY = clampValue(point.y, minY, maxY);
 
       setSelectedStoreCardPosition({
         left: `${clampedX}px`,
@@ -636,49 +725,201 @@ export const StoreMapPreview = ({
     }
     mapEventApi.addListener(map, "zoom_changed", handleMapZoomChanged);
 
+    const handleMapIdle = () => {
+      const center = (map as KakaoMapWithCenter).getCenter();
+
+      onCenterChange?.({ lat: center.getLat(), lng: center.getLng() });
+    };
+
+    // idle 이벤트에서만 알린다. (effect 안에서 바로 호출하면 부모 setState → 재렌더 → effect 재실행 무한 루프)
+    mapEventApi.addListener(map, "idle", handleMapIdle);
+
     overlayRefs.current.forEach(({ cleanup, overlay }) => {
       cleanup?.();
       overlay.setMap(null);
     });
-    overlayRefs.current = stores.map((store) => {
-      const isSelected = selectedStoreId === store.id;
-      const position = new kakaoMaps.LatLng(store.lat, store.lng);
-      const nativeMarker = new kakaoMaps.Marker({
-        map,
-        position,
-        title: store.name,
-        zIndex: isSelected ? 20 : 10,
-      });
+    // 같은 좌표(소수 5자리, 약 1m)에 있는 매장들은 핀 하나로 묶고 개수를 표시한다.
+    // 핀을 누르면 묶인 매장 목록이 떠서 그중 하나를 고를 수 있다.
+    const storeGroups = new Map<
+      string,
+      { index: number; store: StoreLocation }[]
+    >();
+
+    stores.forEach((store, index) => {
+      const coordinateKey = `${store.lat.toFixed(5)}:${store.lng.toFixed(5)}`;
+      const group = storeGroups.get(coordinateKey) ?? [];
+
+      group.push({ index, store });
+      storeGroups.set(coordinateKey, group);
+    });
+
+    overlayRefs.current = Array.from(storeGroups.values()).map((group) => {
+      const [{ store: firstStore }] = group;
+      const isCluster = group.length > 1;
+      const selectedEntry = group.find(
+        ({ store }) => store.id === selectedStoreId,
+      );
+      const isSelected = Boolean(selectedEntry);
+      const getLabel = ({ index, store }: (typeof group)[number]) =>
+        markerLabelById?.[store.id] ?? getStoreMarkerLabel(index);
+      const position = new kakaoMaps.LatLng(firstStore.lat, firstStore.lng);
+      const container = document.createElement("div");
+      container.className = "relative";
       const marker = document.createElement("button");
       marker.type = "button";
-      marker.textContent = store.name.replace("VITA ", "");
-      marker.setAttribute("aria-label", `${store.name} 선택`);
-      marker.className = [
-        "vita-map-marker",
-        isSelected ? "vita-map-marker-selected" : "",
-      ]
-        .filter(Boolean)
-        .join(" ");
-      const handleMarkerClick = () => {
-        onSelectStore(store.id);
+      marker.setAttribute(
+        "aria-label",
+        isCluster
+          ? `같은 위치 매장 ${group.length}곳 보기`
+          : `${firstStore.name} 선택`,
+      );
+      marker.className = cn(
+        "group relative block h-[46px] w-[38px] translate-y-[-8px] border-0 bg-transparent p-0 text-xs leading-none font-black text-white transition duration-150 hover:translate-y-[-10px] hover:scale-[1.04]",
+        isSelected && "translate-y-[-10px] scale-[1.04]",
+      );
+      const markerShape = document.createElement("span");
+      markerShape.className = STORE_PIN_SHAPE_CLASS_NAME;
+      markerShape.innerHTML = STORE_PIN_SVG_MARKUP;
+
+      const markerLetter = document.createElement("span");
+      markerLetter.className =
+        "absolute top-[9px] left-1/2 z-[1] -translate-x-1/2 text-xs font-black text-white";
+      markerLetter.textContent = isCluster
+        ? String(group.length)
+        : getLabel(group[0]);
+
+      const markerTooltip = document.createElement("span");
+      markerTooltip.className = cn(
+        "pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-[2] max-w-[180px] -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-sm bg-slate-950/90 px-2.5 py-1.5 text-xs leading-tight font-extrabold text-white opacity-0 shadow-lg transition group-hover:translate-y-0 group-hover:opacity-100",
+        isSelected && "translate-y-0 opacity-100",
+      );
+      markerTooltip.textContent = selectedEntry
+        ? selectedEntry.store.name
+        : isCluster
+          ? `같은 위치 매장 ${group.length}곳`
+          : firstStore.name;
+
+      if (isCluster) {
+        // 묶음 핀임을 알 수 있도록 오른쪽 위에 작은 겹침 표시를 단다.
+        const clusterBadge = document.createElement("span");
+
+        clusterBadge.setAttribute("aria-hidden", "true");
+        clusterBadge.className =
+          "text-brand absolute -top-1 right-0 z-[2] flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[9px] leading-none font-black shadow-sm";
+        clusterBadge.textContent = "+";
+        marker.append(clusterBadge);
+      }
+
+      marker.append(markerShape, markerLetter, markerTooltip);
+      container.append(marker);
+
+      let clusterList: HTMLDivElement | null = null;
+      const closeClusterList = () => {
+        clusterList?.remove();
+        clusterList = null;
+        marker.setAttribute("aria-expanded", "false");
+      };
+      const handleDocumentPointerDown = (event: PointerEvent) => {
+        if (event.target instanceof Node && container.contains(event.target)) {
+          return;
+        }
+
+        closeClusterList();
+      };
+      const openClusterList = () => {
+        clusterList = document.createElement("div");
+        clusterList.className =
+          "absolute bottom-[calc(100%+4px)] left-1/2 z-[3] w-56 -translate-x-1/2 overflow-hidden rounded-sm bg-white text-left shadow-lg ring-1 ring-gray-950/5 dark:bg-zinc-950 dark:ring-white/10";
+
+        const listTitle = document.createElement("p");
+
+        listTitle.className =
+          "border-b border-gray-100 px-3 py-2 text-[11px] font-extrabold text-gray-400 dark:border-white/10";
+        listTitle.textContent = `같은 위치 매장 ${group.length}곳`;
+        clusterList.append(listTitle);
+
+        const list = document.createElement("div");
+
+        list.className = "max-h-56 overflow-y-auto py-1";
+        group.forEach((entry) => {
+          const item = document.createElement("button");
+          const itemLabel = document.createElement("span");
+          const itemName = document.createElement("span");
+          const isItemSelected = entry.store.id === selectedStoreId;
+
+          item.type = "button";
+          item.className = cn(
+            "flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-bold transition",
+            isItemSelected
+              ? "bg-brand-soft text-gray-900 dark:bg-brand/10 dark:text-white"
+              : "text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-white/[0.04]",
+          );
+          itemLabel.className =
+            "bg-brand flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-[10px] font-black text-white";
+          itemLabel.textContent = getLabel(entry);
+          itemName.className = "min-w-0 truncate";
+          itemName.textContent = entry.store.name;
+          item.append(itemLabel, itemName);
+          item.addEventListener("click", (event) => {
+            event.stopPropagation();
+            closeClusterList();
+            onSelectStore(entry.store.id);
+          });
+          list.append(item);
+        });
+        clusterList.append(list);
+        container.append(clusterList);
+        marker.setAttribute("aria-expanded", "true");
+      };
+      const handleMarkerClick = (event: MouseEvent) => {
+        event.stopPropagation();
+
+        if (!isCluster) {
+          onSelectStore(firstStore.id);
+          return;
+        }
+
+        if (clusterList) {
+          closeClusterList();
+        } else {
+          openClusterList();
+        }
+      };
+
+      const baseZIndex = isSelected ? 20 : 10;
+      const overlay = new kakaoMaps.CustomOverlay({
+        content: container,
+        map,
+        position,
+        xAnchor: 0.5,
+        yAnchor: 1,
+        zIndex: baseZIndex,
+      });
+      // hover 중인 핀의 툴팁(매장명)·묶음 목록이 이웃 핀 뒤로 가려지지 않도록 최상단으로 올린다.
+      const handleMarkerEnter = () => overlay.setZIndex?.(40);
+      const handleMarkerLeave = () => {
+        if (!clusterList) {
+          overlay.setZIndex?.(baseZIndex);
+        }
       };
 
       marker.addEventListener("click", handleMarkerClick);
+      container.addEventListener("mouseenter", handleMarkerEnter);
+      container.addEventListener("mouseleave", handleMarkerLeave);
+      document.addEventListener("pointerdown", handleDocumentPointerDown);
 
       return {
-        marker: nativeMarker,
         cleanup: () => {
+          closeClusterList();
           marker.removeEventListener("click", handleMarkerClick);
-          nativeMarker.setMap(null);
+          container.removeEventListener("mouseenter", handleMarkerEnter);
+          container.removeEventListener("mouseleave", handleMarkerLeave);
+          document.removeEventListener(
+            "pointerdown",
+            handleDocumentPointerDown,
+          );
         },
-        overlay: new kakaoMaps.CustomOverlay({
-          content: marker,
-          map,
-          position,
-          xAnchor: 0.5,
-          yAnchor: 1,
-          zIndex: isSelected ? 20 : 10,
-        }),
+        overlay,
       };
     });
 
@@ -706,6 +947,7 @@ export const StoreMapPreview = ({
         mapEventApi.removeListener(map, "dragend", handleMapDragEnd);
       }
       mapEventApi.removeListener(map, "zoom_changed", handleMapZoomChanged);
+      mapEventApi.removeListener(map, "idle", handleMapIdle);
 
       overlayRefs.current.forEach(({ cleanup, overlay }) => {
         cleanup?.();
@@ -718,17 +960,58 @@ export const StoreMapPreview = ({
     isKakaoMapReady,
     onSelectStore,
     onMapPointSelect,
+    onCenterChange,
+    markerLabelById,
     onSelectedStoreCardClose,
     onSearchFromMapPoint,
     routePreview,
     selectedStore,
     selectedStoreCard,
+    selectedStoreCardLayoutKey,
     selectedStoreCardLeftInset,
+    routeLeftInset,
     selectedStoreId,
     searchPoint,
     stores,
     userLocation,
   ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const kakaoMaps = window.kakao?.maps;
+
+    if (
+      !map ||
+      !kakaoMaps ||
+      !fitTarget ||
+      fitTarget.points.length === 0 ||
+      fittedTargetKeyRef.current === fitTarget.key
+    ) {
+      return;
+    }
+
+    fittedTargetKeyRef.current = fitTarget.key;
+
+    if (fitTarget.points.length === 1) {
+      const [point] = fitTarget.points;
+
+      map.setCenter(new kakaoMaps.LatLng(point.lat, point.lng));
+      map.setLevel(4);
+      return;
+    }
+
+    const bounds = new kakaoMaps.LatLngBounds();
+    const containerWidth =
+      mapContainerRef.current?.getBoundingClientRect().width ?? 0;
+    const leftPadding =
+      containerWidth >= 768 ? Math.max(48, routeLeftInset + 32) : 48;
+
+    fitTarget.points.forEach((point) => {
+      bounds.extend(new kakaoMaps.LatLng(point.lat, point.lng));
+    });
+    // 위: 검색창·핀 높이, 오른쪽: 지도 컨트롤, 왼쪽: 매장 목록 패널 폭만큼 여유를 둔다.
+    map.setBounds(bounds, 120, 96, 72, leftPadding);
+  }, [fitTarget, isKakaoMapReady, routeLeftInset]);
 
   useEffect(() => {
     if (!isKakaoMapReady || !window.kakao?.maps || !mapRef.current) {
@@ -965,20 +1248,31 @@ export const StoreMapPreview = ({
                 onClick={() => onSelectStore(store.id)}
                 aria-pressed={isSelected}
                 className={cn(
-                  "pointer-events-auto absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full border px-3 py-2 text-xs font-extrabold shadow-sm transition",
-                  isSelected
-                    ? "border-brand bg-brand text-white"
-                    : "text-text-secondary hover:border-brand/50 hover:text-text-primary border-white bg-white dark:border-white/15 dark:bg-zinc-900 dark:text-gray-200",
+                  "group pointer-events-auto absolute block h-[46px] w-[38px] -translate-x-1/2 -translate-y-[calc(50%+8px)] border-0 bg-transparent p-0 text-xs leading-none font-black text-white transition duration-150 hover:-translate-y-[calc(50%+10px)] hover:scale-[1.04]",
+                  isSelected && "-translate-y-[calc(50%+10px)] scale-[1.04]",
                 )}
                 style={getFallbackMarkerStyle(store, stores, index)}
               >
-                <MapPin size={15} />
-                {store.name.replace("VITA ", "")}
+                <span
+                  className={STORE_PIN_SHAPE_CLASS_NAME}
+                  dangerouslySetInnerHTML={{ __html: STORE_PIN_SVG_MARKUP }}
+                />
+                <span className="absolute top-[9px] left-1/2 z-[1] -translate-x-1/2 text-xs font-black text-white">
+                  {markerLabelById?.[store.id] ?? getStoreMarkerLabel(index)}
+                </span>
+                <span
+                  className={cn(
+                    "pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-[2] max-w-[180px] -translate-x-1/2 translate-y-1 rounded-sm bg-slate-950/90 px-2.5 py-1.5 text-xs leading-tight font-extrabold whitespace-nowrap text-white opacity-0 shadow-lg transition group-hover:translate-y-0 group-hover:opacity-100",
+                    isSelected && "translate-y-0 opacity-100",
+                  )}
+                >
+                  {store.name}
+                </span>
               </button>
             );
           })}
 
-        <div className="pointer-events-auto absolute top-1/2 right-4 z-30 flex -translate-y-1/2 flex-col gap-1 rounded-sm border border-gray-200 bg-white p-1 shadow-md shadow-gray-950/10 dark:border-white/10 dark:bg-zinc-950 dark:shadow-black/30">
+        <div className="pointer-events-auto absolute right-4 bottom-6 z-30 flex flex-col gap-1 rounded-sm border border-gray-200 bg-white p-1 shadow-md shadow-gray-950/10 md:right-6 md:bottom-8 dark:border-white/10 dark:bg-zinc-950 dark:shadow-black/30">
           {onFocusUserLocation && (
             <>
               <button
@@ -1027,11 +1321,15 @@ export const StoreMapPreview = ({
           selectedStoreCard &&
           (selectedStoreCardPosition || !isKakaoMapReady) && (
             <div
+              ref={selectedStoreCardRef}
               className={cn(
-                "pointer-events-auto absolute z-40 w-[min(320px,calc(100%-24px))]",
+                "pointer-events-auto absolute z-40",
                 isRouteCardDocked
-                  ? "top-24 right-3 md:top-28 md:right-6"
-                  : "-translate-x-1/2 -translate-y-[calc(100%+18px)]",
+                  ? // 길찾기 카드는 내용을 압축해 스크롤 없이 전부 보여준다.
+                    "top-24 right-3 w-[min(300px,calc(100%-24px))] md:top-28 md:right-6"
+                  : "w-[min(320px,calc(100%-24px))]",
+                !isRouteCardDocked &&
+                  "-translate-x-1/2 -translate-y-[calc(100%+18px)]",
               )}
               onClick={(event) => event.stopPropagation()}
               style={
