@@ -10,6 +10,7 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
+  Handshake,
   Store,
 } from "lucide-react";
 import { routes } from "@/shared/constants/routes";
@@ -20,7 +21,8 @@ import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
 const adminMenus = [
   { label: "대시보드", href: routes.admin, icon: BarChart3 },
   { label: "FAQ 관리", href: routes.adminFaqs, icon: FileQuestion },
-  { label: "매장 관리", href: routes.adminStores, icon: Store },
+  { label: "대리점 관리", href: routes.adminStores, icon: Store },
+  { label: "제휴점 관리", href: routes.adminPartners, icon: Handshake },
 ] as const;
 
 type AdminShellProps = {
