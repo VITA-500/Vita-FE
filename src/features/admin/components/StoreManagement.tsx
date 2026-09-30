@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Edit2, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
 import { AdminField } from "@/features/admin/components/AdminField";
+import { FilterDropdown } from "@/features/admin/components/FilterDropdown";
 import { useActionStatus } from "@/features/admin/context/ActionStatusContext";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
 import type { AdminStoreDetail } from "@/features/admin/types";
@@ -19,10 +20,29 @@ type StoreInput = Omit<AdminStoreDetail, "createdAt" | "storeId" | "updatedAt">;
 const pageSizeOptions = [20, 50, 100] as const;
 const MIN_TABLE_ROWS = 8;
 const sortOptions = [
-  { label: "최신 등록순", field: "createdAt", direction: "desc" },
-  { label: "최근 수정순", field: "updatedAt", direction: "desc" },
-  { label: "매장명순", field: "name", direction: "asc" },
+  {
+    direction: "desc",
+    field: "createdAt",
+    label: "최신 등록순",
+    value: "createdAt:desc",
+  },
+  {
+    direction: "desc",
+    field: "updatedAt",
+    label: "최근 수정순",
+    value: "updatedAt:desc",
+  },
+  {
+    direction: "asc",
+    field: "name",
+    label: "매장명순",
+    value: "name:asc",
+  },
 ] as const;
+const pageSizeFilterOptions = pageSizeOptions.map((pageSize) => ({
+  label: `${pageSize}개`,
+  value: String(pageSize),
+}));
 
 export const StoreManagement = () => {
   const {
@@ -69,6 +89,7 @@ export const StoreManagement = () => {
   const fillerRowCount = !shouldShowSkeletonRows
     ? Math.max(0, MIN_TABLE_ROWS - stores.length)
     : 0;
+  const sortValue = `${storeSortField}:${storeSortDirection}`;
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -166,62 +187,28 @@ export const StoreManagement = () => {
             </Button>
           )}
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-text-secondary text-sm font-bold">정렬</span>
-            <div className="flex rounded-2xl border border-gray-200 bg-white p-1 shadow-sm dark:border-white/10 dark:bg-white/5">
-              {sortOptions.map((option) => {
-                const isActive =
-                  option.field === storeSortField &&
-                  option.direction === storeSortDirection;
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <FilterDropdown
+            aria-label="매장 정렬"
+            className="w-full sm:w-[160px]"
+            options={sortOptions}
+            value={sortValue}
+            onChange={(nextValue) => {
+              const selected = sortOptions.find(
+                (option) => option.value === nextValue,
+              );
 
-                return (
-                  <button
-                    key={`${option.field}-${option.direction}`}
-                    type="button"
-                    aria-pressed={isActive}
-                    onClick={() => setStoreSort(option.field, option.direction)}
-                    className={cn(
-                      "h-9 rounded-xl px-3 text-sm font-extrabold transition",
-                      isActive
-                        ? "bg-brand text-white"
-                        : "text-gray-500 hover:bg-gray-100 hover:text-gray-950 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white",
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-text-secondary text-sm font-bold">
-              페이지당
-            </span>
-            <div className="flex rounded-2xl border border-gray-200 bg-white p-1 shadow-sm dark:border-white/10 dark:bg-white/5">
-              {pageSizeOptions.map((pageSize) => {
-                const isActive = pageSize === storePageSize;
-
-                return (
-                  <button
-                    key={pageSize}
-                    type="button"
-                    aria-pressed={isActive}
-                    onClick={() => setStorePageSize(pageSize)}
-                    className={cn(
-                      "h-9 rounded-xl px-3 text-sm font-extrabold transition",
-                      isActive
-                        ? "bg-brand text-white"
-                        : "text-gray-500 hover:bg-gray-100 hover:text-gray-950 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white",
-                    )}
-                  >
-                    {pageSize}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+              if (!selected) return;
+              setStoreSort(selected.field, selected.direction);
+            }}
+          />
+          <FilterDropdown
+            aria-label="페이지당 매장 수"
+            className="w-full sm:w-[120px]"
+            options={pageSizeFilterOptions}
+            value={String(storePageSize)}
+            onChange={(nextValue) => setStorePageSize(Number(nextValue))}
+          />
         </div>
       </div>
 
