@@ -51,6 +51,7 @@ export const storeRows: AdminStore[] = Array.from(
       "대구 중구 동성로",
       "광주 동구 충장로",
     ][index],
+    storeType: "PHONE",
     createdAt: `2026-09-${String(10 + index).padStart(2, "0")}T10:00:00`,
     updatedAt: `2026-09-${String(18 + index).padStart(2, "0")}T15:30:00`,
   }),

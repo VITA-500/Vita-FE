@@ -7,7 +7,7 @@ import { AdminField } from "@/features/admin/components/AdminField";
 import { FilterDropdown } from "@/features/admin/components/FilterDropdown";
 import { useActionStatus } from "@/features/admin/context/ActionStatusContext";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
-import type { AdminStoreDetail } from "@/features/admin/types";
+import type { AdminStoreDetail, AdminStoreType } from "@/features/admin/types";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
@@ -15,7 +15,10 @@ import { Modal } from "@/shared/ui/Modal";
 import { SearchInput } from "@/shared/ui/SearchInput";
 import { showToast } from "@/shared/ui/ToastProvider";
 
-type StoreInput = Omit<AdminStoreDetail, "createdAt" | "storeId" | "updatedAt">;
+type StoreInput = Omit<
+  AdminStoreDetail,
+  "createdAt" | "storeId" | "storeType" | "updatedAt"
+>;
 
 const pageSizeOptions = [20, 50, 100] as const;
 const MIN_TABLE_ROWS = 8;
@@ -32,19 +35,35 @@ const sortOptions = [
     label: "최근 수정순",
     value: "updatedAt:desc",
   },
-  {
-    direction: "asc",
-    field: "name",
-    label: "매장명순",
-    value: "name:asc",
-  },
 ] as const;
 const pageSizeFilterOptions = pageSizeOptions.map((pageSize) => ({
   label: `${pageSize}개`,
   value: String(pageSize),
 }));
 
-export const StoreManagement = () => {
+type StoreManagementProps = {
+  storeType?: AdminStoreType;
+};
+
+const storeTypeLabels: Record<
+  AdminStoreType,
+  { emptyName: string; name: string; title: string }
+> = {
+  PHONE: {
+    emptyName: "대리점",
+    name: "대리점",
+    title: "대리점 관리",
+  },
+  PARTNER: {
+    emptyName: "제휴점",
+    name: "제휴점",
+    title: "제휴점 관리",
+  },
+};
+
+export const StoreManagement = ({
+  storeType = "PHONE",
+}: StoreManagementProps) => {
   const {
     addStore,
     deleteStore,
@@ -55,6 +74,7 @@ export const StoreManagement = () => {
     setStorePage,
     setStorePageSize,
     setStoreSort,
+    setStoreTypeFilter,
     storeError,
     storeKeyword,
     storePage,
@@ -65,6 +85,7 @@ export const StoreManagement = () => {
     storeTotalCount,
     storeTotalPages,
   } = useAdminData();
+  const labels = storeTypeLabels[storeType];
   const { runWithStatus } = useActionStatus();
   const [searchDraft, setSearchDraft] = useState(storeKeyword);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -92,6 +113,10 @@ export const StoreManagement = () => {
   const sortValue = `${storeSortField}:${storeSortDirection}`;
 
   useEffect(() => {
+    setStoreTypeFilter(storeType);
+  }, [setStoreTypeFilter, storeType]);
+
+  useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       if (searchDraft !== storeKeyword) {
         setStoreKeyword(searchDraft);
@@ -104,14 +129,14 @@ export const StoreManagement = () => {
   }, [searchDraft, setStoreKeyword, storeKeyword]);
 
   const handleCreate = async (input: StoreInput) => {
-    await runWithStatus("매장 추가", () => addStore(input));
+    await runWithStatus(`${labels.name} 추가`, () => addStore(input));
     setIsAddModalOpen(false);
   };
 
   const handleUpdate = async (input: StoreInput) => {
     if (!editingStore) return;
 
-    await runWithStatus("매장 수정", () =>
+    await runWithStatus(`${labels.name} 수정`, () =>
       saveStore(editingStore.storeId, input),
     );
     setEditingStoreId(null);
@@ -123,7 +148,7 @@ export const StoreManagement = () => {
     setIsDeleteSubmitting(true);
 
     try {
-      await runWithStatus("매장 삭제", () =>
+      await runWithStatus(`${labels.name} 삭제`, () =>
         deleteStore(deletingStore.storeId),
       );
       setDeletingStoreId(null);
@@ -136,7 +161,7 @@ export const StoreManagement = () => {
     const storeDetail = getStoreDetail(storeId);
 
     if (!storeDetail) {
-      showToast("매장 상세 정보를 불러오지 못했습니다.");
+      showToast(`${labels.name} 상세 정보를 불러오지 못했습니다.`);
       return;
     }
 
@@ -153,10 +178,10 @@ export const StoreManagement = () => {
       <div className="mb-7 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-2xl font-extrabold tracking-normal text-gray-950 dark:text-white">
-            매장 관리
+            {labels.title}
           </h1>
           <p className="text-text-secondary mt-2 text-sm font-medium">
-            관리자 API 기준으로 매장 정보를 추가, 수정, 삭제합니다.
+            관리자 API 기준으로 {labels.name} 정보를 추가, 수정, 삭제합니다.
           </p>
         </div>
 
@@ -165,14 +190,14 @@ export const StoreManagement = () => {
           leftIcon={<Plus size={16} />}
           onClick={() => setIsAddModalOpen(true)}
         >
-          매장 추가
+          {labels.name} 추가
         </Button>
       </div>
 
       <div className="mb-7 grid gap-3 xl:grid-cols-[minmax(280px,420px)_auto] xl:items-start xl:justify-between">
         <div className="flex gap-2">
           <SearchInput
-            placeholder="매장명이나 주소를 검색하세요"
+            placeholder={`${labels.name}명이나 주소를 검색하세요`}
             value={searchDraft}
             onChange={(event) => setSearchDraft(event.target.value)}
           />
@@ -230,7 +255,7 @@ export const StoreManagement = () => {
           <Card>
             <AdminEmptyState
               title="매장이 없습니다."
-              description="검색어를 조정하거나 새 매장을 추가해 주세요."
+              description={`검색어를 조정하거나 새 ${labels.emptyName}을 추가해 주세요.`}
             />
           </Card>
         ) : (
@@ -291,7 +316,7 @@ export const StoreManagement = () => {
                   <td colSpan={6} className="h-[640px] px-5 py-0">
                     <AdminEmptyState
                       title="조건에 맞는 매장이 없습니다."
-                      description="검색어를 조정하거나 새 매장을 추가해 주세요."
+                      description={`검색어를 조정하거나 새 ${labels.emptyName}을 추가해 주세요.`}
                     />
                   </td>
                 </tr>
@@ -364,6 +389,7 @@ export const StoreManagement = () => {
         key={isAddModalOpen ? "create-open" : "create-closed"}
         isOpen={isAddModalOpen}
         mode="create"
+        storeLabel={labels.name}
         onClose={() => setIsAddModalOpen(false)}
         onSave={handleCreate}
       />
@@ -373,6 +399,7 @@ export const StoreManagement = () => {
         isOpen={editingStore !== undefined}
         mode="edit"
         store={editingStore}
+        storeLabel={labels.name}
         onClose={() => setEditingStoreId(null)}
         onSave={handleUpdate}
       />
@@ -380,11 +407,11 @@ export const StoreManagement = () => {
       <Modal
         isOpen={deletingStore !== undefined}
         onClose={() => setDeletingStoreId(null)}
-        title="매장을 삭제할까요?"
+        title={`${labels.name}을 삭제할까요?`}
         description={
           deletingStore
-            ? `#${deletingStore.storeId} ${deletingStore.name} 매장이 관리자 목록에서 삭제됩니다.`
-            : "선택한 매장이 삭제됩니다."
+            ? `#${deletingStore.storeId} ${deletingStore.name} ${labels.name}이 관리자 목록에서 삭제됩니다.`
+            : `선택한 ${labels.name}이 삭제됩니다.`
         }
         actions={
           <>
@@ -665,6 +692,7 @@ type StoreFormModalProps = {
   mode: "create" | "edit";
   onClose: () => void;
   onSave: (input: StoreInput) => Promise<void>;
+  storeLabel: string;
   store?: AdminStoreDetail;
 };
 
@@ -674,6 +702,7 @@ const StoreFormModal = ({
   onClose,
   onSave,
   store,
+  storeLabel,
 }: StoreFormModalProps) => {
   const formId = mode === "create" ? "store-create-form" : "store-edit-form";
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -690,7 +719,7 @@ const StoreFormModal = ({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "매장 정보를 저장하지 못했습니다.",
+          : `${storeLabel} 정보를 저장하지 못했습니다.`,
       );
     } finally {
       setIsSubmitting(false);
@@ -701,8 +730,12 @@ const StoreFormModal = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={mode === "create" ? "매장 추가" : `${store?.name ?? "매장"} 수정`}
-      description="백엔드 관리자 매장 API에 저장할 정보를 입력해 주세요."
+      title={
+        mode === "create"
+          ? `${storeLabel} 추가`
+          : `${store?.name ?? storeLabel} 수정`
+      }
+      description={`백엔드 관리자 API에 저장할 ${storeLabel} 정보를 입력해 주세요.`}
       size="lg"
     >
       <form
@@ -711,7 +744,7 @@ const StoreFormModal = ({
         onSubmit={handleSubmit}
       >
         <AdminField
-          label="매장명"
+          label={`${storeLabel}명`}
           name="name"
           defaultValue={store?.name}
           placeholder="예: VITA 강남점"

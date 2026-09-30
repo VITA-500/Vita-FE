@@ -15,8 +15,9 @@ const FaqProbe = () => {
         onClick={() =>
           addFaq({
             answer: "신규 FAQ 답변",
-            category: "기타",
+            category: "서비스안내",
             question: "신규 FAQ 질문",
+            subcategory: "정보변경",
           })
         }
       >
