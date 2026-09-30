@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import type { MouseEvent } from "react";
+import type { CSSProperties, MouseEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   Archive,
+  ChevronDown,
   ChevronRight,
   CircleHelp,
   Folder,
@@ -24,8 +25,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { recentChats, serviceMenus } from "@/features/chat/constants";
-import type { ChatMode } from "@/features/chat/types";
+import { serviceMenus } from "@/features/chat/constants";
+import type { ChatMode, ChatSessionSummary } from "@/features/chat/types";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
 import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
@@ -57,10 +58,43 @@ type ChatSidebarProps = {
   onHideTooltip: () => void;
   activeMode: ChatMode;
   currentChatTitle?: string;
+  chatSessions?: readonly ChatSessionSummary[];
+  activeSessionId?: number | null;
+  onSelectChat?: (sessionId: number) => void;
+};
+
+type SidebarChatItem = {
+  key: string;
+  title: string;
+  active: boolean;
+  sessionId: number | null;
+};
+
+/** 최근 상담을 펼칠 때 항목이 위에서부터 차례로 나타나도록 주는 지연 간격. */
+const RECENT_CHAT_STAGGER_MS = 40;
+/** 목록이 길어도 마지막 항목이 너무 늦게 나타나지 않도록 지연을 이 순번까지만 늘린다. */
+const RECENT_CHAT_STAGGER_LIMIT = 8;
+
+const formatSessionTitle = (session: ChatSessionSummary) => {
+  if (session.title) {
+    return session.title;
+  }
+
+  const updatedAt = new Date(session.updatedAt);
+
+  if (Number.isNaN(updatedAt.getTime())) {
+    return `상담 #${session.sessionId}`;
+  }
+
+  return `${updatedAt.getMonth() + 1}월 ${updatedAt.getDate()}일 ${String(
+    updatedAt.getHours(),
+  ).padStart(2, "0")}:${String(updatedAt.getMinutes()).padStart(2, "0")} 상담`;
 };
 
 export const ChatSidebar = ({
   activeMode,
+  activeSessionId = null,
+  chatSessions = [],
   currentChatTitle,
   isAuthLoading,
   isAuthReady,
@@ -72,6 +106,7 @@ export const ChatSidebar = ({
   onOpen,
   onOpenProfile,
   onOpenSearch,
+  onSelectChat,
   onStartTour,
   onShowHeaderTooltip,
   onShowRailTooltip,
@@ -86,28 +121,50 @@ export const ChatSidebar = ({
     top: number;
   } | null>(null);
   const [pinnedChatTitles, setPinnedChatTitles] = useState<string[]>([]);
+  const [isRecentChatsCollapsed, setIsRecentChatsCollapsed] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const chatMenuRef = useRef<HTMLDivElement>(null);
   const displayName = user?.name ?? "사용자";
   const isDarkMode = resolvedTheme === "dark";
   const isGuest = isAuthReady && !isAuthenticated && !isAuthLoading;
 
-  const visibleRecentChats = currentChatTitle
-    ? [
-        { title: currentChatTitle, active: true },
-        ...recentChats
-          .filter((chat) => chat.title !== currentChatTitle)
-          .map((chat) => ({ ...chat, active: false })),
-      ]
-    : recentChats;
+  const sessionChats: SidebarChatItem[] = chatSessions.map((session) => {
+    const isActive = session.sessionId === activeSessionId;
+
+    return {
+      key: `session-${session.sessionId}`,
+      title:
+        isActive && currentChatTitle
+          ? currentChatTitle
+          : formatSessionTitle(session),
+      active: isActive,
+      sessionId: session.sessionId,
+    };
+  });
+  const hasActiveSessionInList = sessionChats.some((chat) => chat.active);
+  const visibleRecentChats: SidebarChatItem[] =
+    currentChatTitle && !hasActiveSessionInList
+      ? [
+          {
+            key: `current-${activeSessionId ?? "new"}`,
+            title: currentChatTitle,
+            active: true,
+            sessionId: activeSessionId,
+          },
+          ...sessionChats,
+        ]
+      : sessionChats;
   const pinnedChats = pinnedChatTitles
     .map((title) => visibleRecentChats.find((chat) => chat.title === title))
-    .filter((chat): chat is (typeof visibleRecentChats)[number] =>
-      Boolean(chat),
-    );
+    .filter((chat): chat is SidebarChatItem => Boolean(chat));
   const unpinnedRecentChats = visibleRecentChats.filter(
     (chat) => !pinnedChatTitles.includes(chat.title),
   );
+  const selectChat = (chat: SidebarChatItem) => {
+    if (chat.sessionId !== null) {
+      onSelectChat?.(chat.sessionId);
+    }
+  };
 
   const handleAccountMenuToggle = () => {
     onHideTooltip();
@@ -524,11 +581,12 @@ export const ChatSidebar = ({
 
                     {pinnedChats.map((chat) => (
                       <div
-                        key={chat.title}
+                        key={chat.key}
                         className="group relative mx-1 flex h-11 w-[calc(100%-0.5rem)] items-center rounded-xl text-left transition-colors duration-150 hover:bg-gray-300/70 dark:hover:bg-white/10"
                       >
                         <button
                           type="button"
+                          onClick={() => selectChat(chat)}
                           className="min-w-0 flex-1 truncate px-5 text-left text-sm font-semibold text-gray-500 transition-colors group-hover:text-gray-950 dark:text-gray-400 dark:group-hover:text-white"
                         >
                           {chat.title}
@@ -559,52 +617,118 @@ export const ChatSidebar = ({
                   </>
                 )}
 
-                <p className="mb-2 px-3 pt-4 text-xs font-bold text-gray-400">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setIsRecentChatsCollapsed((isCollapsed) => !isCollapsed)
+                  }
+                  aria-expanded={!isRecentChatsCollapsed}
+                  aria-controls="chat-sidebar-recent-list"
+                  className="group/recent focus-visible:ring-brand/30 mx-1 mt-4 mb-2 flex h-7 w-[calc(100%-0.5rem)] items-center gap-1 rounded-lg px-2 text-left text-xs font-bold text-gray-400 transition-colors hover:text-gray-700 focus-visible:ring-2 focus-visible:outline-none dark:hover:text-gray-200"
+                >
                   최근 상담
-                </p>
-
-                {unpinnedRecentChats.map((chat) => (
-                  <div
-                    key={chat.title}
+                  <ChevronDown
+                    size={14}
+                    strokeWidth={2.2}
+                    aria-hidden="true"
                     className={cn(
-                      "group relative mx-1 flex h-11 w-[calc(100%-0.5rem)] items-center rounded-xl text-left transition-colors duration-150",
-                      chat.active
-                        ? "bg-white dark:bg-white/10"
-                        : "hover:bg-gray-300/70 dark:hover:bg-white/10",
+                      "transition-transform duration-200",
+                      isRecentChatsCollapsed && "-rotate-90",
                     )}
-                  >
-                    <button
-                      type="button"
+                  />
+                  {isRecentChatsCollapsed && unpinnedRecentChats.length > 0 && (
+                    <span className="ml-auto font-semibold text-gray-400/80">
+                      {unpinnedRecentChats.length}
+                    </span>
+                  )}
+                </button>
+
+                <div
+                  id="chat-sidebar-recent-list"
+                  aria-hidden={isRecentChatsCollapsed}
+                  inert={isRecentChatsCollapsed}
+                  className={cn(
+                    "grid transition-[grid-template-rows] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                    isRecentChatsCollapsed
+                      ? "grid-rows-[0fr]"
+                      : "grid-rows-[1fr]",
+                  )}
+                >
+                  <div className="min-h-0 overflow-hidden">
+                    <div
                       className={cn(
-                        "focus-visible:ring-brand/30 min-w-0 flex-1 truncate px-5 text-left text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
-                        chat.active
-                          ? "text-brand"
-                          : "text-gray-500 group-hover:text-gray-950 dark:text-gray-400 dark:group-hover:text-white",
+                        "space-y-1 transition-[opacity,translate] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                        isRecentChatsCollapsed
+                          ? "-translate-y-3 opacity-0"
+                          : "translate-y-0 opacity-100",
                       )}
                     >
-                      {chat.title}
-                    </button>
+                      {unpinnedRecentChats.length === 0 && (
+                        <p className="px-5 py-2 text-xs font-medium text-gray-400">
+                          아직 상담 내역이 없어요.
+                        </p>
+                      )}
 
-                    <button
-                      type="button"
-                      onClick={() => handlePinChat(chat.title)}
-                      className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
-                      aria-label="채팅 고정"
-                    >
-                      <Pin size={16} />
-                    </button>
+                      {unpinnedRecentChats.map((chat, index) => (
+                        <div
+                          key={chat.key}
+                          style={
+                            {
+                              // hover 배경색 전환에는 지연이 붙지 않도록, 나타나는 모션에만 쓰는 변수로 넘긴다.
+                              "--recent-chat-delay": isRecentChatsCollapsed
+                                ? "0ms"
+                                : `${Math.min(index, RECENT_CHAT_STAGGER_LIMIT) * RECENT_CHAT_STAGGER_MS}ms`,
+                            } as CSSProperties
+                          }
+                          className={cn(
+                            "group relative mx-1 flex h-11 w-[calc(100%-0.5rem)] items-center rounded-xl text-left [transition:background-color_150ms,opacity_450ms_cubic-bezier(0.22,1,0.36,1)_var(--recent-chat-delay),translate_450ms_cubic-bezier(0.22,1,0.36,1)_var(--recent-chat-delay)]",
+                            isRecentChatsCollapsed
+                              ? "-translate-y-2 opacity-0"
+                              : "translate-y-0 opacity-100",
+                            chat.active
+                              ? "bg-white dark:bg-white/10"
+                              : "hover:bg-gray-300/70 dark:hover:bg-white/10",
+                          )}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => selectChat(chat)}
+                            aria-current={chat.active ? "true" : undefined}
+                            className={cn(
+                              "focus-visible:ring-brand/30 min-w-0 flex-1 truncate px-5 text-left text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                              chat.active
+                                ? "text-brand"
+                                : "text-gray-500 group-hover:text-gray-950 dark:text-gray-400 dark:group-hover:text-white",
+                            )}
+                          >
+                            {chat.title}
+                          </button>
 
-                    <button
-                      type="button"
-                      data-chat-menu-trigger="true"
-                      onClick={(event) => handleOpenChatMenu(event, chat.title)}
-                      className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
-                      aria-label="채팅 메뉴"
-                    >
-                      <MoreHorizontal size={17} />
-                    </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePinChat(chat.title)}
+                            className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
+                            aria-label="채팅 고정"
+                          >
+                            <Pin size={16} />
+                          </button>
+
+                          <button
+                            type="button"
+                            data-chat-menu-trigger="true"
+                            onClick={(event) =>
+                              handleOpenChatMenu(event, chat.title)
+                            }
+                            className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
+                            aria-label="채팅 메뉴"
+                          >
+                            <MoreHorizontal size={17} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                </div>
               </div>
             </div>
           )}
