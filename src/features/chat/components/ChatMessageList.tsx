@@ -53,6 +53,8 @@ export const ChatMessageList = ({
             <article className="border-border text-text-primary rounded-3xl border bg-white px-4 py-4 text-sm leading-6 shadow-sm md:px-5 dark:border-white/10 dark:bg-zinc-950 dark:text-white">
               <ChatMarkdown content={message.content ?? ""} />
 
+              {/* 참고한 FAQ 표시는 사용하지 않기로 해서 숨김 처리 (BE relatedFaqs 미요청).
+                  다시 표시하려면 아래 블록의 주석을 해제하세요.
               {message.sources && message.sources.length > 0 && (
                 <div className="border-border mt-4 space-y-2 border-t pt-3 dark:border-white/10">
                   <p className="text-brand text-xs font-extrabold">
@@ -70,6 +72,7 @@ export const ChatMessageList = ({
                   </div>
                 </div>
               )}
+              */}
 
               {message.actions && message.actions.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-2">

@@ -1,5 +1,5 @@
 import type {
-  ChatAnswerSource,
+  // ChatAnswerSource, // 참고한 FAQ 표시 숨김 처리로 미사용
   ChatMessage,
   ChatSessionListResponse,
   SessionMessagesResponse,
@@ -119,11 +119,12 @@ export const FAILED_ANSWER_MESSAGE =
   "답변을 생성하지 못했어요. 잠시 후 다시 시도해 주세요.";
 
 const toAssistantMessage = (response: ChatMessageResponse): ChatMessage => {
-  const sources: ChatAnswerSource[] = response.relatedFaqIds.map((faqId) => ({
-    id: String(faqId),
-    title: `FAQ #${faqId}`,
-    category: "FAQ",
-  }));
+  // 참고한 FAQ 표시는 사용하지 않기로 해서 숨김 처리 (BE relatedFaqs 미요청).
+  // const sources: ChatAnswerSource[] = response.relatedFaqIds.map((faqId) => ({
+  //   id: String(faqId),
+  //   title: `FAQ #${faqId}`,
+  //   category: "FAQ",
+  // }));
 
   // BE는 답변 생성이 실패해도(FAILED) 200으로 answer: null을 준다.
   // 빈 말풍선 대신 다시 물어보라는 안내를 보여준다.
@@ -136,7 +137,7 @@ const toAssistantMessage = (response: ChatMessageResponse): ChatMessage => {
     role: "assistant",
     content: hasAnswer ? answer : FAILED_ANSWER_MESSAGE,
     createdAt: response.createAt,
-    sources: hasAnswer ? sources : [],
+    // sources: hasAnswer ? sources : [],
   };
 };
 
