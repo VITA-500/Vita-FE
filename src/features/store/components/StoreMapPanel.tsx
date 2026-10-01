@@ -137,6 +137,8 @@ const SEARCH_RADIUS_KM = 1.5;
 const STORES_PER_PAGE = 12;
 /** 페이지 이동 시 지도가 먼저 움직이기 시작한 뒤 핀·목록을 바꾸기까지의 텀(ms) */
 const STORE_PAGE_SWITCH_DELAY_MS = 260;
+/** 마지막 필터 해제 후 매장을 다시 불러오는 동안 지도를 자동으로 옮기지 않는 시간(ms) */
+const PIN_AUTO_FIT_SKIP_MS = 2500;
 
 /** 지금 보이는 지도 영역 (중심·북동·남서 모서리) */
 type MapViewport = {
@@ -979,6 +981,16 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const lastNearbyLookupKeyRef = useRef("");
   // 지도 영역 검색(searchVisibleArea) 요청 번호. 가장 최근 요청의 응답만 화면에 반영한다.
   const areaSearchRequestIdRef = useRef(0);
+  // true인 동안 핀 자동 맞춤(지도 이동)을 하지 않는다. 필터 해제 직후 보던 화면을 그대로 두기 위해 쓴다.
+  const isPinAutoFitSkippedRef = useRef(false);
+  const pinAutoFitSkipTimeoutRef = useRef<number | undefined>(undefined);
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(pinAutoFitSkipTimeoutRef.current);
+    },
+    [],
+  );
   // 뱃지(필터) 검색 중 사용자가 지도를 끌어 옮겼다: 이동이 끝나면(idle) 보이는 영역에서 다시 찾는다.
   const shouldRefreshTagSearchOnIdleRef = useRef(false);
   const shouldFocusUserLocationRef = useRef(false);
@@ -1499,9 +1511,16 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     setSearchQuery(tags.map((tag) => `#${tag}`).join(" "));
     setIsSearchHistoryOpen(false);
 
-    // 뱃지를 모두 해제하면 태그 검색 결과를 지우고 원래 매장 목록으로 돌아간다.
+    // 마지막 뱃지를 해제하면 태그 검색 결과를 지우되, 지도는 내 위치로 돌아가지 않고 보던 화면을 유지한다.
+    // 그 화면의 매장(필터 없이)을 불러와, 사용자가 그 지역에서 다시 검색하거나 뱃지를 고를 수 있게 한다.
     if (tags.length === 0) {
       restorePreTagSearchStores();
+      isPinAutoFitSkippedRef.current = true;
+      window.clearTimeout(pinAutoFitSkipTimeoutRef.current);
+      pinAutoFitSkipTimeoutRef.current = window.setTimeout(() => {
+        isPinAutoFitSkippedRef.current = false;
+      }, PIN_AUTO_FIT_SKIP_MS);
+      updateStoresByLocation(mapViewport?.center ?? searchCenter);
       return;
     }
 
@@ -2398,6 +2417,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         isPinAutoFitPaused={Boolean(
           routeDestinationStoreId || soloStore || hasSelectedStoreInfo,
         )}
+        shouldSkipPinAutoFit={() => isPinAutoFitSkippedRef.current}
         isFullBleed
         isSearchFromMapPointLoading={isMapSearchLoading}
         routePreview={routePreview}

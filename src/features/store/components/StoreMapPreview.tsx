@@ -709,6 +709,8 @@ type StoreMapPreviewProps = {
   pinAutoFitKey?: string;
   /** true면 자동 맞춤을 하지 않는다(정보 카드·길찾기 중 등). */
   isPinAutoFitPaused?: boolean;
+  /** 자동 맞춤 직전에 호출해 true면 이번 맞춤을 건너뛴다(필터 해제 직후 보던 화면 유지 등). */
+  shouldSkipPinAutoFit?: () => boolean;
   onFocusUserLocation?: () => void;
   onSelectedStoreCardClose?: () => void;
   onSearchFromMapPoint?: () => void;
@@ -751,6 +753,7 @@ export const StoreMapPreview = ({
   getPinFitPadding,
   pinAutoFitKey = "",
   isPinAutoFitPaused = false,
+  shouldSkipPinAutoFit,
   onSelectedStoreCardClose,
   onSearchFromMapPoint,
 }: StoreMapPreviewProps) => {
@@ -770,6 +773,7 @@ export const StoreMapPreview = ({
   const storesRef = useRef(stores);
   const getPinFitPaddingRef = useRef(getPinFitPadding);
   const isPinAutoFitPausedRef = useRef(isPinAutoFitPaused);
+  const shouldSkipPinAutoFitRef = useRef(shouldSkipPinAutoFit);
   const routeLeftInsetRef = useRef(routeLeftInset);
   const onSelectStoreRef = useRef(onSelectStore);
   const routeOverlayRefs = useRef<KakaoCustomOverlay[]>([]);
@@ -1798,6 +1802,7 @@ export const StoreMapPreview = ({
     storesRef.current = stores;
     getPinFitPaddingRef.current = getPinFitPadding;
     isPinAutoFitPausedRef.current = isPinAutoFitPaused;
+    shouldSkipPinAutoFitRef.current = shouldSkipPinAutoFit;
     routeLeftInsetRef.current = routeLeftInset;
   });
 
@@ -2079,7 +2084,8 @@ export const StoreMapPreview = ({
         !map ||
         !containerRect ||
         points.length === 0 ||
-        isPinAutoFitPausedRef.current
+        isPinAutoFitPausedRef.current ||
+        shouldSkipPinAutoFitRef.current?.()
       ) {
         return;
       }
