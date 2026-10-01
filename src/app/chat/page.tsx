@@ -18,6 +18,7 @@ import {
 } from "@/features/chat/lib/chatConversationStorage";
 import {
   chatService,
+  FAILED_ANSWER_MESSAGE,
   isPermanentClaimError,
 } from "@/features/chat/lib/chatService";
 import { ProfilePanel } from "@/features/auth/components/ProfilePanel";
@@ -34,9 +35,6 @@ import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
 import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
 import { showToast } from "@/shared/ui/ToastProvider";
-
-const FAILED_ANSWER_MESSAGE =
-  "답변을 생성하지 못했어요. 잠시 후 다시 시도해 주세요.";
 
 const toChatTitle = (prompt: string) =>
   prompt.length > 18 ? `${prompt.slice(0, 18)}...` : prompt;
