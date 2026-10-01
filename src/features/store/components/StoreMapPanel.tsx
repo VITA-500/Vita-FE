@@ -135,6 +135,10 @@ const VISIBLE_SERVICE_FILTER_COUNT = 6;
 const SEARCH_RADIUS_KM = 1.5;
 /** 지도 핀(A~L)·매장 목록 한 페이지에 보여줄 매장 수. */
 const STORES_PER_PAGE = 12;
+/** 페이지 이동 시 지도가 먼저 움직이기 시작한 뒤 핀·목록을 바꾸기까지의 텀(ms) */
+const STORE_PAGE_SWITCH_DELAY_MS = 260;
+/** 마지막 필터 해제 후 매장을 다시 불러오는 동안 지도를 자동으로 옮기지 않는 시간(ms) */
+const PIN_AUTO_FIT_SKIP_MS = 2500;
 
 /** 지금 보이는 지도 영역 (중심·북동·남서 모서리) */
 type MapViewport = {
@@ -897,6 +901,19 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   // 현재 stores를 조회한 기준 지점(내 위치·지도에서 고른 지점 등). 매장 순서(A, B, C…)는 이 지점에서 가까운 순이다.
   const [storesOrigin, setStoresOrigin] = useState<MapSearchPoint | null>(null);
   const [isStorePaginationOn, setIsStorePaginationOn] = useState(false);
+  // 핀(현재 페이지 12곳) 외 나머지 매장 위치를 반투명 원으로 함께 보여줄지
+  const [isOtherStoresVisible, setIsOtherStoresVisible] = useState(false);
+  // 페이지 버튼을 누른 뒤 실제로 핀·목록이 바뀌기 전까지 이동할 페이지(번호 강조는 바로 바꾼다)
+  const [pendingStorePage, setPendingStorePage] = useState<number | null>(null);
+  const storePageSwitchTimeoutRef = useRef<number | undefined>(undefined);
+  const latestMapStoresKeyRef = useRef("");
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(storePageSwitchTimeoutRef.current);
+    },
+    [],
+  );
   const [storePageSourceKey, setStorePageSourceKey] = useState("");
   const [submittedSearchOrigin, setSubmittedSearchOrigin] =
     useState<MapSearchPoint | null>(null);
@@ -906,6 +923,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const [searchFitTarget, setSearchFitTarget] = useState<{
     key: string;
     points: MapSearchPoint[];
+    smooth?: boolean;
   } | null>(null);
   // 좌표가 실제로 바뀐 경우에만 상태를 갱신해 불필요한 재렌더를 막는다.
   const updateMapCenter = useCallback((point: MapSearchPoint) => {
@@ -961,12 +979,28 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const collapsedSearchRef = useRef<HTMLDivElement>(null);
   const hasFocusedInitialLocationRef = useRef(false);
   const lastNearbyLookupKeyRef = useRef("");
+  // 지도 영역 검색(searchVisibleArea) 요청 번호. 가장 최근 요청의 응답만 화면에 반영한다.
+  const areaSearchRequestIdRef = useRef(0);
+  // true인 동안 핀 자동 맞춤(지도 이동)을 하지 않는다. 필터 해제 직후 보던 화면을 그대로 두기 위해 쓴다.
+  const isPinAutoFitSkippedRef = useRef(false);
+  const pinAutoFitSkipTimeoutRef = useRef<number | undefined>(undefined);
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(pinAutoFitSkipTimeoutRef.current);
+    },
+    [],
+  );
+  // 뱃지(필터) 검색 중 사용자가 지도를 끌어 옮겼다: 이동이 끝나면(idle) 보이는 영역에서 다시 찾는다.
+  const shouldRefreshTagSearchOnIdleRef = useRef(false);
   const shouldFocusUserLocationRef = useRef(false);
   // 마지막으로 매장이 1곳 이상 조회된 지역. "이 위치에서 검색" 결과가 없으면 이곳으로 지도를 되돌린다.
   const lastStoreAreaRef = useRef<MapSearchPoint>(defaultMapLocation);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const panelRootRef = useRef<HTMLDivElement>(null);
   const storeListPanelRef = useRef<HTMLDivElement>(null);
+  // 지도 위 상단 영역(검색창 + 필터 뱃지 줄). 핀이 이 아래로 꽂히도록 높이를 잰다.
+  const mapTopBarRef = useRef<HTMLDivElement>(null);
   const [routeLeftInset, setRouteLeftInset] = useState(0);
   const {
     displayStores,
@@ -986,6 +1020,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     null,
   );
   const [isRouteLoading, setIsRouteLoading] = useState(false);
+  // 출발-경로-도착이 보이도록 지도 범위 맞춤이 끝난 경로 key(이 전까지는 탐색 중 모달을 유지)
+  const [routeMapReadyKey, setRouteMapReadyKey] = useState("");
   // 필터 뱃지 옵션: 지역을 옮길 때마다 순서·구성이 바뀌어 뱃지가 자리를 옮기지 않도록
   // 지금까지 불러온 모든 매장(검색 풀 포함)과 선택 중인 값을 합쳐 가나다순으로 고정한다.
   const consultServiceFilterOptions = useMemo(
@@ -1184,6 +1220,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   if (storePageSourceKey !== mapStoresKey) {
     setStorePageSourceKey(mapStoresKey);
     setStorePage(0);
+    setPendingStorePage(null);
     setIsStorePaginationOn(false);
   }
 
@@ -1223,22 +1260,46 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   if (selectedStoreOutsidePage) {
     markerLabelById[selectedStoreOutsidePage.id] = "•";
   }
+  useEffect(() => {
+    latestMapStoresKeyRef.current = mapStoresKey;
+  }, [mapStoresKey]);
+  // 페이지 버튼 강조·이전/다음 기준은 바뀔 예정인 페이지를 먼저 따른다.
+  const activeStorePage = Math.min(
+    pendingStorePage ?? currentStorePage,
+    storePageCount - 1,
+  );
+  /**
+   * 페이지 이동: 지도를 먼저 부드럽게 옮기기 시작하고, 잠깐(텀) 뒤에 핀·목록을 새 페이지로 바꾼다.
+   * 새 핀·목록은 서서히 나타난다. 연달아 누르면 마지막으로 누른 페이지만 반영한다.
+   */
   const goToStorePage = (page: number) => {
     const nextPage = Math.min(Math.max(0, page), storePageCount - 1);
     const nextPageRange = getStorePageRange(nextPage);
     const pageStores = mapStores.slice(nextPageRange.start, nextPageRange.end);
+    const sourceKey = mapStoresKey;
 
-    setStorePage(nextPage);
+    setPendingStorePage(nextPage);
     setSoloStoreId("");
     setHasSelectedStoreInfo(false);
 
-    // 페이지를 넘기면 그 페이지 매장 핀(A~L)이 모두 보이도록 지도 범위를 맞춘다.
+    // 페이지를 넘기면 그 페이지 매장 핀(A~L)이 모두 보이도록 지도를 부드럽게 옮긴다.
     if (pageStores.length > 0) {
       setSearchFitTarget({
         key: `page:${mapStoresKey}:${nextPage}`,
         points: pageStores.map((store) => ({ lat: store.lat, lng: store.lng })),
+        smooth: true,
       });
     }
+
+    window.clearTimeout(storePageSwitchTimeoutRef.current);
+    storePageSwitchTimeoutRef.current = window.setTimeout(() => {
+      setPendingStorePage(null);
+
+      // 그사이 매장 목록 자체가 바뀌었으면(새 검색 등) 이전 목록 기준 페이지는 적용하지 않는다.
+      if (latestMapStoresKeyRef.current === sourceKey) {
+        setStorePage(nextPage);
+      }
+    }, STORE_PAGE_SWITCH_DELAY_MS);
   };
   const visibleMapStores =
     routeDestinationStoreId && routeDestinationStore
@@ -1248,6 +1309,12 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         : selectedStoreOutsidePage
           ? [...pagedMapStores, selectedStoreOutsidePage]
           : pagedMapStores;
+  // 목록에는 있지만 지금 핀으로 보이지 않는 매장(다른 페이지). 길찾기·단독 표시 중에는 보여주지 않는다.
+  const visibleMapStoreIds = new Set(visibleMapStores.map((store) => store.id));
+  const otherMapStores =
+    (routeDestinationStoreId && routeDestinationStore) || soloStore
+      ? []
+      : mapStores.filter((store) => !visibleMapStoreIds.has(store.id));
   const routeSummary = (() => {
     if (!userLocation || !routeDestinationStore) {
       return null;
@@ -1298,8 +1365,12 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       segments: walkingRoute?.segments,
     };
   })();
+  // 경로 응답을 받은 뒤에도 지도 범위를 맞추는 동안에는 탐색 중 모달을 유지한다.
+  const isRouteMapPreparing = Boolean(
+    routePreview && routeMapReadyKey !== routePreview.routeKey,
+  );
   const isRouteSearchOverlayVisible =
-    isRouteLoading &&
+    (isRouteLoading || isRouteMapPreparing) &&
     locationStatus !== "denied" &&
     locationStatus !== "error" &&
     locationStatus !== "unsupported";
@@ -1339,7 +1410,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       }, RESTORE_AREA_DELAY_MS);
     };
 
-    // 새 지역을 조회하면 이전 Enter 검색 결과 표시는 해제한다.
+    // 새 지역을 조회하면 이전 Enter 검색 결과 표시는 해제한다(진행 중인 영역 검색 응답도 무효화).
+    areaSearchRequestIdRef.current += 1;
     setSubmittedSearchStores(null);
 
     if (options?.showLoadingCard) {
@@ -1426,27 +1498,47 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   /**
    * 뱃지(서비스) 태그 검색을 시작하거나 갱신한다.
    * 입력창에 "#서비스"를 넣고, 지금 불러와 둔 매장 안에서 걸러 첫 페이지 핀에 지도를 맞춘다.
+   * 이미 태그 검색 결과가 있으면 서버를 다시 조회하지 않고 그 결과 안에서 뱃지 조건으로만 다시 거른다.
+   * (뱃지를 더할수록 결과가 줄기만 하도록. 다른 지역 조회는 "이 위치에서 검색" 버튼으로만 한다)
    */
-  const startTagSearch = (nextConsult: string[], nextProvided: string[]) => {
+  const startTagSearch = (
+    nextConsult: string[],
+    nextProvided: string[],
+    { forceFetch = false }: { forceFetch?: boolean } = {},
+  ) => {
     const tags = [...nextConsult, ...nextProvided];
 
     setSearchQuery(tags.map((tag) => `#${tag}`).join(" "));
     setIsSearchHistoryOpen(false);
 
-    // 뱃지를 모두 해제하면 태그 검색 결과를 지우고 원래 매장 목록으로 돌아간다.
+    // 마지막 뱃지를 해제하면 태그 검색 결과를 지우되, 지도는 내 위치로 돌아가지 않고 보던 화면을 유지한다.
+    // 그 화면의 매장(필터 없이)을 불러와, 사용자가 그 지역에서 다시 검색하거나 뱃지를 고를 수 있게 한다.
     if (tags.length === 0) {
       restorePreTagSearchStores();
+      isPinAutoFitSkippedRef.current = true;
+      window.clearTimeout(pinAutoFitSkipTimeoutRef.current);
+      pinAutoFitSkipTimeoutRef.current = window.setTimeout(() => {
+        isPinAutoFitSkippedRef.current = false;
+      }, PIN_AUTO_FIT_SKIP_MS);
+      updateStoresByLocation(mapViewport?.center ?? searchCenter);
       return;
     }
 
     resetRouteState();
     setHasSelectedStoreInfo(false);
-    setSearchPoint(null);
 
     // 모바일은 목록 패널이 화면을 크게 덮으므로 필터 선택만으로 목록을 펼치지 않는다(지도 핀으로 먼저 확인).
     if (window.innerWidth >= 768) {
       setIsStoreListCollapsed(false);
     }
+
+    // 이미 불러온 태그 검색 결과가 있으면 재조회 없이 렌더 시 뱃지 조건으로만 다시 거른다.
+    // 지도를 옮겨 둔 상태라면 "이 위치에서 검색" 버튼(searchPoint)은 그대로 남겨 둔다.
+    if (!forceFetch && isTagSearchQuery && submittedSearchStores) {
+      return;
+    }
+
+    setSearchPoint(null);
 
     // 카테고리(뱃지) 검색: 지금 보이는 지도 영역 기준으로 서버에서 다시 찾고,
     // 보이는 화면 중심에서 가까운 순으로 보여준다. (뱃지 조건은 렌더 시 적용)
@@ -1476,12 +1568,14 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     setSubmittedSearchStores(null);
     setConsultServiceFilters(nextConsult);
     setProvidedServiceFilters(nextProvided);
-    startTagSearch(nextConsult, nextProvided);
+    startTagSearch(nextConsult, nextProvided, { forceFetch: true });
 
     return true;
   };
   /** 태그(뱃지) 검색 결과를 지우고 원래 매장 목록(지도에 불러와 둔 매장)으로 돌아간다. */
   const restorePreTagSearchStores = () => {
+    // 아직 오지 않은 영역 검색 응답이 해제한 결과를 다시 띄우지 않도록 무효화한다.
+    areaSearchRequestIdRef.current += 1;
     setSubmittedSearchStores(null);
     setHasSelectedStoreInfo(false);
 
@@ -1523,9 +1617,15 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     } = {},
   ) => {
     const { center, radiusKm } = getVisibleAreaQuery(viewport);
+    const requestId = ++areaSearchRequestIdRef.current;
 
     try {
       const areaStores = await storeService.fetchNearbyStores(center, radiusKm);
+
+      // 그 사이 새 검색이 시작됐거나 결과가 해제됐으면 늦게 도착한 이 응답은 버린다.
+      if (requestId !== areaSearchRequestIdRef.current) {
+        return null;
+      }
 
       // 입력 중 드롭다운 검색에도 쓰도록 검색용 매장 풀에 합쳐 둔다.
       mergeSearchStores(areaStores);
@@ -1547,16 +1647,81 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
 
       return results;
     } catch {
-      showToast("매장 정보를 불러오지 못했어요.");
+      if (requestId === areaSearchRequestIdRef.current) {
+        showToast("매장 정보를 불러오지 못했어요.");
+      }
       return null;
     }
   };
   /** 지도 이동·확대/축소가 끝날 때: 보이는 영역을 기억하고, 텍스트 검색 중 사용자가 지도를 옮겼으면 자동 재검색 */
+  /**
+   * 핀을 꽂을 때 비워 둘 여백(지도 기준 px). 매장 목록이 펼쳐져 있는지에 따라 달라진다.
+   * - 위: 검색창·필터 줄 아래 + 핀 높이 (모바일에서 목록을 펼쳤으면 목록 아래)
+   * - 왼쪽(데스크톱): 목록을 펼쳤으면 목록 오른쪽 끝 + 여유, 접었으면 기본 여유만
+   * - 오른쪽·아래: 지도 컨트롤 버튼 자리
+   */
+  const getMapPinFitPadding = (container: {
+    height: number;
+    width: number;
+  }) => {
+    const rootRect = panelRootRef.current?.getBoundingClientRect();
+    const topBarRect = mapTopBarRef.current?.getBoundingClientRect();
+
+    if (!rootRect || !topBarRect) {
+      return null;
+    }
+
+    const listRect = isStoreListCollapsed
+      ? null
+      : (storeListPanelRef.current?.getBoundingClientRect() ?? null);
+    const isDesktop = container.width >= 768;
+    // 핀은 좌표 지점에서 위로 46px 솟으므로 그만큼 + 여유를 더 비운다.
+    const pinTopSpace = 56;
+    const edgeGap = 24;
+    const topBarBottom = topBarRect.bottom - rootRect.top;
+    const top =
+      (!isDesktop && listRect
+        ? Math.max(topBarBottom, listRect.bottom - rootRect.top)
+        : topBarBottom) + pinTopSpace;
+    const left =
+      isDesktop && listRect ? listRect.right - rootRect.left + edgeGap : 32;
+
+    return {
+      bottom: 56,
+      left,
+      right: isDesktop ? 96 : 76,
+      top,
+    };
+  };
   const handleViewportChange = (viewport: MapViewport) => {
     // 지도를 옮겨도 자동으로 다시 검색하지 않는다(화면만 둘러보려는 사용자를 헷갈리게 하지 않도록).
     // 다시 찾기는 "이 위치에서 검색" 버튼으로만 한다(searchInCurrentArea).
+    // 단, 뱃지(필터) 검색 중에는 결과가 처음 찾은 지역에 묶여 옮긴 화면에 핀이 뜨지 않으므로,
+    // 사용자가 직접 끌어 옮긴 경우에 한해 선택한 뱃지를 유지한 채 보이는 영역에서 다시 찾는다.
     setMapViewport(viewport);
     updateMapCenter(viewport.center);
+
+    if (!shouldRefreshTagSearchOnIdleRef.current) {
+      return;
+    }
+
+    shouldRefreshTagSearchOnIdleRef.current = false;
+
+    if (
+      !isTagSearchQuery ||
+      !hasActiveServiceFilter ||
+      routeDestinationStoreId
+    ) {
+      return;
+    }
+
+    setSearchPoint(null);
+    setSoloStoreId("");
+    void searchVisibleArea("tag", { viewport }).then((results) => {
+      if (results && filterStoresByServices(results).length === 0) {
+        showToast("이 지역에는 선택한 서비스를 제공하는 매장이 없어요.");
+      }
+    });
   };
   /**
    * "이 위치에서 검색" 버튼: 지금 보이는 지도 영역에서 다시 찾는다.
@@ -1658,6 +1823,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       return;
     }
 
+    areaSearchRequestIdRef.current += 1;
     setSubmittedSearchStores(null);
 
     if (isTagSearchQuery) {
@@ -1745,6 +1911,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   };
 
   const handleRouteStart = (store: StoreLocation) => {
+    setRouteMapReadyKey("");
     setRouteDestinationStoreId(store.id);
     setWalkingRoute(null);
     setRouteResultMessage(null);
@@ -1786,6 +1953,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     });
   };
   const changeRouteMode = (nextMode: StoreRouteMode) => {
+    setRouteMapReadyKey("");
     setRouteMode(nextMode);
     setWalkingRoute(null);
     setRouteResultMessage(null);
@@ -1855,6 +2023,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     setSoloStoreId("");
   };
   const resetRouteState = () => {
+    setRouteMapReadyKey("");
     setRouteDestinationStoreId("");
     setWalkingRoute(null);
     setRouteResultMessage(null);
@@ -2240,9 +2409,19 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         className="absolute inset-0"
         focusPoint={focusPoint}
         fitTarget={searchFitTarget}
+        markerEnterKey={`${currentStorePage}:${mapStoresKey}`}
+        getPinFitPadding={getMapPinFitPadding}
+        // 새 핀 묶음이 꽂히거나 목록을 펼치고 접을 때 가장 바깥 핀이 가리지 않는지 확인한다.
+        // (페이지 이동은 goToStorePage의 fitTarget이 같은 여백으로 맞춘다)
+        pinAutoFitKey={`${mapStoresKey}|${isStoreListCollapsed ? "collapsed" : "expanded"}`}
+        isPinAutoFitPaused={Boolean(
+          routeDestinationStoreId || soloStore || hasSelectedStoreInfo,
+        )}
+        shouldSkipPinAutoFit={() => isPinAutoFitSkippedRef.current}
         isFullBleed
         isSearchFromMapPointLoading={isMapSearchLoading}
         routePreview={routePreview}
+        onRouteMapReady={setRouteMapReadyKey}
         isRouteCardDocked={Boolean(
           routeDestinationStoreId &&
           routeDestinationStoreId === mapSelectedStore?.id,
@@ -2300,6 +2479,9 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         onFocusUserLocation={focusUserLocation}
         onMapPointSelect={(point) => {
           setSearchPoint(point);
+          // 뱃지(필터) 검색 중이면 이동이 끝난 뒤 보이는 영역에서 자동으로 다시 찾는다.
+          shouldRefreshTagSearchOnIdleRef.current =
+            isTagSearchQuery && hasActiveServiceFilter;
           // 사용자가 지도를 직접 옮김: 이후 텍스트 검색 정렬 중심은 보이는 지도 중심
           setSearchAnchorSource("map");
         }}
@@ -2309,10 +2491,19 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
           void searchInCurrentArea();
         }}
         onSelectStore={handleStoreSelect}
+        otherStores={isOtherStoresVisible ? otherMapStores : []}
+        otherStoreCount={otherMapStores.length}
+        isOtherStoresVisible={isOtherStoresVisible}
+        onToggleOtherStores={() =>
+          setIsOtherStoresVisible((isVisible) => !isVisible)
+        }
       />
 
       <div className="pointer-events-none absolute inset-0 z-10 pt-16 md:pt-0">
-        <div className="pointer-events-auto absolute top-3 right-3 left-3 flex flex-col gap-3 md:top-5 md:right-5 md:left-5 md:flex-row md:flex-wrap md:items-start">
+        <div
+          ref={mapTopBarRef}
+          className="pointer-events-auto absolute top-3 right-3 left-3 flex flex-col gap-3 md:top-5 md:right-5 md:left-5 md:flex-row md:flex-wrap md:items-start"
+        >
           <div className="flex min-w-0 flex-col gap-3 md:flex-1 md:flex-row md:flex-nowrap md:items-start">
             <div
               ref={collapsedSearchRef}
@@ -2363,6 +2554,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                         void loadSearchAreaStores();
                       }
 
+                      areaSearchRequestIdRef.current += 1;
                       setSubmittedSearchStores(null);
                       setSearchQuery(nextQuery);
                     }}
@@ -2636,7 +2828,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                       <>
                         {pagedMapStores.map((store, index) => (
                           <button
-                            key={store.id}
+                            key={`${currentStorePage}:${store.id}`}
                             type="button"
                             onClick={() =>
                               handleStoreSelect(store.id, {
@@ -2645,7 +2837,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                               })
                             }
                             className={cn(
-                              "flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-gray-50 dark:hover:bg-white/[0.04]",
+                              // 페이지가 바뀌면(key 변경으로 새로 그려짐) 서서히 나타난다.
+                              "animate-store-page-in flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-gray-50 dark:hover:bg-white/[0.04]",
                               mapSelectedStoreId === store.id &&
                                 "bg-brand-soft dark:bg-brand/10",
                             )}
@@ -2706,17 +2899,15 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                           >
                             <button
                               type="button"
-                              onClick={() =>
-                                goToStorePage(currentStorePage - 1)
-                              }
-                              disabled={currentStorePage === 0}
+                              onClick={() => goToStorePage(activeStorePage - 1)}
+                              disabled={activeStorePage === 0}
                               className="text-text-secondary flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-white/10"
                               aria-label="이전 페이지"
                             >
                               <ChevronLeft size={15} />
                             </button>
                             {getPaginationItems(
-                              currentStorePage,
+                              activeStorePage,
                               storePageCount,
                             ).map((page, index) =>
                               page === "ellipsis" ? (
@@ -2734,12 +2925,12 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                                   onClick={() => goToStorePage(page)}
                                   className={cn(
                                     "flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-xs font-extrabold transition",
-                                    page === currentStorePage
+                                    page === activeStorePage
                                       ? "bg-brand text-white"
                                       : "text-text-secondary hover:bg-gray-100 dark:hover:bg-white/10",
                                   )}
                                   aria-current={
-                                    page === currentStorePage
+                                    page === activeStorePage
                                       ? "page"
                                       : undefined
                                   }
@@ -2750,10 +2941,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                             )}
                             <button
                               type="button"
-                              onClick={() =>
-                                goToStorePage(currentStorePage + 1)
-                              }
-                              disabled={currentStorePage === storePageCount - 1}
+                              onClick={() => goToStorePage(activeStorePage + 1)}
+                              disabled={activeStorePage === storePageCount - 1}
                               className="text-text-secondary flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-white/10"
                               aria-label="다음 페이지"
                             >
@@ -2843,11 +3032,12 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
               className="border-brand mx-auto block size-8 animate-spin rounded-full border-4 border-t-transparent"
             />
             <p className="mt-4 text-sm font-extrabold text-gray-950 dark:text-white">
-              이동 경로 탐색 중
+              경로 탐색 중입니다
             </p>
             <p className="text-text-secondary mt-2 text-xs leading-5 font-semibold">
-              현재 위치에서 선택한 매장까지의 경로와 예상 시간을 계산하고
-              있어요.
+              {isRouteLoading
+                ? "현재 위치에서 선택한 매장까지의 경로와 예상 시간을 계산하고 있어요."
+                : "출발지부터 도착지까지 한눈에 보이도록 지도를 맞추고 있어요."}
             </p>
           </div>
         </div>

@@ -2,7 +2,15 @@
 
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { LocateFixed, LocateOff, Minus, Plus, RotateCcw } from "lucide-react";
+import { createPortal } from "react-dom";
+import {
+  Layers,
+  LocateFixed,
+  LocateOff,
+  Minus,
+  Plus,
+  RotateCcw,
+} from "lucide-react";
 import { useKakaoMapReady } from "@/features/store/hooks/useKakaoMapReady";
 import type { UserLocation } from "@/features/store/lib/geo";
 import type {
@@ -11,6 +19,7 @@ import type {
   StoreRouteSegmentKind,
 } from "@/features/store/types";
 import { cn } from "@/shared/lib/cn";
+import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
 
 const clampPercent = (value: number) => Math.min(88, Math.max(12, value));
 const clampValue = (value: number, min: number, max: number) =>
@@ -38,8 +47,27 @@ const STORE_CARD_ESTIMATED_HEIGHT = 320;
 const STORE_CARD_MARKER_GAP = 64;
 /** 초점 이동 완료(idle) 신호가 오지 않을 때 카드를 보여주기까지 기다리는 최대 시간(ms) */
 const CARD_REVEAL_FALLBACK_MS = 700;
+/** 길찾기: 지도 범위 맞춤 후 idle 신호가 오지 않을 때 경로 그리기를 시작하기까지 기다리는 최대 시간(ms) */
+const ROUTE_FIT_READY_FALLBACK_MS = 800;
+/** 길찾기: 경로를 다 그린 뒤 정보 카드를 띄우기까지의 텀(ms) */
+const ROUTE_CARD_REVEAL_DELAY_MS = 220;
 /** 확대/축소 버튼 애니메이션 시간(ms) */
 const ZOOM_ANIMATION_MS = 320;
+/** 새 핀이 꽂히거나 목록을 펼친 뒤 가림 여부를 확인하기까지 기다리는 시간(ms) */
+const PIN_AUTO_FIT_DELAY_MS = 160;
+/** 페이지 전환 등으로 새로 나타나는 핀·원이 서서히 보이는 시간(ms) */
+const MARKER_ENTER_ANIMATION_MS = 280;
+
+/** 핀·원 DOM이 아래에서 살짝 떠오르며 나타나게 한다. */
+const playMarkerEnterAnimation = (element: HTMLElement) => {
+  element.animate?.(
+    [
+      { opacity: 0, transform: "translateY(6px) scale(0.85)" },
+      { opacity: 1, transform: "translateY(0) scale(1)" },
+    ],
+    { duration: MARKER_ENTER_ANIMATION_MS, easing: "ease-out", fill: "both" },
+  );
+};
 /** 길찾기 중 확대/축소 전에 초점 지점으로 지도를 미리 옮기는 시간(ms, 카카오 panTo 애니메이션 여유 포함) */
 const ZOOM_FOCUS_PAN_MS = 280;
 
@@ -128,6 +156,132 @@ const getRouteFitPadding = ({
       STORE_CARD_MARKER_GAP
     : 160,
 });
+
+export type MapFitPadding = {
+  bottom: number;
+  left: number;
+  right: number;
+  top: number;
+};
+
+/** 핀이 들어갈 기본 여백: 위 검색창·핀 높이, 오른쪽 지도 컨트롤, 왼쪽 매장 목록 패널 */
+const getDefaultPinFitPadding = (
+  containerWidth: number,
+  routeLeftInset: number,
+): MapFitPadding => ({
+  bottom: 72,
+  left: containerWidth >= 768 ? Math.max(48, routeLeftInset + 32) : 48,
+  right: 96,
+  top: 120,
+});
+
+/** 좌표들을 지도 컨테이너 기준 화면 좌표로 바꾼다. 투영 정보가 없으면 null */
+const getScreenPoints = (map: KakaoMap, points: MapPoint[]) => {
+  const kakaoMaps = window.kakao?.maps;
+  const projection = (map as KakaoMapWithProjection).getProjection?.();
+
+  if (!kakaoMaps || !projection?.containerPointFromCoords) {
+    return null;
+  }
+
+  return points.map((point) =>
+    projection.containerPointFromCoords!(
+      new kakaoMaps.LatLng(point.lat, point.lng),
+    ),
+  );
+};
+
+/** 모든 좌표가 여백을 뺀 영역(패널·검색창에 가리지 않는 곳) 안에 있는지 */
+const arePointsInFreeArea = (
+  map: KakaoMap,
+  points: MapPoint[],
+  container: { height: number; width: number },
+  padding: MapFitPadding,
+) => {
+  const screenPoints = getScreenPoints(map, points);
+
+  if (!screenPoints) {
+    return true;
+  }
+
+  return screenPoints.every(
+    (point) =>
+      point.x >= padding.left &&
+      point.x <= container.width - padding.right &&
+      point.y >= padding.top &&
+      point.y <= container.height - padding.bottom,
+  );
+};
+
+/**
+ * 점들이 모두 보이도록 지도를 부드럽게 옮긴다.
+ * 1) 핀이 들어갈 영역(여백 제외)의 가운데로 panTo  2) 그래도 넘치면 이동 후 필요한 만큼만 애니메이션 축소.
+ * 계산할 수 없으면 false(호출한 쪽에서 setBounds 등으로 처리). 축소 예약 타이머 id를 onZoomScheduled로 넘긴다.
+ */
+const fitPointsSmoothlyOnMap = (
+  map: KakaoMap,
+  points: MapPoint[],
+  container: { height: number; width: number },
+  padding: MapFitPadding,
+  onZoomScheduled: (timeoutId: number) => void,
+) => {
+  const kakaoMaps = window.kakao?.maps;
+  const screenPoints = getScreenPoints(map, points);
+
+  if (!kakaoMaps || !map.panTo || !screenPoints || points.length === 0) {
+    return false;
+  }
+
+  const freeWidth = container.width - padding.left - padding.right;
+  const freeHeight = container.height - padding.top - padding.bottom;
+
+  if (freeWidth <= 0 || freeHeight <= 0) {
+    return false;
+  }
+
+  const spanX =
+    Math.max(...screenPoints.map((point) => point.x)) -
+    Math.min(...screenPoints.map((point) => point.x));
+  const spanY =
+    Math.max(...screenPoints.map((point) => point.y)) -
+    Math.min(...screenPoints.map((point) => point.y));
+  const latitudes = points.map((point) => point.lat);
+  const longitudes = points.map((point) => point.lng);
+  const pointsCenter = {
+    lat: (Math.min(...latitudes) + Math.max(...latitudes)) / 2,
+    lng: (Math.min(...longitudes) + Math.max(...longitudes)) / 2,
+  };
+  const nextCenter = getCenterPlacingPointAt(
+    map,
+    pointsCenter,
+    { x: padding.left + freeWidth / 2, y: padding.top + freeHeight / 2 },
+    container,
+  );
+
+  if (!nextCenter) {
+    return false;
+  }
+
+  map.panTo(nextCenter);
+
+  // 현재 확대 수준에서 다 들어가지 않으면, 이동이 끝난 뒤 필요한 단계만큼 부드럽게 축소한다.
+  const overflowRatio = Math.max(spanX / freeWidth, spanY / freeHeight);
+
+  if (overflowRatio > 1) {
+    const zoomOutLevels = Math.ceil(Math.log2(overflowRatio));
+
+    onZoomScheduled(
+      window.setTimeout(() => {
+        map.setLevel(map.getLevel() + zoomOutLevels, {
+          anchor: new kakaoMaps.LatLng(pointsCenter.lat, pointsCenter.lng),
+          animate: { duration: ZOOM_ANIMATION_MS },
+        });
+      }, ZOOM_ANIMATION_MS),
+    );
+  }
+
+  return true;
+};
 
 const getStoreMarkerLabel = (index: number) =>
   String.fromCharCode(65 + (index % 26));
@@ -528,16 +682,41 @@ type StoreMapPreviewProps = {
   }) => void;
   /** 매장 id별 핀 글자. 없으면 stores 순서대로 A, B, C… */
   markerLabelById?: Record<string, string>;
+  /** 핀(현재 페이지) 외 나머지 매장. 핀 대신 반투명 원으로 위치만 표시한다. */
+  otherStores?: StoreLocation[];
+  /** 핀 외 나머지 매장 수. 0보다 크면 "나머지 매장 보기" 버튼을 보여준다. */
+  otherStoreCount?: number;
+  isOtherStoresVisible?: boolean;
+  onToggleOtherStores?: () => void;
   /** 길찾기 경로를 가릴 수 있는 지도 위 패널(매장 목록)의 화면 영역. 없으면 null */
   getRouteObstacleRect?: () => DOMRect | null;
   /** 경로·출발/도착 지점·정보 카드가 위 패널에 가려졌을 때 호출 */
   onRouteObstructed?: () => void;
   /** key가 바뀔 때마다 points가 모두 보이도록 지도 범위를 맞춘다(검색 결과 표시용). */
-  fitTarget?: { key: string; points: MapPoint[] } | null;
+  /** smooth: 순간 이동 대신 부드럽게 이동(panTo)하고, 모자라면 애니메이션으로 축소한다(페이지 전환용). */
+  fitTarget?: { key: string; points: MapPoint[]; smooth?: boolean } | null;
+  /** 값이 바뀌면 이번에 그리는 핀·원을 서서히 나타나게 한다(페이지 전환용). */
+  markerEnterKey?: string;
+  /**
+   * 핀을 둘 때 비워 둘 여백(검색창·매장 목록 패널 등에 가리는 영역, 지도 컨테이너 기준 px).
+   * 목록이 펼쳐졌는지에 따라 달라지므로 호출 시점에 잰다. 없으면 기본 여백.
+   */
+  getPinFitPadding?: (container: {
+    height: number;
+    width: number;
+  }) => MapFitPadding | null;
+  /** 값이 바뀌면(새 핀 묶음, 목록 펼침/접힘) 가장 바깥 핀까지 가리지 않고 보이는지 확인하고, 아니면 지도를 옮긴다. */
+  pinAutoFitKey?: string;
+  /** true면 자동 맞춤을 하지 않는다(정보 카드·길찾기 중 등). */
+  isPinAutoFitPaused?: boolean;
+  /** 자동 맞춤 직전에 호출해 true면 이번 맞춤을 건너뛴다(필터 해제 직후 보던 화면 유지 등). */
+  shouldSkipPinAutoFit?: () => boolean;
   onFocusUserLocation?: () => void;
   onSelectedStoreCardClose?: () => void;
   onSearchFromMapPoint?: () => void;
   onSelectStore: (storeId: string) => void;
+  /** 길찾기: 출발-경로-도착이 보이도록 지도 범위를 맞추고(이동 완료) 경로를 그리기 시작할 때, 그 경로 key */
+  onRouteMapReady?: (routeKey: string) => void;
 };
 
 export const StoreMapPreview = ({
@@ -547,6 +726,7 @@ export const StoreMapPreview = ({
   isRouteCardDocked = false,
   isSearchFromMapPointLoading = false,
   onSelectStore,
+  onRouteMapReady,
   selectedStore,
   selectedStoreCard,
   selectedStoreCardLeftInset = 0,
@@ -562,9 +742,18 @@ export const StoreMapPreview = ({
   onCenterChange,
   onViewportChange,
   markerLabelById,
+  otherStores = [],
+  otherStoreCount = 0,
+  isOtherStoresVisible = false,
+  onToggleOtherStores,
   getRouteObstacleRect,
   onRouteObstructed,
   fitTarget,
+  markerEnterKey = "",
+  getPinFitPadding,
+  pinAutoFitKey = "",
+  isPinAutoFitPaused = false,
+  shouldSkipPinAutoFit,
   onSelectedStoreCardClose,
   onSearchFromMapPoint,
 }: StoreMapPreviewProps) => {
@@ -572,9 +761,32 @@ export const StoreMapPreview = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<KakaoMap | null>(null);
   const overlayRefs = useRef<MapOverlayHandle[]>([]);
+  // 나머지 매장(반투명 원) 오버레이. 핀 오버레이와 따로 관리해 핀을 다시 그리지 않고 켜고 끌 수 있게 한다.
+  const otherStoreOverlayRefs = useRef<MapOverlayHandle[]>([]);
+  // 핀 등장 애니메이션을 마지막으로 재생한 key(같은 key로 다시 그릴 때는 재생하지 않음)
+  const animatedMarkerEnterKeyRef = useRef("");
+  const fitZoomTimeoutRef = useRef<number | undefined>(undefined);
+  const [controlTooltip, setControlTooltip] = useState<RailTooltipProps | null>(
+    null,
+  );
+  const otherStoresRef = useRef(otherStores);
+  const storesRef = useRef(stores);
+  const getPinFitPaddingRef = useRef(getPinFitPadding);
+  const isPinAutoFitPausedRef = useRef(isPinAutoFitPaused);
+  const shouldSkipPinAutoFitRef = useRef(shouldSkipPinAutoFit);
+  const routeLeftInsetRef = useRef(routeLeftInset);
+  const onSelectStoreRef = useRef(onSelectStore);
   const routeOverlayRefs = useRef<KakaoCustomOverlay[]>([]);
   const routeLineRefs = useRef<KakaoPolyline[]>([]);
   const selectedStoreCardRef = useRef<HTMLDivElement | null>(null);
+  // 길찾기: 지도 범위를 맞추고 이동이 끝난 경로 key. 이 key가 되기 전에는 경로를 그리지 않는다.
+  const [routeFitReadyKey, setRouteFitReadyKey] = useState("");
+  // 길찾기: 경로를 다 그린 뒤 정보 카드를 다시 보여도 되는 경로 key
+  const [routeCardRevealKey, setRouteCardRevealKey] = useState("");
+  // 범위 맞춤 후 idle을 기다리는 경로 key와 대비용 타이머
+  const pendingRouteFitKeyRef = useRef("");
+  const routeFitFallbackTimeoutRef = useRef<number | undefined>(undefined);
+  const onRouteMapReadyRef = useRef(onRouteMapReady);
   const [routeDrawState, setRouteDrawState] = useState({
     progress: 1,
     routeKey: "",
@@ -733,7 +945,93 @@ export const StoreMapPreview = ({
   };
 
   useEffect(() => {
+    onRouteMapReadyRef.current = onRouteMapReady;
+  });
+
+  /** 지도 범위 맞춤(이동)이 끝났다: 경로 그리기를 시작하고 부모(탐색 중 모달)에 알린다. */
+  const markRouteFitReady = (routeKey: string) => {
+    if (!routeKey || pendingRouteFitKeyRef.current !== routeKey) {
+      return;
+    }
+
+    pendingRouteFitKeyRef.current = "";
+    window.clearTimeout(routeFitFallbackTimeoutRef.current);
+    setRouteFitReadyKey(routeKey);
+    onRouteMapReadyRef.current?.(routeKey);
+  };
+  const markRouteFitReadyRef = useRef(markRouteFitReady);
+
+  useEffect(() => {
+    markRouteFitReadyRef.current = markRouteFitReady;
+  });
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(routeFitFallbackTimeoutRef.current);
+    },
+    [],
+  );
+
+  // 길찾기가 끝나거나(경로 없음) 다른 경로를 불러오는 중이면 상태를 비워,
+  // 같은 경로를 다시 보여줄 때도 범위 맞춤 → 그리기 → 카드 순서를 처음부터 밟게 한다.
+  useEffect(() => {
+    if (routePreviewKey) {
+      return;
+    }
+
+    fittedRouteKeyRef.current = "";
+    pendingRouteFitKeyRef.current = "";
+    window.clearTimeout(routeFitFallbackTimeoutRef.current);
+  }, [routePreviewKey]);
+
+  // (상태 초기화는 렌더 중 이전 key와 비교해 처리한다. effect 안 setState는 연쇄 렌더를 만든다)
+  const [lastRoutePreviewKey, setLastRoutePreviewKey] =
+    useState(routePreviewKey);
+
+  if (lastRoutePreviewKey !== routePreviewKey) {
+    setLastRoutePreviewKey(routePreviewKey);
+
     if (!routePreviewKey) {
+      setRouteFitReadyKey("");
+      setRouteCardRevealKey("");
+    }
+  }
+
+  // 지도 SDK가 없으면(대체 화면) 맞출 지도가 없으므로 바로 준비 완료로 본다.
+  useEffect(() => {
+    if (!isKakaoMapReady && routePreviewKey) {
+      pendingRouteFitKeyRef.current = routePreviewKey;
+      markRouteFitReadyRef.current(routePreviewKey);
+    }
+  }, [isKakaoMapReady, routePreviewKey]);
+
+  // 경로를 다 그리면 잠깐 뒤 정보 카드를 자연스럽게 다시 띄운다.
+  const isRouteDrawComplete =
+    Boolean(routePreviewKey) &&
+    routeDrawState.routeKey === routePreviewKey &&
+    routeDrawState.progress >= 1;
+
+  useEffect(() => {
+    if (!isRouteDrawComplete) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setRouteCardRevealKey(routePreviewKey);
+    }, ROUTE_CARD_REVEAL_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isRouteDrawComplete, routePreviewKey]);
+
+  // 길찾기 중 경로를 그리기 전·그리는 동안에는 정보 카드를 접어 둔다.
+  const isRouteCardHeld =
+    Boolean(routePreviewKey) && routeCardRevealKey !== routePreviewKey;
+
+  useEffect(() => {
+    // 지도 공간이 확보되기 전에는 경로를 그리지 않는다.
+    if (!routePreviewKey || routeFitReadyKey !== routePreviewKey) {
       return;
     }
 
@@ -759,7 +1057,7 @@ export const StoreMapPreview = ({
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [routePreviewKey]);
+  }, [routePreviewKey, routeFitReadyKey]);
 
   useEffect(() => {
     if (!isKakaoMapReady || !mapContainerRef.current || !window.kakao?.maps) {
@@ -819,6 +1117,15 @@ export const StoreMapPreview = ({
         padding.left,
       );
       fittedRouteKeyRef.current = routePreview.routeKey;
+
+      // 범위 맞춤이 끝나면(idle) 경로를 그리기 시작한다. idle이 오지 않으면 잠시 뒤 시작한다.
+      const fittedRouteKey = routePreview.routeKey;
+
+      pendingRouteFitKeyRef.current = fittedRouteKey;
+      window.clearTimeout(routeFitFallbackTimeoutRef.current);
+      routeFitFallbackTimeoutRef.current = window.setTimeout(() => {
+        markRouteFitReadyRef.current(fittedRouteKey);
+      }, ROUTE_FIT_READY_FALLBACK_MS);
     } else if (isNewMap || shouldRecenterByFocusPoint) {
       const recenterPoint =
         shouldRecenterByFocusPoint && focusPoint ? focusPoint : null;
@@ -999,6 +1306,11 @@ export const StoreMapPreview = ({
         return;
       }
 
+      // 길찾기 경로를 그리는 동안에는 카드 자리 확보를 위해 지도를 옮기지 않는다(경로 범위 맞춤 유지).
+      if (isRouteCardHeld) {
+        return;
+      }
+
       if (ensuredCardStoreIdRef.current === selectedStore.id) {
         return;
       }
@@ -1160,6 +1472,11 @@ export const StoreMapPreview = ({
       }
       revealPendingCard();
 
+      // 길찾기 범위 맞춤 이동이 끝났으면 경로 그리기를 시작한다.
+      if (pendingRouteFitKeyRef.current) {
+        markRouteFitReadyRef.current(pendingRouteFitKeyRef.current);
+      }
+
       // 확대/축소 버튼으로 카드가 화면 위쪽·가장자리 밖으로 나가게 되면, 지도를 살짝 밀어 카드를 핀 위에 온전히 띄운다.
       // 사용자가 직접 끌거나 휠로 움직인 경우에는 밀지 않는다(길찾기 중 지도를 자유롭게 옮겨 볼 수 있어야 하므로).
       // (핀 자체가 화면 밖으로 나간 경우도 밀지 않는다)
@@ -1211,6 +1528,12 @@ export const StoreMapPreview = ({
     });
 
     const isStoreCardShown = Boolean(selectedStore && selectedStoreCard);
+    // 페이지가 바뀐 뒤 처음 그릴 때만 핀이 서서히 나타나게 한다(매장 선택 등으로 다시 그릴 때는 그대로).
+    const shouldAnimateMarkerEnter =
+      Boolean(markerEnterKey) &&
+      animatedMarkerEnterKeyRef.current !== markerEnterKey;
+
+    animatedMarkerEnterKeyRef.current = markerEnterKey;
 
     overlayRefs.current = Array.from(storeGroups.values()).map((group) => {
       const [{ store: firstStore }] = group;
@@ -1224,6 +1547,10 @@ export const StoreMapPreview = ({
       const position = new kakaoMaps.LatLng(firstStore.lat, firstStore.lng);
       const container = document.createElement("div");
       container.className = "relative";
+
+      if (shouldAnimateMarkerEnter) {
+        playMarkerEnterAnimation(container);
+      }
       const marker = document.createElement("button");
       marker.type = "button";
       marker.setAttribute(
@@ -1440,12 +1767,14 @@ export const StoreMapPreview = ({
     focusPoint,
     isKakaoMapReady,
     isRouteCardDocked,
+    isRouteCardHeld,
     revealedCardStoreId,
     onSelectStore,
     onMapPointSelect,
     onCenterChange,
     onViewportChange,
     markerLabelById,
+    markerEnterKey,
     getRouteObstacleRect,
     onRouteObstructed,
     onSelectedStoreCardClose,
@@ -1461,6 +1790,90 @@ export const StoreMapPreview = ({
     stores,
     userLocation,
   ]);
+
+  // 배열이 렌더마다 새로 만들어져도 구성(매장·좌표)이 같으면 원을 다시 그리지 않도록 key로 비교한다.
+  const otherStoresKey = otherStores
+    .map((store) => `${store.id}:${store.lat}:${store.lng}`)
+    .join(",");
+
+  useEffect(() => {
+    otherStoresRef.current = otherStores;
+    onSelectStoreRef.current = onSelectStore;
+    storesRef.current = stores;
+    getPinFitPaddingRef.current = getPinFitPadding;
+    isPinAutoFitPausedRef.current = isPinAutoFitPaused;
+    shouldSkipPinAutoFitRef.current = shouldSkipPinAutoFit;
+    routeLeftInsetRef.current = routeLeftInset;
+  });
+
+  /** 핀(현재 페이지) 외 나머지 매장을 반투명 원으로 그린다. 페이지를 옮기면 그 페이지 매장은 핀으로 바뀐다. */
+  useEffect(() => {
+    const map = mapRef.current;
+
+    if (!isKakaoMapReady || !map || !window.kakao?.maps) {
+      return;
+    }
+
+    const kakaoMaps = window.kakao.maps;
+
+    otherStoreOverlayRefs.current = otherStoresRef.current.map((store) => {
+      const dot = document.createElement("button");
+      const tooltip = document.createElement("span");
+
+      dot.type = "button";
+      dot.setAttribute("aria-label", `${store.name} 선택`);
+      // 지도 위에서도 잘 보이도록 브랜드 진한 색(brand-hover) + 흰 테두리 + 그림자로 표시한다.
+      dot.className =
+        "group bg-brand-hover relative block h-4 w-4 rounded-full border-2 border-white p-0 opacity-80 shadow-[0_2px_6px_rgba(15,23,42,0.35)] transition duration-150 hover:scale-125 hover:opacity-100";
+
+      playMarkerEnterAnimation(dot);
+      tooltip.className =
+        "pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 z-[2] max-w-[180px] -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-sm bg-slate-950/90 px-2.5 py-1.5 text-xs leading-tight font-extrabold text-white opacity-0 shadow-lg transition group-hover:translate-y-0 group-hover:opacity-100";
+      tooltip.textContent = store.name;
+      dot.append(tooltip);
+
+      const handleDotClick = (event: MouseEvent) => {
+        event.stopPropagation();
+        lastMarkerClickAtRef.current = Date.now();
+        setRevealedCardStoreId("");
+        onSelectStoreRef.current(store.id);
+      };
+
+      dot.addEventListener("click", handleDotClick);
+
+      const overlay = new kakaoMaps.CustomOverlay({
+        content: dot,
+        map,
+        position: new kakaoMaps.LatLng(store.lat, store.lng),
+        xAnchor: 0.5,
+        yAnchor: 0.5,
+        // 핀(10~)보다 아래에 깔아 핀을 가리지 않게 한다.
+        zIndex: 5,
+      });
+      const handleDotEnter = () => overlay.setZIndex?.(40);
+      const handleDotLeave = () => overlay.setZIndex?.(5);
+
+      dot.addEventListener("mouseenter", handleDotEnter);
+      dot.addEventListener("mouseleave", handleDotLeave);
+
+      return {
+        cleanup: () => {
+          dot.removeEventListener("click", handleDotClick);
+          dot.removeEventListener("mouseenter", handleDotEnter);
+          dot.removeEventListener("mouseleave", handleDotLeave);
+        },
+        overlay,
+      };
+    });
+
+    return () => {
+      otherStoreOverlayRefs.current.forEach(({ cleanup, overlay }) => {
+        cleanup?.();
+        overlay.setMap(null);
+      });
+      otherStoreOverlayRefs.current = [];
+    };
+  }, [isKakaoMapReady, otherStoresKey]);
 
   /**
    * 경로 그리기 애니메이션이 끝났을 때 경로가 화면(여백 제외 영역)에 온전히 보이지 않으면 다시 초점을 맞춘다.
@@ -1576,6 +1989,13 @@ export const StoreMapPreview = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRouteDrawn, drawnRouteKey]);
 
+  useEffect(
+    () => () => {
+      window.clearTimeout(fitZoomTimeoutRef.current);
+    },
+    [],
+  );
+
   useEffect(() => {
     const map = mapRef.current;
     const kakaoMaps = window.kakao?.maps;
@@ -1591,6 +2011,32 @@ export const StoreMapPreview = ({
     }
 
     fittedTargetKeyRef.current = fitTarget.key;
+    window.clearTimeout(fitZoomTimeoutRef.current);
+
+    const containerRect = mapContainerRef.current?.getBoundingClientRect();
+    const container = {
+      height: containerRect?.height ?? 0,
+      width: containerRect?.width ?? 0,
+    };
+    // 목록 펼침 여부에 따라 가리는 영역이 달라지므로 맞추는 순간의 여백을 쓴다.
+    const padding =
+      getPinFitPaddingRef.current?.(container) ??
+      getDefaultPinFitPadding(container.width, routeLeftInset);
+
+    if (
+      fitTarget.smooth &&
+      fitPointsSmoothlyOnMap(
+        map,
+        fitTarget.points,
+        container,
+        padding,
+        (timeoutId) => {
+          fitZoomTimeoutRef.current = timeoutId;
+        },
+      )
+    ) {
+      return;
+    }
 
     if (fitTarget.points.length === 1) {
       const [point] = fitTarget.points;
@@ -1601,17 +2047,71 @@ export const StoreMapPreview = ({
     }
 
     const bounds = new kakaoMaps.LatLngBounds();
-    const containerWidth =
-      mapContainerRef.current?.getBoundingClientRect().width ?? 0;
-    const leftPadding =
-      containerWidth >= 768 ? Math.max(48, routeLeftInset + 32) : 48;
 
     fitTarget.points.forEach((point) => {
       bounds.extend(new kakaoMaps.LatLng(point.lat, point.lng));
     });
-    // 위: 검색창·핀 높이, 오른쪽: 지도 컨트롤, 왼쪽: 매장 목록 패널 폭만큼 여유를 둔다.
-    map.setBounds(bounds, 120, 96, 72, leftPadding);
+    // 검색창·매장 목록(펼친 경우)·지도 컨트롤에 가리지 않도록 여백을 둔다.
+    map.setBounds(
+      bounds,
+      padding.top,
+      padding.right,
+      padding.bottom,
+      padding.left,
+    );
   }, [fitTarget, isKakaoMapReady, routeLeftInset]);
+
+  /**
+   * 새 핀 묶음이 꽂히거나 매장 목록을 펼치고 접을 때:
+   * 가장 바깥 핀까지 검색창·목록 패널에 가리지 않는지 보고, 가리면 지도를 부드럽게 옮긴다(필요하면 축소).
+   * 이미 다 보이면 지도를 건드리지 않는다.
+   */
+  useEffect(() => {
+    if (!pinAutoFitKey || !isKakaoMapReady) {
+      return;
+    }
+
+    // 목록 패널이 그려져 크기를 잴 수 있고, 핀이 자리 잡은 뒤에 확인한다.
+    const timeoutId = window.setTimeout(() => {
+      const map = mapRef.current;
+      const containerRect = mapContainerRef.current?.getBoundingClientRect();
+      const points = storesRef.current.map((store) => ({
+        lat: store.lat,
+        lng: store.lng,
+      }));
+
+      if (
+        !map ||
+        !containerRect ||
+        points.length === 0 ||
+        isPinAutoFitPausedRef.current ||
+        shouldSkipPinAutoFitRef.current?.()
+      ) {
+        return;
+      }
+
+      const container = {
+        height: containerRect.height,
+        width: containerRect.width,
+      };
+      const padding =
+        getPinFitPaddingRef.current?.(container) ??
+        getDefaultPinFitPadding(container.width, routeLeftInsetRef.current);
+
+      if (arePointsInFreeArea(map, points, container, padding)) {
+        return;
+      }
+
+      window.clearTimeout(fitZoomTimeoutRef.current);
+      fitPointsSmoothlyOnMap(map, points, container, padding, (zoomId) => {
+        fitZoomTimeoutRef.current = zoomId;
+      });
+    }, PIN_AUTO_FIT_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isKakaoMapReady, pinAutoFitKey]);
 
   useEffect(() => {
     if (!isKakaoMapReady || !window.kakao?.maps || !mapRef.current) {
@@ -1626,7 +2126,8 @@ export const StoreMapPreview = ({
     routeOverlayRefs.current.forEach((overlay) => overlay.setMap(null));
     routeOverlayRefs.current = [];
 
-    if (!routePreview) {
+    // 지도 공간이 확보되기 전에는 경로(선·출발/도착 표시)를 그리지 않는다.
+    if (!routePreview || routeFitReadyKey !== routePreview.routeKey) {
       return;
     }
 
@@ -1807,7 +2308,26 @@ export const StoreMapPreview = ({
       routeOverlayRefs.current.forEach((overlay) => overlay.setMap(null));
       routeOverlayRefs.current = [];
     };
-  }, [isKakaoMapReady, routeDrawProgress, routePreview]);
+  }, [isKakaoMapReady, routeDrawProgress, routeFitReadyKey, routePreview]);
+
+  const otherStoresToggleLabel = isOtherStoresVisible
+    ? "나머지 매장 위치 숨기기"
+    : `나머지 매장 ${otherStoreCount}곳 위치 보기`;
+  /** 지도 컨트롤 툴팁: 공용 RailTooltip을 버튼 왼쪽(화면 오른쪽 끝이라)에 띄운다. */
+  const showControlTooltip = (target: HTMLElement) => {
+    const rect = target.getBoundingClientRect();
+
+    setControlTooltip({
+      label: otherStoresToggleLabel,
+      placement: "left",
+      x: rect.left - 8,
+      y: rect.top + rect.height / 2,
+    });
+  };
+  // 켜고 끌 때 툴팁 문구도 바로 바꾼다.
+  const visibleControlTooltip = controlTooltip
+    ? { ...controlTooltip, label: otherStoresToggleLabel }
+    : null;
 
   return (
     <section
@@ -1872,40 +2392,76 @@ export const StoreMapPreview = ({
             );
           })}
 
-        <div className="pointer-events-auto absolute right-4 bottom-6 z-30 flex flex-col gap-1 rounded-sm border border-gray-200 bg-white p-1 shadow-md shadow-gray-950/10 md:right-6 md:bottom-8 dark:border-white/10 dark:bg-zinc-950 dark:shadow-black/30">
-          {onFocusUserLocation && (
-            <>
+        <div className="pointer-events-none absolute right-4 bottom-6 z-30 flex flex-col items-end gap-1 md:right-6 md:bottom-8">
+          {/* 나머지 매장 보기: 내 위치 버튼 묶음 바로 위(4px 간격) */}
+          {onToggleOtherStores && otherStoreCount > 0 && (
+            <div className="pointer-events-auto rounded-sm border border-gray-200 bg-white p-1 shadow-md shadow-gray-950/10 dark:border-white/10 dark:bg-zinc-950 dark:shadow-black/30">
               <button
                 type="button"
-                onClick={onFocusUserLocation}
-                disabled={isUserLocationLoading}
-                className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none disabled:cursor-wait disabled:opacity-60 dark:text-gray-200"
-                aria-label="내 위치로 이동"
-              >
-                {userLocation ? (
-                  <LocateFixed size={18} className="text-brand" />
-                ) : (
-                  <LocateOff size={18} />
+                onClick={onToggleOtherStores}
+                aria-pressed={isOtherStoresVisible}
+                aria-label={otherStoresToggleLabel}
+                onMouseEnter={(event) =>
+                  showControlTooltip(event.currentTarget)
+                }
+                onMouseLeave={() => setControlTooltip(null)}
+                onFocus={(event) => showControlTooltip(event.currentTarget)}
+                onBlur={() => setControlTooltip(null)}
+                className={cn(
+                  "relative flex h-10 w-10 items-center justify-center rounded-sm transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none",
+                  isOtherStoresVisible
+                    ? "bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand"
+                    : "hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand text-gray-700 dark:text-gray-200",
                 )}
+              >
+                <Layers size={18} />
+                <span className="bg-brand absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] leading-none font-black text-white">
+                  {otherStoreCount}
+                </span>
               </button>
-            </>
+              {/* 다른 화면 툴팁과 같은 공용 RailTooltip. 지도 패널 안 transform·overflow에 갇히지 않게 body로 띄운다. */}
+              {visibleControlTooltip &&
+                createPortal(
+                  <RailTooltip {...visibleControlTooltip} />,
+                  document.body,
+                )}
+            </div>
           )}
-          <button
-            type="button"
-            onClick={() => adjustZoomLevel("in")}
-            className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none dark:text-gray-200"
-            aria-label="지도 확대"
-          >
-            <Plus size={18} />
-          </button>
-          <button
-            type="button"
-            onClick={() => adjustZoomLevel("out")}
-            className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none dark:text-gray-200"
-            aria-label="지도 축소"
-          >
-            <Minus size={18} />
-          </button>
+          <div className="pointer-events-auto flex flex-col gap-1 rounded-sm border border-gray-200 bg-white p-1 shadow-md shadow-gray-950/10 dark:border-white/10 dark:bg-zinc-950 dark:shadow-black/30">
+            {onFocusUserLocation && (
+              <>
+                <button
+                  type="button"
+                  onClick={onFocusUserLocation}
+                  disabled={isUserLocationLoading}
+                  className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none disabled:cursor-wait disabled:opacity-60 dark:text-gray-200"
+                  aria-label="내 위치로 이동"
+                >
+                  {userLocation ? (
+                    <LocateFixed size={18} className="text-brand" />
+                  ) : (
+                    <LocateOff size={18} />
+                  )}
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => adjustZoomLevel("in")}
+              className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none dark:text-gray-200"
+              aria-label="지도 확대"
+            >
+              <Plus size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={() => adjustZoomLevel("out")}
+              className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none dark:text-gray-200"
+              aria-label="지도 축소"
+            >
+              <Minus size={18} />
+            </button>
+          </div>
         </div>
 
         {/*
@@ -1920,11 +2476,14 @@ export const StoreMapPreview = ({
               ref={selectedStoreCardRef}
               className={cn(
                 // 카드는 항상 핀 바로 위(핀 끝에서 64px 위)에 뜬다.
-                "pointer-events-auto absolute z-40 -translate-x-1/2 -translate-y-[calc(100%+64px)] transition-opacity duration-200",
+                "pointer-events-auto absolute z-40 origin-bottom -translate-x-1/2 -translate-y-[calc(100%+64px)] transition-[opacity,scale] duration-300 ease-out",
                 // 매장을 새로 고르면 초점 이동으로 카드 자리를 확보한 뒤에 나타난다(그 전엔 보이지 않게 크기만 잰다).
-                revealedCardStoreId !== selectedStore.id
-                  ? "pointer-events-none opacity-0"
-                  : isMapAnimating && "opacity-40",
+                // 길찾기 경로를 그리는 동안에는 카드를 접어 두고, 다 그린 뒤 펼친다.
+                isRouteCardHeld
+                  ? "pointer-events-none scale-95 opacity-0"
+                  : revealedCardStoreId !== selectedStore.id
+                    ? "pointer-events-none opacity-0"
+                    : isMapAnimating && "opacity-40",
                 isRouteCardDocked
                   ? // 길찾기 카드: 도착 매장 핀 바로 위에 붙이고, 브랜드 테두리로 눈에 띄게 한다.
                     "ring-brand w-[min(300px,calc(100%-24px))] rounded-sm shadow-[0_12px_32px_rgba(253,182,29,0.28)] ring-2"

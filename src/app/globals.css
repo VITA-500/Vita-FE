@@ -72,6 +72,19 @@
   --text-chat-title--line-height: 36px;
   --text-chat-message: 14px;
   --text-chat-message--line-height: 24px;
+  /* 매장 목록 페이지 전환 시 새 페이지 항목이 부드럽게 나타나는 애니메이션 */
+  --animate-store-page-in: store-page-in 280ms ease-out both;
+
+  @keyframes store-page-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
 body {
