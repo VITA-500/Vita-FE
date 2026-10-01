@@ -55,12 +55,22 @@ declare global {
 
   interface KakaoLatLngBounds {
     extend: (latLng: KakaoLatLng) => void;
+    getSouthWest?: () => KakaoLatLng;
+    getNorthEast?: () => KakaoLatLng;
   }
 
   interface KakaoMap {
     getLevel: () => number;
     setCenter: (latLng: KakaoLatLng) => void;
-    setLevel: (level: number) => void;
+    setLevel: (
+      level: number,
+      options?: {
+        animate?: boolean | { duration: number };
+        anchor?: KakaoLatLng;
+      },
+    ) => void;
+    panTo?: (latLng: KakaoLatLng) => void;
+    getBounds?: () => KakaoLatLngBounds;
     setBounds: (
       bounds: KakaoLatLngBounds,
       paddingTop?: number,
