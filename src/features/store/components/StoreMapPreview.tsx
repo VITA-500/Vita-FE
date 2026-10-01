@@ -47,6 +47,10 @@ const STORE_CARD_ESTIMATED_HEIGHT = 320;
 const STORE_CARD_MARKER_GAP = 64;
 /** 초점 이동 완료(idle) 신호가 오지 않을 때 카드를 보여주기까지 기다리는 최대 시간(ms) */
 const CARD_REVEAL_FALLBACK_MS = 700;
+/** 길찾기: 지도 범위 맞춤 후 idle 신호가 오지 않을 때 경로 그리기를 시작하기까지 기다리는 최대 시간(ms) */
+const ROUTE_FIT_READY_FALLBACK_MS = 800;
+/** 길찾기: 경로를 다 그린 뒤 정보 카드를 띄우기까지의 텀(ms) */
+const ROUTE_CARD_REVEAL_DELAY_MS = 220;
 /** 확대/축소 버튼 애니메이션 시간(ms) */
 const ZOOM_ANIMATION_MS = 320;
 /** 페이지 전환 등으로 새로 나타나는 핀·원이 서서히 보이는 시간(ms) */
@@ -569,6 +573,8 @@ type StoreMapPreviewProps = {
   onSelectedStoreCardClose?: () => void;
   onSearchFromMapPoint?: () => void;
   onSelectStore: (storeId: string) => void;
+  /** 길찾기: 출발-경로-도착이 보이도록 지도 범위를 맞추고(이동 완료) 경로를 그리기 시작할 때, 그 경로 key */
+  onRouteMapReady?: (routeKey: string) => void;
 };
 
 export const StoreMapPreview = ({
@@ -578,6 +584,7 @@ export const StoreMapPreview = ({
   isRouteCardDocked = false,
   isSearchFromMapPointLoading = false,
   onSelectStore,
+  onRouteMapReady,
   selectedStore,
   selectedStoreCard,
   selectedStoreCardLeftInset = 0,
@@ -621,6 +628,14 @@ export const StoreMapPreview = ({
   const routeOverlayRefs = useRef<KakaoCustomOverlay[]>([]);
   const routeLineRefs = useRef<KakaoPolyline[]>([]);
   const selectedStoreCardRef = useRef<HTMLDivElement | null>(null);
+  // 길찾기: 지도 범위를 맞추고 이동이 끝난 경로 key. 이 key가 되기 전에는 경로를 그리지 않는다.
+  const [routeFitReadyKey, setRouteFitReadyKey] = useState("");
+  // 길찾기: 경로를 다 그린 뒤 정보 카드를 다시 보여도 되는 경로 key
+  const [routeCardRevealKey, setRouteCardRevealKey] = useState("");
+  // 범위 맞춤 후 idle을 기다리는 경로 key와 대비용 타이머
+  const pendingRouteFitKeyRef = useRef("");
+  const routeFitFallbackTimeoutRef = useRef<number | undefined>(undefined);
+  const onRouteMapReadyRef = useRef(onRouteMapReady);
   const [routeDrawState, setRouteDrawState] = useState({
     progress: 1,
     routeKey: "",
@@ -779,7 +794,93 @@ export const StoreMapPreview = ({
   };
 
   useEffect(() => {
+    onRouteMapReadyRef.current = onRouteMapReady;
+  });
+
+  /** 지도 범위 맞춤(이동)이 끝났다: 경로 그리기를 시작하고 부모(탐색 중 모달)에 알린다. */
+  const markRouteFitReady = (routeKey: string) => {
+    if (!routeKey || pendingRouteFitKeyRef.current !== routeKey) {
+      return;
+    }
+
+    pendingRouteFitKeyRef.current = "";
+    window.clearTimeout(routeFitFallbackTimeoutRef.current);
+    setRouteFitReadyKey(routeKey);
+    onRouteMapReadyRef.current?.(routeKey);
+  };
+  const markRouteFitReadyRef = useRef(markRouteFitReady);
+
+  useEffect(() => {
+    markRouteFitReadyRef.current = markRouteFitReady;
+  });
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(routeFitFallbackTimeoutRef.current);
+    },
+    [],
+  );
+
+  // 길찾기가 끝나거나(경로 없음) 다른 경로를 불러오는 중이면 상태를 비워,
+  // 같은 경로를 다시 보여줄 때도 범위 맞춤 → 그리기 → 카드 순서를 처음부터 밟게 한다.
+  useEffect(() => {
+    if (routePreviewKey) {
+      return;
+    }
+
+    fittedRouteKeyRef.current = "";
+    pendingRouteFitKeyRef.current = "";
+    window.clearTimeout(routeFitFallbackTimeoutRef.current);
+  }, [routePreviewKey]);
+
+  // (상태 초기화는 렌더 중 이전 key와 비교해 처리한다. effect 안 setState는 연쇄 렌더를 만든다)
+  const [lastRoutePreviewKey, setLastRoutePreviewKey] =
+    useState(routePreviewKey);
+
+  if (lastRoutePreviewKey !== routePreviewKey) {
+    setLastRoutePreviewKey(routePreviewKey);
+
     if (!routePreviewKey) {
+      setRouteFitReadyKey("");
+      setRouteCardRevealKey("");
+    }
+  }
+
+  // 지도 SDK가 없으면(대체 화면) 맞출 지도가 없으므로 바로 준비 완료로 본다.
+  useEffect(() => {
+    if (!isKakaoMapReady && routePreviewKey) {
+      pendingRouteFitKeyRef.current = routePreviewKey;
+      markRouteFitReadyRef.current(routePreviewKey);
+    }
+  }, [isKakaoMapReady, routePreviewKey]);
+
+  // 경로를 다 그리면 잠깐 뒤 정보 카드를 자연스럽게 다시 띄운다.
+  const isRouteDrawComplete =
+    Boolean(routePreviewKey) &&
+    routeDrawState.routeKey === routePreviewKey &&
+    routeDrawState.progress >= 1;
+
+  useEffect(() => {
+    if (!isRouteDrawComplete) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setRouteCardRevealKey(routePreviewKey);
+    }, ROUTE_CARD_REVEAL_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isRouteDrawComplete, routePreviewKey]);
+
+  // 길찾기 중 경로를 그리기 전·그리는 동안에는 정보 카드를 접어 둔다.
+  const isRouteCardHeld =
+    Boolean(routePreviewKey) && routeCardRevealKey !== routePreviewKey;
+
+  useEffect(() => {
+    // 지도 공간이 확보되기 전에는 경로를 그리지 않는다.
+    if (!routePreviewKey || routeFitReadyKey !== routePreviewKey) {
       return;
     }
 
@@ -805,7 +906,7 @@ export const StoreMapPreview = ({
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [routePreviewKey]);
+  }, [routePreviewKey, routeFitReadyKey]);
 
   useEffect(() => {
     if (!isKakaoMapReady || !mapContainerRef.current || !window.kakao?.maps) {
@@ -865,6 +966,15 @@ export const StoreMapPreview = ({
         padding.left,
       );
       fittedRouteKeyRef.current = routePreview.routeKey;
+
+      // 범위 맞춤이 끝나면(idle) 경로를 그리기 시작한다. idle이 오지 않으면 잠시 뒤 시작한다.
+      const fittedRouteKey = routePreview.routeKey;
+
+      pendingRouteFitKeyRef.current = fittedRouteKey;
+      window.clearTimeout(routeFitFallbackTimeoutRef.current);
+      routeFitFallbackTimeoutRef.current = window.setTimeout(() => {
+        markRouteFitReadyRef.current(fittedRouteKey);
+      }, ROUTE_FIT_READY_FALLBACK_MS);
     } else if (isNewMap || shouldRecenterByFocusPoint) {
       const recenterPoint =
         shouldRecenterByFocusPoint && focusPoint ? focusPoint : null;
@@ -1045,6 +1155,11 @@ export const StoreMapPreview = ({
         return;
       }
 
+      // 길찾기 경로를 그리는 동안에는 카드 자리 확보를 위해 지도를 옮기지 않는다(경로 범위 맞춤 유지).
+      if (isRouteCardHeld) {
+        return;
+      }
+
       if (ensuredCardStoreIdRef.current === selectedStore.id) {
         return;
       }
@@ -1205,6 +1320,11 @@ export const StoreMapPreview = ({
         });
       }
       revealPendingCard();
+
+      // 길찾기 범위 맞춤 이동이 끝났으면 경로 그리기를 시작한다.
+      if (pendingRouteFitKeyRef.current) {
+        markRouteFitReadyRef.current(pendingRouteFitKeyRef.current);
+      }
 
       // 확대/축소 버튼으로 카드가 화면 위쪽·가장자리 밖으로 나가게 되면, 지도를 살짝 밀어 카드를 핀 위에 온전히 띄운다.
       // 사용자가 직접 끌거나 휠로 움직인 경우에는 밀지 않는다(길찾기 중 지도를 자유롭게 옮겨 볼 수 있어야 하므로).
@@ -1496,6 +1616,7 @@ export const StoreMapPreview = ({
     focusPoint,
     isKakaoMapReady,
     isRouteCardDocked,
+    isRouteCardHeld,
     revealedCardStoreId,
     onSelectStore,
     onMapPointSelect,
@@ -1863,7 +1984,8 @@ export const StoreMapPreview = ({
     routeOverlayRefs.current.forEach((overlay) => overlay.setMap(null));
     routeOverlayRefs.current = [];
 
-    if (!routePreview) {
+    // 지도 공간이 확보되기 전에는 경로(선·출발/도착 표시)를 그리지 않는다.
+    if (!routePreview || routeFitReadyKey !== routePreview.routeKey) {
       return;
     }
 
@@ -2044,7 +2166,7 @@ export const StoreMapPreview = ({
       routeOverlayRefs.current.forEach((overlay) => overlay.setMap(null));
       routeOverlayRefs.current = [];
     };
-  }, [isKakaoMapReady, routeDrawProgress, routePreview]);
+  }, [isKakaoMapReady, routeDrawProgress, routeFitReadyKey, routePreview]);
 
   const otherStoresToggleLabel = isOtherStoresVisible
     ? "나머지 매장 위치 숨기기"
@@ -2212,11 +2334,14 @@ export const StoreMapPreview = ({
               ref={selectedStoreCardRef}
               className={cn(
                 // 카드는 항상 핀 바로 위(핀 끝에서 64px 위)에 뜬다.
-                "pointer-events-auto absolute z-40 -translate-x-1/2 -translate-y-[calc(100%+64px)] transition-opacity duration-200",
+                "pointer-events-auto absolute z-40 origin-bottom -translate-x-1/2 -translate-y-[calc(100%+64px)] transition-[opacity,scale] duration-300 ease-out",
                 // 매장을 새로 고르면 초점 이동으로 카드 자리를 확보한 뒤에 나타난다(그 전엔 보이지 않게 크기만 잰다).
-                revealedCardStoreId !== selectedStore.id
-                  ? "pointer-events-none opacity-0"
-                  : isMapAnimating && "opacity-40",
+                // 길찾기 경로를 그리는 동안에는 카드를 접어 두고, 다 그린 뒤 펼친다.
+                isRouteCardHeld
+                  ? "pointer-events-none scale-95 opacity-0"
+                  : revealedCardStoreId !== selectedStore.id
+                    ? "pointer-events-none opacity-0"
+                    : isMapAnimating && "opacity-40",
                 isRouteCardDocked
                   ? // 길찾기 카드: 도착 매장 핀 바로 위에 붙이고, 브랜드 테두리로 눈에 띄게 한다.
                     "ring-brand w-[min(300px,calc(100%-24px))] rounded-sm shadow-[0_12px_32px_rgba(253,182,29,0.28)] ring-2"

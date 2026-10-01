@@ -1004,6 +1004,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     null,
   );
   const [isRouteLoading, setIsRouteLoading] = useState(false);
+  // 출발-경로-도착이 보이도록 지도 범위 맞춤이 끝난 경로 key(이 전까지는 탐색 중 모달을 유지)
+  const [routeMapReadyKey, setRouteMapReadyKey] = useState("");
   // 필터 뱃지 옵션: 지역을 옮길 때마다 순서·구성이 바뀌어 뱃지가 자리를 옮기지 않도록
   // 지금까지 불러온 모든 매장(검색 풀 포함)과 선택 중인 값을 합쳐 가나다순으로 고정한다.
   const consultServiceFilterOptions = useMemo(
@@ -1347,8 +1349,12 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       segments: walkingRoute?.segments,
     };
   })();
+  // 경로 응답을 받은 뒤에도 지도 범위를 맞추는 동안에는 탐색 중 모달을 유지한다.
+  const isRouteMapPreparing = Boolean(
+    routePreview && routeMapReadyKey !== routePreview.routeKey,
+  );
   const isRouteSearchOverlayVisible =
-    isRouteLoading &&
+    (isRouteLoading || isRouteMapPreparing) &&
     locationStatus !== "denied" &&
     locationStatus !== "error" &&
     locationStatus !== "unsupported";
@@ -1819,6 +1825,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   };
 
   const handleRouteStart = (store: StoreLocation) => {
+    setRouteMapReadyKey("");
     setRouteDestinationStoreId(store.id);
     setWalkingRoute(null);
     setRouteResultMessage(null);
@@ -1860,6 +1867,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     });
   };
   const changeRouteMode = (nextMode: StoreRouteMode) => {
+    setRouteMapReadyKey("");
     setRouteMode(nextMode);
     setWalkingRoute(null);
     setRouteResultMessage(null);
@@ -1929,6 +1937,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     setSoloStoreId("");
   };
   const resetRouteState = () => {
+    setRouteMapReadyKey("");
     setRouteDestinationStoreId("");
     setWalkingRoute(null);
     setRouteResultMessage(null);
@@ -2318,6 +2327,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         isFullBleed
         isSearchFromMapPointLoading={isMapSearchLoading}
         routePreview={routePreview}
+        onRouteMapReady={setRouteMapReadyKey}
         isRouteCardDocked={Boolean(
           routeDestinationStoreId &&
           routeDestinationStoreId === mapSelectedStore?.id,
@@ -2922,11 +2932,12 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
               className="border-brand mx-auto block size-8 animate-spin rounded-full border-4 border-t-transparent"
             />
             <p className="mt-4 text-sm font-extrabold text-gray-950 dark:text-white">
-              이동 경로 탐색 중
+              경로 탐색 중입니다
             </p>
             <p className="text-text-secondary mt-2 text-xs leading-5 font-semibold">
-              현재 위치에서 선택한 매장까지의 경로와 예상 시간을 계산하고
-              있어요.
+              {isRouteLoading
+                ? "현재 위치에서 선택한 매장까지의 경로와 예상 시간을 계산하고 있어요."
+                : "출발지부터 도착지까지 한눈에 보이도록 지도를 맞추고 있어요."}
             </p>
           </div>
         </div>
