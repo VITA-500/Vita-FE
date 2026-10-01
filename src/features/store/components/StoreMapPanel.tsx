@@ -961,6 +961,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const collapsedSearchRef = useRef<HTMLDivElement>(null);
   const hasFocusedInitialLocationRef = useRef(false);
   const lastNearbyLookupKeyRef = useRef("");
+  // 지도 영역 검색(searchVisibleArea) 요청 번호. 가장 최근 요청의 응답만 화면에 반영한다.
+  const areaSearchRequestIdRef = useRef(0);
   const shouldFocusUserLocationRef = useRef(false);
   // 마지막으로 매장이 1곳 이상 조회된 지역. "이 위치에서 검색" 결과가 없으면 이곳으로 지도를 되돌린다.
   const lastStoreAreaRef = useRef<MapSearchPoint>(defaultMapLocation);
@@ -1339,7 +1341,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       }, RESTORE_AREA_DELAY_MS);
     };
 
-    // 새 지역을 조회하면 이전 Enter 검색 결과 표시는 해제한다.
+    // 새 지역을 조회하면 이전 Enter 검색 결과 표시는 해제한다(진행 중인 영역 검색 응답도 무효화).
+    areaSearchRequestIdRef.current += 1;
     setSubmittedSearchStores(null);
 
     if (options?.showLoadingCard) {
@@ -1426,8 +1429,14 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   /**
    * 뱃지(서비스) 태그 검색을 시작하거나 갱신한다.
    * 입력창에 "#서비스"를 넣고, 지금 불러와 둔 매장 안에서 걸러 첫 페이지 핀에 지도를 맞춘다.
+   * 이미 태그 검색 결과가 있으면 서버를 다시 조회하지 않고 그 결과 안에서 뱃지 조건으로만 다시 거른다.
+   * (뱃지를 더할수록 결과가 줄기만 하도록. 다른 지역 조회는 "이 위치에서 검색" 버튼으로만 한다)
    */
-  const startTagSearch = (nextConsult: string[], nextProvided: string[]) => {
+  const startTagSearch = (
+    nextConsult: string[],
+    nextProvided: string[],
+    { forceFetch = false }: { forceFetch?: boolean } = {},
+  ) => {
     const tags = [...nextConsult, ...nextProvided];
 
     setSearchQuery(tags.map((tag) => `#${tag}`).join(" "));
@@ -1441,12 +1450,19 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
 
     resetRouteState();
     setHasSelectedStoreInfo(false);
-    setSearchPoint(null);
 
     // 모바일은 목록 패널이 화면을 크게 덮으므로 필터 선택만으로 목록을 펼치지 않는다(지도 핀으로 먼저 확인).
     if (window.innerWidth >= 768) {
       setIsStoreListCollapsed(false);
     }
+
+    // 이미 불러온 태그 검색 결과가 있으면 재조회 없이 렌더 시 뱃지 조건으로만 다시 거른다.
+    // 지도를 옮겨 둔 상태라면 "이 위치에서 검색" 버튼(searchPoint)은 그대로 남겨 둔다.
+    if (!forceFetch && isTagSearchQuery && submittedSearchStores) {
+      return;
+    }
+
+    setSearchPoint(null);
 
     // 카테고리(뱃지) 검색: 지금 보이는 지도 영역 기준으로 서버에서 다시 찾고,
     // 보이는 화면 중심에서 가까운 순으로 보여준다. (뱃지 조건은 렌더 시 적용)
@@ -1476,12 +1492,14 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     setSubmittedSearchStores(null);
     setConsultServiceFilters(nextConsult);
     setProvidedServiceFilters(nextProvided);
-    startTagSearch(nextConsult, nextProvided);
+    startTagSearch(nextConsult, nextProvided, { forceFetch: true });
 
     return true;
   };
   /** 태그(뱃지) 검색 결과를 지우고 원래 매장 목록(지도에 불러와 둔 매장)으로 돌아간다. */
   const restorePreTagSearchStores = () => {
+    // 아직 오지 않은 영역 검색 응답이 해제한 결과를 다시 띄우지 않도록 무효화한다.
+    areaSearchRequestIdRef.current += 1;
     setSubmittedSearchStores(null);
     setHasSelectedStoreInfo(false);
 
@@ -1523,9 +1541,15 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     } = {},
   ) => {
     const { center, radiusKm } = getVisibleAreaQuery(viewport);
+    const requestId = ++areaSearchRequestIdRef.current;
 
     try {
       const areaStores = await storeService.fetchNearbyStores(center, radiusKm);
+
+      // 그 사이 새 검색이 시작됐거나 결과가 해제됐으면 늦게 도착한 이 응답은 버린다.
+      if (requestId !== areaSearchRequestIdRef.current) {
+        return null;
+      }
 
       // 입력 중 드롭다운 검색에도 쓰도록 검색용 매장 풀에 합쳐 둔다.
       mergeSearchStores(areaStores);
@@ -1547,7 +1571,9 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
 
       return results;
     } catch {
-      showToast("매장 정보를 불러오지 못했어요.");
+      if (requestId === areaSearchRequestIdRef.current) {
+        showToast("매장 정보를 불러오지 못했어요.");
+      }
       return null;
     }
   };
@@ -1658,6 +1684,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       return;
     }
 
+    areaSearchRequestIdRef.current += 1;
     setSubmittedSearchStores(null);
 
     if (isTagSearchQuery) {
@@ -2363,6 +2390,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                         void loadSearchAreaStores();
                       }
 
+                      areaSearchRequestIdRef.current += 1;
                       setSubmittedSearchStores(null);
                       setSearchQuery(nextQuery);
                     }}
