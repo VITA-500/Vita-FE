@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { ChatMarkdown } from "@/features/chat/components/ChatMarkdown";
+import { ChatProgressSteps } from "@/features/chat/components/ChatProgressSteps";
 import type { ChatMessage } from "@/features/chat/types";
 import { ButtonLink } from "@/shared/ui/Button";
 
@@ -92,15 +93,21 @@ export const ChatMessageList = ({
 
     {isLoading && (
       <div
-        aria-label="답변을 정리하고 있어요"
-        className="text-text-secondary mr-auto flex max-w-[76%] items-start gap-3 text-sm font-medium dark:text-gray-400"
+        aria-label="답변을 준비하고 있어요"
+        className="mr-auto flex max-w-[76%] items-start gap-3"
       >
         <AssistantProfile />
 
-        <div className="pt-3">
-          <div className="flex items-center gap-2">
+        <div className="min-w-0">
+          <ChatProgressSteps />
+
+          {/* 기존 로딩 표시: 단계 아래에서 계속 움직여 응답을 기다리는 중임을 보여준다. */}
+          <div
+            aria-hidden="true"
+            className="text-text-secondary mt-3 flex items-center gap-2 pl-7 text-sm font-medium dark:text-gray-400"
+          >
             <span className="animate-pulse">생각 중</span>
-            <span className="flex items-center gap-1 pt-1" aria-hidden="true">
+            <span className="flex items-center gap-1 pt-1">
               <span className="bg-brand h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:0ms]" />
               <span className="bg-brand h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:120ms]" />
               <span className="bg-brand h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:240ms]" />
