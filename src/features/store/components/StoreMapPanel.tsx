@@ -987,6 +987,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const panelRootRef = useRef<HTMLDivElement>(null);
   const storeListPanelRef = useRef<HTMLDivElement>(null);
+  // 지도 위 상단 영역(검색창 + 필터 뱃지 줄). 핀이 이 아래로 꽂히도록 높이를 잰다.
+  const mapTopBarRef = useRef<HTMLDivElement>(null);
   const [routeLeftInset, setRouteLeftInset] = useState(0);
   const {
     displayStores,
@@ -1633,6 +1635,45 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     }
   };
   /** 지도 이동·확대/축소가 끝날 때: 보이는 영역을 기억하고, 텍스트 검색 중 사용자가 지도를 옮겼으면 자동 재검색 */
+  /**
+   * 핀을 꽂을 때 비워 둘 여백(지도 기준 px). 매장 목록이 펼쳐져 있는지에 따라 달라진다.
+   * - 위: 검색창·필터 줄 아래 + 핀 높이 (모바일에서 목록을 펼쳤으면 목록 아래)
+   * - 왼쪽(데스크톱): 목록을 펼쳤으면 목록 오른쪽 끝 + 여유, 접었으면 기본 여유만
+   * - 오른쪽·아래: 지도 컨트롤 버튼 자리
+   */
+  const getMapPinFitPadding = (container: {
+    height: number;
+    width: number;
+  }) => {
+    const rootRect = panelRootRef.current?.getBoundingClientRect();
+    const topBarRect = mapTopBarRef.current?.getBoundingClientRect();
+
+    if (!rootRect || !topBarRect) {
+      return null;
+    }
+
+    const listRect = isStoreListCollapsed
+      ? null
+      : (storeListPanelRef.current?.getBoundingClientRect() ?? null);
+    const isDesktop = container.width >= 768;
+    // 핀은 좌표 지점에서 위로 46px 솟으므로 그만큼 + 여유를 더 비운다.
+    const pinTopSpace = 56;
+    const edgeGap = 24;
+    const topBarBottom = topBarRect.bottom - rootRect.top;
+    const top =
+      (!isDesktop && listRect
+        ? Math.max(topBarBottom, listRect.bottom - rootRect.top)
+        : topBarBottom) + pinTopSpace;
+    const left =
+      isDesktop && listRect ? listRect.right - rootRect.left + edgeGap : 32;
+
+    return {
+      bottom: 56,
+      left,
+      right: isDesktop ? 96 : 76,
+      top,
+    };
+  };
   const handleViewportChange = (viewport: MapViewport) => {
     // 지도를 옮겨도 자동으로 다시 검색하지 않는다(화면만 둘러보려는 사용자를 헷갈리게 하지 않도록).
     // 다시 찾기는 "이 위치에서 검색" 버튼으로만 한다(searchInCurrentArea).
@@ -2350,6 +2391,13 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         focusPoint={focusPoint}
         fitTarget={searchFitTarget}
         markerEnterKey={`${currentStorePage}:${mapStoresKey}`}
+        getPinFitPadding={getMapPinFitPadding}
+        // 새 핀 묶음이 꽂히거나 목록을 펼치고 접을 때 가장 바깥 핀이 가리지 않는지 확인한다.
+        // (페이지 이동은 goToStorePage의 fitTarget이 같은 여백으로 맞춘다)
+        pinAutoFitKey={`${mapStoresKey}|${isStoreListCollapsed ? "collapsed" : "expanded"}`}
+        isPinAutoFitPaused={Boolean(
+          routeDestinationStoreId || soloStore || hasSelectedStoreInfo,
+        )}
         isFullBleed
         isSearchFromMapPointLoading={isMapSearchLoading}
         routePreview={routePreview}
@@ -2432,7 +2480,10 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       />
 
       <div className="pointer-events-none absolute inset-0 z-10 pt-16 md:pt-0">
-        <div className="pointer-events-auto absolute top-3 right-3 left-3 flex flex-col gap-3 md:top-5 md:right-5 md:left-5 md:flex-row md:flex-wrap md:items-start">
+        <div
+          ref={mapTopBarRef}
+          className="pointer-events-auto absolute top-3 right-3 left-3 flex flex-col gap-3 md:top-5 md:right-5 md:left-5 md:flex-row md:flex-wrap md:items-start"
+        >
           <div className="flex min-w-0 flex-col gap-3 md:flex-1 md:flex-row md:flex-nowrap md:items-start">
             <div
               ref={collapsedSearchRef}
