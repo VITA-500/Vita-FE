@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   Layers,
   LocateFixed,
@@ -18,6 +19,7 @@ import type {
   StoreRouteSegmentKind,
 } from "@/features/store/types";
 import { cn } from "@/shared/lib/cn";
+import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
 
 const clampPercent = (value: number) => Math.min(88, Math.max(12, value));
 const clampValue = (value: number, min: number, max: number) =>
@@ -47,6 +49,19 @@ const STORE_CARD_MARKER_GAP = 64;
 const CARD_REVEAL_FALLBACK_MS = 700;
 /** 확대/축소 버튼 애니메이션 시간(ms) */
 const ZOOM_ANIMATION_MS = 320;
+/** 페이지 전환 등으로 새로 나타나는 핀·원이 서서히 보이는 시간(ms) */
+const MARKER_ENTER_ANIMATION_MS = 280;
+
+/** 핀·원 DOM이 아래에서 살짝 떠오르며 나타나게 한다. */
+const playMarkerEnterAnimation = (element: HTMLElement) => {
+  element.animate?.(
+    [
+      { opacity: 0, transform: "translateY(6px) scale(0.85)" },
+      { opacity: 1, transform: "translateY(0) scale(1)" },
+    ],
+    { duration: MARKER_ENTER_ANIMATION_MS, easing: "ease-out", fill: "both" },
+  );
+};
 /** 길찾기 중 확대/축소 전에 초점 지점으로 지도를 미리 옮기는 시간(ms, 카카오 panTo 애니메이션 여유 포함) */
 const ZOOM_FOCUS_PAN_MS = 280;
 
@@ -546,7 +561,10 @@ type StoreMapPreviewProps = {
   /** 경로·출발/도착 지점·정보 카드가 위 패널에 가려졌을 때 호출 */
   onRouteObstructed?: () => void;
   /** key가 바뀔 때마다 points가 모두 보이도록 지도 범위를 맞춘다(검색 결과 표시용). */
-  fitTarget?: { key: string; points: MapPoint[] } | null;
+  /** smooth: 순간 이동 대신 부드럽게 이동(panTo)하고, 모자라면 애니메이션으로 축소한다(페이지 전환용). */
+  fitTarget?: { key: string; points: MapPoint[]; smooth?: boolean } | null;
+  /** 값이 바뀌면 이번에 그리는 핀·원을 서서히 나타나게 한다(페이지 전환용). */
+  markerEnterKey?: string;
   onFocusUserLocation?: () => void;
   onSelectedStoreCardClose?: () => void;
   onSearchFromMapPoint?: () => void;
@@ -582,6 +600,7 @@ export const StoreMapPreview = ({
   getRouteObstacleRect,
   onRouteObstructed,
   fitTarget,
+  markerEnterKey = "",
   onSelectedStoreCardClose,
   onSearchFromMapPoint,
 }: StoreMapPreviewProps) => {
@@ -591,6 +610,12 @@ export const StoreMapPreview = ({
   const overlayRefs = useRef<MapOverlayHandle[]>([]);
   // 나머지 매장(반투명 원) 오버레이. 핀 오버레이와 따로 관리해 핀을 다시 그리지 않고 켜고 끌 수 있게 한다.
   const otherStoreOverlayRefs = useRef<MapOverlayHandle[]>([]);
+  // 핀 등장 애니메이션을 마지막으로 재생한 key(같은 key로 다시 그릴 때는 재생하지 않음)
+  const animatedMarkerEnterKeyRef = useRef("");
+  const fitZoomTimeoutRef = useRef<number | undefined>(undefined);
+  const [controlTooltip, setControlTooltip] = useState<RailTooltipProps | null>(
+    null,
+  );
   const otherStoresRef = useRef(otherStores);
   const onSelectStoreRef = useRef(onSelectStore);
   const routeOverlayRefs = useRef<KakaoCustomOverlay[]>([]);
@@ -1232,6 +1257,12 @@ export const StoreMapPreview = ({
     });
 
     const isStoreCardShown = Boolean(selectedStore && selectedStoreCard);
+    // 페이지가 바뀐 뒤 처음 그릴 때만 핀이 서서히 나타나게 한다(매장 선택 등으로 다시 그릴 때는 그대로).
+    const shouldAnimateMarkerEnter =
+      Boolean(markerEnterKey) &&
+      animatedMarkerEnterKeyRef.current !== markerEnterKey;
+
+    animatedMarkerEnterKeyRef.current = markerEnterKey;
 
     overlayRefs.current = Array.from(storeGroups.values()).map((group) => {
       const [{ store: firstStore }] = group;
@@ -1245,6 +1276,10 @@ export const StoreMapPreview = ({
       const position = new kakaoMaps.LatLng(firstStore.lat, firstStore.lng);
       const container = document.createElement("div");
       container.className = "relative";
+
+      if (shouldAnimateMarkerEnter) {
+        playMarkerEnterAnimation(container);
+      }
       const marker = document.createElement("button");
       marker.type = "button";
       marker.setAttribute(
@@ -1467,6 +1502,7 @@ export const StoreMapPreview = ({
     onCenterChange,
     onViewportChange,
     markerLabelById,
+    markerEnterKey,
     getRouteObstacleRect,
     onRouteObstructed,
     onSelectedStoreCardClose,
@@ -1509,8 +1545,11 @@ export const StoreMapPreview = ({
 
       dot.type = "button";
       dot.setAttribute("aria-label", `${store.name} 선택`);
+      // 지도 위에서도 잘 보이도록 브랜드 진한 색(brand-hover) + 흰 테두리 + 그림자로 표시한다.
       dot.className =
-        "group relative block h-3.5 w-3.5 rounded-full border-2 border-white bg-brand p-0 opacity-50 shadow-sm transition duration-150 hover:scale-125 hover:opacity-90";
+        "group bg-brand-hover relative block h-4 w-4 rounded-full border-2 border-white p-0 opacity-80 shadow-[0_2px_6px_rgba(15,23,42,0.35)] transition duration-150 hover:scale-125 hover:opacity-100";
+
+      playMarkerEnterAnimation(dot);
       tooltip.className =
         "pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 z-[2] max-w-[180px] -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-sm bg-slate-950/90 px-2.5 py-1.5 text-xs leading-tight font-extrabold text-white opacity-0 shadow-lg transition group-hover:translate-y-0 group-hover:opacity-100";
       tooltip.textContent = store.name;
@@ -1673,7 +1712,103 @@ export const StoreMapPreview = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRouteDrawn, drawnRouteKey]);
 
+  useEffect(
+    () => () => {
+      window.clearTimeout(fitZoomTimeoutRef.current);
+    },
+    [],
+  );
+
   useEffect(() => {
+    /**
+     * 점들이 모두 보이도록 지도를 부드럽게 옮긴다.
+     * 1) 핀이 들어갈 영역(여백 제외)의 가운데로 panTo  2) 그래도 넘치면 애니메이션으로 필요한 만큼만 축소.
+     * 투영 정보가 없어 계산할 수 없으면 false(기존 setBounds로 처리).
+     */
+    const fitPointsSmoothly = (map: KakaoMap, points: MapPoint[]) => {
+      const kakaoMaps = window.kakao?.maps;
+      const projection = (map as KakaoMapWithProjection).getProjection?.();
+      const containerRect = mapContainerRef.current?.getBoundingClientRect();
+
+      if (
+        !kakaoMaps ||
+        !map.panTo ||
+        !projection?.containerPointFromCoords ||
+        !containerRect
+      ) {
+        return false;
+      }
+
+      const screenPoints = points.map((point) =>
+        projection.containerPointFromCoords!(
+          new kakaoMaps.LatLng(point.lat, point.lng),
+        ),
+      );
+      // setBounds와 같은 여백: 위 검색창·핀 높이, 오른쪽 지도 컨트롤, 왼쪽 매장 목록 패널
+      const padding = {
+        bottom: 72,
+        left:
+          containerRect.width >= 768 ? Math.max(48, routeLeftInset + 32) : 48,
+        right: 96,
+        top: 120,
+      };
+      const freeWidth = containerRect.width - padding.left - padding.right;
+      const freeHeight = containerRect.height - padding.top - padding.bottom;
+      const spanX =
+        Math.max(...screenPoints.map((point) => point.x)) -
+        Math.min(...screenPoints.map((point) => point.x));
+      const spanY =
+        Math.max(...screenPoints.map((point) => point.y)) -
+        Math.min(...screenPoints.map((point) => point.y));
+
+      if (freeWidth <= 0 || freeHeight <= 0) {
+        return false;
+      }
+
+      const latitudes = points.map((point) => point.lat);
+      const longitudes = points.map((point) => point.lng);
+      const pointsCenter = {
+        lat: (Math.min(...latitudes) + Math.max(...latitudes)) / 2,
+        lng: (Math.min(...longitudes) + Math.max(...longitudes)) / 2,
+      };
+      const containerSize = {
+        height: containerRect.height,
+        width: containerRect.width,
+      };
+      const freeAreaCenter = {
+        x: padding.left + freeWidth / 2,
+        y: padding.top + freeHeight / 2,
+      };
+      const nextCenter = getCenterPlacingPointAt(
+        map,
+        pointsCenter,
+        freeAreaCenter,
+        containerSize,
+      );
+
+      if (!nextCenter) {
+        return false;
+      }
+
+      map.panTo(nextCenter);
+
+      // 현재 확대 수준에서 다 들어가지 않으면, 이동이 끝난 뒤 필요한 단계만큼 부드럽게 축소한다.
+      const overflowRatio = Math.max(spanX / freeWidth, spanY / freeHeight);
+
+      if (overflowRatio > 1) {
+        const zoomOutLevels = Math.ceil(Math.log2(overflowRatio));
+
+        fitZoomTimeoutRef.current = window.setTimeout(() => {
+          map.setLevel(map.getLevel() + zoomOutLevels, {
+            anchor: new kakaoMaps.LatLng(pointsCenter.lat, pointsCenter.lng),
+            animate: { duration: ZOOM_ANIMATION_MS },
+          });
+        }, ZOOM_ANIMATION_MS);
+      }
+
+      return true;
+    };
+
     const map = mapRef.current;
     const kakaoMaps = window.kakao?.maps;
 
@@ -1688,6 +1823,11 @@ export const StoreMapPreview = ({
     }
 
     fittedTargetKeyRef.current = fitTarget.key;
+    window.clearTimeout(fitZoomTimeoutRef.current);
+
+    if (fitTarget.smooth && fitPointsSmoothly(map, fitTarget.points)) {
+      return;
+    }
 
     if (fitTarget.points.length === 1) {
       const [point] = fitTarget.points;
@@ -1906,6 +2046,25 @@ export const StoreMapPreview = ({
     };
   }, [isKakaoMapReady, routeDrawProgress, routePreview]);
 
+  const otherStoresToggleLabel = isOtherStoresVisible
+    ? "나머지 매장 위치 숨기기"
+    : `나머지 매장 ${otherStoreCount}곳 위치 보기`;
+  /** 지도 컨트롤 툴팁: 공용 RailTooltip을 버튼 왼쪽(화면 오른쪽 끝이라)에 띄운다. */
+  const showControlTooltip = (target: HTMLElement) => {
+    const rect = target.getBoundingClientRect();
+
+    setControlTooltip({
+      label: otherStoresToggleLabel,
+      placement: "left",
+      x: rect.left - 8,
+      y: rect.top + rect.height / 2,
+    });
+  };
+  // 켜고 끌 때 툴팁 문구도 바로 바꾼다.
+  const visibleControlTooltip = controlTooltip
+    ? { ...controlTooltip, label: otherStoresToggleLabel }
+    : null;
+
   return (
     <section
       data-kakao-map-ready={isKakaoMapReady}
@@ -1977,16 +2136,13 @@ export const StoreMapPreview = ({
                 type="button"
                 onClick={onToggleOtherStores}
                 aria-pressed={isOtherStoresVisible}
-                aria-label={
-                  isOtherStoresVisible
-                    ? `나머지 매장 ${otherStoreCount}곳 위치 숨기기`
-                    : `나머지 매장 ${otherStoreCount}곳 위치 보기`
+                aria-label={otherStoresToggleLabel}
+                onMouseEnter={(event) =>
+                  showControlTooltip(event.currentTarget)
                 }
-                title={
-                  isOtherStoresVisible
-                    ? "나머지 매장 위치 숨기기"
-                    : `나머지 매장 ${otherStoreCount}곳 위치 보기`
-                }
+                onMouseLeave={() => setControlTooltip(null)}
+                onFocus={(event) => showControlTooltip(event.currentTarget)}
+                onBlur={() => setControlTooltip(null)}
                 className={cn(
                   "relative flex h-10 w-10 items-center justify-center rounded-sm transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none",
                   isOtherStoresVisible
@@ -1999,6 +2155,12 @@ export const StoreMapPreview = ({
                   {otherStoreCount}
                 </span>
               </button>
+              {/* 다른 화면 툴팁과 같은 공용 RailTooltip. 지도 패널 안 transform·overflow에 갇히지 않게 body로 띄운다. */}
+              {visibleControlTooltip &&
+                createPortal(
+                  <RailTooltip {...visibleControlTooltip} />,
+                  document.body,
+                )}
             </div>
           )}
           <div className="pointer-events-auto flex flex-col gap-1 rounded-sm border border-gray-200 bg-white p-1 shadow-md shadow-gray-950/10 dark:border-white/10 dark:bg-zinc-950 dark:shadow-black/30">

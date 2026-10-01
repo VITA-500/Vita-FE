@@ -135,6 +135,8 @@ const VISIBLE_SERVICE_FILTER_COUNT = 6;
 const SEARCH_RADIUS_KM = 1.5;
 /** 지도 핀(A~L)·매장 목록 한 페이지에 보여줄 매장 수. */
 const STORES_PER_PAGE = 12;
+/** 페이지 이동 시 지도가 먼저 움직이기 시작한 뒤 핀·목록을 바꾸기까지의 텀(ms) */
+const STORE_PAGE_SWITCH_DELAY_MS = 260;
 
 /** 지금 보이는 지도 영역 (중심·북동·남서 모서리) */
 type MapViewport = {
@@ -899,6 +901,17 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const [isStorePaginationOn, setIsStorePaginationOn] = useState(false);
   // 핀(현재 페이지 12곳) 외 나머지 매장 위치를 반투명 원으로 함께 보여줄지
   const [isOtherStoresVisible, setIsOtherStoresVisible] = useState(false);
+  // 페이지 버튼을 누른 뒤 실제로 핀·목록이 바뀌기 전까지 이동할 페이지(번호 강조는 바로 바꾼다)
+  const [pendingStorePage, setPendingStorePage] = useState<number | null>(null);
+  const storePageSwitchTimeoutRef = useRef<number | undefined>(undefined);
+  const latestMapStoresKeyRef = useRef("");
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(storePageSwitchTimeoutRef.current);
+    },
+    [],
+  );
   const [storePageSourceKey, setStorePageSourceKey] = useState("");
   const [submittedSearchOrigin, setSubmittedSearchOrigin] =
     useState<MapSearchPoint | null>(null);
@@ -908,6 +921,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const [searchFitTarget, setSearchFitTarget] = useState<{
     key: string;
     points: MapSearchPoint[];
+    smooth?: boolean;
   } | null>(null);
   // 좌표가 실제로 바뀐 경우에만 상태를 갱신해 불필요한 재렌더를 막는다.
   const updateMapCenter = useCallback((point: MapSearchPoint) => {
@@ -1188,6 +1202,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   if (storePageSourceKey !== mapStoresKey) {
     setStorePageSourceKey(mapStoresKey);
     setStorePage(0);
+    setPendingStorePage(null);
     setIsStorePaginationOn(false);
   }
 
@@ -1227,22 +1242,46 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   if (selectedStoreOutsidePage) {
     markerLabelById[selectedStoreOutsidePage.id] = "•";
   }
+  useEffect(() => {
+    latestMapStoresKeyRef.current = mapStoresKey;
+  }, [mapStoresKey]);
+  // 페이지 버튼 강조·이전/다음 기준은 바뀔 예정인 페이지를 먼저 따른다.
+  const activeStorePage = Math.min(
+    pendingStorePage ?? currentStorePage,
+    storePageCount - 1,
+  );
+  /**
+   * 페이지 이동: 지도를 먼저 부드럽게 옮기기 시작하고, 잠깐(텀) 뒤에 핀·목록을 새 페이지로 바꾼다.
+   * 새 핀·목록은 서서히 나타난다. 연달아 누르면 마지막으로 누른 페이지만 반영한다.
+   */
   const goToStorePage = (page: number) => {
     const nextPage = Math.min(Math.max(0, page), storePageCount - 1);
     const nextPageRange = getStorePageRange(nextPage);
     const pageStores = mapStores.slice(nextPageRange.start, nextPageRange.end);
+    const sourceKey = mapStoresKey;
 
-    setStorePage(nextPage);
+    setPendingStorePage(nextPage);
     setSoloStoreId("");
     setHasSelectedStoreInfo(false);
 
-    // 페이지를 넘기면 그 페이지 매장 핀(A~L)이 모두 보이도록 지도 범위를 맞춘다.
+    // 페이지를 넘기면 그 페이지 매장 핀(A~L)이 모두 보이도록 지도를 부드럽게 옮긴다.
     if (pageStores.length > 0) {
       setSearchFitTarget({
         key: `page:${mapStoresKey}:${nextPage}`,
         points: pageStores.map((store) => ({ lat: store.lat, lng: store.lng })),
+        smooth: true,
       });
     }
+
+    window.clearTimeout(storePageSwitchTimeoutRef.current);
+    storePageSwitchTimeoutRef.current = window.setTimeout(() => {
+      setPendingStorePage(null);
+
+      // 그사이 매장 목록 자체가 바뀌었으면(새 검색 등) 이전 목록 기준 페이지는 적용하지 않는다.
+      if (latestMapStoresKeyRef.current === sourceKey) {
+        setStorePage(nextPage);
+      }
+    }, STORE_PAGE_SWITCH_DELAY_MS);
   };
   const visibleMapStores =
     routeDestinationStoreId && routeDestinationStore
@@ -2275,6 +2314,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         className="absolute inset-0"
         focusPoint={focusPoint}
         fitTarget={searchFitTarget}
+        markerEnterKey={`${currentStorePage}:${mapStoresKey}`}
         isFullBleed
         isSearchFromMapPointLoading={isMapSearchLoading}
         routePreview={routePreview}
@@ -2678,7 +2718,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                       <>
                         {pagedMapStores.map((store, index) => (
                           <button
-                            key={store.id}
+                            key={`${currentStorePage}:${store.id}`}
                             type="button"
                             onClick={() =>
                               handleStoreSelect(store.id, {
@@ -2687,7 +2727,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                               })
                             }
                             className={cn(
-                              "flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-gray-50 dark:hover:bg-white/[0.04]",
+                              // 페이지가 바뀌면(key 변경으로 새로 그려짐) 서서히 나타난다.
+                              "animate-store-page-in flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-gray-50 dark:hover:bg-white/[0.04]",
                               mapSelectedStoreId === store.id &&
                                 "bg-brand-soft dark:bg-brand/10",
                             )}
@@ -2748,17 +2789,15 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                           >
                             <button
                               type="button"
-                              onClick={() =>
-                                goToStorePage(currentStorePage - 1)
-                              }
-                              disabled={currentStorePage === 0}
+                              onClick={() => goToStorePage(activeStorePage - 1)}
+                              disabled={activeStorePage === 0}
                               className="text-text-secondary flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-white/10"
                               aria-label="이전 페이지"
                             >
                               <ChevronLeft size={15} />
                             </button>
                             {getPaginationItems(
-                              currentStorePage,
+                              activeStorePage,
                               storePageCount,
                             ).map((page, index) =>
                               page === "ellipsis" ? (
@@ -2776,12 +2815,12 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                                   onClick={() => goToStorePage(page)}
                                   className={cn(
                                     "flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-xs font-extrabold transition",
-                                    page === currentStorePage
+                                    page === activeStorePage
                                       ? "bg-brand text-white"
                                       : "text-text-secondary hover:bg-gray-100 dark:hover:bg-white/10",
                                   )}
                                   aria-current={
-                                    page === currentStorePage
+                                    page === activeStorePage
                                       ? "page"
                                       : undefined
                                   }
@@ -2792,10 +2831,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                             )}
                             <button
                               type="button"
-                              onClick={() =>
-                                goToStorePage(currentStorePage + 1)
-                              }
-                              disabled={currentStorePage === storePageCount - 1}
+                              onClick={() => goToStorePage(activeStorePage + 1)}
+                              disabled={activeStorePage === storePageCount - 1}
                               className="text-text-secondary flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-white/10"
                               aria-label="다음 페이지"
                             >
