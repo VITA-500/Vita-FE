@@ -979,6 +979,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const lastNearbyLookupKeyRef = useRef("");
   // 지도 영역 검색(searchVisibleArea) 요청 번호. 가장 최근 요청의 응답만 화면에 반영한다.
   const areaSearchRequestIdRef = useRef(0);
+  // 뱃지(필터) 검색 중 사용자가 지도를 끌어 옮겼다: 이동이 끝나면(idle) 보이는 영역에서 다시 찾는다.
+  const shouldRefreshTagSearchOnIdleRef = useRef(false);
   const shouldFocusUserLocationRef = useRef(false);
   // 마지막으로 매장이 1곳 이상 조회된 지역. "이 위치에서 검색" 결과가 없으면 이곳으로 지도를 되돌린다.
   const lastStoreAreaRef = useRef<MapSearchPoint>(defaultMapLocation);
@@ -1634,8 +1636,32 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const handleViewportChange = (viewport: MapViewport) => {
     // 지도를 옮겨도 자동으로 다시 검색하지 않는다(화면만 둘러보려는 사용자를 헷갈리게 하지 않도록).
     // 다시 찾기는 "이 위치에서 검색" 버튼으로만 한다(searchInCurrentArea).
+    // 단, 뱃지(필터) 검색 중에는 결과가 처음 찾은 지역에 묶여 옮긴 화면에 핀이 뜨지 않으므로,
+    // 사용자가 직접 끌어 옮긴 경우에 한해 선택한 뱃지를 유지한 채 보이는 영역에서 다시 찾는다.
     setMapViewport(viewport);
     updateMapCenter(viewport.center);
+
+    if (!shouldRefreshTagSearchOnIdleRef.current) {
+      return;
+    }
+
+    shouldRefreshTagSearchOnIdleRef.current = false;
+
+    if (
+      !isTagSearchQuery ||
+      !hasActiveServiceFilter ||
+      routeDestinationStoreId
+    ) {
+      return;
+    }
+
+    setSearchPoint(null);
+    setSoloStoreId("");
+    void searchVisibleArea("tag", { viewport }).then((results) => {
+      if (results && filterStoresByServices(results).length === 0) {
+        showToast("이 지역에는 선택한 서비스를 제공하는 매장이 없어요.");
+      }
+    });
   };
   /**
    * "이 위치에서 검색" 버튼: 지금 보이는 지도 영역에서 다시 찾는다.
@@ -2385,6 +2411,9 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         onFocusUserLocation={focusUserLocation}
         onMapPointSelect={(point) => {
           setSearchPoint(point);
+          // 뱃지(필터) 검색 중이면 이동이 끝난 뒤 보이는 영역에서 자동으로 다시 찾는다.
+          shouldRefreshTagSearchOnIdleRef.current =
+            isTagSearchQuery && hasActiveServiceFilter;
           // 사용자가 지도를 직접 옮김: 이후 텍스트 검색 정렬 중심은 보이는 지도 중심
           setSearchAnchorSource("map");
         }}
