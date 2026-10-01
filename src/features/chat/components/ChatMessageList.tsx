@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { ChatMarkdown } from "@/features/chat/components/ChatMarkdown";
 import type { ChatMessage } from "@/features/chat/types";
 import { ButtonLink } from "@/shared/ui/Button";
 
@@ -43,13 +44,13 @@ export const ChatMessageList = ({
       return (
         <div
           key={message.id}
-          className="mr-auto flex max-w-[76%] items-start gap-3"
+          className="mr-auto flex max-w-full items-start gap-2 md:max-w-[76%] md:gap-3"
         >
           <AssistantProfile />
 
           <div className="min-w-0 flex-1">
-            <article className="border-border text-text-primary rounded-3xl border bg-white px-5 py-4 text-sm leading-6 shadow-sm dark:border-white/10 dark:bg-zinc-950 dark:text-white">
-              <p className="whitespace-pre-line">{message.content}</p>
+            <article className="border-border text-text-primary rounded-3xl border bg-white px-4 py-4 text-sm leading-6 shadow-sm md:px-5 dark:border-white/10 dark:bg-zinc-950 dark:text-white">
+              <ChatMarkdown content={message.content ?? ""} />
 
               {message.sources && message.sources.length > 0 && (
                 <div className="border-border mt-4 space-y-2 border-t pt-3 dark:border-white/10">
