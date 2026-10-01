@@ -2,7 +2,14 @@
 
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { LocateFixed, LocateOff, Minus, Plus, RotateCcw } from "lucide-react";
+import {
+  Layers,
+  LocateFixed,
+  LocateOff,
+  Minus,
+  Plus,
+  RotateCcw,
+} from "lucide-react";
 import { useKakaoMapReady } from "@/features/store/hooks/useKakaoMapReady";
 import type { UserLocation } from "@/features/store/lib/geo";
 import type {
@@ -528,6 +535,12 @@ type StoreMapPreviewProps = {
   }) => void;
   /** 매장 id별 핀 글자. 없으면 stores 순서대로 A, B, C… */
   markerLabelById?: Record<string, string>;
+  /** 핀(현재 페이지) 외 나머지 매장. 핀 대신 반투명 원으로 위치만 표시한다. */
+  otherStores?: StoreLocation[];
+  /** 핀 외 나머지 매장 수. 0보다 크면 "나머지 매장 보기" 버튼을 보여준다. */
+  otherStoreCount?: number;
+  isOtherStoresVisible?: boolean;
+  onToggleOtherStores?: () => void;
   /** 길찾기 경로를 가릴 수 있는 지도 위 패널(매장 목록)의 화면 영역. 없으면 null */
   getRouteObstacleRect?: () => DOMRect | null;
   /** 경로·출발/도착 지점·정보 카드가 위 패널에 가려졌을 때 호출 */
@@ -562,6 +575,10 @@ export const StoreMapPreview = ({
   onCenterChange,
   onViewportChange,
   markerLabelById,
+  otherStores = [],
+  otherStoreCount = 0,
+  isOtherStoresVisible = false,
+  onToggleOtherStores,
   getRouteObstacleRect,
   onRouteObstructed,
   fitTarget,
@@ -572,6 +589,10 @@ export const StoreMapPreview = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<KakaoMap | null>(null);
   const overlayRefs = useRef<MapOverlayHandle[]>([]);
+  // 나머지 매장(반투명 원) 오버레이. 핀 오버레이와 따로 관리해 핀을 다시 그리지 않고 켜고 끌 수 있게 한다.
+  const otherStoreOverlayRefs = useRef<MapOverlayHandle[]>([]);
+  const otherStoresRef = useRef(otherStores);
+  const onSelectStoreRef = useRef(onSelectStore);
   const routeOverlayRefs = useRef<KakaoCustomOverlay[]>([]);
   const routeLineRefs = useRef<KakaoPolyline[]>([]);
   const selectedStoreCardRef = useRef<HTMLDivElement | null>(null);
@@ -1462,6 +1483,82 @@ export const StoreMapPreview = ({
     userLocation,
   ]);
 
+  // 배열이 렌더마다 새로 만들어져도 구성(매장·좌표)이 같으면 원을 다시 그리지 않도록 key로 비교한다.
+  const otherStoresKey = otherStores
+    .map((store) => `${store.id}:${store.lat}:${store.lng}`)
+    .join(",");
+
+  useEffect(() => {
+    otherStoresRef.current = otherStores;
+    onSelectStoreRef.current = onSelectStore;
+  });
+
+  /** 핀(현재 페이지) 외 나머지 매장을 반투명 원으로 그린다. 페이지를 옮기면 그 페이지 매장은 핀으로 바뀐다. */
+  useEffect(() => {
+    const map = mapRef.current;
+
+    if (!isKakaoMapReady || !map || !window.kakao?.maps) {
+      return;
+    }
+
+    const kakaoMaps = window.kakao.maps;
+
+    otherStoreOverlayRefs.current = otherStoresRef.current.map((store) => {
+      const dot = document.createElement("button");
+      const tooltip = document.createElement("span");
+
+      dot.type = "button";
+      dot.setAttribute("aria-label", `${store.name} 선택`);
+      dot.className =
+        "group relative block h-3.5 w-3.5 rounded-full border-2 border-white bg-brand p-0 opacity-50 shadow-sm transition duration-150 hover:scale-125 hover:opacity-90";
+      tooltip.className =
+        "pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 z-[2] max-w-[180px] -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-sm bg-slate-950/90 px-2.5 py-1.5 text-xs leading-tight font-extrabold text-white opacity-0 shadow-lg transition group-hover:translate-y-0 group-hover:opacity-100";
+      tooltip.textContent = store.name;
+      dot.append(tooltip);
+
+      const handleDotClick = (event: MouseEvent) => {
+        event.stopPropagation();
+        lastMarkerClickAtRef.current = Date.now();
+        setRevealedCardStoreId("");
+        onSelectStoreRef.current(store.id);
+      };
+
+      dot.addEventListener("click", handleDotClick);
+
+      const overlay = new kakaoMaps.CustomOverlay({
+        content: dot,
+        map,
+        position: new kakaoMaps.LatLng(store.lat, store.lng),
+        xAnchor: 0.5,
+        yAnchor: 0.5,
+        // 핀(10~)보다 아래에 깔아 핀을 가리지 않게 한다.
+        zIndex: 5,
+      });
+      const handleDotEnter = () => overlay.setZIndex?.(40);
+      const handleDotLeave = () => overlay.setZIndex?.(5);
+
+      dot.addEventListener("mouseenter", handleDotEnter);
+      dot.addEventListener("mouseleave", handleDotLeave);
+
+      return {
+        cleanup: () => {
+          dot.removeEventListener("click", handleDotClick);
+          dot.removeEventListener("mouseenter", handleDotEnter);
+          dot.removeEventListener("mouseleave", handleDotLeave);
+        },
+        overlay,
+      };
+    });
+
+    return () => {
+      otherStoreOverlayRefs.current.forEach(({ cleanup, overlay }) => {
+        cleanup?.();
+        overlay.setMap(null);
+      });
+      otherStoreOverlayRefs.current = [];
+    };
+  }, [isKakaoMapReady, otherStoresKey]);
+
   /**
    * 경로 그리기 애니메이션이 끝났을 때 경로가 화면(여백 제외 영역)에 온전히 보이지 않으면 다시 초점을 맞춘다.
    * (그리는 도중 사용자가 지도를 움직였거나, 실제 경로가 도착해 모양이 바뀐 경우)
@@ -1872,40 +1969,73 @@ export const StoreMapPreview = ({
             );
           })}
 
-        <div className="pointer-events-auto absolute right-4 bottom-6 z-30 flex flex-col gap-1 rounded-sm border border-gray-200 bg-white p-1 shadow-md shadow-gray-950/10 md:right-6 md:bottom-8 dark:border-white/10 dark:bg-zinc-950 dark:shadow-black/30">
-          {onFocusUserLocation && (
-            <>
+        <div className="pointer-events-none absolute right-4 bottom-6 z-30 flex flex-col items-end gap-1 md:right-6 md:bottom-8">
+          {/* 나머지 매장 보기: 내 위치 버튼 묶음 바로 위(4px 간격) */}
+          {onToggleOtherStores && otherStoreCount > 0 && (
+            <div className="pointer-events-auto rounded-sm border border-gray-200 bg-white p-1 shadow-md shadow-gray-950/10 dark:border-white/10 dark:bg-zinc-950 dark:shadow-black/30">
               <button
                 type="button"
-                onClick={onFocusUserLocation}
-                disabled={isUserLocationLoading}
-                className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none disabled:cursor-wait disabled:opacity-60 dark:text-gray-200"
-                aria-label="내 위치로 이동"
-              >
-                {userLocation ? (
-                  <LocateFixed size={18} className="text-brand" />
-                ) : (
-                  <LocateOff size={18} />
+                onClick={onToggleOtherStores}
+                aria-pressed={isOtherStoresVisible}
+                aria-label={
+                  isOtherStoresVisible
+                    ? `나머지 매장 ${otherStoreCount}곳 위치 숨기기`
+                    : `나머지 매장 ${otherStoreCount}곳 위치 보기`
+                }
+                title={
+                  isOtherStoresVisible
+                    ? "나머지 매장 위치 숨기기"
+                    : `나머지 매장 ${otherStoreCount}곳 위치 보기`
+                }
+                className={cn(
+                  "relative flex h-10 w-10 items-center justify-center rounded-sm transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none",
+                  isOtherStoresVisible
+                    ? "bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand"
+                    : "hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand text-gray-700 dark:text-gray-200",
                 )}
+              >
+                <Layers size={18} />
+                <span className="bg-brand absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] leading-none font-black text-white">
+                  {otherStoreCount}
+                </span>
               </button>
-            </>
+            </div>
           )}
-          <button
-            type="button"
-            onClick={() => adjustZoomLevel("in")}
-            className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none dark:text-gray-200"
-            aria-label="지도 확대"
-          >
-            <Plus size={18} />
-          </button>
-          <button
-            type="button"
-            onClick={() => adjustZoomLevel("out")}
-            className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none dark:text-gray-200"
-            aria-label="지도 축소"
-          >
-            <Minus size={18} />
-          </button>
+          <div className="pointer-events-auto flex flex-col gap-1 rounded-sm border border-gray-200 bg-white p-1 shadow-md shadow-gray-950/10 dark:border-white/10 dark:bg-zinc-950 dark:shadow-black/30">
+            {onFocusUserLocation && (
+              <>
+                <button
+                  type="button"
+                  onClick={onFocusUserLocation}
+                  disabled={isUserLocationLoading}
+                  className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none disabled:cursor-wait disabled:opacity-60 dark:text-gray-200"
+                  aria-label="내 위치로 이동"
+                >
+                  {userLocation ? (
+                    <LocateFixed size={18} className="text-brand" />
+                  ) : (
+                    <LocateOff size={18} />
+                  )}
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => adjustZoomLevel("in")}
+              className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none dark:text-gray-200"
+              aria-label="지도 확대"
+            >
+              <Plus size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={() => adjustZoomLevel("out")}
+              className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none dark:text-gray-200"
+              aria-label="지도 축소"
+            >
+              <Minus size={18} />
+            </button>
+          </div>
         </div>
 
         {/*

@@ -897,6 +897,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   // 현재 stores를 조회한 기준 지점(내 위치·지도에서 고른 지점 등). 매장 순서(A, B, C…)는 이 지점에서 가까운 순이다.
   const [storesOrigin, setStoresOrigin] = useState<MapSearchPoint | null>(null);
   const [isStorePaginationOn, setIsStorePaginationOn] = useState(false);
+  // 핀(현재 페이지 12곳) 외 나머지 매장 위치를 반투명 원으로 함께 보여줄지
+  const [isOtherStoresVisible, setIsOtherStoresVisible] = useState(false);
   const [storePageSourceKey, setStorePageSourceKey] = useState("");
   const [submittedSearchOrigin, setSubmittedSearchOrigin] =
     useState<MapSearchPoint | null>(null);
@@ -1250,6 +1252,12 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         : selectedStoreOutsidePage
           ? [...pagedMapStores, selectedStoreOutsidePage]
           : pagedMapStores;
+  // 목록에는 있지만 지금 핀으로 보이지 않는 매장(다른 페이지). 길찾기·단독 표시 중에는 보여주지 않는다.
+  const visibleMapStoreIds = new Set(visibleMapStores.map((store) => store.id));
+  const otherMapStores =
+    (routeDestinationStoreId && routeDestinationStore) || soloStore
+      ? []
+      : mapStores.filter((store) => !visibleMapStoreIds.has(store.id));
   const routeSummary = (() => {
     if (!userLocation || !routeDestinationStore) {
       return null;
@@ -2336,6 +2344,12 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
           void searchInCurrentArea();
         }}
         onSelectStore={handleStoreSelect}
+        otherStores={isOtherStoresVisible ? otherMapStores : []}
+        otherStoreCount={otherMapStores.length}
+        isOtherStoresVisible={isOtherStoresVisible}
+        onToggleOtherStores={() =>
+          setIsOtherStoresVisible((isVisible) => !isVisible)
+        }
       />
 
       <div className="pointer-events-none absolute inset-0 z-10 pt-16 md:pt-0">
