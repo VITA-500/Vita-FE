@@ -1,5 +1,5 @@
 import { Clock3, X } from "lucide-react";
-import { getServiceFilterIcon } from "@/features/store/components/StoreServiceFilterCarousel";
+import { getServiceFilterIcon } from "@/features/store/lib/serviceFilterItems";
 import { MAX_SEARCH_RESULT_COUNT } from "@/features/store/constants";
 import type { StoreSearchHistoryItem } from "@/features/store/hooks/useStoreSearchHistory";
 import type { StoreLocation } from "@/features/store/types";
