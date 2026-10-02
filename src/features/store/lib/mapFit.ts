@@ -12,7 +12,7 @@ const STORE_CARD_ESTIMATED_HEIGHT = 320;
  * 핀 높이 46px + 선택 시 떠오르는 10px + 여유 8px -> 카드가 핀 머리를 가리지 않는다.
  * (카드의 -translate-y-[calc(100%+64px)]와 같은 값)
  */
-const STORE_CARD_MARKER_GAP = 64;
+export const STORE_CARD_MARKER_GAP = 64;
 
 export type MapPoint = {
   lat: number;
@@ -37,12 +37,12 @@ export type KakaoMapWithProjection = KakaoMap & {
   getProjection?: () => KakaoMapProjection;
 };
 
-const getStoreCardTopInset = (containerWidth: number) =>
+export const getStoreCardTopInset = (containerWidth: number) =>
   containerWidth >= 768
     ? STORE_CARD_TOP_INSET_DESKTOP
     : STORE_CARD_TOP_INSET_MOBILE;
 
-const getStoreCardHeight = (
+export const getStoreCardHeight = (
   card: HTMLElement | null,
   estimatedHeight = STORE_CARD_ESTIMATED_HEIGHT,
 ) => card?.getBoundingClientRect().height || estimatedHeight;

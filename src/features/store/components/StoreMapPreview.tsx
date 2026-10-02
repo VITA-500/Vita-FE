@@ -20,6 +20,9 @@ import {
   getCenterPlacingPointAt,
   getDefaultPinFitPadding,
   getRouteFitPadding,
+  getStoreCardHeight,
+  getStoreCardTopInset,
+  STORE_CARD_MARKER_GAP,
   type KakaoMapWithProjection,
   type MapFitPadding,
   type MapPoint,
@@ -260,6 +263,72 @@ const createClusterListElement = ({
 
   clusterList.append(listTitle, list);
   return clusterList;
+};
+
+type KakaoMapsApi = NonNullable<NonNullable<Window["kakao"]>["maps"]>;
+
+/** 나머지 매장 위치를 표시하는 반투명 원(+ 매장명 툴팁) DOM을 만든다. */
+const createOtherStoreDotElement = (store: StoreLocation) => {
+  const dot = document.createElement("button");
+  const tooltip = document.createElement("span");
+
+  dot.type = "button";
+  dot.setAttribute("aria-label", `${store.name} 선택`);
+  // 지도 위에서도 잘 보이도록 브랜드 진한 색(brand-hover) + 흰 테두리 + 그림자로 표시한다.
+  dot.className =
+    "group bg-brand-hover relative block h-4 w-4 rounded-full border-2 border-white p-0 opacity-80 shadow-[0_2px_6px_rgba(15,23,42,0.35)] transition duration-150 hover:scale-125 hover:opacity-100";
+
+  playMarkerEnterAnimation(dot);
+  tooltip.className =
+    "pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 z-[2] max-w-[180px] -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-sm bg-slate-950/90 px-2.5 py-1.5 text-xs leading-tight font-extrabold text-white opacity-0 shadow-lg transition group-hover:translate-y-0 group-hover:opacity-100";
+  tooltip.textContent = store.name;
+  dot.append(tooltip);
+
+  return dot;
+};
+
+/**
+ * 나머지 매장 원을 지도 위 overlay로 올리고, 클릭·hover 이벤트를 연결한다.
+ * 선택 시 처리(최신 ref·state 반영)는 호출하는 effect가 onSelect로 넘긴다.
+ */
+const createOtherStoreOverlay = ({
+  kakaoMaps,
+  map,
+  store,
+  onSelect,
+}: {
+  kakaoMaps: KakaoMapsApi;
+  map: KakaoMap;
+  store: StoreLocation;
+  onSelect: (event: MouseEvent) => void;
+}): MapOverlayHandle => {
+  const dot = createOtherStoreDotElement(store);
+
+  dot.addEventListener("click", onSelect);
+
+  const overlay = new kakaoMaps.CustomOverlay({
+    content: dot,
+    map,
+    position: new kakaoMaps.LatLng(store.lat, store.lng),
+    xAnchor: 0.5,
+    yAnchor: 0.5,
+    // 핀(10~)보다 아래에 깔아 핀을 가리지 않게 한다.
+    zIndex: 5,
+  });
+  const handleDotEnter = () => overlay.setZIndex?.(40);
+  const handleDotLeave = () => overlay.setZIndex?.(5);
+
+  dot.addEventListener("mouseenter", handleDotEnter);
+  dot.addEventListener("mouseleave", handleDotLeave);
+
+  return {
+    cleanup: () => {
+      dot.removeEventListener("click", onSelect);
+      dot.removeEventListener("mouseenter", handleDotEnter);
+      dot.removeEventListener("mouseleave", handleDotLeave);
+    },
+    overlay,
+  };
 };
 
 type RoutePreviewRef = RoutePreview | null | undefined;
@@ -1456,55 +1525,19 @@ export const StoreMapPreview = ({
 
     const kakaoMaps = window.kakao.maps;
 
-    otherStoreOverlayRefs.current = otherStoresRef.current.map((store) => {
-      const dot = document.createElement("button");
-      const tooltip = document.createElement("span");
-
-      dot.type = "button";
-      dot.setAttribute("aria-label", `${store.name} 선택`);
-      // 지도 위에서도 잘 보이도록 브랜드 진한 색(brand-hover) + 흰 테두리 + 그림자로 표시한다.
-      dot.className =
-        "group bg-brand-hover relative block h-4 w-4 rounded-full border-2 border-white p-0 opacity-80 shadow-[0_2px_6px_rgba(15,23,42,0.35)] transition duration-150 hover:scale-125 hover:opacity-100";
-
-      playMarkerEnterAnimation(dot);
-      tooltip.className =
-        "pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 z-[2] max-w-[180px] -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-sm bg-slate-950/90 px-2.5 py-1.5 text-xs leading-tight font-extrabold text-white opacity-0 shadow-lg transition group-hover:translate-y-0 group-hover:opacity-100";
-      tooltip.textContent = store.name;
-      dot.append(tooltip);
-
-      const handleDotClick = (event: MouseEvent) => {
-        event.stopPropagation();
-        lastMarkerClickAtRef.current = Date.now();
-        setRevealedCardStoreId("");
-        onSelectStoreRef.current(store.id);
-      };
-
-      dot.addEventListener("click", handleDotClick);
-
-      const overlay = new kakaoMaps.CustomOverlay({
-        content: dot,
+    otherStoreOverlayRefs.current = otherStoresRef.current.map((store) =>
+      createOtherStoreOverlay({
+        kakaoMaps,
         map,
-        position: new kakaoMaps.LatLng(store.lat, store.lng),
-        xAnchor: 0.5,
-        yAnchor: 0.5,
-        // 핀(10~)보다 아래에 깔아 핀을 가리지 않게 한다.
-        zIndex: 5,
-      });
-      const handleDotEnter = () => overlay.setZIndex?.(40);
-      const handleDotLeave = () => overlay.setZIndex?.(5);
-
-      dot.addEventListener("mouseenter", handleDotEnter);
-      dot.addEventListener("mouseleave", handleDotLeave);
-
-      return {
-        cleanup: () => {
-          dot.removeEventListener("click", handleDotClick);
-          dot.removeEventListener("mouseenter", handleDotEnter);
-          dot.removeEventListener("mouseleave", handleDotLeave);
+        store,
+        onSelect: (event) => {
+          event.stopPropagation();
+          lastMarkerClickAtRef.current = Date.now();
+          setRevealedCardStoreId("");
+          onSelectStoreRef.current(store.id);
         },
-        overlay,
-      };
-    });
+      }),
+    );
 
     return () => {
       otherStoreOverlayRefs.current.forEach(({ cleanup, overlay }) => {
