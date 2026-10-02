@@ -59,9 +59,10 @@ export type AdminFaq = {
   category: AdminFaqCategory;
   subcategory?: string;
   question: string;
-  answer?: string;
+  answer: string;
   status: AdminFaqStatus;
   createdAt: string;
+  updatedAt: string;
 };
 
 export type AdminFaqCreateRequest = {

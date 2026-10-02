@@ -37,6 +37,8 @@ type StoreSaveInput = Omit<
 >;
 type StoreSortField = "createdAt" | "name" | "updatedAt";
 type StoreSortDirection = "asc" | "desc";
+type FaqSortField = "createdAt" | "updatedAt";
+type FaqSortDirection = "asc" | "desc";
 type FaqCategoryFilter = "ALL" | AdminFaqCategory;
 type FaqStatusFilter = "ALL" | AdminFaqStatus;
 
@@ -49,6 +51,8 @@ type AdminDataContextValue = {
   faqKeyword: string;
   faqPage: number;
   faqPageSize: number;
+  faqSortDirection: FaqSortDirection;
+  faqSortField: FaqSortField;
   faqStatusFilter: FaqStatusFilter;
   faqTotalCount: number;
   faqTotalPages: number;
@@ -59,6 +63,7 @@ type AdminDataContextValue = {
   setFaqKeyword: (keyword: string) => void;
   setFaqPage: (page: number) => void;
   setFaqPageSize: (pageSize: number) => void;
+  setFaqSort: (field: FaqSortField, direction: FaqSortDirection) => void;
   setFaqStatus: (faqId: number, status: AdminFaq["status"]) => Promise<void>;
   setFaqStatusFilter: (status: FaqStatusFilter) => void;
   addStore: (input: StoreSaveInput) => Promise<void>;
@@ -98,6 +103,9 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
     useState<FaqCategoryFilter>("ALL");
   const [faqStatusFilter, setFaqStatusFilterState] =
     useState<FaqStatusFilter>("ACTIVE");
+  const [faqSortField, setFaqSortField] = useState<FaqSortField>("createdAt");
+  const [faqSortDirection, setFaqSortDirection] =
+    useState<FaqSortDirection>("desc");
   const [faqTotalCount, setFaqTotalCount] = useState(
     env.apiBaseUrl ? 0 : faqRows.length,
   );
@@ -137,6 +145,7 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
         keyword: faqKeyword,
         page: faqPage,
         size: faqPageSize,
+        sortBy: `${faqSortField},${faqSortDirection}`,
         status: faqStatusFilter === "ALL" ? undefined : faqStatusFilter,
       });
       setFaqs(nextFaqData.content);
@@ -152,7 +161,15 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsFaqLoading(false);
     }
-  }, [faqCategoryFilter, faqKeyword, faqPage, faqPageSize, faqStatusFilter]);
+  }, [
+    faqCategoryFilter,
+    faqKeyword,
+    faqPage,
+    faqPageSize,
+    faqSortDirection,
+    faqSortField,
+    faqStatusFilter,
+  ]);
 
   const refreshStores = useCallback(async () => {
     if (!env.apiBaseUrl) return;
@@ -235,6 +252,15 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
     setFaqPage(0);
   }, []);
 
+  const setFaqSort = useCallback(
+    (field: FaqSortField, direction: FaqSortDirection) => {
+      setFaqSortField(field);
+      setFaqSortDirection(direction);
+      setFaqPage(0);
+    },
+    [],
+  );
+
   const setStoreKeyword = useCallback((keyword: string) => {
     setStoreKeywordState(keyword);
     setStorePage(0);
@@ -277,6 +303,7 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
             faqId: nextFaqId,
             status: "ACTIVE",
             createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
           },
           ...faqs,
         ]);
@@ -299,6 +326,8 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
       faqKeyword,
       faqPage,
       faqPageSize,
+      faqSortDirection,
+      faqSortField,
       faqStatusFilter,
       faqTotalCount,
       faqTotalPages,
@@ -321,6 +350,7 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
       setFaqKeyword,
       setFaqPage,
       setFaqPageSize,
+      setFaqSort,
       setFaqStatus: async (faqId, status) => {
         if (env.apiBaseUrl) {
           await adminFaqService.updateFaq(faqId, { status });
@@ -336,7 +366,10 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
       },
       setFaqStatusFilter,
       addStore: async (input) => {
-        await adminStoreService.createStore(input);
+        await adminStoreService.createStore({
+          ...input,
+          storeType: storeTypeFilter,
+        });
         await refreshStores();
       },
       stores,
@@ -428,6 +461,8 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
       faqKeyword,
       faqPage,
       faqPageSize,
+      faqSortDirection,
+      faqSortField,
       faqStatusFilter,
       faqTotalCount,
       faqTotalPages,
@@ -439,6 +474,7 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
       setFaqCategoryFilter,
       setFaqKeyword,
       setFaqPageSize,
+      setFaqSort,
       setFaqStatusFilter,
       setStoreKeyword,
       setStorePageSize,
