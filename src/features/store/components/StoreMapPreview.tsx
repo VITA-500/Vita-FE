@@ -6,6 +6,12 @@ import { RotateCcw } from "lucide-react";
 import { StoreMapControls } from "@/features/store/components/StoreMapControls";
 import { StoreMapFallbackMarkers } from "@/features/store/components/StoreMapFallbackMarkers";
 import { useKakaoMapReady } from "@/features/store/hooks/useKakaoMapReady";
+import { useMapFitTarget } from "@/features/store/hooks/useMapFitTarget";
+import { useMapZoom } from "@/features/store/hooks/useMapZoom";
+import { useOtherStoreOverlays } from "@/features/store/hooks/useOtherStoreOverlays";
+import { useRouteDrawing } from "@/features/store/hooks/useRouteDrawing";
+import { useRouteOverlays } from "@/features/store/hooks/useRouteOverlays";
+import { useRouteRefocus } from "@/features/store/hooks/useRouteRefocus";
 import { hasKakaoMapKey } from "@/shared/config/env";
 import type { UserLocation } from "@/features/store/lib/geo";
 import type {
@@ -14,10 +20,7 @@ import type {
   MapOverlayHandle,
 } from "@/features/store/lib/kakaoMapTypes";
 import {
-  arePointsInFreeArea,
-  fitPointsSmoothlyOnMap,
   getCenterPlacingPointAt,
-  getDefaultPinFitPadding,
   getRouteFitPadding,
   getStoreCardHeight,
   getStoreCardTopInset,
@@ -26,28 +29,12 @@ import {
   type MapFitPadding,
   type MapPoint,
 } from "@/features/store/lib/mapFit";
-import {
-  getPartialRoutePath,
-  getRoutePreviewSegments,
-  getSequentialRouteSegments,
-  getTransitSegmentStyle,
-  getTransferStops,
-  routeStyleByMode,
-  type RoutePreview,
-} from "@/features/store/lib/mapRoute";
-import {
-  createRouteDestinationElement,
-  createRouteHeadElement,
-  createRouteOriginElement,
-  createTransferStopElement,
-} from "@/features/store/lib/routeMarkerElements";
+import { type RoutePreview } from "@/features/store/lib/mapRoute";
 import type { StoreLocation } from "@/features/store/types";
 import type { MarkerColorInfo } from "@/features/store/lib/markerColors";
-import { createOtherStoreOverlay } from "@/features/store/lib/mapOverlayElements";
 import { getFallbackMarkerStyle } from "@/features/store/lib/storeMapFallbackLayout";
 import {
   createCurrentLocationOverlay,
-  createRoutePointOverlay,
   createStoreMarkerOverlay,
   groupStoresByCoordinate,
 } from "@/features/store/lib/storeMarkerOverlays";
@@ -66,14 +53,6 @@ const MAP_SDK_LOAD_TIMEOUT_MS = 10000;
 const CARD_REVEAL_FALLBACK_MS = 700;
 /** 길찾기: 지도 범위 맞춤 후 idle 신호가 오지 않을 때 경로 그리기를 시작하기까지 기다리는 최대 시간(ms) */
 const ROUTE_FIT_READY_FALLBACK_MS = 800;
-/** 길찾기: 경로를 다 그린 뒤 정보 카드를 띄우기까지의 텀(ms) */
-const ROUTE_CARD_REVEAL_DELAY_MS = 220;
-/** 확대/축소 버튼 애니메이션 시간(ms) */
-const ZOOM_ANIMATION_MS = 320;
-/** 새 핀이 꽂히거나 목록을 펼친 뒤 가림 여부를 확인하기까지 기다리는 시간(ms) */
-const PIN_AUTO_FIT_DELAY_MS = 160;
-/** 길찾기 중 확대/축소 전에 초점 지점으로 지도를 미리 옮기는 시간(ms, 카카오 panTo 애니메이션 여유 포함) */
-const ZOOM_FOCUS_PAN_MS = 280;
 
 type SearchPointRef = MapPoint | null | undefined;
 type FocusPointRef = MapPoint | null | undefined;
@@ -197,11 +176,8 @@ export const StoreMapPreview = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<KakaoMap | null>(null);
   const overlayRefs = useRef<MapOverlayHandle[]>([]);
-  // 나머지 매장(반투명 원) 오버레이. 핀 오버레이와 따로 관리해 핀을 다시 그리지 않고 켜고 끌 수 있게 한다.
-  const otherStoreOverlayRefs = useRef<MapOverlayHandle[]>([]);
   // 핀 등장 애니메이션을 마지막으로 재생한 key(같은 key로 다시 그릴 때는 재생하지 않음)
   const animatedMarkerEnterKeyRef = useRef("");
-  const fitZoomTimeoutRef = useRef<number | undefined>(undefined);
   const otherStoresRef = useRef(otherStores);
   const storesRef = useRef(stores);
   const getPinFitPaddingRef = useRef(getPinFitPadding);
@@ -209,30 +185,12 @@ export const StoreMapPreview = ({
   const shouldSkipPinAutoFitRef = useRef(shouldSkipPinAutoFit);
   const routeLeftInsetRef = useRef(routeLeftInset);
   const onSelectStoreRef = useRef(onSelectStore);
-  const routeOverlayRefs = useRef<KakaoCustomOverlay[]>([]);
-  const routeLineRefs = useRef<KakaoPolyline[]>([]);
   const selectedStoreCardRef = useRef<HTMLDivElement | null>(null);
-  // 길찾기: 지도 범위를 맞추고 이동이 끝난 경로 key. 이 key가 되기 전에는 경로를 그리지 않는다.
-  const [routeFitReadyKey, setRouteFitReadyKey] = useState("");
-  // 길찾기: 경로를 다 그린 뒤 정보 카드를 다시 보여도 되는 경로 key
-  const [routeCardRevealKey, setRouteCardRevealKey] = useState("");
-  // 범위 맞춤 후 idle을 기다리는 경로 key와 대비용 타이머
-  const pendingRouteFitKeyRef = useRef("");
-  const routeFitFallbackTimeoutRef = useRef<number | undefined>(undefined);
-  const onRouteMapReadyRef = useRef(onRouteMapReady);
-  const [routeDrawState, setRouteDrawState] = useState({
-    progress: 1,
-    routeKey: "",
-  });
   const [selectedStoreCardPosition, setSelectedStoreCardPosition] =
     useState<CSSProperties | null>(null);
   const [selectedStoreCardLayoutKey, setSelectedStoreCardLayoutKey] =
     useState(0);
   const fittedRouteKeyRef = useRef("");
-  const fittedTargetKeyRef = useRef("");
-  // 경로 그리기가 끝난 뒤 초점 보정을 마친 경로 key
-  const refocusedRouteKeyRef = useRef("");
-  const zoomFocusTimeoutRef = useRef<number | undefined>(undefined);
   // 핀 클릭 시각(핀 클릭이 지도 click으로 이어져 카드가 바로 닫히는 것을 막는 데 사용)
   const lastMarkerClickAtRef = useRef(0);
   // 확대/축소 버튼 직후에만 카드 위치 자동 보정(지도 밀기)을 하기 위한 표시
@@ -244,14 +202,10 @@ export const StoreMapPreview = ({
   const pendingRevealStoreIdRef = useRef("");
   const revealFallbackTimeoutRef = useRef<number | undefined>(undefined);
   const [revealedCardStoreId, setRevealedCardStoreId] = useState("");
-  const zoomSettleTimeoutRef = useRef<number | undefined>(undefined);
-  const [isMapAnimating, setIsMapAnimating] = useState(false);
 
   useEffect(
     () => () => {
       window.clearTimeout(revealFallbackTimeoutRef.current);
-      window.clearTimeout(zoomFocusTimeoutRef.current);
-      window.clearTimeout(zoomSettleTimeoutRef.current);
     },
     [],
   );
@@ -259,11 +213,6 @@ export const StoreMapPreview = ({
   const searchPointRef = useRef<SearchPointRef>(undefined);
   const routePreviewRef = useRef<RoutePreviewRef>(undefined);
 
-  const routeDrawProgress =
-    routePreview && routeDrawState.routeKey === routePreview.routeKey
-      ? routeDrawState.progress
-      : 0;
-  const routePreviewKey = routePreview?.routeKey ?? "";
   useEffect(() => {
     const selectedStoreCardElement = selectedStoreCardRef.current;
 
@@ -282,215 +231,31 @@ export const StoreMapPreview = ({
     };
   }, [selectedStoreCard]);
 
-  const adjustZoomLevel = (direction: "in" | "out") => {
-    const map = mapRef.current;
-
-    if (!map) {
-      return;
-    }
-
-    const currentLevel = map.getLevel();
-    const nextLevel =
-      direction === "in"
-        ? Math.max(1, currentLevel - 1)
-        : Math.min(14, currentLevel + 1);
-
-    if (nextLevel === currentLevel) {
-      return;
-    }
-
-    // 버튼 확대/축소가 끝나면(idle) 카드가 화면 밖으로 나갔는지 한 번 보정한다.
-    autoFitCardAfterZoomRef.current = true;
-
-    const containerRect = mapContainerRef.current?.getBoundingClientRect();
-
-    // 길찾기 중이 아니면 기본 동작(지도 중심 기준 확대/축소)
-    if (!routePreview || routePreview.path.length === 0 || !containerRect) {
-      map.setLevel(nextLevel, { animate: { duration: ZOOM_ANIMATION_MS } });
-      return;
-    }
-
-    // 길찾기 중: 확대는 도착 매장(정보 카드가 떠 있으면 카드 포함), 축소는 경로 전체 가운데를 초점으로 잡아
-    // 확대/축소 후 경로와 카드가 검색 패널·카드에 가리지 않는 영역 가운데에 오도록 부드럽게 옮긴다.
-    const isDesktop = containerRect.width >= 768;
-    const leftInset = isDesktop
-      ? Math.max(selectedStoreCardLeftInset, routeLeftInset + 16)
-      : 0;
-    const topInset = getStoreCardTopInset(containerRect.width);
-    const isCardVisible = Boolean(selectedStore && selectedStoreCard);
-    const cardSpace = isCardVisible
-      ? getStoreCardHeight(selectedStoreCardRef.current, 240) +
-        STORE_CARD_MARKER_GAP
-      : 0;
-    const latitudes = routePreview.path.map((point) => point.lat);
-    const longitudes = routePreview.path.map((point) => point.lng);
-    const routeCenter = {
-      lat: (Math.min(...latitudes) + Math.max(...latitudes)) / 2,
-      lng: (Math.min(...longitudes) + Math.max(...longitudes)) / 2,
-    };
-    const focusOnDestination = direction === "in";
-    const focusPoint = focusOnDestination
-      ? routePreview.destination
-      : routeCenter;
-    const target = {
-      x: leftInset + (containerRect.width - leftInset) / 2,
-      // 도착 매장에 초점을 둘 때는 핀 위 카드 자리까지 감안해 핀을 아래로 내린다.
-      y: focusOnDestination
-        ? (topInset + containerRect.height) / 2 + cardSpace / 2
-        : (topInset + cardSpace + containerRect.height) / 2,
-    };
-
-    // 부드럽게: ① 현재 확대 수준에서 초점 지점을 목표 위치로 먼저 천천히 옮기고(panTo)
-    //          ② 그 지점을 기준점(anchor)으로 확대/축소해 초점이 화면에서 움직이지 않게 한다.
-    // 이동 중에는 정보 카드를 잠시 흐리게 해 지도와 따로 노는 것처럼 보이지 않게 한다.
-    window.clearTimeout(zoomFocusTimeoutRef.current);
-    window.clearTimeout(zoomSettleTimeoutRef.current);
-    setIsMapAnimating(true);
-
-    const nextCenter = getCenterPlacingPointAt(map, focusPoint, target, {
-      height: containerRect.height,
-      width: containerRect.width,
-    });
-
-    if (nextCenter) {
-      map.panTo?.(nextCenter);
-    }
-
-    zoomFocusTimeoutRef.current = window.setTimeout(
-      () => {
-        const kakaoMaps = window.kakao?.maps;
-
-        // 앞선 초점 이동(panTo)의 idle에서 표시가 소비됐을 수 있으므로 확대/축소 직전에 다시 켠다.
-        autoFitCardAfterZoomRef.current = true;
-        map.setLevel(nextLevel, {
-          anchor: kakaoMaps
-            ? new kakaoMaps.LatLng(focusPoint.lat, focusPoint.lng)
-            : undefined,
-          animate: { duration: ZOOM_ANIMATION_MS },
-        });
-
-        zoomSettleTimeoutRef.current = window.setTimeout(() => {
-          setIsMapAnimating(false);
-        }, ZOOM_ANIMATION_MS + 40);
-      },
-      nextCenter ? ZOOM_FOCUS_PAN_MS : 0,
-    );
-  };
-
-  useEffect(() => {
-    onRouteMapReadyRef.current = onRouteMapReady;
+  const { adjustZoomLevel, isMapAnimating } = useMapZoom({
+    autoFitCardAfterZoomRef,
+    mapContainerRef,
+    mapRef,
+    routeLeftInset,
+    routePreview,
+    selectedStore,
+    selectedStoreCard,
+    selectedStoreCardLeftInset,
+    selectedStoreCardRef,
   });
 
-  /** 지도 범위 맞춤(이동)이 끝났다: 경로 그리기를 시작하고 부모(탐색 중 모달)에 알린다. */
-  const markRouteFitReady = (routeKey: string) => {
-    if (!routeKey || pendingRouteFitKeyRef.current !== routeKey) {
-      return;
-    }
-
-    pendingRouteFitKeyRef.current = "";
-    window.clearTimeout(routeFitFallbackTimeoutRef.current);
-    setRouteFitReadyKey(routeKey);
-    onRouteMapReadyRef.current?.(routeKey);
-  };
-  const markRouteFitReadyRef = useRef(markRouteFitReady);
-
-  useEffect(() => {
-    markRouteFitReadyRef.current = markRouteFitReady;
+  const {
+    isRouteCardHeld,
+    markRouteFitReadyRef,
+    pendingRouteFitKeyRef,
+    routeDrawProgress,
+    routeFitFallbackTimeoutRef,
+    routeFitReadyKey,
+  } = useRouteDrawing({
+    fittedRouteKeyRef,
+    isKakaoMapReady,
+    onRouteMapReady,
+    routePreview,
   });
-
-  useEffect(
-    () => () => {
-      window.clearTimeout(routeFitFallbackTimeoutRef.current);
-    },
-    [],
-  );
-
-  // 길찾기가 끝나거나(경로 없음) 다른 경로를 불러오는 중이면 상태를 비워,
-  // 같은 경로를 다시 보여줄 때도 범위 맞춤 → 그리기 → 카드 순서를 처음부터 밟게 한다.
-  useEffect(() => {
-    if (routePreviewKey) {
-      return;
-    }
-
-    fittedRouteKeyRef.current = "";
-    pendingRouteFitKeyRef.current = "";
-    window.clearTimeout(routeFitFallbackTimeoutRef.current);
-  }, [routePreviewKey]);
-
-  // (상태 초기화는 렌더 중 이전 key와 비교해 처리한다. effect 안 setState는 연쇄 렌더를 만든다)
-  const [lastRoutePreviewKey, setLastRoutePreviewKey] =
-    useState(routePreviewKey);
-
-  if (lastRoutePreviewKey !== routePreviewKey) {
-    setLastRoutePreviewKey(routePreviewKey);
-
-    if (!routePreviewKey) {
-      setRouteFitReadyKey("");
-      setRouteCardRevealKey("");
-    }
-  }
-
-  // 지도 SDK가 없으면(대체 화면) 맞출 지도가 없으므로 바로 준비 완료로 본다.
-  useEffect(() => {
-    if (!isKakaoMapReady && routePreviewKey) {
-      pendingRouteFitKeyRef.current = routePreviewKey;
-      markRouteFitReadyRef.current(routePreviewKey);
-    }
-  }, [isKakaoMapReady, routePreviewKey]);
-
-  // 경로를 다 그리면 잠깐 뒤 정보 카드를 자연스럽게 다시 띄운다.
-  const isRouteDrawComplete =
-    Boolean(routePreviewKey) &&
-    routeDrawState.routeKey === routePreviewKey &&
-    routeDrawState.progress >= 1;
-
-  useEffect(() => {
-    if (!isRouteDrawComplete) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setRouteCardRevealKey(routePreviewKey);
-    }, ROUTE_CARD_REVEAL_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [isRouteDrawComplete, routePreviewKey]);
-
-  // 길찾기 중 경로를 그리기 전·그리는 동안에는 정보 카드를 접어 둔다.
-  const isRouteCardHeld =
-    Boolean(routePreviewKey) && routeCardRevealKey !== routePreviewKey;
-
-  useEffect(() => {
-    // 지도 공간이 확보되기 전에는 경로를 그리지 않는다.
-    if (!routePreviewKey || routeFitReadyKey !== routePreviewKey) {
-      return;
-    }
-
-    const startedAt = window.performance.now();
-    const durationMs = 1400;
-    let frameId = 0;
-
-    const drawFrame = (timestamp: number) => {
-      const nextProgress = Math.min((timestamp - startedAt) / durationMs, 1);
-
-      setRouteDrawState({
-        progress: nextProgress,
-        routeKey: routePreviewKey,
-      });
-
-      if (nextProgress < 1) {
-        frameId = window.requestAnimationFrame(drawFrame);
-      }
-    };
-
-    frameId = window.requestAnimationFrame(drawFrame);
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-    };
-  }, [routePreviewKey, routeFitReadyKey]);
 
   useEffect(() => {
     if (!hasKakaoMapKey) return;
@@ -1050,9 +815,13 @@ export const StoreMapPreview = ({
       });
       overlayRefs.current = [];
     };
+    // markRouteFitReadyRef·pendingRouteFitKeyRef·routeFitFallbackTimeoutRef는 useRouteDrawing의 ref라 항상 같은 값이다.
   }, [
     focusPoint,
     isKakaoMapReady,
+    markRouteFitReadyRef,
+    pendingRouteFitKeyRef,
+    routeFitFallbackTimeoutRef,
     isRouteCardDocked,
     isRouteCardHeld,
     revealedCardStoreId,
@@ -1079,11 +848,6 @@ export const StoreMapPreview = ({
     userLocation,
   ]);
 
-  // 배열이 렌더마다 새로 만들어져도 구성(매장·좌표)이 같으면 원을 다시 그리지 않도록 key로 비교한다.
-  const otherStoresKey = otherStores
-    .map((store) => `${store.id}:${store.lat}:${store.lng}`)
-    .join(",");
-
   useEffect(() => {
     otherStoresRef.current = otherStores;
     onSelectStoreRef.current = onSelectStore;
@@ -1094,392 +858,48 @@ export const StoreMapPreview = ({
     routeLeftInsetRef.current = routeLeftInset;
   });
 
-  /** 핀(현재 페이지) 외 나머지 매장을 반투명 원으로 그린다. 페이지를 옮기면 그 페이지 매장은 핀으로 바뀐다. */
-  useEffect(() => {
-    const map = mapRef.current;
+  useOtherStoreOverlays({
+    isKakaoMapReady,
+    lastMarkerClickAtRef,
+    mapRef,
+    onSelectStoreRef,
+    otherStores,
+    otherStoresRef,
+    setRevealedCardStoreId,
+  });
 
-    if (!isKakaoMapReady || !map || !window.kakao?.maps) {
-      return;
-    }
+  useRouteRefocus({
+    mapContainerRef,
+    mapRef,
+    routeDrawProgress,
+    routeLeftInset,
+    routePreview,
+    selectedStoreCard,
+    selectedStoreCardLeftInset,
+    selectedStoreCardRef,
+  });
 
-    const kakaoMaps = window.kakao.maps;
+  useMapFitTarget({
+    fitTarget,
+    getPinFitPaddingRef,
+    isKakaoMapReady,
+    isPinAutoFitPausedRef,
+    mapContainerRef,
+    mapRef,
+    pinAutoFitKey,
+    routeLeftInset,
+    routeLeftInsetRef,
+    shouldSkipPinAutoFitRef,
+    storesRef,
+  });
 
-    otherStoreOverlayRefs.current = otherStoresRef.current.map((store) =>
-      createOtherStoreOverlay({
-        kakaoMaps,
-        map,
-        store,
-        onSelect: (event) => {
-          event.stopPropagation();
-          lastMarkerClickAtRef.current = Date.now();
-          setRevealedCardStoreId("");
-          onSelectStoreRef.current(store.id);
-        },
-      }),
-    );
-
-    return () => {
-      otherStoreOverlayRefs.current.forEach(({ cleanup, overlay }) => {
-        cleanup?.();
-        overlay.setMap(null);
-      });
-      otherStoreOverlayRefs.current = [];
-    };
-  }, [isKakaoMapReady, otherStoresKey]);
-
-  /**
-   * 경로 그리기 애니메이션이 끝났을 때 경로가 화면(여백 제외 영역)에 온전히 보이지 않으면 다시 초점을 맞춘다.
-   * (그리는 도중 사용자가 지도를 움직였거나, 실제 경로가 도착해 모양이 바뀐 경우)
-   * - 현재 확대 수준에서 들어가면 부드럽게 이동(panTo)만 하고
-   * - 들어가지 않으면 경로 전체가 보이도록 범위를 다시 맞춘다.
-   */
-  const isRouteDrawn = routeDrawProgress >= 1;
-  const drawnRouteKey = routePreview?.routeKey ?? "";
-
-  useEffect(() => {
-    const map = mapRef.current;
-    const kakaoMaps = window.kakao?.maps;
-    const projection = map
-      ? (map as KakaoMapWithProjection).getProjection?.()
-      : undefined;
-    const containerRect = mapContainerRef.current?.getBoundingClientRect();
-
-    if (
-      !isRouteDrawn ||
-      !routePreview ||
-      !map ||
-      !kakaoMaps ||
-      !projection?.containerPointFromCoords ||
-      !containerRect ||
-      refocusedRouteKeyRef.current === drawnRouteKey
-    ) {
-      return;
-    }
-
-    refocusedRouteKeyRef.current = drawnRouteKey;
-
-    const padding = getRouteFitPadding({
-      cardElement: selectedStoreCardRef.current,
-      containerWidth:
-        mapContainerRef.current?.getBoundingClientRect().width ?? 0,
-      hasStoreCard: Boolean(selectedStoreCard),
-      routeLeftInset,
-      selectedStoreCardLeftInset,
-    });
-    const routePoints = [
-      routePreview.origin,
-      routePreview.destination,
-      ...routePreview.path,
-    ];
-    const screenPoints = routePoints
-      .map((point) =>
-        projection.containerPointFromCoords?.(
-          new kakaoMaps.LatLng(point.lat, point.lng),
-        ),
-      )
-      .filter((point): point is { x: number; y: number } => Boolean(point));
-
-    if (screenPoints.length === 0) {
-      return;
-    }
-
-    const minX = Math.min(...screenPoints.map((point) => point.x));
-    const maxX = Math.max(...screenPoints.map((point) => point.x));
-    const minY = Math.min(...screenPoints.map((point) => point.y));
-    const maxY = Math.max(...screenPoints.map((point) => point.y));
-    const freeLeft = padding.left;
-    const freeRight = containerRect.width - padding.right;
-    const freeTop = padding.top;
-    const freeBottom = containerRect.height - padding.bottom;
-    const isFullyVisible =
-      minX >= freeLeft &&
-      maxX <= freeRight &&
-      minY >= freeTop &&
-      maxY <= freeBottom;
-
-    if (isFullyVisible) {
-      return;
-    }
-
-    const fitsAtCurrentLevel =
-      maxX - minX <= freeRight - freeLeft &&
-      maxY - minY <= freeBottom - freeTop;
-
-    if (fitsAtCurrentLevel && map.panTo) {
-      const latitudes = routePoints.map((point) => point.lat);
-      const longitudes = routePoints.map((point) => point.lng);
-      const routeCenter = {
-        lat: (Math.min(...latitudes) + Math.max(...latitudes)) / 2,
-        lng: (Math.min(...longitudes) + Math.max(...longitudes)) / 2,
-      };
-      const nextCenter = getCenterPlacingPointAt(
-        map,
-        routeCenter,
-        { x: (freeLeft + freeRight) / 2, y: (freeTop + freeBottom) / 2 },
-        { height: containerRect.height, width: containerRect.width },
-      );
-
-      if (nextCenter) {
-        map.panTo(nextCenter);
-        return;
-      }
-    }
-
-    const bounds = new kakaoMaps.LatLngBounds();
-
-    routePoints.forEach((point) => {
-      bounds.extend(new kakaoMaps.LatLng(point.lat, point.lng));
-    });
-    map.setBounds(
-      bounds,
-      padding.top,
-      padding.right,
-      padding.bottom,
-      padding.left,
-    );
-    // 경로 모양이 바뀔 때만 다시 맞춘다(지도를 직접 옮겨 보는 것은 막지 않도록 한 번만 실행)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRouteDrawn, drawnRouteKey]);
-
-  useEffect(
-    () => () => {
-      window.clearTimeout(fitZoomTimeoutRef.current);
-    },
-    [],
-  );
-
-  useEffect(() => {
-    const map = mapRef.current;
-    const kakaoMaps = window.kakao?.maps;
-
-    if (
-      !map ||
-      !kakaoMaps ||
-      !fitTarget ||
-      fitTarget.points.length === 0 ||
-      fittedTargetKeyRef.current === fitTarget.key
-    ) {
-      return;
-    }
-
-    fittedTargetKeyRef.current = fitTarget.key;
-    window.clearTimeout(fitZoomTimeoutRef.current);
-
-    const containerRect = mapContainerRef.current?.getBoundingClientRect();
-    const container = {
-      height: containerRect?.height ?? 0,
-      width: containerRect?.width ?? 0,
-    };
-    // 목록 펼침 여부에 따라 가리는 영역이 달라지므로 맞추는 순간의 여백을 쓴다.
-    const padding =
-      getPinFitPaddingRef.current?.(container) ??
-      getDefaultPinFitPadding(container.width, routeLeftInset);
-
-    if (
-      fitTarget.smooth &&
-      fitPointsSmoothlyOnMap(
-        map,
-        fitTarget.points,
-        container,
-        padding,
-        ZOOM_ANIMATION_MS,
-        (timeoutId) => {
-          fitZoomTimeoutRef.current = timeoutId;
-        },
-      )
-    ) {
-      return;
-    }
-
-    if (fitTarget.points.length === 1) {
-      const [point] = fitTarget.points;
-
-      map.setCenter(new kakaoMaps.LatLng(point.lat, point.lng));
-      map.setLevel(4);
-      return;
-    }
-
-    const bounds = new kakaoMaps.LatLngBounds();
-
-    fitTarget.points.forEach((point) => {
-      bounds.extend(new kakaoMaps.LatLng(point.lat, point.lng));
-    });
-    // 검색창·매장 목록(펼친 경우)·지도 컨트롤에 가리지 않도록 여백을 둔다.
-    map.setBounds(
-      bounds,
-      padding.top,
-      padding.right,
-      padding.bottom,
-      padding.left,
-    );
-  }, [fitTarget, isKakaoMapReady, routeLeftInset]);
-
-  /**
-   * 새 핀 묶음이 꽂히거나 매장 목록을 펼치고 접을 때:
-   * 가장 바깥 핀까지 검색창·목록 패널에 가리지 않는지 보고, 가리면 지도를 부드럽게 옮긴다(필요하면 축소).
-   * 이미 다 보이면 지도를 건드리지 않는다.
-   */
-  useEffect(() => {
-    if (!pinAutoFitKey || !isKakaoMapReady) {
-      return;
-    }
-
-    // 목록 패널이 그려져 크기를 잴 수 있고, 핀이 자리 잡은 뒤에 확인한다.
-    const timeoutId = window.setTimeout(() => {
-      const map = mapRef.current;
-      const containerRect = mapContainerRef.current?.getBoundingClientRect();
-      const points = storesRef.current.map((store) => ({
-        lat: store.lat,
-        lng: store.lng,
-      }));
-
-      if (
-        !map ||
-        !containerRect ||
-        points.length === 0 ||
-        isPinAutoFitPausedRef.current ||
-        shouldSkipPinAutoFitRef.current?.()
-      ) {
-        return;
-      }
-
-      const container = {
-        height: containerRect.height,
-        width: containerRect.width,
-      };
-      const padding =
-        getPinFitPaddingRef.current?.(container) ??
-        getDefaultPinFitPadding(container.width, routeLeftInsetRef.current);
-
-      if (arePointsInFreeArea(map, points, container, padding)) {
-        return;
-      }
-
-      window.clearTimeout(fitZoomTimeoutRef.current);
-      fitPointsSmoothlyOnMap(
-        map,
-        points,
-        container,
-        padding,
-        ZOOM_ANIMATION_MS,
-        (zoomId) => {
-          fitZoomTimeoutRef.current = zoomId;
-        },
-      );
-    }, PIN_AUTO_FIT_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [isKakaoMapReady, pinAutoFitKey]);
-
-  useEffect(() => {
-    if (!isKakaoMapReady || !window.kakao?.maps || !mapRef.current) {
-      return;
-    }
-
-    const kakaoMaps = window.kakao.maps;
-    const map = mapRef.current;
-
-    routeLineRefs.current.forEach((line) => line.setMap(null));
-    routeLineRefs.current = [];
-    routeOverlayRefs.current.forEach((overlay) => overlay.setMap(null));
-    routeOverlayRefs.current = [];
-
-    // 지도 공간이 확보되기 전에는 경로(선·출발/도착 표시)를 그리지 않는다.
-    if (!routePreview || routeFitReadyKey !== routePreview.routeKey) {
-      return;
-    }
-
-    const routeStyle = routeStyleByMode[routePreview.mode];
-    const routeSegments = getRoutePreviewSegments(routePreview);
-    const animatedRouteSegments = getSequentialRouteSegments(
-      routeSegments,
-      routeDrawProgress,
-    );
-    const transferStops = getTransferStops(
-      routeSegments,
-      routePreview.mode,
-    ).filter((stop) => routeDrawProgress >= stop.progress);
-    const animatedRoutePath = getPartialRoutePath(
-      routePreview.path,
-      routeDrawProgress,
-    );
-    const routeHead = animatedRoutePath[animatedRoutePath.length - 1];
-
-    animatedRouteSegments.forEach((segment, index) => {
-      const segmentStyle = getTransitSegmentStyle(segment, routePreview.mode);
-
-      routeLineRefs.current.push(
-        new kakaoMaps.Polyline({
-          clickable: false,
-          map,
-          path: segment.path.map(
-            (point) => new kakaoMaps.LatLng(point.lat, point.lng),
-          ),
-          strokeColor: segmentStyle.color,
-          strokeOpacity: segmentStyle.opacity,
-          strokeStyle: segmentStyle.strokeStyle,
-          strokeWeight: segmentStyle.weight,
-          zIndex: 35 + index,
-        }),
-      );
-    });
-
-    transferStops.forEach((stop) => {
-      routeOverlayRefs.current.push(
-        createRoutePointOverlay({
-          content: createTransferStopElement(stop.color),
-          kakaoMaps,
-          map,
-          point: stop.point,
-          zIndex: 43,
-        }),
-      );
-    });
-
-    routeOverlayRefs.current.push(
-      createRoutePointOverlay({
-        content: createRouteOriginElement(routeStyle.color),
-        kakaoMaps,
-        map,
-        point: routePreview.path[0],
-        zIndex: 36,
-      }),
-    );
-
-    if (routeDrawProgress >= 1) {
-      routeOverlayRefs.current.push(
-        createRoutePointOverlay({
-          content: createRouteDestinationElement(routeStyle.color),
-          kakaoMaps,
-          map,
-          point: routePreview.path[routePreview.path.length - 1],
-          yAnchor: 1,
-          zIndex: 38,
-        }),
-      );
-    }
-
-    if (routeHead && routeDrawProgress < 1) {
-      routeOverlayRefs.current.push(
-        createRoutePointOverlay({
-          content: createRouteHeadElement(routeStyle),
-          kakaoMaps,
-          map,
-          point: routeHead,
-          zIndex: 42,
-        }),
-      );
-    }
-
-    return () => {
-      routeLineRefs.current.forEach((line) => line.setMap(null));
-      routeLineRefs.current = [];
-      routeOverlayRefs.current.forEach((overlay) => overlay.setMap(null));
-      routeOverlayRefs.current = [];
-    };
-  }, [isKakaoMapReady, routeDrawProgress, routeFitReadyKey, routePreview]);
+  useRouteOverlays({
+    isKakaoMapReady,
+    mapRef,
+    routeDrawProgress,
+    routeFitReadyKey,
+    routePreview,
+  });
 
   // SDK를 끝내 불러오지 못하면 로딩 화면을 걷고 대체 지도(가짜 핀)를 보여준다.
   const isMapLoadingVisible =

@@ -14,6 +14,9 @@ const STORE_CARD_ESTIMATED_HEIGHT = 320;
  */
 export const STORE_CARD_MARKER_GAP = 64;
 
+/** 확대/축소 애니메이션 시간(ms). 확대/축소 버튼과 페이지 전환 범위 맞춤이 같이 쓴다. */
+export const ZOOM_ANIMATION_MS = 320;
+
 export type MapPoint = {
   lat: number;
   lng: number;
