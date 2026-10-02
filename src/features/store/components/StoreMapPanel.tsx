@@ -10,39 +10,34 @@ import { StorePanelSearchDropdown } from "@/features/store/components/StorePanel
 import { StorePanelServiceFilters } from "@/features/store/components/StorePanelServiceFilters";
 import { StorePanelStoreList } from "@/features/store/components/StorePanelStoreList";
 import { StorePanelRouteSearchOverlay } from "@/features/store/components/StorePanelRouteSearchOverlay";
+import { useLocationPermission } from "@/features/store/hooks/useLocationPermission";
+import { useServiceFilters } from "@/features/store/hooks/useServiceFilters";
 import { useStoreMapState } from "@/features/store/hooks/useStoreMapState";
+import { useStorePagination } from "@/features/store/hooks/useStorePagination";
+import { useStoreRoute } from "@/features/store/hooks/useStoreRoute";
 import {
   useStoreSearchHistory,
   type StoreSearchHistoryItem,
 } from "@/features/store/hooks/useStoreSearchHistory";
 import {
   formatDistance,
-  formatDurationSeconds,
-  formatRemainingDistance,
-  formatWalkingTime,
   getDistanceMeters,
   matchesStoreSearch,
 } from "@/features/store/lib/geo";
-import {
-  buildMarkerColorInfoById,
-  buildServiceFilterColorByValue,
-} from "@/features/store/lib/markerColors";
+import { buildMarkerColorInfoById } from "@/features/store/lib/markerColors";
 import { findServicesInText } from "@/features/store/lib/serviceKeywords";
 import {
   getGeolocationPermissionState,
   LOCATION_CONSENT_STORAGE_KEY,
-  LOCATION_MODAL_DISMISSED_STORAGE_KEY,
   readStorage,
-  writeStorage,
 } from "@/features/store/lib/storePanelStorage";
 import { getStoreMarkerLabel } from "@/features/store/lib/storeMarkerOverlays";
+import {
+  buildRoutePreview,
+  buildRouteSummary,
+} from "@/features/store/lib/storeRoutePreview";
 import { storeService } from "@/features/store/lib/storeService";
-import type {
-  MapCategory,
-  StoreLocation,
-  StoreRoute,
-  StoreRouteMode,
-} from "@/features/store/types";
+import type { MapCategory, StoreLocation } from "@/features/store/types";
 import { showToast } from "@/shared/ui/ToastProvider";
 
 type StoreMapPanelProps = {
@@ -59,20 +54,8 @@ type MapSearchPoint = {
   lng: number;
 };
 
-const noRouteResultMessage =
-  "해당 교통 수단의 길찾기 결과가 없습니다.\n다른 이동 수단을 선택해주세요";
-
-/** 이 직선거리(m) 안의 매장은 차량·자전거 경로가 크게 돌아가면 도보를 추천한다. */
-const WALK_RECOMMEND_MAX_STRAIGHT_METERS = 300;
-/** 경로 거리가 직선거리의 이 배수 이상이면 "크게 돌아간다"고 본다(일방통행·유턴 등). */
-const WALK_RECOMMEND_DETOUR_RATIO = 2;
-
 /** 텍스트 검색 반경(km). 주변 매장 조회 반경(storeService)과 같다. */
 const SEARCH_RADIUS_KM = 1.5;
-/** 지도 핀(A~L)·매장 목록 한 페이지에 보여줄 매장 수. */
-const STORES_PER_PAGE = 12;
-/** 페이지 이동 시 지도가 먼저 움직이기 시작한 뒤 핀·목록을 바꾸기까지의 텀(ms) */
-const STORE_PAGE_SWITCH_DELAY_MS = 260;
 /** 마지막 필터 해제 후 매장을 다시 불러오는 동안 지도를 자동으로 옮기지 않는 시간(ms) */
 const PIN_AUTO_FIT_SKIP_MS = 2500;
 
@@ -87,11 +70,6 @@ const MAX_VIEWPORT_SEARCH_RADIUS_KM = 3;
 /** "이 지역에 매장 없음" 안내 후 직전 지역으로 지도를 되돌리기까지의 지연(ms). */
 const RESTORE_AREA_DELAY_MS = 1400;
 
-const toStableServiceOptions = (services: string[], selected: string[]) =>
-  Array.from(new Set([...services, ...selected]))
-    .sort((first, second) => first.localeCompare(second, "ko"))
-    .map((service) => ({ label: service, value: service }));
-
 // 지도 화면은 검색, 필터, 위치, 길찾기 상태가 강하게 맞물린다.
 // 새 상태를 추가할 때는 useStoreMapState로 먼저 분리할 수 있는지 확인한다.
 export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
@@ -103,24 +81,10 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const [isSearchHistoryOpen, setIsSearchHistoryOpen] = useState(false);
   const [soloStoreId, setSoloStoreId] = useState("");
   const [mapCenter, setMapCenter] = useState<MapSearchPoint | null>(null);
-  const [storePage, setStorePage] = useState(0);
   // 현재 stores를 조회한 기준 지점(내 위치·지도에서 고른 지점 등). 매장 순서(A, B, C…)는 이 지점에서 가까운 순이다.
   const [storesOrigin, setStoresOrigin] = useState<MapSearchPoint | null>(null);
-  const [isStorePaginationOn, setIsStorePaginationOn] = useState(false);
   // 핀(현재 페이지 12곳) 외 나머지 매장 위치를 반투명 원으로 함께 보여줄지
   const [isOtherStoresVisible, setIsOtherStoresVisible] = useState(false);
-  // 페이지 버튼을 누른 뒤 실제로 핀·목록이 바뀌기 전까지 이동할 페이지(번호 강조는 바로 바꾼다)
-  const [pendingStorePage, setPendingStorePage] = useState<number | null>(null);
-  const storePageSwitchTimeoutRef = useRef<number | undefined>(undefined);
-  const latestMapStoresKeyRef = useRef("");
-
-  useEffect(
-    () => () => {
-      window.clearTimeout(storePageSwitchTimeoutRef.current);
-    },
-    [],
-  );
-  const [storePageSourceKey, setStorePageSourceKey] = useState("");
   const [submittedSearchOrigin, setSubmittedSearchOrigin] =
     useState<MapSearchPoint | null>(null);
   const [submittedSearchStores, setSubmittedSearchStores] = useState<
@@ -167,19 +131,10 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const [hasSelectedStoreInfo, setHasSelectedStoreInfo] = useState(false);
   const [reservationStore, setReservationStore] =
     useState<StoreLocation | null>(null);
-  // 위치 허용 모달은 진입할 때마다 무조건 띄우지 않고, 권한 상태를 확인한 뒤 필요할 때만 연다.
-  const [isLocationPermissionModalOpen, setIsLocationPermissionModalOpen] =
-    useState(false);
   const [isLoginRequiredModalOpen, setIsLoginRequiredModalOpen] =
     useState(false);
   const [isStoreListCollapsed, setIsStoreListCollapsed] = useState(true);
   const [isToastBackdropVisible, setIsToastBackdropVisible] = useState(false);
-  const [consultServiceFilters, setConsultServiceFilters] = useState<string[]>(
-    [],
-  );
-  const [providedServiceFilters, setProvidedServiceFilters] = useState<
-    string[]
-  >([]);
   const [activeMapCategory, setActiveMapCategory] =
     useState<MapCategory>("store");
   const collapsedSearchRef = useRef<HTMLDivElement>(null);
@@ -219,62 +174,44 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     userLocation,
     watchLocation,
   } = useStoreMapState(stores);
-  const [routeDestinationStoreId, setRouteDestinationStoreId] = useState("");
-  const [walkingRoute, setWalkingRoute] = useState<StoreRoute | null>(null);
-  const [routeMode, setRouteMode] = useState<StoreRouteMode>("walk");
-  const [routeResultMessage, setRouteResultMessage] = useState<string | null>(
-    null,
-  );
-  const [isRouteLoading, setIsRouteLoading] = useState(false);
-  // 출발-경로-도착이 보이도록 지도 범위 맞춤이 끝난 경로 key(이 전까지는 탐색 중 모달을 유지)
-  const [routeMapReadyKey, setRouteMapReadyKey] = useState("");
-  // 필터 뱃지 옵션: 지역을 옮길 때마다 순서·구성이 바뀌어 뱃지가 자리를 옮기지 않도록
-  // 지금까지 불러온 모든 매장(검색 풀 포함)과 선택 중인 값을 합쳐 가나다순으로 고정한다.
-  const consultServiceFilterOptions = useMemo(
-    () =>
-      toStableServiceOptions(
-        [...allStores, ...stores].flatMap(
-          (store) => store.consultServices ?? [],
-        ),
-        consultServiceFilters,
-      ),
-    [allStores, stores, consultServiceFilters],
-  );
-  const providedServiceFilterOptions = useMemo(
-    () =>
-      toStableServiceOptions(
-        [...allStores, ...stores].flatMap(
-          (store) => store.providedServices ?? [],
-        ),
-        providedServiceFilters,
-      ),
-    [allStores, stores, providedServiceFilters],
-  );
-  const serviceFilterColorByValue = useMemo(
-    () =>
-      buildServiceFilterColorByValue([
-        ...consultServiceFilterOptions,
-        ...providedServiceFilterOptions,
-      ]),
-    [consultServiceFilterOptions, providedServiceFilterOptions],
-  );
-  const filterStoresByServices = (
-    storeRows: StoreLocation[],
-    consultFilters: string[] = consultServiceFilters,
-    providedFilters: string[] = providedServiceFilters,
-  ) =>
-    storeRows.filter((store) => {
-      const consultServices = store.consultServices ?? [];
-      const providedServices = store.providedServices ?? [];
-      const matchesConsultService = consultFilters.every((service) =>
-        consultServices.includes(service),
-      );
-      const matchesProvidedService = providedFilters.every((service) =>
-        providedServices.includes(service),
-      );
-
-      return matchesConsultService && matchesProvidedService;
-    });
+  const {
+    changeRouteMode,
+    isRouteLoading,
+    resetRouteState,
+    routeDestinationStoreId,
+    routeMapReadyKey,
+    routeMode,
+    routeResultMessage,
+    setRouteMapReadyKey,
+    startRoute,
+    walkingRoute,
+  } = useStoreRoute(userLocation);
+  const {
+    consultServiceFilterOptions,
+    consultServiceFilters,
+    filterStoresByServices,
+    hasActiveServiceFilter,
+    providedServiceFilterOptions,
+    providedServiceFilters,
+    serviceFilterColorByValue,
+    setConsultServiceFilters,
+    setProvidedServiceFilters,
+  } = useServiceFilters({ allStores, stores });
+  const {
+    dismissLocationPermissionModal,
+    isLocationPermissionModalOpen,
+    openLocationPermissionModal,
+    requestUserLocationFromModal,
+  } = useLocationPermission({
+    isRouteActive: Boolean(routeDestinationStoreId),
+    locationStatus,
+    // 모달에서 "위치 허용"을 누르는 시점에 호출된다(아래에서 정의하는 함수).
+    onConsent: () => focusUserLocation(),
+    onRouteCancel: resetRouteState,
+    requestLocation,
+    shouldFocusUserLocationRef,
+    userLocation,
+  });
   const categoryStores =
     activeMapCategory === "store" ? filterStoresByServices(stores) : [];
   const categoryDisplayStores =
@@ -288,8 +225,6 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         categoryDisplayStores[0] ??
         categoryStores[0])
       : undefined;
-  const hasActiveServiceFilter =
-    consultServiceFilters.length > 0 || providedServiceFilters.length > 0;
   // 검색 풀 = 지역별로 조회해 둔 매장(allStores) + 현재 지도에 불러온 매장(stores).
   const searchableStores = useMemo(() => {
     const storeMap = new Map<string, StoreLocation>();
@@ -428,38 +363,40 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       ? (categoryStores.find((store) => store.id === soloStoreId) ??
         stores.find((store) => store.id === soloStoreId))
       : undefined;
-  // 매장이 12개를 넘으면 12개씩 페이지로 나눈다. 기본은 첫 12개만, "더보기"를 누르면 페이지 이동이 켜진다.
-  const mapStoresKey = mapStores.map((store) => store.id).join(",");
+  const {
+    activeStorePage,
+    currentStorePage,
+    firstPageSize,
+    goToStorePage,
+    hasMoreStorePages,
+    isStorePaginationOn,
+    mapStoresKey,
+    pagedMapStores,
+    showStorePagination,
+    storePageCount,
+  } = useStorePagination({
+    mapStores,
+    onPageChangeStart: ({
+      mapStoresKey: pageSourceKey,
+      nextPage,
+      pageStores,
+    }) => {
+      setSoloStoreId("");
+      setHasSelectedStoreInfo(false);
 
-  if (storePageSourceKey !== mapStoresKey) {
-    setStorePageSourceKey(mapStoresKey);
-    setStorePage(0);
-    setPendingStorePage(null);
-    setIsStorePaginationOn(false);
-  }
-
-  // 첫 페이지(처음 보여주는 핀)는 기준 지점(중심 좌표)에서 가까운 순 12개. 나머지는 12개씩 다음 페이지.
-  const firstPageSize = Math.min(STORES_PER_PAGE, mapStores.length);
-  const getStorePageRange = (page: number) =>
-    page === 0
-      ? { end: firstPageSize, start: 0 }
-      : {
-          end: firstPageSize + page * STORES_PER_PAGE,
-          start: firstPageSize + (page - 1) * STORES_PER_PAGE,
-        };
-  const storePageCount =
-    1 +
-    Math.max(
-      0,
-      Math.ceil((mapStores.length - firstPageSize) / STORES_PER_PAGE),
-    );
-  const currentStorePage = Math.min(storePage, storePageCount - 1);
-  const currentStorePageRange = getStorePageRange(currentStorePage);
-  const pagedMapStores = mapStores.slice(
-    currentStorePageRange.start,
-    currentStorePageRange.end,
-  );
-  const hasMoreStorePages = storePageCount > 1;
+      // 페이지를 넘기면 그 페이지 매장 핀(A~L)이 모두 보이도록 지도를 부드럽게 옮긴다.
+      if (pageStores.length > 0) {
+        setSearchFitTarget({
+          key: `page:${pageSourceKey}:${nextPage}`,
+          points: pageStores.map((store) => ({
+            lat: store.lat,
+            lng: store.lng,
+          })),
+          smooth: true,
+        });
+      }
+    },
+  });
   // 다른 페이지에 있는 매장을 골라 카드가 떠 있으면(검색·묶음 핀 등) 그 핀도 함께 보여준다.
   const selectedStoreOutsidePage =
     hasSelectedStoreInfo &&
@@ -486,47 +423,6 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   if (selectedStoreOutsidePage) {
     markerLabelById[selectedStoreOutsidePage.id] = "•";
   }
-  useEffect(() => {
-    latestMapStoresKeyRef.current = mapStoresKey;
-  }, [mapStoresKey]);
-  // 페이지 버튼 강조·이전/다음 기준은 바뀔 예정인 페이지를 먼저 따른다.
-  const activeStorePage = Math.min(
-    pendingStorePage ?? currentStorePage,
-    storePageCount - 1,
-  );
-  /**
-   * 페이지 이동: 지도를 먼저 부드럽게 옮기기 시작하고, 잠깐(텀) 뒤에 핀·목록을 새 페이지로 바꾼다.
-   * 새 핀·목록은 서서히 나타난다. 연달아 누르면 마지막으로 누른 페이지만 반영한다.
-   */
-  const goToStorePage = (page: number) => {
-    const nextPage = Math.min(Math.max(0, page), storePageCount - 1);
-    const nextPageRange = getStorePageRange(nextPage);
-    const pageStores = mapStores.slice(nextPageRange.start, nextPageRange.end);
-    const sourceKey = mapStoresKey;
-
-    setPendingStorePage(nextPage);
-    setSoloStoreId("");
-    setHasSelectedStoreInfo(false);
-
-    // 페이지를 넘기면 그 페이지 매장 핀(A~L)이 모두 보이도록 지도를 부드럽게 옮긴다.
-    if (pageStores.length > 0) {
-      setSearchFitTarget({
-        key: `page:${mapStoresKey}:${nextPage}`,
-        points: pageStores.map((store) => ({ lat: store.lat, lng: store.lng })),
-        smooth: true,
-      });
-    }
-
-    window.clearTimeout(storePageSwitchTimeoutRef.current);
-    storePageSwitchTimeoutRef.current = window.setTimeout(() => {
-      setPendingStorePage(null);
-
-      // 그사이 매장 목록 자체가 바뀌었으면(새 검색 등) 이전 목록 기준 페이지는 적용하지 않는다.
-      if (latestMapStoresKeyRef.current === sourceKey) {
-        setStorePage(nextPage);
-      }
-    }, STORE_PAGE_SWITCH_DELAY_MS);
-  };
   const visibleMapStores =
     routeDestinationStoreId && routeDestinationStore
       ? [routeDestinationStore]
@@ -541,68 +437,22 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     (routeDestinationStoreId && routeDestinationStore) || soloStore
       ? []
       : mapStores.filter((store) => !visibleMapStoreIds.has(store.id));
-  const routeSummary = (() => {
-    if (!userLocation || !routeDestinationStore) {
-      return null;
-    }
-
-    const straightDistanceMeters = getDistanceMeters(
-      userLocation,
-      routeDestinationStore,
-    );
-    const remainingDistanceMeters =
-      walkingRoute?.distanceMeters ?? straightDistanceMeters;
-    // 가까운 매장이라도 차량·자전거는 일방통행·유턴 등으로 크게 돌아가는 경로가 나올 수 있다.
-    // 경로는 그대로 보여주되, 이런 경우 도보 길찾기를 함께 권한다.
-    const isWalkRecommended =
-      (routeMode === "car" || routeMode === "bicycle") &&
-      Boolean(walkingRoute) &&
-      straightDistanceMeters < WALK_RECOMMEND_MAX_STRAIGHT_METERS &&
-      remainingDistanceMeters >=
-        straightDistanceMeters * WALK_RECOMMEND_DETOUR_RATIO;
-
-    return {
-      isLoading: isRouteLoading,
-      isWalkRecommended,
-      remainingDistanceText: formatRemainingDistance(remainingDistanceMeters),
-      travelTimeText: walkingRoute
-        ? formatDurationSeconds(walkingRoute.durationSeconds)
-        : formatWalkingTime(remainingDistanceMeters),
-    };
-  })();
-  const routePreview = (() => {
-    if (!userLocation || !routeDestinationStore || routeResultMessage) {
-      return null;
-    }
-
-    // 경로를 불러오는 동안에는 선을 그리지 않는다. 대체 경로(내 위치→매장 직선)를 먼저 그리면
-    // 건물을 가로지르는 직선이 보였다가 실제 경로로 바뀌어, 잘못된 경로처럼 보인다.
-    // 로딩 상태는 경로 검색 오버레이(isRouteSearchOverlayVisible)가 대신 보여준다.
-    if (isRouteLoading && !walkingRoute?.path.length) {
-      return null;
-    }
-
-    const destination = {
-      lat: routeDestinationStore.lat,
-      lng: routeDestinationStore.lng,
-    };
-    const fallbackPath = [userLocation, destination];
-    const routePath = walkingRoute?.path.length
-      ? [userLocation, ...walkingRoute.path, destination]
-      : fallbackPath;
-    const routeKey = walkingRoute?.path.length
-      ? `route:${routeDestinationStoreId}:${walkingRoute.mode}`
-      : `fallback:${routeDestinationStoreId}:${routeMode}`;
-
-    return {
-      destination,
-      mode: routeMode,
-      origin: userLocation,
-      path: routePath,
-      routeKey,
-      segments: walkingRoute?.segments,
-    };
-  })();
+  const routeSummary = buildRouteSummary({
+    isRouteLoading,
+    routeDestinationStore,
+    routeMode,
+    userLocation,
+    walkingRoute,
+  });
+  const routePreview = buildRoutePreview({
+    isRouteLoading,
+    routeDestinationStore,
+    routeDestinationStoreId,
+    routeMode,
+    routeResultMessage,
+    userLocation,
+    walkingRoute,
+  });
   // 경로 응답을 받은 뒤에도 지도 범위를 맞추는 동안에는 탐색 중 모달을 유지한다.
   const isRouteMapPreparing = Boolean(
     routePreview && routeMapReadyKey !== routePreview.routeKey,
@@ -1149,11 +999,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   };
 
   const handleRouteStart = (store: StoreLocation) => {
-    setRouteMapReadyKey("");
-    setRouteDestinationStoreId(store.id);
-    setWalkingRoute(null);
-    setRouteResultMessage(null);
-    setIsRouteLoading(true);
+    startRoute(store.id);
     handleStoreSelect(store.id, { focusMap: true });
 
     // 모바일은 화면이 좁아 카드가 경로를 가리므로 기본으로 닫아 둔다(도착 핀을 누르면 다시 열림).
@@ -1187,47 +1033,9 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         return;
       }
 
-      setIsLocationPermissionModalOpen(true);
+      openLocationPermissionModal();
     });
   };
-  const changeRouteMode = (nextMode: StoreRouteMode) => {
-    setRouteMapReadyKey("");
-    setRouteMode(nextMode);
-    setWalkingRoute(null);
-    setRouteResultMessage(null);
-    setIsRouteLoading(Boolean(routeDestinationStoreId));
-  };
-  useEffect(() => {
-    if (!routeDestinationStoreId || !userLocation) {
-      return;
-    }
-
-    let isCurrentRequest = true;
-
-    storeService
-      .fetchRoute(routeDestinationStoreId, userLocation, routeMode)
-      .then((route) => {
-        if (isCurrentRequest) {
-          setWalkingRoute(route);
-          setRouteResultMessage(null);
-        }
-      })
-      .catch(() => {
-        if (isCurrentRequest) {
-          setWalkingRoute(null);
-          setRouteResultMessage(noRouteResultMessage);
-        }
-      })
-      .finally(() => {
-        if (isCurrentRequest) {
-          setIsRouteLoading(false);
-        }
-      });
-
-    return () => {
-      isCurrentRequest = false;
-    };
-  }, [routeDestinationStoreId, routeMode, userLocation]);
 
   const handleReservationConfirm = () => {
     if (!reservationStore) {
@@ -1259,13 +1067,6 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const closeSelectedStoreInfo = () => {
     setHasSelectedStoreInfo(false);
     setSoloStoreId("");
-  };
-  const resetRouteState = () => {
-    setRouteMapReadyKey("");
-    setRouteDestinationStoreId("");
-    setWalkingRoute(null);
-    setRouteResultMessage(null);
-    setIsRouteLoading(false);
   };
   const showNearbyStoresAfterRoute = () => {
     const currentPoint = routeDestinationStore
@@ -1347,83 +1148,6 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       setSoloStoreId("");
     }
   };
-  const requestUserLocationFromModal = () => {
-    setIsLocationPermissionModalOpen(false);
-    writeStorage("local", LOCATION_CONSENT_STORAGE_KEY, "granted");
-    focusUserLocation();
-  };
-  /**
-   * 위치 허용 모달 "나중에"/닫기:
-   * - 이번 세션 동안은 모달을 다시 띄우지 않는다.
-   * - 위치 없이 기본 위치 주변 매장을 보여주고(진입 시 이미 조회됨), 나중에 켜는 방법을 안내한다.
-   * - 이후 "내 위치" 버튼이나 길찾기에서 위치가 필요하면 그때 다시 묻는다.
-   */
-  const dismissLocationPermissionModal = () => {
-    setIsLocationPermissionModalOpen(false);
-    writeStorage("session", LOCATION_MODAL_DISMISSED_STORAGE_KEY, "true");
-
-    if (userLocation) {
-      return;
-    }
-
-    // 길찾기 시작 중에 "나중에"를 누르면 위치 없이 경로를 계산할 수 없으므로 길찾기를 취소한다.
-    // (취소하지 않으면 "이동 경로 탐색 중" 오버레이가 계속 떠 있게 된다.)
-    if (routeDestinationStoreId) {
-      resetRouteState();
-      showToast("위치를 허용해야 경로를 볼 수 있어요.");
-      return;
-    }
-
-    showToast(
-      "기본 위치 주변 매장을 보여드릴게요. 내 위치 버튼으로 언제든 위치를 켤 수 있어요.",
-    );
-  };
-
-  // 진입 시 위치 권한 확인:
-  // - 이미 허용됨(또는 이전에 모달에서 허용) → 모달 없이 바로 내 위치 조회
-  // - 차단됨 / 이번 세션에 "나중에" 선택 → 모달 띄우지 않음
-  // - 아직 묻지 않음 → 모달 표시
-  useEffect(() => {
-    let isCancelled = false;
-
-    void getGeolocationPermissionState().then((permissionState) => {
-      if (isCancelled) {
-        return;
-      }
-
-      const hasConsented =
-        readStorage("local", LOCATION_CONSENT_STORAGE_KEY) === "granted";
-
-      if (
-        permissionState === "granted" ||
-        (permissionState === null && hasConsented)
-      ) {
-        shouldFocusUserLocationRef.current = true;
-        requestLocation();
-        return;
-      }
-
-      if (
-        permissionState === "denied" ||
-        readStorage("session", LOCATION_MODAL_DISMISSED_STORAGE_KEY) === "true"
-      ) {
-        return;
-      }
-
-      setIsLocationPermissionModalOpen(true);
-    });
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [requestLocation]);
-
-  // 위치 요청이 차단되면 이유를 알려준다.
-  useEffect(() => {
-    if (locationStatus === "denied") {
-      showToast("브라우저 설정에서 위치 권한을 허용해 주세요.");
-    }
-  }, [locationStatus]);
   const mapSelectedStore = categorySelectedStore ?? routeDestinationStore;
   const mapSelectedStoreId =
     categorySelectedStore?.id ?? routeDestinationStore?.id ?? "";
@@ -1852,7 +1576,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                       showOnlySelected: true,
                     })
                   }
-                  onShowPagination={() => setIsStorePaginationOn(true)}
+                  onShowPagination={showStorePagination}
                   pagedMapStores={pagedMapStores}
                   panelRef={storeListPanelRef}
                   storeCount={mapStores.length}
