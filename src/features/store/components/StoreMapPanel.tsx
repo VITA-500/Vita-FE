@@ -1,31 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  BadgePercent,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  CircleX,
-  Clock3,
-  List,
-  Menu,
-  Search,
-  Store,
-  X,
-} from "lucide-react";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
 import { StoreMapPreview } from "@/features/store/components/StoreMapPreview";
 import { StorePanelInfoBubble } from "@/features/store/components/StorePanelInfoBubble";
 import { StorePanelModals } from "@/features/store/components/StorePanelModals";
+import { StorePanelSearchBar } from "@/features/store/components/StorePanelSearchBar";
+import { StorePanelSearchDropdown } from "@/features/store/components/StorePanelSearchDropdown";
+import { StorePanelServiceFilters } from "@/features/store/components/StorePanelServiceFilters";
+import { StorePanelStoreList } from "@/features/store/components/StorePanelStoreList";
 import { StorePanelRouteSearchOverlay } from "@/features/store/components/StorePanelRouteSearchOverlay";
-import {
-  getServiceFilterIcon,
-  MobileServiceFilterCarousel,
-  ServiceFilterCarousel,
-} from "@/features/store/components/StoreServiceFilterCarousel";
 import { useStoreMapState } from "@/features/store/hooks/useStoreMapState";
-import { useStoreSearchHistory } from "@/features/store/hooks/useStoreSearchHistory";
+import {
+  useStoreSearchHistory,
+  type StoreSearchHistoryItem,
+} from "@/features/store/hooks/useStoreSearchHistory";
 import {
   formatDistance,
   formatDurationSeconds,
@@ -39,7 +28,6 @@ import {
   buildServiceFilterColorByValue,
 } from "@/features/store/lib/markerColors";
 import { findServicesInText } from "@/features/store/lib/serviceKeywords";
-import { getPaginationItems } from "@/features/store/lib/storePanelPagination";
 import {
   getGeolocationPermissionState,
   LOCATION_CONSENT_STORAGE_KEY,
@@ -47,13 +35,14 @@ import {
   readStorage,
   writeStorage,
 } from "@/features/store/lib/storePanelStorage";
+import { getStoreMarkerLabel } from "@/features/store/lib/storeMarkerOverlays";
 import { storeService } from "@/features/store/lib/storeService";
 import type {
+  MapCategory,
   StoreLocation,
   StoreRoute,
   StoreRouteMode,
 } from "@/features/store/types";
-import { cn } from "@/shared/lib/cn";
 import { showToast } from "@/shared/ui/ToastProvider";
 
 type StoreMapPanelProps = {
@@ -64,36 +53,11 @@ const defaultMapLocation = {
   lat: 37.50312732327876,
   lng: 127.04987850743296,
 };
-const getStoreListLabel = (index: number) =>
-  String.fromCharCode(65 + (index % 26));
-
-type MapCategory = "store" | "benefit";
 
 type MapSearchPoint = {
   lat: number;
   lng: number;
 };
-
-const mapCategoryOptions: {
-  icon: typeof Store | typeof BadgePercent;
-  label: string;
-  value: MapCategory;
-}[] = [
-  { icon: Store, label: "매장", value: "store" },
-  { icon: BadgePercent, label: "혜택", value: "benefit" },
-];
-const benefitServicePreviewItems = [
-  {
-    description:
-      "멤버십 제휴 매장과 서비스 혜택을 이 영역에 표시할 예정입니다.",
-    title: "제휴 혜택 준비 중",
-  },
-  {
-    description:
-      "혜택 API가 연결되면 카테고리별 제휴처를 지도와 함께 확인할 수 있어요.",
-    title: "서비스 목록 연동 예정",
-  },
-];
 
 const noRouteResultMessage =
   "해당 교통 수단의 길찾기 결과가 없습니다.\n다른 이동 수단을 선택해주세요";
@@ -122,8 +86,6 @@ type MapViewport = {
 const MAX_VIEWPORT_SEARCH_RADIUS_KM = 3;
 /** "이 지역에 매장 없음" 안내 후 직전 지역으로 지도를 되돌리기까지의 지연(ms). */
 const RESTORE_AREA_DELAY_MS = 1400;
-/** 검색 드롭다운에 보여줄 최대 결과 수(스크롤로 확인). */
-const MAX_SEARCH_RESULT_COUNT = 30;
 
 const toStableServiceOptions = (services: string[], selected: string[]) =>
   Array.from(new Set([...services, ...selected]))
@@ -506,7 +468,10 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       ? selectedStore
       : undefined;
   const markerLabelById: Record<string, string> = Object.fromEntries(
-    pagedMapStores.map((store, index) => [store.id, getStoreListLabel(index)]),
+    pagedMapStores.map((store, index) => [
+      store.id,
+      getStoreMarkerLabel(index),
+    ]),
   );
   const activeServiceFilters = [
     ...consultServiceFilters,
@@ -1673,6 +1638,50 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     };
   }, [isSearchHistoryOpen, isStoreListCollapsed]);
 
+  /** 검색어 입력: 태그·텍스트 검색어를 모두 지웠을 때의 정리와 검색 풀 조회를 함께 처리한다. */
+  const handleSearchQueryChange = (nextQuery: string) => {
+    // 태그 검색어를 모두 지우면 뱃지 필터도 함께 해제한다.
+    if (isTagSearchQuery && !nextQuery.trim()) {
+      setConsultServiceFilters([]);
+      setProvidedServiceFilters([]);
+      restorePreTagSearchStores();
+    }
+
+    // 텍스트 검색어를 모두 지우면 검색 중에 쌓인 데이터를 정리한다.
+    if (!isTagSearchQuery && searchQuery.trim() && !nextQuery.trim()) {
+      clearTextSearchSession();
+    }
+
+    // 검색 풀을 비운 뒤 다시 입력하면 현재 지역 매장을 다시 불러온다(이미 불러왔으면 건너뜀).
+    if (nextQuery.trim() && !nextQuery.trim().startsWith("#")) {
+      void loadSearchAreaStores();
+    }
+
+    areaSearchRequestIdRef.current += 1;
+    setSubmittedSearchStores(null);
+    setSearchQuery(nextQuery);
+  };
+  const openSearchHistory = () => {
+    setIsSearchHistoryOpen(true);
+    void loadSearchAreaStores();
+  };
+  /** 이미 포커스된 검색창을 다시 누르면 드롭다운을 열고 닫는다. */
+  const toggleSearchHistoryOnInputMouseDown = () => {
+    if (document.activeElement === searchInputRef.current) {
+      setIsSearchHistoryOpen((isOpen) => !isOpen);
+      void loadSearchAreaStores();
+    }
+  };
+  const selectSearchHistory = (item: StoreSearchHistoryItem) => {
+    setSearchQuery(item.query);
+
+    if (item.storeId) {
+      runStoreSearch(item.storeId, item.query);
+    } else {
+      searchInputRef.current?.focus();
+    }
+  };
+
   return (
     <div
       ref={panelRootRef}
@@ -1783,510 +1792,81 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
               ref={collapsedSearchRef}
               className="relative w-[min(420px,calc(100vw-48px))] max-w-full min-w-0 shrink-0 self-center sm:self-start md:w-[360px] lg:w-[420px]"
             >
-              <div className="relative z-30 flex h-12 items-center rounded-sm bg-white text-left shadow-sm dark:bg-zinc-950">
-                {onOpenSidebar && (
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onOpenSidebar();
-                    }}
-                    className="text-brand hover:bg-brand-soft ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-sm transition md:hidden"
-                    aria-label="사이드바 열기"
-                  >
-                    <Menu size={20} />
-                  </button>
-                )}
-                <label className="flex h-full min-w-0 flex-1 items-center justify-between gap-3 rounded-l-sm bg-white px-3.5 text-sm font-semibold text-gray-400 dark:bg-zinc-950">
-                  <input
-                    ref={searchInputRef}
-                    value={searchQuery}
-                    onChange={(event) => {
-                      const nextQuery = event.target.value;
-
-                      // 태그 검색어를 모두 지우면 뱃지 필터도 함께 해제한다.
-                      if (isTagSearchQuery && !nextQuery.trim()) {
-                        setConsultServiceFilters([]);
-                        setProvidedServiceFilters([]);
-                        restorePreTagSearchStores();
-                      }
-
-                      // 텍스트 검색어를 모두 지우면 검색 중에 쌓인 데이터를 정리한다.
-                      if (
-                        !isTagSearchQuery &&
-                        searchQuery.trim() &&
-                        !nextQuery.trim()
-                      ) {
-                        clearTextSearchSession();
-                      }
-
-                      // 검색 풀을 비운 뒤 다시 입력하면 현재 지역 매장을 다시 불러온다(이미 불러왔으면 건너뜀).
-                      if (
-                        nextQuery.trim() &&
-                        !nextQuery.trim().startsWith("#")
-                      ) {
-                        void loadSearchAreaStores();
-                      }
-
-                      areaSearchRequestIdRef.current += 1;
-                      setSubmittedSearchStores(null);
-                      setSearchQuery(nextQuery);
-                    }}
-                    onFocus={() => {
-                      setIsSearchHistoryOpen(true);
-                      void loadSearchAreaStores();
-                    }}
-                    onMouseDown={() => {
-                      if (document.activeElement === searchInputRef.current) {
-                        setIsSearchHistoryOpen((isOpen) => !isOpen);
-                        void loadSearchAreaStores();
-                      }
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        void submitStoreSearch();
-                      }
-                    }}
-                    placeholder="매장명, 주소, 전화번호 검색"
-                    className="min-w-0 flex-1 truncate bg-transparent text-sm font-semibold text-gray-700 outline-none placeholder:text-gray-400/85 dark:text-white"
-                    aria-label="매장명, 주소, 전화번호 검색"
-                    title={isTagSearchQuery ? searchQuery : undefined}
-                  />
-                  {hasActiveServiceFilter && (
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        clearServiceFilters();
-                        searchInputRef.current?.focus();
-                      }}
-                      className="group/clear relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-300 transition hover:bg-gray-100 hover:text-gray-500 dark:text-gray-500 dark:hover:bg-white/10 dark:hover:text-gray-300"
-                      aria-label="선택한 필터 모두 해제"
-                    >
-                      <CircleX size={17} />
-                      <span className="pointer-events-none absolute top-[calc(100%+10px)] left-1/2 z-50 flex -translate-x-1/2 -translate-y-1 items-center rounded-full bg-gray-900 px-3 py-1.5 text-xs font-extrabold whitespace-nowrap text-white opacity-0 shadow-xl transition duration-150 group-hover/clear:translate-y-0 group-hover/clear:opacity-100 group-focus-visible/clear:translate-y-0 group-focus-visible/clear:opacity-100">
-                        필터 모두 해제
-                      </span>
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      void submitStoreSearch();
-                    }}
-                    className="hover:text-brand flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-300/90 transition hover:bg-gray-100 dark:hover:bg-white/10"
-                    aria-label="검색"
-                  >
-                    <Search size={22} />
-                  </button>
-                </label>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setIsStoreListCollapsed((isCollapsed) => !isCollapsed)
-                  }
-                  className="border-border hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand group relative flex h-full w-12 shrink-0 items-center justify-center rounded-r-sm border-l bg-white text-xs font-extrabold text-gray-500 transition dark:border-white/10 dark:bg-zinc-950 dark:text-gray-300"
-                  aria-expanded={!isStoreListCollapsed}
-                  aria-label={
-                    isStoreListCollapsed ? "지점 목록 펼치기" : "지점 목록 접기"
-                  }
-                >
-                  <List
-                    size={18}
-                    className="transition group-hover:scale-0 group-hover:opacity-0"
-                  />
-                  <span className="absolute inset-0 flex scale-75 items-center justify-center opacity-0 transition group-hover:scale-100 group-hover:opacity-100">
-                    {/* 지도에 찍힌 핀(현재 페이지) 개수 기준. 전체가 더 많으면 "현재/전체"로 표시 */}
-                    {activeMapCategory === "store"
-                      ? hasMoreStorePages
-                        ? `${pagedMapStores.length}/${mapStores.length}`
-                        : `${mapStores.length}개`
-                      : `${benefitServicePreviewItems.length}개`}
-                  </span>
-                  <span className="pointer-events-none absolute top-[calc(100%+8px)] right-0 z-50 flex translate-y-1 items-center rounded-full bg-gray-900 px-3 py-1.5 text-xs font-extrabold whitespace-nowrap text-white opacity-0 shadow-xl transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
-                    {activeMapCategory === "store"
-                      ? "매장 목록"
-                      : "제휴 혜택/서비스 목록"}
-                  </span>
-                </button>
-              </div>
+              <StorePanelSearchBar
+                activeMapCategory={activeMapCategory}
+                hasActiveServiceFilter={hasActiveServiceFilter}
+                hasMoreStorePages={hasMoreStorePages}
+                isStoreListCollapsed={isStoreListCollapsed}
+                isTagSearchQuery={isTagSearchQuery}
+                onClearFilters={clearServiceFilters}
+                onInputFocus={openSearchHistory}
+                onInputMouseDown={toggleSearchHistoryOnInputMouseDown}
+                onOpenSidebar={onOpenSidebar}
+                onQueryChange={handleSearchQueryChange}
+                onSubmit={() => {
+                  void submitStoreSearch();
+                }}
+                onToggleStoreList={() =>
+                  setIsStoreListCollapsed((isCollapsed) => !isCollapsed)
+                }
+                pagedStoreCount={pagedMapStores.length}
+                searchInputRef={searchInputRef}
+                searchQuery={searchQuery}
+                storeCount={mapStores.length}
+              />
 
               {isSearchHistoryOpen && (
-                <div className="absolute top-12 left-0 z-20 w-full overflow-hidden bg-white text-sm shadow-sm dark:bg-zinc-950">
-                  {searchQuery ? (
-                    <div className="max-h-[232px] overflow-y-auto overscroll-contain py-1">
-                      {/* 서비스로 찾기: 매장명보다 하려는 일로 찾는 경우를 위해 맨 위에 보여준다 */}
-                      {searchedServices.map((service) => {
-                        const ServiceIcon = getServiceFilterIcon(service);
-
-                        return (
-                          <button
-                            key={`service-${service}`}
-                            type="button"
-                            onClick={() => {
-                              addSearchHistory(searchQuery);
-                              applyServiceFilterSearch([service]);
-                            }}
-                            className="flex h-11 w-full items-center gap-3 px-5 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-white/[0.04]"
-                          >
-                            <span className="bg-brand-soft text-brand dark:bg-brand/10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
-                              <ServiceIcon size={13} aria-hidden="true" />
-                            </span>
-                            <span className="min-w-0 flex-1 truncate">
-                              {service} 가능한 매장 찾기
-                            </span>
-                            <span className="text-brand shrink-0 text-[11px] font-extrabold">
-                              서비스
-                            </span>
-                          </button>
-                        );
-                      })}
-                      {searchResultStores
-                        .slice(0, MAX_SEARCH_RESULT_COUNT)
-                        .map((store) => (
-                          <button
-                            key={store.id}
-                            type="button"
-                            onClick={() => runStoreSearch(store.id)}
-                            className="flex h-11 w-full items-center justify-between gap-3 px-5 text-left text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-white/[0.04]"
-                          >
-                            <span className="min-w-0 truncate">
-                              {store.name}
-                            </span>
-                            {store.distanceText && (
-                              <span className="shrink-0 text-xs text-gray-400">
-                                {store.distanceText}
-                              </span>
-                            )}
-                          </button>
-                        ))}
-
-                      {searchResultStores.length === 0 &&
-                        searchedServices.length === 0 && (
-                          <div className="flex h-14 cursor-default items-center justify-center text-sm font-medium text-gray-400/85">
-                            지금 보이는 지도 영역에 검색 결과가 없어요.
-                          </div>
-                        )}
-                    </div>
-                  ) : isSearchHistoryEnabled && searchHistory.length > 0 ? (
-                    <div className="max-h-[232px] overflow-y-auto overscroll-contain py-1">
-                      {searchHistory.map((item) => (
-                        <div
-                          key={item.query}
-                          className="group flex items-center hover:bg-gray-50 dark:hover:bg-white/[0.04]"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSearchQuery(item.query);
-
-                              if (item.storeId) {
-                                runStoreSearch(item.storeId, item.query);
-                              } else {
-                                searchInputRef.current?.focus();
-                              }
-                            }}
-                            className="flex h-11 min-w-0 flex-1 items-center gap-3 pl-5 text-left text-sm font-semibold text-gray-600 dark:text-gray-200"
-                          >
-                            <Clock3
-                              size={15}
-                              className="shrink-0 text-gray-300"
-                              aria-hidden="true"
-                            />
-                            <span className="min-w-0 truncate">
-                              {item.query}
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => removeSearchHistory(item.query)}
-                            className="mr-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-300 transition hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-white/10"
-                            aria-label={`${item.query} 검색 기록 삭제`}
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex h-14 cursor-default items-center justify-center gap-2 text-gray-400/85">
-                      <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-gray-300/80 text-[11px] leading-none font-bold text-gray-300">
-                        i
-                      </span>
-                      <span className="text-sm font-medium">
-                        {isSearchHistoryEnabled
-                          ? "히스토리가 없어요."
-                          : "검색 히스토리 저장이 꺼져 있어요."}
-                      </span>
-                    </div>
-                  )}
-                  {!searchQuery && (
-                    <div className="flex h-12 cursor-default items-center justify-between gap-3 bg-gray-50 px-5 dark:bg-white/[0.04]">
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={toggleSearchHistoryEnabled}
-                          className="cursor-pointer text-sm font-medium text-gray-400/90 hover:text-gray-600 dark:hover:text-gray-200"
-                        >
-                          {isSearchHistoryEnabled
-                            ? "히스토리 끄기"
-                            : "히스토리 켜기"}
-                        </button>
-                      </div>
-                      {isSearchHistoryEnabled && searchHistory.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={clearSearchHistory}
-                          className="cursor-pointer text-sm font-medium text-gray-400/90 hover:text-gray-600 dark:hover:text-gray-200"
-                        >
-                          전체 삭제
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <StorePanelSearchDropdown
+                  isSearchHistoryEnabled={isSearchHistoryEnabled}
+                  onClearHistory={clearSearchHistory}
+                  onRemoveHistory={removeSearchHistory}
+                  onSelectHistory={selectSearchHistory}
+                  onSelectService={(service) => {
+                    addSearchHistory(searchQuery);
+                    applyServiceFilterSearch([service]);
+                  }}
+                  onSelectStore={(storeId) => runStoreSearch(storeId)}
+                  onToggleHistoryEnabled={toggleSearchHistoryEnabled}
+                  searchedServices={searchedServices}
+                  searchHistory={searchHistory}
+                  searchQuery={searchQuery}
+                  searchResultStores={searchResultStores}
+                />
               )}
 
               {!isStoreListCollapsed && (
-                <div
-                  ref={storeListPanelRef}
-                  className="absolute top-12 left-0 z-10 w-full overflow-hidden rounded-b-sm bg-white/95 shadow-sm backdrop-blur dark:bg-zinc-950/95"
-                >
-                  <div className="border-border flex h-12 items-center justify-between gap-3 border-b px-3 dark:border-white/10">
-                    <span className="min-w-0 truncate text-sm font-extrabold text-gray-950 dark:text-white">
-                      {activeMapCategory === "store"
-                        ? "매장 목록"
-                        : "제휴 혜택/서비스 목록"}
-                    </span>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <div className="flex items-center gap-1 rounded-sm border border-gray-200 bg-white p-0.5 text-[11px] font-extrabold dark:border-white/10 dark:bg-zinc-950">
-                        {mapCategoryOptions.map((item) => {
-                          const Icon = item.icon;
-                          const isSelected = activeMapCategory === item.value;
-
-                          return (
-                            <button
-                              key={item.value}
-                              type="button"
-                              onClick={() => setActiveMapCategory(item.value)}
-                              className={cn(
-                                "group relative flex h-7 w-7 items-center justify-center rounded-sm transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none",
-                                isSelected
-                                  ? "bg-brand text-white dark:text-zinc-950"
-                                  : "text-text-secondary hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand",
-                              )}
-                              aria-label={`${item.label} 보기`}
-                              aria-pressed={isSelected}
-                            >
-                              <Icon size={14} />
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setIsStoreListCollapsed(true)}
-                        className="flex h-8 w-8 items-center justify-center rounded-sm text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none dark:hover:bg-white/10 dark:hover:text-gray-200"
-                        aria-label="매장 목록 닫기"
-                      >
-                        <X size={15} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="max-h-[min(48vh,372px)] overflow-y-auto py-1">
-                    {activeMapCategory === "store" ? (
-                      <>
-                        {pagedMapStores.map((store, index) => (
-                          <button
-                            key={`${currentStorePage}:${store.id}`}
-                            type="button"
-                            onClick={() =>
-                              handleStoreSelect(store.id, {
-                                focusMap: true,
-                                showOnlySelected: true,
-                              })
-                            }
-                            className={cn(
-                              // 페이지가 바뀌면(key 변경으로 새로 그려짐) 서서히 나타난다.
-                              "animate-store-page-in flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-gray-50 dark:hover:bg-white/[0.04]",
-                              mapSelectedStoreId === store.id &&
-                                "bg-brand-soft dark:bg-brand/10",
-                            )}
-                            aria-pressed={mapSelectedStoreId === store.id}
-                          >
-                            <span
-                              className={cn(
-                                "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-xs font-black",
-                                mapSelectedStoreId === store.id
-                                  ? "bg-brand text-white"
-                                  : "bg-brand/10 text-brand",
-                              )}
-                            >
-                              {getStoreListLabel(index)}
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="flex items-center justify-between gap-2">
-                                <span className="truncate text-sm font-extrabold text-gray-800 dark:text-white">
-                                  {store.name}
-                                </span>
-                                {store.distanceText && (
-                                  <span className="shrink-0 text-[11px] font-bold text-gray-400">
-                                    {store.distanceText}
-                                  </span>
-                                )}
-                              </span>
-                              <span className="mt-1 block truncate text-xs font-medium text-gray-400">
-                                {store.address || "상세 주소 확인 중"}
-                              </span>
-                            </span>
-                          </button>
-                        ))}
-
-                        {mapStores.length === 0 && (
-                          <div className="flex h-20 items-center justify-center text-sm font-semibold text-gray-400">
-                            표시할 매장이 없어요.
-                          </div>
-                        )}
-
-                        {hasMoreStorePages && !isStorePaginationOn && (
-                          <button
-                            type="button"
-                            onClick={() => setIsStorePaginationOn(true)}
-                            className="text-text-secondary hover:text-text-primary flex h-11 w-full items-center justify-center gap-1 text-xs font-extrabold transition hover:bg-gray-50 dark:hover:bg-white/[0.04]"
-                          >
-                            더보기
-                            <span className="text-gray-400">
-                              ({mapStores.length - firstPageSize}개 더)
-                            </span>
-                            <ChevronDown size={14} />
-                          </button>
-                        )}
-
-                        {hasMoreStorePages && isStorePaginationOn && (
-                          <nav
-                            aria-label="매장 목록 페이지"
-                            className="flex h-11 items-center justify-center gap-1"
-                          >
-                            <button
-                              type="button"
-                              onClick={() => goToStorePage(activeStorePage - 1)}
-                              disabled={activeStorePage === 0}
-                              className="text-text-secondary flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-white/10"
-                              aria-label="이전 페이지"
-                            >
-                              <ChevronLeft size={15} />
-                            </button>
-                            {getPaginationItems(
-                              activeStorePage,
-                              storePageCount,
-                            ).map((page, index) =>
-                              page === "ellipsis" ? (
-                                <span
-                                  key={`ellipsis-${index}`}
-                                  aria-hidden="true"
-                                  className="flex h-7 w-5 items-center justify-center text-xs font-extrabold text-gray-400"
-                                >
-                                  …
-                                </span>
-                              ) : (
-                                <button
-                                  key={page}
-                                  type="button"
-                                  onClick={() => goToStorePage(page)}
-                                  className={cn(
-                                    "flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-xs font-extrabold transition",
-                                    page === activeStorePage
-                                      ? "bg-brand text-white"
-                                      : "text-text-secondary hover:bg-gray-100 dark:hover:bg-white/10",
-                                  )}
-                                  aria-current={
-                                    page === activeStorePage
-                                      ? "page"
-                                      : undefined
-                                  }
-                                >
-                                  {page + 1}
-                                </button>
-                              ),
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => goToStorePage(activeStorePage + 1)}
-                              disabled={activeStorePage === storePageCount - 1}
-                              className="text-text-secondary flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-white/10"
-                              aria-label="다음 페이지"
-                            >
-                              <ChevronRight size={15} />
-                            </button>
-                          </nav>
-                        )}
-                      </>
-                    ) : (
-                      <div className="space-y-1 px-2 py-2">
-                        {benefitServicePreviewItems.map((item) => (
-                          <div
-                            key={item.title}
-                            className="rounded-sm px-3 py-3 text-left transition hover:bg-gray-50 dark:hover:bg-white/[0.04]"
-                          >
-                            <span className="flex items-start gap-3">
-                              <span
-                                aria-hidden="true"
-                                className="bg-brand/10 text-brand mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-sm"
-                              >
-                                <BadgePercent size={15} />
-                              </span>
-                              <span className="min-w-0">
-                                <span className="block text-sm font-extrabold text-gray-800 dark:text-white">
-                                  {item.title}
-                                </span>
-                                <span className="mt-1 block text-xs leading-5 font-medium text-gray-400">
-                                  {item.description}
-                                </span>
-                              </span>
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <StorePanelStoreList
+                  activeMapCategory={activeMapCategory}
+                  activeStorePage={activeStorePage}
+                  currentStorePage={currentStorePage}
+                  firstPageSize={firstPageSize}
+                  hasMoreStorePages={hasMoreStorePages}
+                  isStorePaginationOn={isStorePaginationOn}
+                  mapSelectedStoreId={mapSelectedStoreId}
+                  onCategoryChange={setActiveMapCategory}
+                  onClose={() => setIsStoreListCollapsed(true)}
+                  onPageChange={goToStorePage}
+                  onSelectStore={(storeId) =>
+                    handleStoreSelect(storeId, {
+                      focusMap: true,
+                      showOnlySelected: true,
+                    })
+                  }
+                  onShowPagination={() => setIsStorePaginationOn(true)}
+                  pagedMapStores={pagedMapStores}
+                  panelRef={storeListPanelRef}
+                  storeCount={mapStores.length}
+                  storePageCount={storePageCount}
+                />
               )}
             </div>
-            {/* 모바일: 검색창 바로 아래 가로 슬라이드 필터 */}
-            <div className="-mx-3 w-[calc(100%+24px)] max-w-none min-w-0 self-stretch sm:mx-0 sm:w-[min(420px,calc(100vw-48px))] sm:max-w-full sm:self-start md:hidden">
-              <MobileServiceFilterCarousel
-                aria-label="상담 및 서비스 카테고리 필터"
-                consultOptions={consultServiceFilterOptions}
-                consultValue={consultServiceFilters}
-                onConsultChange={(value) =>
-                  handleServiceFilterChange("consult", value)
-                }
-                onProvidedChange={(value) =>
-                  handleServiceFilterChange("provided", value)
-                }
-                providedOptions={providedServiceFilterOptions}
-                providedValue={providedServiceFilters}
-              />
-            </div>
-            <div className="hidden min-w-0 md:flex md:flex-1">
-              <ServiceFilterCarousel
-                aria-label="상담 및 서비스 카테고리 필터"
-                consultOptions={consultServiceFilterOptions}
-                consultValue={consultServiceFilters}
-                onConsultChange={(value) =>
-                  handleServiceFilterChange("consult", value)
-                }
-                onProvidedChange={(value) =>
-                  handleServiceFilterChange("provided", value)
-                }
-                providedOptions={providedServiceFilterOptions}
-                providedValue={providedServiceFilters}
-              />
-            </div>
+            <StorePanelServiceFilters
+              consultOptions={consultServiceFilterOptions}
+              consultValue={consultServiceFilters}
+              onChange={handleServiceFilterChange}
+              providedOptions={providedServiceFilterOptions}
+              providedValue={providedServiceFilters}
+            />
           </div>
         </div>
       </div>

@@ -35,3 +35,6 @@ export type StoreRoute = {
   path: StoreRoutePoint[];
   segments?: StoreRouteSegment[];
 };
+
+/** 매장 지도 패널 목록 탭: 매장 / 제휴 혜택 */
+export type MapCategory = "store" | "benefit";
