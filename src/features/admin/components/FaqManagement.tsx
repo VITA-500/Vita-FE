@@ -59,6 +59,10 @@ const faqStatusFilterOptions = [
   { label: "활성", value: "ACTIVE" },
   { label: "비활성", value: "INACTIVE" },
 ] as const;
+const faqSortOptions = [
+  { label: "최신 등록순", value: "createdAt:desc" },
+  { label: "최근 수정순", value: "updatedAt:desc" },
+] as const;
 const pageSizeOptions = [20, 50, 100] as const;
 const pageSizeFilterOptions = pageSizeOptions.map((pageSize) => ({
   label: `${pageSize}개`,
@@ -75,6 +79,8 @@ export const FaqManagement = () => {
     faqKeyword,
     faqPage,
     faqPageSize,
+    faqSortDirection,
+    faqSortField,
     faqStatusFilter,
     faqTotalCount,
     faqTotalPages,
@@ -85,6 +91,7 @@ export const FaqManagement = () => {
     setFaqKeyword,
     setFaqPage,
     setFaqPageSize,
+    setFaqSort,
     setFaqStatus,
     setFaqStatusFilter,
   } = useAdminData();
@@ -175,6 +182,19 @@ export const FaqManagement = () => {
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <FilterDropdown
+            aria-label="FAQ 정렬"
+            className="w-full sm:w-[160px]"
+            options={faqSortOptions}
+            value={`${faqSortField}:${faqSortDirection}`}
+            onChange={(nextValue) => {
+              const [field, direction] = nextValue.split(":");
+              setFaqSort(
+                field as "createdAt" | "updatedAt",
+                direction as "asc" | "desc",
+              );
+            }}
+          />
+          <FilterDropdown
             aria-label="카테고리 필터"
             className="w-full sm:w-[160px]"
             options={faqCategoryFilterOptions}
@@ -235,6 +255,7 @@ export const FaqManagement = () => {
                     <span>#{faq.faqId}</span>
                     <span>{faq.category}</span>
                     <span>{faq.createdAt.slice(0, 10)}</span>
+                    <span>수정 {formatDate(faq.updatedAt)}</span>
                   </div>
                 </div>
               </div>
@@ -245,16 +266,7 @@ export const FaqManagement = () => {
                   size="xs"
                   className="h-9 w-9 rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white"
                   aria-label="FAQ 수정"
-                  onClick={() => {
-                    if (!faq.answer) {
-                      showToast(
-                        "백엔드 응답에 답변이 없어 아직 기존 FAQ 수정은 열 수 없습니다.",
-                      );
-                      return;
-                    }
-
-                    setEditingFaqId(faq.faqId);
-                  }}
+                  onClick={() => setEditingFaqId(faq.faqId)}
                 >
                   <Edit2 size={20} />
                 </Button>
@@ -313,6 +325,7 @@ export const FaqManagement = () => {
                 <th className="px-4 py-4 text-left">질문</th>
                 <th className="w-[22%] px-4 py-4 text-left">카테고리</th>
                 <th className="w-[128px] px-4 py-4 text-center">등록일</th>
+                <th className="w-[128px] px-4 py-4 text-center">수정일</th>
                 <th className="w-[270px] px-5 py-4 text-center">관리</th>
               </tr>
             </thead>
@@ -323,7 +336,7 @@ export const FaqManagement = () => {
                 ))
               ) : faqs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="h-[640px] px-5 py-0">
+                  <td colSpan={6} className="h-[640px] px-5 py-0">
                     <AdminEmptyState
                       title="조건에 맞는 FAQ가 없습니다."
                       description="검색어와 카테고리 필터를 조정하거나 새 FAQ를 등록해 주세요."
@@ -349,6 +362,9 @@ export const FaqManagement = () => {
                       <td className="px-4 py-4 text-center font-semibold text-gray-400">
                         {formatDate(faq.createdAt)}
                       </td>
+                      <td className="px-4 py-4 text-center font-semibold text-gray-400">
+                        {formatDate(faq.updatedAt)}
+                      </td>
                       <td className="px-5 py-4 text-center">
                         <div className="inline-flex items-center justify-center gap-2">
                           <Button
@@ -356,16 +372,7 @@ export const FaqManagement = () => {
                             size="sm"
                             className="h-12 w-12 rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white"
                             aria-label="FAQ 수정"
-                            onClick={() => {
-                              if (!faq.answer) {
-                                showToast(
-                                  "백엔드 응답에 답변이 없어 아직 기존 FAQ 수정은 열 수 없습니다.",
-                                );
-                                return;
-                              }
-
-                              setEditingFaqId(faq.faqId);
-                            }}
+                            onClick={() => setEditingFaqId(faq.faqId)}
                           >
                             <Edit2 size={30} />
                           </Button>
@@ -413,7 +420,7 @@ export const FaqManagement = () => {
                       aria-hidden="true"
                       className="h-20"
                     >
-                      <td colSpan={5} />
+                      <td colSpan={6} />
                     </tr>
                   ))}
                 </>
@@ -731,6 +738,9 @@ const FaqSkeletonRow = () => (
     </td>
     <td className="px-4 py-4">
       <div className="bg-surface-muted h-4 w-24 animate-pulse rounded-full dark:bg-white/10" />
+    </td>
+    <td className="px-4 py-4">
+      <div className="bg-surface-muted mx-auto h-4 w-20 animate-pulse rounded-full dark:bg-white/10" />
     </td>
     <td className="px-4 py-4">
       <div className="bg-surface-muted mx-auto h-4 w-20 animate-pulse rounded-full dark:bg-white/10" />

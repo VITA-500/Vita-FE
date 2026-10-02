@@ -1,4 +1,6 @@
 import Image from "next/image";
+import { ChatMarkdown } from "@/features/chat/components/ChatMarkdown";
+import { ChatProgressSteps } from "@/features/chat/components/ChatProgressSteps";
 import type { ChatMessage } from "@/features/chat/types";
 import { ButtonLink } from "@/shared/ui/Button";
 
@@ -43,14 +45,16 @@ export const ChatMessageList = ({
       return (
         <div
           key={message.id}
-          className="mr-auto flex max-w-[76%] items-start gap-3"
+          className="mr-auto flex max-w-full items-start gap-2 md:max-w-[76%] md:gap-3"
         >
           <AssistantProfile />
 
           <div className="min-w-0 flex-1">
-            <article className="border-border text-text-primary rounded-3xl border bg-white px-5 py-4 text-sm leading-6 shadow-sm dark:border-white/10 dark:bg-zinc-950 dark:text-white">
-              <p className="whitespace-pre-line">{message.content}</p>
+            <article className="border-border text-text-primary rounded-3xl border bg-white px-4 py-4 text-sm leading-6 shadow-sm md:px-5 dark:border-white/10 dark:bg-zinc-950 dark:text-white">
+              <ChatMarkdown content={message.content ?? ""} />
 
+              {/* 참고한 FAQ 표시는 사용하지 않기로 해서 숨김 처리 (BE relatedFaqs 미요청).
+                  다시 표시하려면 아래 블록의 주석을 해제하세요.
               {message.sources && message.sources.length > 0 && (
                 <div className="border-border mt-4 space-y-2 border-t pt-3 dark:border-white/10">
                   <p className="text-brand text-xs font-extrabold">
@@ -68,6 +72,7 @@ export const ChatMessageList = ({
                   </div>
                 </div>
               )}
+              */}
 
               {message.actions && message.actions.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -91,15 +96,21 @@ export const ChatMessageList = ({
 
     {isLoading && (
       <div
-        aria-label="답변을 정리하고 있어요"
-        className="text-text-secondary mr-auto flex max-w-[76%] items-start gap-3 text-sm font-medium dark:text-gray-400"
+        aria-label="답변을 준비하고 있어요"
+        className="mr-auto flex max-w-[76%] items-start gap-3"
       >
         <AssistantProfile />
 
-        <div className="pt-3">
-          <div className="flex items-center gap-2">
+        <div className="min-w-0">
+          <ChatProgressSteps />
+
+          {/* 기존 로딩 표시: 단계 아래에서 계속 움직여 응답을 기다리는 중임을 보여준다. */}
+          <div
+            aria-hidden="true"
+            className="text-text-secondary mt-3 flex items-center gap-2 pl-7 text-sm font-medium dark:text-gray-400"
+          >
             <span className="animate-pulse">생각 중</span>
-            <span className="flex items-center gap-1 pt-1" aria-hidden="true">
+            <span className="flex items-center gap-1 pt-1">
               <span className="bg-brand h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:0ms]" />
               <span className="bg-brand h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:120ms]" />
               <span className="bg-brand h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:240ms]" />

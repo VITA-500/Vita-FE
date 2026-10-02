@@ -10,7 +10,7 @@ describe("requestJson", () => {
     vi.restoreAllMocks();
   });
 
-  it("uses the configured base URL and includes credentials", async () => {
+  it("uses the configured base URL and includes credentials without JSON header on GET", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ ok: true }), {
         headers: { "Content-Type": "application/json" },
@@ -25,12 +25,11 @@ describe("requestJson", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.vita.test/users/me",
-      expect.objectContaining({
-        credentials: "include",
-        headers: expect.objectContaining({
-          "Content-Type": "application/json",
-        }),
-      }),
+      expect.objectContaining({ credentials: "include" }),
+    );
+    // body 없는 GET에는 Content-Type을 붙이지 않는다(불필요한 CORS preflight 방지).
+    expect(fetchMock.mock.calls[0][1].headers).not.toHaveProperty(
+      "Content-Type",
     );
   });
 

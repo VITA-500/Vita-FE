@@ -18,6 +18,7 @@ import {
 } from "@/features/chat/lib/chatConversationStorage";
 import {
   chatService,
+  FAILED_ANSWER_MESSAGE,
   isPermanentClaimError,
 } from "@/features/chat/lib/chatService";
 import { ProfilePanel } from "@/features/auth/components/ProfilePanel";
@@ -27,6 +28,7 @@ import type {
   ChatMode,
   ChatSessionSummary,
   SessionMessage,
+  SessionMessagesResponse,
 } from "@/features/chat/types";
 import { useChatTour } from "@/features/chat/hooks/useChatTour";
 import { StoreMapPanel } from "@/features/store/components/StoreMapPanel";
@@ -35,8 +37,10 @@ import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
 import { showToast } from "@/shared/ui/ToastProvider";
 
-const FAILED_ANSWER_MESSAGE =
-  "답변을 생성하지 못했어요. 잠시 후 다시 시도해 주세요.";
+/** 사이드바 제목을 채우려고 상담 메시지를 동시에 조회하는 최대 개수. */
+const TITLE_FETCH_CONCURRENCY = 4;
+/** 최근 상담을 펼치기 전에 제목 조회를 기다리는 최대 시간. */
+const TITLE_FETCH_WAIT_MS = 3000;
 
 const toChatTitle = (prompt: string) =>
   prompt.length > 18 ? `${prompt.slice(0, 18)}...` : prompt;
@@ -70,6 +74,9 @@ const ChatPageContent = () => {
     useState(false);
   const [chatInput, setChatInput] = useState("");
   const [chatStatus, setChatStatus] = useState<"idle" | "loading">("idle");
+  // 지난 상담을 불러오는 중인 세션 번호. 답변 대기(chatStatus)와 분리해서,
+  // 상담을 바꿀 때 지금 보던 대화에 "생각 중" 진행 표시가 뜨지 않게 한다.
+  const [loadingSessionId, setLoadingSessionId] = useState<number | null>(null);
   const [currentChatTitle, setCurrentChatTitle] = useState("");
   const [currentGuestId, setCurrentGuestId] = useState<string | undefined>();
   const [currentSessionId, setCurrentSessionId] = useState<
@@ -77,9 +84,22 @@ const ChatPageContent = () => {
   >();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatSessions, setChatSessions] = useState<ChatSessionSummary[]>([]);
+  // 첫 진입·새로고침 때 최근 상담 목록(제목 포함)을 다 받아왔는지. 받기 전에는 사이드바 목록을 접어 둬서
+  // 생성 시각 → 첫 질문으로 제목이 바뀌는 순간이 보이지 않게 한다.
+  const [hasLoadedRecentChats, setHasLoadedRecentChats] = useState(false);
+  // BE 세션 title이 항상 비어 있어서, 상담의 첫 질문을 제목으로 기억해 사이드바에 쓴다.
+  const [sessionTitles, setSessionTitles] = useState<Record<number, string>>(
+    {},
+  );
   const [railTooltip, setRailTooltip] = useState<RailTooltipProps | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  // 지난 상담으로 바꿀 때는 부드러운 스크롤 대신 바로 맨 아래로 이동한다(긴 대화에서 화면이 끌려 내려가지 않게).
+  const shouldJumpToBottomRef = useRef(false);
+  // 상담을 빠르게 연속 클릭했을 때 늦게 도착한 이전 응답이 화면을 덮어쓰지 않도록 마지막 요청만 반영한다.
+  const latestSelectRequestRef = useRef(0);
   const chatInputRef = useRef<HTMLInputElement | null>(null);
+  // 제목을 채우려고 이미 메시지를 조회한(또는 조회 중인) 상담 번호.
+  const requestedTitleSessionIdsRef = useRef<Set<number>>(new Set());
   const activeConversationOwnerKeyRef = useRef("");
   const hasHydratedConversationRef = useRef(false);
   const modeParam = searchParams.get("mode");
@@ -100,6 +120,57 @@ const ChatPageContent = () => {
 
   const startChatTour = useChatTour();
 
+  // BE 세션 목록의 title이 비어 있어서, 새로고침·첫 진입 때 사이드바가 생성 시각으로만 보였다.
+  // 제목을 모르는 상담은 메시지를 조회해 첫 질문을 제목으로 채운다(한 번 조회한 상담은 다시 묻지 않음).
+  const fillMissingSessionTitles = useCallback(
+    async (sessions: readonly ChatSessionSummary[]) => {
+      const targets = sessions.filter(
+        (session) =>
+          !session.title &&
+          !requestedTitleSessionIdsRef.current.has(session.sessionId),
+      );
+
+      targets.forEach((session) =>
+        requestedTitleSessionIdsRef.current.add(session.sessionId),
+      );
+
+      const queue = [...targets];
+      const worker = async () => {
+        for (let session = queue.shift(); session; session = queue.shift()) {
+          try {
+            const { messages: sessionMessages } = await chatService.getMessages(
+              session.sessionId,
+            );
+            const firstPrompt = sessionMessages.find(
+              (message) => message.role === "USER" && message.content,
+            )?.content;
+
+            if (!firstPrompt) continue;
+
+            const sessionId = session.sessionId;
+            setSessionTitles((titles) =>
+              titles[sessionId]
+                ? titles
+                : { ...titles, [sessionId]: toChatTitle(firstPrompt) },
+            );
+          } catch {
+            // 실패하면 다음 새로고침 때 다시 시도하고, 그동안은 날짜 제목을 그대로 쓴다.
+            requestedTitleSessionIdsRef.current.delete(session.sessionId);
+          }
+        }
+      };
+
+      // 상담이 많아도 요청이 한꺼번에 몰리지 않게 동시에 몇 개씩만 조회한다.
+      await Promise.all(
+        Array.from(
+          { length: Math.min(TITLE_FETCH_CONCURRENCY, queue.length) },
+          worker,
+        ),
+      );
+    },
+    [],
+  );
+
   const refreshChatSessions = useCallback(async () => {
     if (!isAuthenticated) {
       setChatSessions([]);
@@ -109,22 +180,38 @@ const ChatPageContent = () => {
     try {
       const { sessions } = await chatService.getSessions();
       setChatSessions(sessions);
+      // 처음 목록을 그릴 때는 제목이 채워질 때까지(최대 TITLE_FETCH_WAIT_MS) 기다렸다가 펼친다.
+      // 너무 오래 걸리면 먼저 펼치고, 늦게 온 제목은 그대로 반영된다.
+      await Promise.race([
+        fillMissingSessionTitles(sessions),
+        new Promise((resolve) =>
+          window.setTimeout(resolve, TITLE_FETCH_WAIT_MS),
+        ),
+      ]);
     } catch {
       setChatSessions([]);
+    } finally {
+      setHasLoadedRecentChats(true);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fillMissingSessionTitles]);
 
-  const loadChatSession = useCallback(async (targetSessionId: number) => {
-    const response = await chatService.getMessages(targetSessionId);
+  const applyChatSession = useCallback((response: SessionMessagesResponse) => {
     const nextMessages = response.messages.map(toChatMessage);
     const firstPrompt = response.messages.find(
       (message) => message.role === "USER" && message.content,
     )?.content;
 
+    shouldJumpToBottomRef.current = true;
     setCurrentSessionId(response.sessionId);
     setCurrentGuestId(undefined);
     setMessages(nextMessages);
     setCurrentChatTitle(firstPrompt ? toChatTitle(firstPrompt) : "");
+    if (firstPrompt) {
+      setSessionTitles((titles) => ({
+        ...titles,
+        [response.sessionId]: toChatTitle(firstPrompt),
+      }));
+    }
     setChatStatus("idle");
   }, []);
 
@@ -269,19 +356,24 @@ const ChatPageContent = () => {
   useEffect(() => {
     if (activeMode !== "chat" || messages.length === 0) return;
 
+    const behavior: ScrollBehavior = shouldJumpToBottomRef.current
+      ? "auto"
+      : "smooth";
+    shouldJumpToBottomRef.current = false;
+
     window.requestAnimationFrame(() => {
       scrollContainerRef.current?.scrollTo({
         top: scrollContainerRef.current.scrollHeight,
-        behavior: "smooth",
+        behavior,
       });
       window.requestAnimationFrame(() => {
         scrollContainerRef.current?.scrollTo({
           top: scrollContainerRef.current.scrollHeight,
-          behavior: "smooth",
+          behavior,
         });
       });
     });
-  }, [activeMode, chatStatus, messages.length]);
+  }, [activeMode, chatStatus, messages]);
 
   const showRailTooltip =
     (label: string, shortcut?: string) => (event: MouseEvent<HTMLElement>) => {
@@ -366,6 +458,11 @@ const ChatPageContent = () => {
 
       setCurrentGuestId(nextGuestId);
       setCurrentSessionId(nextSessionId);
+      setSessionTitles((titles) =>
+        titles[nextSessionId]
+          ? titles
+          : { ...titles, [nextSessionId]: toChatTitle(trimmedPrompt) },
+      );
 
       const assistantMessage = await chatService.sendMessage({
         content: trimmedPrompt,
@@ -391,6 +488,9 @@ const ChatPageContent = () => {
   };
 
   const resetChat = () => {
+    // 지난 상담을 불러오는 중에 새 상담을 시작하면, 늦게 온 응답이 새 화면을 덮지 않게 무시한다.
+    latestSelectRequestRef.current += 1;
+    setLoadingSessionId(null);
     setMessages([]);
     setChatInput("");
     setCurrentChatTitle("");
@@ -406,17 +506,38 @@ const ChatPageContent = () => {
       router.replace(routes.chat);
     }
 
-    if (targetSessionId === currentSessionId || chatStatus === "loading") {
+    if (
+      targetSessionId === currentSessionId ||
+      targetSessionId === loadingSessionId ||
+      chatStatus === "loading"
+    ) {
       return;
     }
 
-    setChatStatus("loading");
+    const requestId = latestSelectRequestRef.current + 1;
+    latestSelectRequestRef.current = requestId;
+    setLoadingSessionId(targetSessionId);
 
     try {
-      await loadChatSession(targetSessionId);
+      const loaded = await chatService.getMessages(targetSessionId);
+
+      // 그사이 다른 상담을 눌렀으면 이 응답은 버린다.
+      if (latestSelectRequestRef.current !== requestId) return;
+
+      // 질문이 저장되지 못한 빈 상담은 열어도 새 상담 화면처럼 보이기만 해서, 지금 화면을 유지한다.
+      if (loaded.messages.length === 0) {
+        showToast("저장된 대화가 없는 상담이에요.");
+        return;
+      }
+
+      applyChatSession(loaded);
     } catch {
+      if (latestSelectRequestRef.current !== requestId) return;
       showToast("상담 내역을 불러오지 못했어요.");
-      setChatStatus("idle");
+    } finally {
+      if (latestSelectRequestRef.current === requestId) {
+        setLoadingSessionId(null);
+      }
     }
   };
 
@@ -484,7 +605,12 @@ const ChatPageContent = () => {
         activeMode={activeMode}
         currentChatTitle={currentChatTitle}
         chatSessions={chatSessions}
+        pendingSessionId={loadingSessionId}
         activeSessionId={currentSessionId ?? null}
+        sessionTitles={sessionTitles}
+        isRecentChatsLoading={
+          !isAuthReady || (isAuthenticated && !hasLoadedRecentChats)
+        }
         onSelectChat={(targetSessionId) => {
           void handleSelectChat(targetSessionId);
         }}
@@ -527,7 +653,13 @@ const ChatPageContent = () => {
                     className="h-full overflow-y-auto"
                   >
                     <div className="mx-auto min-h-full w-full max-w-[860px] px-6 pt-16 pb-36 md:pt-20">
-                      <div>
+                      <div
+                        aria-busy={loadingSessionId !== null}
+                        className={cn(
+                          "transition-opacity duration-200",
+                          loadingSessionId !== null && "opacity-40",
+                        )}
+                      >
                         <ChatMessageList
                           isLoading={chatStatus === "loading"}
                           messages={messages}
