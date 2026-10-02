@@ -468,6 +468,11 @@ type MapOverlayHandle = {
   cleanup?: () => void;
 };
 
+type StoreMarkerGroupEntry = {
+  index: number;
+  store: StoreLocation;
+};
+
 type ExtraService = MarkerColorInfo["extraServices"][number];
 
 const getExtraServicesLabel = (services: ExtraService[]) =>
@@ -523,6 +528,55 @@ const ExtraServiceBadge = ({ services }: { services: ExtraService[] }) => (
     </span>
   </span>
 );
+
+const createClusterListElement = ({
+  group,
+  getLabel,
+  onSelect,
+  selectedStoreId,
+}: {
+  group: StoreMarkerGroupEntry[];
+  getLabel: (entry: StoreMarkerGroupEntry) => string;
+  onSelect: (entry: StoreMarkerGroupEntry, event: MouseEvent) => void;
+  selectedStoreId: string;
+}) => {
+  const clusterList = document.createElement("div");
+  const listTitle = document.createElement("p");
+  const list = document.createElement("div");
+
+  clusterList.className =
+    "absolute bottom-[calc(100%+4px)] left-1/2 z-[3] w-56 -translate-x-1/2 overflow-hidden rounded-sm bg-white text-left shadow-lg ring-1 ring-gray-950/5 dark:bg-zinc-950 dark:ring-white/10";
+  listTitle.className =
+    "border-b border-gray-100 px-3 py-2 text-[11px] font-extrabold text-gray-400 dark:border-white/10";
+  listTitle.textContent = `같은 위치 매장 ${group.length}곳`;
+  list.className = "max-h-56 overflow-y-auto py-1";
+
+  group.forEach((entry) => {
+    const item = document.createElement("button");
+    const itemLabel = document.createElement("span");
+    const itemName = document.createElement("span");
+    const isItemSelected = entry.store.id === selectedStoreId;
+
+    item.type = "button";
+    item.className = cn(
+      "flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-bold transition",
+      isItemSelected
+        ? "bg-brand-soft text-gray-900 dark:bg-brand/10 dark:text-white"
+        : "text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-white/[0.04]",
+    );
+    itemLabel.className =
+      "bg-brand flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-[10px] font-black text-white";
+    itemLabel.textContent = getLabel(entry);
+    itemName.className = "min-w-0 truncate";
+    itemName.textContent = entry.store.name;
+    item.append(itemLabel, itemName);
+    item.addEventListener("click", (event) => onSelect(entry, event));
+    list.append(item);
+  });
+
+  clusterList.append(listTitle, list);
+  return clusterList;
+};
 
 type RoutePreview = {
   destination: MapPoint;
@@ -1748,40 +1802,10 @@ export const StoreMapPreview = ({
         closeClusterList();
       };
       const openClusterList = () => {
-        clusterList = document.createElement("div");
-        clusterList.className =
-          "absolute bottom-[calc(100%+4px)] left-1/2 z-[3] w-56 -translate-x-1/2 overflow-hidden rounded-sm bg-white text-left shadow-lg ring-1 ring-gray-950/5 dark:bg-zinc-950 dark:ring-white/10";
-
-        const listTitle = document.createElement("p");
-
-        listTitle.className =
-          "border-b border-gray-100 px-3 py-2 text-[11px] font-extrabold text-gray-400 dark:border-white/10";
-        listTitle.textContent = `같은 위치 매장 ${group.length}곳`;
-        clusterList.append(listTitle);
-
-        const list = document.createElement("div");
-
-        list.className = "max-h-56 overflow-y-auto py-1";
-        group.forEach((entry) => {
-          const item = document.createElement("button");
-          const itemLabel = document.createElement("span");
-          const itemName = document.createElement("span");
-          const isItemSelected = entry.store.id === selectedStoreId;
-
-          item.type = "button";
-          item.className = cn(
-            "flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-bold transition",
-            isItemSelected
-              ? "bg-brand-soft text-gray-900 dark:bg-brand/10 dark:text-white"
-              : "text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-white/[0.04]",
-          );
-          itemLabel.className =
-            "bg-brand flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-[10px] font-black text-white";
-          itemLabel.textContent = getLabel(entry);
-          itemName.className = "min-w-0 truncate";
-          itemName.textContent = entry.store.name;
-          item.append(itemLabel, itemName);
-          item.addEventListener("click", (event) => {
+        clusterList = createClusterListElement({
+          getLabel,
+          group,
+          onSelect: (entry, event) => {
             event.stopPropagation();
             closeClusterList();
             setRevealedCardStoreId("");
@@ -1790,10 +1814,9 @@ export const StoreMapPreview = ({
               setRevealedCardStoreId("");
             }
             onSelectStore(entry.store.id);
-          });
-          list.append(item);
+          },
+          selectedStoreId,
         });
-        clusterList.append(list);
         container.append(clusterList);
         marker.setAttribute("aria-expanded", "true");
       };
