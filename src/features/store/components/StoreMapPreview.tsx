@@ -331,6 +331,267 @@ const createOtherStoreOverlay = ({
   };
 };
 
+/** 같은 좌표(소수 5자리, 약 1m)에 있는 매장들을 한 묶음으로 모은다. 묶음 순서는 stores에서 처음 나온 순서를 따른다. */
+const groupStoresByCoordinate = (stores: StoreLocation[]) => {
+  const storeGroups = new Map<string, StoreMarkerGroupEntry[]>();
+
+  stores.forEach((store, index) => {
+    const coordinateKey = `${store.lat.toFixed(5)}:${store.lng.toFixed(5)}`;
+    const group = storeGroups.get(coordinateKey) ?? [];
+
+    group.push({ index, store });
+    storeGroups.set(coordinateKey, group);
+  });
+
+  return Array.from(storeGroups.values());
+};
+
+/** 매장 핀(묶음 핀 포함) DOM을 만든다. 이벤트 연결과 overlay 생성은 createStoreMarkerOverlay가 맡는다. */
+const createStoreMarkerElement = ({
+  getLabel,
+  group,
+  isStoreCardShown,
+  markerColorInfo,
+  selectedEntry,
+  shouldAnimateEnter,
+}: {
+  getLabel: (entry: StoreMarkerGroupEntry) => string;
+  group: StoreMarkerGroupEntry[];
+  isStoreCardShown: boolean;
+  markerColorInfo?: MarkerColorInfo;
+  selectedEntry?: StoreMarkerGroupEntry;
+  shouldAnimateEnter: boolean;
+}) => {
+  const [{ store: firstStore }] = group;
+  const isCluster = group.length > 1;
+  const isSelected = Boolean(selectedEntry);
+  const markerColors = markerColorInfo?.colors ?? [];
+  const coordinateKey = `${firstStore.lat.toFixed(5)}:${firstStore.lng.toFixed(5)}`;
+  const gradientId = getMarkerGradientId({
+    colors: markerColors,
+    coordinateKey,
+    storeIds: group.map(({ store }) => store.id),
+  });
+  const container = document.createElement("div");
+  container.className = "relative";
+
+  if (shouldAnimateEnter) {
+    playMarkerEnterAnimation(container);
+  }
+  const marker = document.createElement("button");
+  marker.type = "button";
+  marker.setAttribute(
+    "aria-label",
+    isCluster
+      ? `같은 위치 매장 ${group.length}곳 보기`
+      : `${firstStore.name} 선택`,
+  );
+  marker.className = cn(
+    "group relative block h-[46px] w-[38px] translate-y-[-8px] border-0 bg-transparent p-0 text-xs leading-none font-black text-white transition duration-150 hover:translate-y-[-10px] hover:scale-[1.04]",
+    isSelected && "translate-y-[-10px] scale-[1.04]",
+  );
+  const markerShape = document.createElement("span");
+  markerShape.className = STORE_PIN_SHAPE_CLASS_NAME;
+  markerShape.innerHTML = getStorePinSvgMarkup({
+    colors: markerColors,
+    gradientId,
+  });
+
+  const markerLetter = document.createElement("span");
+  markerLetter.className =
+    "absolute top-[9px] left-1/2 z-[1] -translate-x-1/2 text-xs font-black text-white [text-shadow:_0_1px_2px_rgb(15_23_42_/_0.45)]";
+  markerLetter.textContent = isCluster
+    ? String(group.length)
+    : getLabel(group[0]);
+
+  const markerTooltip = document.createElement("span");
+  markerTooltip.className = cn(
+    "pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-[2] max-w-[180px] -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-sm bg-slate-950/90 px-2.5 py-1.5 text-xs leading-tight font-extrabold text-white opacity-0 shadow-lg transition group-hover:translate-y-0 group-hover:opacity-100",
+    isSelected && "translate-y-0 opacity-100",
+    // 정보 카드가 떠 있으면 카드에 매장명이 있으므로 선택 핀의 이름 툴팁은 숨긴다.
+    isSelected && isStoreCardShown && "hidden",
+  );
+  markerTooltip.textContent = selectedEntry
+    ? selectedEntry.store.name
+    : isCluster
+      ? `같은 위치 매장 ${group.length}곳`
+      : firstStore.name;
+
+  if (isCluster) {
+    // 묶음 핀임을 알 수 있도록 오른쪽 위에 작은 겹침 표시를 단다.
+    const clusterBadge = document.createElement("span");
+
+    clusterBadge.setAttribute("aria-hidden", "true");
+    clusterBadge.className =
+      "text-brand absolute -top-1 right-0 z-[2] flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[9px] leading-none font-black shadow-sm";
+    clusterBadge.style.color = markerColors[0] ?? "";
+    clusterBadge.textContent = "+";
+    marker.append(clusterBadge);
+  }
+
+  if (markerColorInfo && markerColorInfo.extraServices.length > 0) {
+    marker.append(
+      createExtraServiceBadgeElement(markerColorInfo.extraServices),
+    );
+  }
+
+  marker.append(markerShape, markerLetter, markerTooltip);
+  container.append(marker);
+
+  return { container, marker };
+};
+
+/**
+ * 매장 핀을 지도 위 overlay로 올리고, 클릭(단일 선택·묶음 목록 열기/닫기)·hover 이벤트를 연결한다.
+ * 매장 선택 시 처리(최신 state 반영, 카드 초기화 등)는 호출하는 effect가 콜백으로 넘긴다.
+ */
+const createStoreMarkerOverlay = ({
+  group,
+  isStoreCardShown,
+  kakaoMaps,
+  map,
+  markerColorInfoById,
+  markerLabelById,
+  selectedStoreId,
+  shouldAnimateEnter,
+  onMarkerClick,
+  onSelectClusterStore,
+  onSelectStore,
+}: {
+  group: StoreMarkerGroupEntry[];
+  isStoreCardShown: boolean;
+  kakaoMaps: KakaoMapsApi;
+  map: KakaoMap;
+  markerColorInfoById?: Record<string, MarkerColorInfo>;
+  markerLabelById?: Record<string, string>;
+  selectedStoreId: string;
+  shouldAnimateEnter: boolean;
+  /** 핀을 누를 때마다(단일·묶음 공통) 호출한다. */
+  onMarkerClick: () => void;
+  /** 묶음 핀의 목록에서 매장을 골랐을 때 */
+  onSelectClusterStore: (storeId: string) => void;
+  /** 단일 핀을 눌러 매장을 골랐을 때 */
+  onSelectStore: (storeId: string) => void;
+}): MapOverlayHandle => {
+  const [{ store: firstStore }] = group;
+  const isCluster = group.length > 1;
+  const selectedEntry = group.find(({ store }) => store.id === selectedStoreId);
+  const isSelected = Boolean(selectedEntry);
+  const getLabel = ({ index, store }: StoreMarkerGroupEntry) =>
+    markerLabelById?.[store.id] ?? getStoreMarkerLabel(index);
+  const colorTargetStore = selectedEntry?.store ?? firstStore;
+  const { container, marker } = createStoreMarkerElement({
+    getLabel,
+    group,
+    isStoreCardShown,
+    markerColorInfo: markerColorInfoById?.[colorTargetStore.id],
+    selectedEntry,
+    shouldAnimateEnter,
+  });
+
+  let clusterList: HTMLDivElement | null = null;
+  const closeClusterList = () => {
+    clusterList?.remove();
+    clusterList = null;
+    marker.setAttribute("aria-expanded", "false");
+  };
+  const handleDocumentPointerDown = (event: PointerEvent) => {
+    if (event.target instanceof Node && container.contains(event.target)) {
+      return;
+    }
+
+    closeClusterList();
+  };
+  const openClusterList = () => {
+    clusterList = createClusterListElement({
+      getLabel,
+      group,
+      onSelect: (entry, event) => {
+        event.stopPropagation();
+        closeClusterList();
+        onSelectClusterStore(entry.store.id);
+      },
+      selectedStoreId,
+    });
+    container.append(clusterList);
+    marker.setAttribute("aria-expanded", "true");
+  };
+  const handleMarkerClick = (event: MouseEvent) => {
+    event.stopPropagation();
+    onMarkerClick();
+
+    if (!isCluster) {
+      onSelectStore(firstStore.id);
+      return;
+    }
+
+    if (clusterList) {
+      closeClusterList();
+    } else {
+      openClusterList();
+    }
+  };
+
+  const baseZIndex = isSelected ? 20 : 10;
+  const overlay = new kakaoMaps.CustomOverlay({
+    content: container,
+    map,
+    position: new kakaoMaps.LatLng(firstStore.lat, firstStore.lng),
+    xAnchor: 0.5,
+    yAnchor: 1,
+    zIndex: baseZIndex,
+  });
+  // hover 중인 핀의 툴팁(매장명)·묶음 목록이 이웃 핀 뒤로 가려지지 않도록 최상단으로 올린다.
+  const handleMarkerEnter = () => overlay.setZIndex?.(40);
+  const handleMarkerLeave = () => {
+    if (!clusterList) {
+      overlay.setZIndex?.(baseZIndex);
+    }
+  };
+
+  marker.addEventListener("click", handleMarkerClick);
+  container.addEventListener("mouseenter", handleMarkerEnter);
+  container.addEventListener("mouseleave", handleMarkerLeave);
+  document.addEventListener("pointerdown", handleDocumentPointerDown);
+
+  return {
+    cleanup: () => {
+      closeClusterList();
+      marker.removeEventListener("click", handleMarkerClick);
+      container.removeEventListener("mouseenter", handleMarkerEnter);
+      container.removeEventListener("mouseleave", handleMarkerLeave);
+      document.removeEventListener("pointerdown", handleDocumentPointerDown);
+    },
+    overlay,
+  };
+};
+
+/** 내 위치 표시 overlay를 만든다. */
+const createCurrentLocationOverlay = ({
+  kakaoMaps,
+  map,
+  userLocation,
+}: {
+  kakaoMaps: KakaoMapsApi;
+  map: KakaoMap;
+  userLocation: UserLocation;
+}): MapOverlayHandle => {
+  const currentLocationMarker = document.createElement("div");
+  currentLocationMarker.className = "vita-current-location-marker";
+  currentLocationMarker.setAttribute("aria-label", "내 위치");
+
+  return {
+    overlay: new kakaoMaps.CustomOverlay({
+      content: currentLocationMarker,
+      map,
+      position: new kakaoMaps.LatLng(userLocation.lat, userLocation.lng),
+      xAnchor: 0.5,
+      yAnchor: 0.5,
+      zIndex: 30,
+    }),
+  };
+};
+
 type RoutePreviewRef = RoutePreview | null | undefined;
 
 type StoreMapPreviewProps = {
@@ -1234,18 +1495,7 @@ export const StoreMapPreview = ({
     });
     // 같은 좌표(소수 5자리, 약 1m)에 있는 매장들은 핀 하나로 묶고 개수를 표시한다.
     // 핀을 누르면 묶인 매장 목록이 떠서 그중 하나를 고를 수 있다.
-    const storeGroups = new Map<
-      string,
-      { index: number; store: StoreLocation }[]
-    >();
-
-    stores.forEach((store, index) => {
-      const coordinateKey = `${store.lat.toFixed(5)}:${store.lng.toFixed(5)}`;
-      const group = storeGroups.get(coordinateKey) ?? [];
-
-      group.push({ index, store });
-      storeGroups.set(coordinateKey, group);
-    });
+    const storeGroups = groupStoresByCoordinate(stores);
 
     const isStoreCardShown = Boolean(selectedStore && selectedStoreCard);
     // 페이지가 바뀐 뒤 처음 그릴 때만 핀이 서서히 나타나게 한다(매장 선택 등으로 다시 그릴 때는 그대로).
@@ -1255,195 +1505,41 @@ export const StoreMapPreview = ({
 
     animatedMarkerEnterKeyRef.current = markerEnterKey;
 
-    overlayRefs.current = Array.from(storeGroups.values()).map((group) => {
-      const [{ store: firstStore }] = group;
-      const isCluster = group.length > 1;
-      const selectedEntry = group.find(
-        ({ store }) => store.id === selectedStoreId,
-      );
-      const isSelected = Boolean(selectedEntry);
-      const getLabel = ({ index, store }: (typeof group)[number]) =>
-        markerLabelById?.[store.id] ?? getStoreMarkerLabel(index);
-      const colorTargetStore = selectedEntry?.store ?? firstStore;
-      const markerColorInfo = markerColorInfoById?.[colorTargetStore.id];
-      const markerColors = markerColorInfo?.colors ?? [];
-      const coordinateKey = `${firstStore.lat.toFixed(5)}:${firstStore.lng.toFixed(5)}`;
-      const gradientId = getMarkerGradientId({
-        colors: markerColors,
-        coordinateKey,
-        storeIds: group.map(({ store }) => store.id),
-      });
-      const position = new kakaoMaps.LatLng(firstStore.lat, firstStore.lng);
-      const container = document.createElement("div");
-      container.className = "relative";
-
-      if (shouldAnimateMarkerEnter) {
-        playMarkerEnterAnimation(container);
-      }
-      const marker = document.createElement("button");
-      marker.type = "button";
-      marker.setAttribute(
-        "aria-label",
-        isCluster
-          ? `같은 위치 매장 ${group.length}곳 보기`
-          : `${firstStore.name} 선택`,
-      );
-      marker.className = cn(
-        "group relative block h-[46px] w-[38px] translate-y-[-8px] border-0 bg-transparent p-0 text-xs leading-none font-black text-white transition duration-150 hover:translate-y-[-10px] hover:scale-[1.04]",
-        isSelected && "translate-y-[-10px] scale-[1.04]",
-      );
-      const markerShape = document.createElement("span");
-      markerShape.className = STORE_PIN_SHAPE_CLASS_NAME;
-      markerShape.innerHTML = getStorePinSvgMarkup({
-        colors: markerColors,
-        gradientId,
-      });
-
-      const markerLetter = document.createElement("span");
-      markerLetter.className =
-        "absolute top-[9px] left-1/2 z-[1] -translate-x-1/2 text-xs font-black text-white [text-shadow:_0_1px_2px_rgb(15_23_42_/_0.45)]";
-      markerLetter.textContent = isCluster
-        ? String(group.length)
-        : getLabel(group[0]);
-
-      const markerTooltip = document.createElement("span");
-      markerTooltip.className = cn(
-        "pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-[2] max-w-[180px] -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-sm bg-slate-950/90 px-2.5 py-1.5 text-xs leading-tight font-extrabold text-white opacity-0 shadow-lg transition group-hover:translate-y-0 group-hover:opacity-100",
-        isSelected && "translate-y-0 opacity-100",
-        // 정보 카드가 떠 있으면 카드에 매장명이 있으므로 선택 핀의 이름 툴팁은 숨긴다.
-        isSelected && isStoreCardShown && "hidden",
-      );
-      markerTooltip.textContent = selectedEntry
-        ? selectedEntry.store.name
-        : isCluster
-          ? `같은 위치 매장 ${group.length}곳`
-          : firstStore.name;
-
-      if (isCluster) {
-        // 묶음 핀임을 알 수 있도록 오른쪽 위에 작은 겹침 표시를 단다.
-        const clusterBadge = document.createElement("span");
-
-        clusterBadge.setAttribute("aria-hidden", "true");
-        clusterBadge.className =
-          "text-brand absolute -top-1 right-0 z-[2] flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[9px] leading-none font-black shadow-sm";
-        clusterBadge.style.color = markerColors[0] ?? "";
-        clusterBadge.textContent = "+";
-        marker.append(clusterBadge);
-      }
-
-      if (markerColorInfo && markerColorInfo.extraServices.length > 0) {
-        marker.append(
-          createExtraServiceBadgeElement(markerColorInfo.extraServices),
-        );
-      }
-
-      marker.append(markerShape, markerLetter, markerTooltip);
-      container.append(marker);
-
-      let clusterList: HTMLDivElement | null = null;
-      const closeClusterList = () => {
-        clusterList?.remove();
-        clusterList = null;
-        marker.setAttribute("aria-expanded", "false");
-      };
-      const handleDocumentPointerDown = (event: PointerEvent) => {
-        if (event.target instanceof Node && container.contains(event.target)) {
-          return;
-        }
-
-        closeClusterList();
-      };
-      const openClusterList = () => {
-        clusterList = createClusterListElement({
-          getLabel,
-          group,
-          onSelect: (entry, event) => {
-            event.stopPropagation();
-            closeClusterList();
-            setRevealedCardStoreId("");
-            // 다른 매장을 고르면 초점 이동 후에 카드를 보여준다(같은 매장을 다시 누르면 그대로 둠).
-            if (entry.store.id !== selectedStoreId) {
-              setRevealedCardStoreId("");
-            }
-            onSelectStore(entry.store.id);
-          },
-          selectedStoreId,
-        });
-        container.append(clusterList);
-        marker.setAttribute("aria-expanded", "true");
-      };
-      const handleMarkerClick = (event: MouseEvent) => {
-        event.stopPropagation();
-        lastMarkerClickAtRef.current = Date.now();
-
-        if (!isCluster) {
+    overlayRefs.current = storeGroups.map((group) =>
+      createStoreMarkerOverlay({
+        group,
+        isStoreCardShown,
+        kakaoMaps,
+        map,
+        markerColorInfoById,
+        markerLabelById,
+        selectedStoreId,
+        shouldAnimateEnter: shouldAnimateMarkerEnter,
+        onMarkerClick: () => {
+          lastMarkerClickAtRef.current = Date.now();
+        },
+        onSelectStore: (storeId) => {
           // 다른 매장을 고르면 초점 이동 후에 카드를 보여준다(같은 매장을 다시 누르면 그대로 둠).
-          if (firstStore.id !== selectedStoreId) {
+          if (storeId !== selectedStoreId) {
             setRevealedCardStoreId("");
           }
-          onSelectStore(firstStore.id);
-          return;
-        }
-
-        if (clusterList) {
-          closeClusterList();
-        } else {
-          openClusterList();
-        }
-      };
-
-      const baseZIndex = isSelected ? 20 : 10;
-      const overlay = new kakaoMaps.CustomOverlay({
-        content: container,
-        map,
-        position,
-        xAnchor: 0.5,
-        yAnchor: 1,
-        zIndex: baseZIndex,
-      });
-      // hover 중인 핀의 툴팁(매장명)·묶음 목록이 이웃 핀 뒤로 가려지지 않도록 최상단으로 올린다.
-      const handleMarkerEnter = () => overlay.setZIndex?.(40);
-      const handleMarkerLeave = () => {
-        if (!clusterList) {
-          overlay.setZIndex?.(baseZIndex);
-        }
-      };
-
-      marker.addEventListener("click", handleMarkerClick);
-      container.addEventListener("mouseenter", handleMarkerEnter);
-      container.addEventListener("mouseleave", handleMarkerLeave);
-      document.addEventListener("pointerdown", handleDocumentPointerDown);
-
-      return {
-        cleanup: () => {
-          closeClusterList();
-          marker.removeEventListener("click", handleMarkerClick);
-          container.removeEventListener("mouseenter", handleMarkerEnter);
-          container.removeEventListener("mouseleave", handleMarkerLeave);
-          document.removeEventListener(
-            "pointerdown",
-            handleDocumentPointerDown,
-          );
+          onSelectStore(storeId);
         },
-        overlay,
-      };
-    });
+        onSelectClusterStore: (storeId) => {
+          setRevealedCardStoreId("");
+          // 다른 매장을 고르면 초점 이동 후에 카드를 보여준다(같은 매장을 다시 누르면 그대로 둠).
+          if (storeId !== selectedStoreId) {
+            setRevealedCardStoreId("");
+          }
+          onSelectStore(storeId);
+        },
+      }),
+    );
 
     if (userLocation) {
-      const currentLocationMarker = document.createElement("div");
-      currentLocationMarker.className = "vita-current-location-marker";
-      currentLocationMarker.setAttribute("aria-label", "내 위치");
-
-      overlayRefs.current.push({
-        overlay: new kakaoMaps.CustomOverlay({
-          content: currentLocationMarker,
-          map,
-          position: new kakaoMaps.LatLng(userLocation.lat, userLocation.lng),
-          xAnchor: 0.5,
-          yAnchor: 0.5,
-          zIndex: 30,
-        }),
-      });
+      overlayRefs.current.push(
+        createCurrentLocationOverlay({ kakaoMaps, map, userLocation }),
+      );
     }
 
     if (!selectedStore || !selectedStoreCard) {
