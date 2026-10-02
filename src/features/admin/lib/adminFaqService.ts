@@ -14,6 +14,7 @@ type FetchFaqsParams = {
   page: number;
   size: number;
   status?: AdminFaqStatus;
+  sortBy?: string;
 };
 
 export const adminFaqService = {
@@ -23,6 +24,7 @@ export const adminFaqService = {
     page,
     size,
     status,
+    sortBy,
   }: FetchFaqsParams) => {
     const params = new URLSearchParams({
       page: String(page),
@@ -39,6 +41,10 @@ export const adminFaqService = {
 
     if (status) {
       params.set("status", status);
+    }
+
+    if (sortBy) {
+      params.set("sortBy", sortBy);
     }
 
     return requestJson<PageResponse<AdminFaq>>(

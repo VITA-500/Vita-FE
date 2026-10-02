@@ -25,6 +25,7 @@ export const faqRows: AdminFaq[] = Array.from({ length: 9 }, (_, index) => ({
   subcategory: index % 2 === 0 ? "기본" : "상세",
   status: index === 7 ? "INACTIVE" : "ACTIVE",
   createdAt: `2026-09-${String(10 + index).padStart(2, "0")}T10:00:00`,
+  updatedAt: `2026-09-${String(18 + index).padStart(2, "0")}T15:30:00`,
 }));
 
 export const storeRows: AdminStore[] = Array.from(
