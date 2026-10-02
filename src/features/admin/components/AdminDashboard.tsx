@@ -4,18 +4,10 @@ import { AlertTriangle, ChevronRight } from "lucide-react";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
 import type { AdminFaqCategory } from "@/features/admin/types";
 import { routes } from "@/shared/constants/routes";
+import { formatKoreanMonthDay } from "@/shared/lib/date";
 import { ButtonLink } from "@/shared/ui/Button";
 import { Card, CardContent, CardHeader } from "@/shared/ui/Card";
 import { StatCard } from "@/shared/ui/StatCard";
-
-const formatDate = (value?: string) => {
-  if (!value) return "-";
-
-  return new Intl.DateTimeFormat("ko-KR", {
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(value));
-};
 
 export const AdminDashboard = () => {
   const { faqTotalCount, faqs, storeDetails, storeTotalCount, stores } =
@@ -192,7 +184,7 @@ export const AdminDashboard = () => {
               emptyText="최근 등록 FAQ가 없습니다."
               rows={recentFaqs.map((faq) => ({
                 id: `#${faq.faqId}`,
-                meta: `${faq.category} · ${formatDate(faq.createdAt)}`,
+                meta: `${faq.category} · ${formatKoreanMonthDay(faq.createdAt)}`,
                 title: faq.question,
               }))}
             />
@@ -218,7 +210,7 @@ export const AdminDashboard = () => {
               emptyText="최근 등록 대리점이 없습니다."
               rows={recentStores.map((store) => ({
                 id: `#${store.storeId}`,
-                meta: `${formatDate(store.createdAt)} · ${store.address}`,
+                meta: `${formatKoreanMonthDay(store.createdAt)} · ${store.address}`,
                 title: store.name,
               }))}
             />

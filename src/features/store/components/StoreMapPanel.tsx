@@ -888,6 +888,8 @@ const StoreInfoBubble = ({
   );
 };
 
+// 지도 화면은 검색, 필터, 위치, 길찾기 상태가 강하게 맞물린다.
+// 새 상태를 추가할 때는 useStoreMapState로 먼저 분리할 수 있는지 확인한다.
 export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuthUser();
   const [stores, setStores] = useState<StoreLocation[]>([]);

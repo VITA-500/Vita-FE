@@ -1,14 +1,16 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Edit2, Plus, Trash2 } from "lucide-react";
+import { Edit2, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
 import { AdminField } from "@/features/admin/components/AdminField";
+import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { FilterDropdown } from "@/features/admin/components/FilterDropdown";
 import { useActionStatus } from "@/features/admin/context/ActionStatusContext";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
 import type { AdminStoreDetail, AdminStoreType } from "@/features/admin/types";
 import { cn } from "@/shared/lib/cn";
+import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { Modal } from "@/shared/ui/Modal";
@@ -270,8 +272,8 @@ export const StoreManagement = ({
                     {store.address}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-bold text-gray-400">
-                    <span>등록 {formatDate(store.createdAt)}</span>
-                    <span>수정 {formatDate(store.updatedAt)}</span>
+                    <span>등록 {formatKoreanDate(store.createdAt)}</span>
+                    <span>수정 {formatKoreanDate(store.updatedAt)}</span>
                   </div>
                 </div>
                 <StoreRowActions
@@ -284,7 +286,7 @@ export const StoreManagement = ({
           ))
         )}
         {!shouldShowSkeletonRows && stores.length > 0 && (
-          <StorePagination
+          <AdminPagination
             currentPage={storePage + 1}
             disabled={isStoreLoading}
             totalPages={storeTotalPages}
@@ -339,10 +341,10 @@ export const StoreManagement = ({
                         {store.address}
                       </td>
                       <td className="px-4 py-4 text-center font-semibold text-gray-400">
-                        {formatDate(store.createdAt)}
+                        {formatKoreanDate(store.createdAt)}
                       </td>
                       <td className="px-4 py-4 text-center font-semibold text-gray-400">
-                        {formatDate(store.updatedAt)}
+                        {formatKoreanDate(store.updatedAt)}
                       </td>
                       <td className="px-5 py-4 text-center">
                         <StoreRowActions
@@ -369,7 +371,7 @@ export const StoreManagement = ({
 
         <div className="border-border-soft flex min-h-[65px] items-center justify-center gap-1 border-t px-5 py-4 dark:border-white/10">
           {!shouldShowSkeletonRows && stores.length > 0 && (
-            <StorePagination
+            <AdminPagination
               currentPage={storePage + 1}
               disabled={isStoreLoading}
               totalPages={storeTotalPages}
@@ -529,162 +531,6 @@ const StoreSkeletonCard = () => (
       </div>
     </div>
   </Card>
-);
-
-type StorePaginationProps = {
-  currentPage: number;
-  disabled?: boolean;
-  onPageChange: (page: number) => void;
-  totalPages: number;
-};
-
-const StorePagination = ({
-  currentPage,
-  disabled = false,
-  onPageChange,
-  totalPages,
-}: StorePaginationProps) => {
-  const pages = getVisiblePages(currentPage, totalPages);
-  const [jumpValue, setJumpValue] = useState("");
-
-  const handleJumpSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const nextPage = Number(jumpValue);
-
-    if (!Number.isInteger(nextPage)) return;
-
-    onPageChange(Math.min(totalPages, Math.max(1, nextPage)));
-    setJumpValue("");
-  };
-
-  return (
-    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 pt-2 md:pt-0">
-      <div className="flex items-center justify-center gap-1">
-        <Button
-          variant="ghost"
-          size="xs"
-          className="h-8 w-8 rounded-lg p-0 disabled:pointer-events-none disabled:opacity-30"
-          disabled={currentPage === 1 || disabled}
-          aria-label="이전 페이지"
-          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-        >
-          <ChevronLeft size={15} />
-        </Button>
-        {pages.map((page, index) =>
-          page === "ellipsis" ? (
-            <span
-              key={`ellipsis-${index}`}
-              className="flex h-8 min-w-8 items-center justify-center px-1 text-sm font-extrabold text-gray-400"
-            >
-              ...
-            </span>
-          ) : (
-            <PaginationPageButton
-              key={page}
-              disabled={disabled}
-              isActive={page === currentPage}
-              page={page}
-              onClick={() => onPageChange(page)}
-            />
-          ),
-        )}
-        <Button
-          variant="ghost"
-          size="xs"
-          className="h-8 w-8 rounded-lg p-0 disabled:pointer-events-none disabled:opacity-30"
-          disabled={currentPage === totalPages || disabled}
-          aria-label="다음 페이지"
-          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-        >
-          <ChevronRight size={15} />
-        </Button>
-      </div>
-
-      {totalPages > 7 && (
-        <form className="flex items-center gap-1.5" onSubmit={handleJumpSubmit}>
-          <input
-            type="number"
-            min={1}
-            max={totalPages}
-            value={jumpValue}
-            disabled={disabled}
-            placeholder="페이지"
-            onChange={(event) => setJumpValue(event.target.value)}
-            className="border-border focus:border-brand h-8 w-20 rounded-lg border bg-white px-2 text-center text-xs font-bold text-gray-700 transition outline-none dark:border-white/10 dark:bg-white/5 dark:text-gray-200"
-          />
-          <Button
-            variant="secondary"
-            size="xs"
-            type="submit"
-            disabled={disabled || !jumpValue}
-            className="h-8 rounded-lg px-2"
-          >
-            이동
-          </Button>
-        </form>
-      )}
-    </div>
-  );
-};
-
-type PaginationItem = number | "ellipsis";
-
-const getVisiblePages = (
-  currentPage: number,
-  totalPages: number,
-): PaginationItem[] => {
-  if (totalPages <= 7) {
-    return Array.from({ length: totalPages }, (_, index) => index + 1);
-  }
-
-  const start = Math.max(2, currentPage - 1);
-  const end = Math.min(totalPages - 1, currentPage + 1);
-  const pages: PaginationItem[] = [1];
-
-  if (start > 2) {
-    pages.push("ellipsis");
-  }
-
-  for (let page = start; page <= end; page += 1) {
-    pages.push(page);
-  }
-
-  if (end < totalPages - 1) {
-    pages.push("ellipsis");
-  }
-
-  pages.push(totalPages);
-  return pages;
-};
-
-type PaginationPageButtonProps = {
-  disabled?: boolean;
-  isActive: boolean;
-  onClick: () => void;
-  page: number;
-};
-
-const PaginationPageButton = ({
-  disabled,
-  isActive,
-  onClick,
-  page,
-}: PaginationPageButtonProps) => (
-  <button
-    type="button"
-    aria-label={`${page}페이지`}
-    aria-current={isActive ? "page" : undefined}
-    disabled={disabled}
-    onClick={onClick}
-    className={cn(
-      "flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-extrabold transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50",
-      isActive
-        ? "bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand"
-        : "text-gray-500 hover:bg-gray-100 hover:text-gray-950 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white",
-    )}
-  >
-    {page}
-  </button>
 );
 
 type StoreFormModalProps = {
@@ -853,22 +699,6 @@ const parseCoordinate = (value: FormDataEntryValue | string | null) => {
   }
 
   return coordinate;
-};
-
-const formatDate = (value?: string) => {
-  if (!value) return "-";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value.slice(0, 10);
-  }
-
-  return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
 };
 
 const toServiceArray = (value: FormDataEntryValue | string | null) =>
