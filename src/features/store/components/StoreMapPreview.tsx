@@ -14,6 +14,16 @@ import {
 import { useKakaoMapReady } from "@/features/store/hooks/useKakaoMapReady";
 import { hasKakaoMapKey } from "@/shared/config/env";
 import type { UserLocation } from "@/features/store/lib/geo";
+import {
+  arePointsInFreeArea,
+  fitPointsSmoothlyOnMap,
+  getCenterPlacingPointAt,
+  getDefaultPinFitPadding,
+  getRouteFitPadding,
+  type KakaoMapWithProjection,
+  type MapFitPadding,
+  type MapPoint,
+} from "@/features/store/lib/mapFit";
 import type {
   StoreLocation,
   StoreRouteMode,
@@ -28,29 +38,16 @@ import {
 import { cn } from "@/shared/lib/cn";
 import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
 
+export type { MapFitPadding } from "@/features/store/lib/mapFit";
+
 const clampPercent = (value: number) => Math.min(88, Math.max(12, value));
 const clampValue = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
 
-/**
- * 매장 정보 카드 위치 계산 공통 값.
- * - 선택 매장으로 지도 중심을 옮길 때와, 카드가 지도 위쪽 밖으로 나가지 않게 막을 때 같은 값을 쓴다.
- * - 위쪽 여백은 좌측 상단 검색창 영역(데스크톱: 위 20px + 높이 48px, 모바일: 상단 여백 포함 약 124px)을 피하는 높이다.
- */
 /** 지도 타일이 그려졌다는 이벤트(tilesloaded)가 오지 않아도 로딩 화면을 걷는 시간(ms) */
 const MAP_FIRST_PAINT_FALLBACK_MS = 3000;
 /** 카카오맵 SDK가 이 시간 안에 준비되지 않으면 로딩 화면을 걷고 대체 지도를 보여준다(ms) */
 const MAP_SDK_LOAD_TIMEOUT_MS = 10000;
-const STORE_CARD_TOP_INSET_DESKTOP = 80;
-const STORE_CARD_TOP_INSET_MOBILE = 140;
-/** 카드가 아직 그려지지 않아 높이를 잴 수 없을 때 쓰는 추정 높이 */
-const STORE_CARD_ESTIMATED_HEIGHT = 320;
-/**
- * 카드 아래쪽과 핀 끝(좌표 지점) 사이 간격.
- * 핀 높이 46px + 선택 시 떠오르는 10px + 여유 8px → 카드가 핀 머리를 가리지 않는다.
- * (카드의 -translate-y-[calc(100%+64px)]와 같은 값)
- */
-const STORE_CARD_MARKER_GAP = 64;
 /** 초점 이동 완료(idle) 신호가 오지 않을 때 카드를 보여주기까지 기다리는 최대 시간(ms) */
 const CARD_REVEAL_FALLBACK_MS = 700;
 /** 길찾기: 지도 범위 맞춤 후 idle 신호가 오지 않을 때 경로 그리기를 시작하기까지 기다리는 최대 시간(ms) */
@@ -76,218 +73,6 @@ const playMarkerEnterAnimation = (element: HTMLElement) => {
 };
 /** 길찾기 중 확대/축소 전에 초점 지점으로 지도를 미리 옮기는 시간(ms, 카카오 panTo 애니메이션 여유 포함) */
 const ZOOM_FOCUS_PAN_MS = 280;
-
-const getStoreCardTopInset = (containerWidth: number) =>
-  containerWidth >= 768
-    ? STORE_CARD_TOP_INSET_DESKTOP
-    : STORE_CARD_TOP_INSET_MOBILE;
-
-const getStoreCardHeight = (
-  card: HTMLElement | null,
-  estimatedHeight = STORE_CARD_ESTIMATED_HEIGHT,
-) => card?.getBoundingClientRect().height || estimatedHeight;
-
-/**
- * point가 지도 컨테이너의 (targetX, targetY) 픽셀 위치에 오도록 하는 지도 중심 좌표를 구한다.
- * 현재 확대 수준의 픽셀↔위경도 비율을 projection으로 재서 계산한다(짧은 거리에서는 선형 근사로 충분).
- */
-const getCenterPlacingPointAt = (
-  map: KakaoMap,
-  point: MapPoint,
-  target: { x: number; y: number },
-  container: { width: number; height: number },
-) => {
-  const kakaoMaps = window.kakao?.maps;
-  const projection = (map as KakaoMapWithProjection).getProjection?.();
-
-  if (!kakaoMaps || !projection?.containerPointFromCoords) {
-    return null;
-  }
-
-  const deltaDegree = 0.001;
-  const basePoint = projection.containerPointFromCoords(
-    new kakaoMaps.LatLng(point.lat, point.lng),
-  );
-  const offsetPoint = projection.containerPointFromCoords(
-    new kakaoMaps.LatLng(point.lat + deltaDegree, point.lng + deltaDegree),
-  );
-  const pxPerLat = (basePoint.y - offsetPoint.y) / deltaDegree;
-  const pxPerLng = (offsetPoint.x - basePoint.x) / deltaDegree;
-
-  if (!(pxPerLat > 0) || !(pxPerLng > 0)) {
-    return null;
-  }
-
-  const dx = target.x - container.width / 2;
-  const dy = target.y - container.height / 2;
-
-  return new kakaoMaps.LatLng(
-    point.lat + dy / pxPerLat,
-    point.lng - dx / pxPerLng,
-  );
-};
-
-/**
- * 길찾기 경로를 화면에 맞출 때 비워 둘 여백(왼쪽 패널·위쪽 카드·오른쪽 컨트롤 영역).
- * 컴포넌트 밖 순수 함수로 두어, 렌더·effect 어디서 불러도 선언 순서·의존성 문제가 없게 한다.
- */
-const getRouteFitPadding = ({
-  cardElement,
-  containerWidth,
-  hasStoreCard,
-  routeLeftInset,
-  selectedStoreCardLeftInset,
-}: {
-  cardElement: HTMLElement | null;
-  containerWidth: number;
-  hasStoreCard: boolean;
-  routeLeftInset: number;
-  selectedStoreCardLeftInset: number;
-}) => ({
-  bottom: 96,
-  left:
-    containerWidth >= 768
-      ? Math.max(
-          48,
-          selectedStoreCardLeftInset ? selectedStoreCardLeftInset + 24 : 0,
-          // 출발-경로-도착이 왼쪽 매장 목록 패널 아래로 가려지지 않도록 패널 폭만큼 비운다.
-          routeLeftInset ? routeLeftInset + 32 : 0,
-        )
-      : 48,
-  right: 72,
-  // 길찾기 카드는 도착 매장 핀 위에 붙어 뜨므로, 위쪽에 카드가 들어갈 자리를 남긴다.
-  top: hasStoreCard
-    ? getStoreCardTopInset(containerWidth) +
-      getStoreCardHeight(cardElement, 240) +
-      STORE_CARD_MARKER_GAP
-    : 160,
-});
-
-export type MapFitPadding = {
-  bottom: number;
-  left: number;
-  right: number;
-  top: number;
-};
-
-/** 핀이 들어갈 기본 여백: 위 검색창·핀 높이, 오른쪽 지도 컨트롤, 왼쪽 매장 목록 패널 */
-const getDefaultPinFitPadding = (
-  containerWidth: number,
-  routeLeftInset: number,
-): MapFitPadding => ({
-  bottom: 72,
-  left: containerWidth >= 768 ? Math.max(48, routeLeftInset + 32) : 48,
-  right: 96,
-  top: 120,
-});
-
-/** 좌표들을 지도 컨테이너 기준 화면 좌표로 바꾼다. 투영 정보가 없으면 null */
-const getScreenPoints = (map: KakaoMap, points: MapPoint[]) => {
-  const kakaoMaps = window.kakao?.maps;
-  const projection = (map as KakaoMapWithProjection).getProjection?.();
-
-  if (!kakaoMaps || !projection?.containerPointFromCoords) {
-    return null;
-  }
-
-  return points.map((point) =>
-    projection.containerPointFromCoords!(
-      new kakaoMaps.LatLng(point.lat, point.lng),
-    ),
-  );
-};
-
-/** 모든 좌표가 여백을 뺀 영역(패널·검색창에 가리지 않는 곳) 안에 있는지 */
-const arePointsInFreeArea = (
-  map: KakaoMap,
-  points: MapPoint[],
-  container: { height: number; width: number },
-  padding: MapFitPadding,
-) => {
-  const screenPoints = getScreenPoints(map, points);
-
-  if (!screenPoints) {
-    return true;
-  }
-
-  return screenPoints.every(
-    (point) =>
-      point.x >= padding.left &&
-      point.x <= container.width - padding.right &&
-      point.y >= padding.top &&
-      point.y <= container.height - padding.bottom,
-  );
-};
-
-/**
- * 점들이 모두 보이도록 지도를 부드럽게 옮긴다.
- * 1) 핀이 들어갈 영역(여백 제외)의 가운데로 panTo  2) 그래도 넘치면 이동 후 필요한 만큼만 애니메이션 축소.
- * 계산할 수 없으면 false(호출한 쪽에서 setBounds 등으로 처리). 축소 예약 타이머 id를 onZoomScheduled로 넘긴다.
- */
-const fitPointsSmoothlyOnMap = (
-  map: KakaoMap,
-  points: MapPoint[],
-  container: { height: number; width: number },
-  padding: MapFitPadding,
-  onZoomScheduled: (timeoutId: number) => void,
-) => {
-  const kakaoMaps = window.kakao?.maps;
-  const screenPoints = getScreenPoints(map, points);
-
-  if (!kakaoMaps || !map.panTo || !screenPoints || points.length === 0) {
-    return false;
-  }
-
-  const freeWidth = container.width - padding.left - padding.right;
-  const freeHeight = container.height - padding.top - padding.bottom;
-
-  if (freeWidth <= 0 || freeHeight <= 0) {
-    return false;
-  }
-
-  const spanX =
-    Math.max(...screenPoints.map((point) => point.x)) -
-    Math.min(...screenPoints.map((point) => point.x));
-  const spanY =
-    Math.max(...screenPoints.map((point) => point.y)) -
-    Math.min(...screenPoints.map((point) => point.y));
-  const latitudes = points.map((point) => point.lat);
-  const longitudes = points.map((point) => point.lng);
-  const pointsCenter = {
-    lat: (Math.min(...latitudes) + Math.max(...latitudes)) / 2,
-    lng: (Math.min(...longitudes) + Math.max(...longitudes)) / 2,
-  };
-  const nextCenter = getCenterPlacingPointAt(
-    map,
-    pointsCenter,
-    { x: padding.left + freeWidth / 2, y: padding.top + freeHeight / 2 },
-    container,
-  );
-
-  if (!nextCenter) {
-    return false;
-  }
-
-  map.panTo(nextCenter);
-
-  // 현재 확대 수준에서 다 들어가지 않으면, 이동이 끝난 뒤 필요한 단계만큼 부드럽게 축소한다.
-  const overflowRatio = Math.max(spanX / freeWidth, spanY / freeHeight);
-
-  if (overflowRatio > 1) {
-    const zoomOutLevels = Math.ceil(Math.log2(overflowRatio));
-
-    onZoomScheduled(
-      window.setTimeout(() => {
-        map.setLevel(map.getLevel() + zoomOutLevels, {
-          anchor: new kakaoMaps.LatLng(pointsCenter.lat, pointsCenter.lng),
-          animate: { duration: ZOOM_ANIMATION_MS },
-        });
-      }, ZOOM_ANIMATION_MS),
-    );
-  }
-
-  return true;
-};
 
 const getStoreMarkerLabel = (index: number) =>
   String.fromCharCode(65 + (index % 26));
@@ -329,11 +114,6 @@ const routeStyleByMode: Record<
     strokeStyle: "solid",
     weight: 7,
   },
-};
-
-type MapPoint = {
-  lat: number;
-  lng: number;
 };
 
 const getPathDistance = (from: MapPoint, to: MapPoint) => {
@@ -450,17 +230,6 @@ type KakaoMapWithCenter = KakaoMap & {
 
 type SearchPointRef = MapPoint | null | undefined;
 type FocusPointRef = MapPoint | null | undefined;
-
-type KakaoMapProjection = {
-  containerPointFromCoords?: (latlng: KakaoLatLng) => {
-    x: number;
-    y: number;
-  };
-};
-
-type KakaoMapWithProjection = KakaoMap & {
-  getProjection?: () => KakaoMapProjection;
-};
 
 type MapOverlayHandle = {
   marker?: KakaoMarker;
@@ -2187,6 +1956,7 @@ export const StoreMapPreview = ({
         fitTarget.points,
         container,
         padding,
+        ZOOM_ANIMATION_MS,
         (timeoutId) => {
           fitZoomTimeoutRef.current = timeoutId;
         },
@@ -2260,9 +2030,16 @@ export const StoreMapPreview = ({
       }
 
       window.clearTimeout(fitZoomTimeoutRef.current);
-      fitPointsSmoothlyOnMap(map, points, container, padding, (zoomId) => {
-        fitZoomTimeoutRef.current = zoomId;
-      });
+      fitPointsSmoothlyOnMap(
+        map,
+        points,
+        container,
+        padding,
+        ZOOM_ANIMATION_MS,
+        (zoomId) => {
+          fitZoomTimeoutRef.current = zoomId;
+        },
+      );
     }, PIN_AUTO_FIT_DELAY_MS);
 
     return () => {
