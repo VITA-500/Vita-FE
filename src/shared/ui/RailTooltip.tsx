@@ -5,7 +5,8 @@ export type RailTooltipProps = {
   shortcut?: string;
   y: number;
   x?: number;
-  placement?: "side" | "bottom";
+  /** side: x 오른쪽, bottom: x 가운데 아래, left: x 왼쪽(오른쪽 끝 버튼용) */
+  placement?: "side" | "bottom" | "left";
 };
 
 export const RailTooltip = ({
@@ -18,7 +19,11 @@ export const RailTooltip = ({
   <span
     className={cn(
       "pointer-events-none fixed z-[999] flex items-center gap-2 rounded-full bg-gray-900 px-3.5 py-2 text-sm font-extrabold whitespace-nowrap text-white shadow-xl",
-      placement === "bottom" ? "-translate-x-1/2" : "-translate-y-1/2",
+      placement === "bottom"
+        ? "-translate-x-1/2"
+        : placement === "left"
+          ? "-translate-x-full -translate-y-1/2"
+          : "-translate-y-1/2",
     )}
     style={{ left: x, top: y }}
   >

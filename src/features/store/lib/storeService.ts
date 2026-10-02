@@ -458,7 +458,8 @@ const toStoreLocation = (
 });
 
 export const storeService = {
-  fetchNearbyStores: async (location?: UserLocation) => {
+  /** 기준 좌표에서 반경(km, 기본 1.5km) 안의 매장을 가까운 순으로 모두 가져온다. */
+  fetchNearbyStores: async (location?: UserLocation, radiusKm = 1.5) => {
     if (!location) {
       return [];
     }
@@ -466,7 +467,7 @@ export const storeService = {
     const params = new URLSearchParams({
       lat: String(location.lat),
       lng: String(location.lng),
-      radius: "1.5",
+      radius: String(radiusKm),
     });
 
     const response = await requestJson<NearbyStoresResponse>(
