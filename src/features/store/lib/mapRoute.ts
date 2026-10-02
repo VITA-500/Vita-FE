@@ -294,3 +294,21 @@ export const getTransferStops = (
 
   return Array.from(stops.values());
 };
+
+/**
+ * 지도에 그릴 경로 구간 목록.
+ * 응답에 구간 정보가 있으면 그대로 쓰고, 없으면 대중교통은 도보-탑승-도보로 나눈 대체 구간을, 그 외는 경로 전체를 한 구간으로 쓴다.
+ */
+export const getRoutePreviewSegments = (
+  routePreview: RoutePreview,
+): RoutePreviewSegment[] =>
+  routePreview.segments && routePreview.segments.length > 0
+    ? routePreview.segments
+    : routePreview.mode === "transit"
+      ? getFlatTransitFallbackSegments(routePreview.path)
+      : [
+          {
+            kind: routePreview.mode,
+            path: routePreview.path,
+          },
+        ];
