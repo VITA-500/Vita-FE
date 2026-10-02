@@ -28,14 +28,20 @@ import {
   type MapPoint,
 } from "@/features/store/lib/mapFit";
 import {
-  getFlatTransitFallbackSegments,
   getPartialRoutePath,
+  getRoutePreviewSegments,
   getSequentialRouteSegments,
   getTransitSegmentStyle,
   getTransferStops,
   routeStyleByMode,
   type RoutePreview,
 } from "@/features/store/lib/mapRoute";
+import {
+  createRouteDestinationElement,
+  createRouteHeadElement,
+  createRouteOriginElement,
+  createTransferStopElement,
+} from "@/features/store/lib/routeMarkerElements";
 import type { StoreLocation } from "@/features/store/types";
 import type { MarkerColorInfo } from "@/features/store/lib/markerColors";
 import {
@@ -591,6 +597,31 @@ const createCurrentLocationOverlay = ({
     }),
   };
 };
+
+/** 경로 위 한 지점(출발·도착·환승·진행 지점)에 표시 DOM을 올린다. */
+const createRoutePointOverlay = ({
+  content,
+  kakaoMaps,
+  map,
+  point,
+  yAnchor = 0.5,
+  zIndex,
+}: {
+  content: HTMLElement;
+  kakaoMaps: KakaoMapsApi;
+  map: KakaoMap;
+  point: MapPoint;
+  yAnchor?: number;
+  zIndex: number;
+}) =>
+  new kakaoMaps.CustomOverlay({
+    content,
+    map,
+    position: new kakaoMaps.LatLng(point.lat, point.lng),
+    xAnchor: 0.5,
+    yAnchor,
+    zIndex,
+  });
 
 type RoutePreviewRef = RoutePreview | null | undefined;
 
@@ -1909,17 +1940,7 @@ export const StoreMapPreview = ({
     }
 
     const routeStyle = routeStyleByMode[routePreview.mode];
-    const routeSegments =
-      routePreview.segments && routePreview.segments.length > 0
-        ? routePreview.segments
-        : routePreview.mode === "transit"
-          ? getFlatTransitFallbackSegments(routePreview.path)
-          : [
-              {
-                kind: routePreview.mode,
-                path: routePreview.path,
-              },
-            ];
+    const routeSegments = getRoutePreviewSegments(routePreview);
     const animatedRouteSegments = getSequentialRouteSegments(
       routeSegments,
       routeDrawProgress,
@@ -1954,101 +1975,34 @@ export const StoreMapPreview = ({
     });
 
     transferStops.forEach((stop) => {
-      const transferMarker = document.createElement("span");
-      const transferMarkerDot = document.createElement("span");
-
-      transferMarker.setAttribute("aria-label", "교통수단 승하차 지점");
-      transferMarker.style.display = "flex";
-      transferMarker.style.width = "20px";
-      transferMarker.style.height = "20px";
-      transferMarker.style.alignItems = "center";
-      transferMarker.style.justifyContent = "center";
-      transferMarker.style.border = `4px solid ${stop.color}`;
-      transferMarker.style.borderRadius = "9999px";
-      transferMarker.style.background = stop.color;
-      transferMarker.style.boxShadow =
-        "0 6px 16px rgba(15, 23, 42, 0.2), 0 0 0 4px rgba(255, 255, 255, 0.9)";
-      transferMarker.style.pointerEvents = "none";
-
-      transferMarkerDot.style.display = "block";
-      transferMarkerDot.style.width = "8px";
-      transferMarkerDot.style.height = "8px";
-      transferMarkerDot.style.borderRadius = "9999px";
-      transferMarkerDot.style.background = "#ffffff";
-      transferMarker.appendChild(transferMarkerDot);
-
       routeOverlayRefs.current.push(
-        new kakaoMaps.CustomOverlay({
-          content: transferMarker,
+        createRoutePointOverlay({
+          content: createTransferStopElement(stop.color),
+          kakaoMaps,
           map,
-          position: new kakaoMaps.LatLng(stop.point.lat, stop.point.lng),
-          xAnchor: 0.5,
-          yAnchor: 0.5,
+          point: stop.point,
           zIndex: 43,
         }),
       );
     });
 
-    const originMarker = document.createElement("span");
-    originMarker.setAttribute("aria-label", "경로 시작점");
-    originMarker.style.display = "block";
-    originMarker.style.width = "16px";
-    originMarker.style.height = "16px";
-    originMarker.style.border = `4px solid ${routeStyle.color}`;
-    originMarker.style.borderRadius = "9999px";
-    originMarker.style.background = "#ffffff";
-    originMarker.style.boxShadow =
-      "0 4px 12px rgba(15, 23, 42, 0.18), inset 0 0 0 2px #ffffff";
-    originMarker.style.pointerEvents = "none";
-
     routeOverlayRefs.current.push(
-      new kakaoMaps.CustomOverlay({
-        content: originMarker,
+      createRoutePointOverlay({
+        content: createRouteOriginElement(routeStyle.color),
+        kakaoMaps,
         map,
-        position: new kakaoMaps.LatLng(
-          routePreview.path[0].lat,
-          routePreview.path[0].lng,
-        ),
-        xAnchor: 0.5,
-        yAnchor: 0.5,
+        point: routePreview.path[0],
         zIndex: 36,
       }),
     );
 
     if (routeDrawProgress >= 1) {
-      const destinationMarker = document.createElement("span");
-      const destinationMarkerDot = document.createElement("span");
-
-      destinationMarker.setAttribute("aria-label", "경로 도착점");
-      destinationMarker.style.display = "flex";
-      destinationMarker.style.width = "24px";
-      destinationMarker.style.height = "24px";
-      destinationMarker.style.alignItems = "center";
-      destinationMarker.style.justifyContent = "center";
-      destinationMarker.style.border = "3px solid #ffffff";
-      destinationMarker.style.borderRadius = "50% 50% 50% 0";
-      destinationMarker.style.background = routeStyle.color;
-      destinationMarker.style.boxShadow = "0 6px 16px rgba(15, 23, 42, 0.22)";
-      destinationMarker.style.pointerEvents = "none";
-      destinationMarker.style.transform = "rotate(-45deg)";
-
-      destinationMarkerDot.style.display = "block";
-      destinationMarkerDot.style.width = "8px";
-      destinationMarkerDot.style.height = "8px";
-      destinationMarkerDot.style.borderRadius = "9999px";
-      destinationMarkerDot.style.background = "#ffffff";
-      destinationMarkerDot.style.transform = "rotate(45deg)";
-      destinationMarker.appendChild(destinationMarkerDot);
-
       routeOverlayRefs.current.push(
-        new kakaoMaps.CustomOverlay({
-          content: destinationMarker,
+        createRoutePointOverlay({
+          content: createRouteDestinationElement(routeStyle.color),
+          kakaoMaps,
           map,
-          position: new kakaoMaps.LatLng(
-            routePreview.path[routePreview.path.length - 1].lat,
-            routePreview.path[routePreview.path.length - 1].lng,
-          ),
-          xAnchor: 0.5,
+          point: routePreview.path[routePreview.path.length - 1],
           yAnchor: 1,
           zIndex: 38,
         }),
@@ -2056,24 +2010,12 @@ export const StoreMapPreview = ({
     }
 
     if (routeHead && routeDrawProgress < 1) {
-      const routeHeadMarker = document.createElement("span");
-      routeHeadMarker.setAttribute("aria-label", "경로 진행 지점");
-      routeHeadMarker.style.display = "block";
-      routeHeadMarker.style.width = "18px";
-      routeHeadMarker.style.height = "18px";
-      routeHeadMarker.style.border = "4px solid #ffffff";
-      routeHeadMarker.style.borderRadius = "9999px";
-      routeHeadMarker.style.background = routeStyle.color;
-      routeHeadMarker.style.boxShadow = `0 0 0 7px ${routeStyle.glow}, 0 8px 18px rgba(15, 23, 42, 0.2)`;
-      routeHeadMarker.style.pointerEvents = "none";
-
       routeOverlayRefs.current.push(
-        new kakaoMaps.CustomOverlay({
-          content: routeHeadMarker,
+        createRoutePointOverlay({
+          content: createRouteHeadElement(routeStyle),
+          kakaoMaps,
           map,
-          position: new kakaoMaps.LatLng(routeHead.lat, routeHead.lng),
-          xAnchor: 0.5,
-          yAnchor: 0.5,
+          point: routeHead,
           zIndex: 42,
         }),
       );
