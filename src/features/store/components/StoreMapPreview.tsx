@@ -468,6 +468,62 @@ type MapOverlayHandle = {
   cleanup?: () => void;
 };
 
+type ExtraService = MarkerColorInfo["extraServices"][number];
+
+const getExtraServicesLabel = (services: ExtraService[]) =>
+  services.map((service) => service.label).join(", ");
+
+const createExtraServiceBadgeElement = (services: ExtraService[]) => {
+  const badge = document.createElement("span");
+  const tooltip = document.createElement("span");
+
+  badge.setAttribute(
+    "aria-label",
+    `추가 필터 조건: ${getExtraServicesLabel(services)}`,
+  );
+  badge.className =
+    "group/extra absolute -top-1 left-0 z-[2] flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-950/90 px-1 text-[9px] leading-none font-black text-white shadow-sm";
+  badge.textContent = `+${services.length}`;
+  tooltip.className =
+    "pointer-events-none absolute top-[calc(100%+6px)] left-0 z-[4] flex min-w-max translate-y-1 flex-col gap-1 rounded-sm bg-slate-950/95 px-2.5 py-1.5 text-[10px] leading-snug font-extrabold whitespace-nowrap text-white opacity-0 shadow-lg transition group-hover/extra:translate-y-0 group-hover/extra:opacity-100 group-focus-visible/extra:translate-y-0 group-focus-visible/extra:opacity-100";
+
+  services.forEach((service) => {
+    const row = document.createElement("span");
+    const dot = document.createElement("span");
+    const label = document.createElement("span");
+
+    row.className = "flex items-center gap-1.5";
+    dot.className = "h-2 w-2 shrink-0 rounded-full";
+    dot.style.backgroundColor = service.color;
+    label.textContent = service.label;
+    row.append(dot, label);
+    tooltip.append(row);
+  });
+
+  badge.append(tooltip);
+  return badge;
+};
+
+const ExtraServiceBadge = ({ services }: { services: ExtraService[] }) => (
+  <span
+    className="group/extra absolute -top-1 left-0 z-[2] flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-950/90 px-1 text-[9px] leading-none font-black text-white shadow-sm"
+    aria-label={`추가 필터 조건: ${getExtraServicesLabel(services)}`}
+  >
+    +{services.length}
+    <span className="pointer-events-none absolute top-[calc(100%+6px)] left-0 z-[4] flex min-w-max translate-y-1 flex-col gap-1 rounded-sm bg-slate-950/95 px-2.5 py-1.5 text-[10px] leading-snug font-extrabold whitespace-nowrap text-white opacity-0 shadow-lg transition group-hover/extra:translate-y-0 group-hover/extra:opacity-100">
+      {services.map((service) => (
+        <span key={service.label} className="flex items-center gap-1.5">
+          <span
+            className="h-2 w-2 shrink-0 rounded-full"
+            style={{ backgroundColor: service.color }}
+          />
+          {service.label}
+        </span>
+      ))}
+    </span>
+  </span>
+);
+
 type RoutePreview = {
   destination: MapPoint;
   mode: StoreRouteMode;
@@ -1670,35 +1726,9 @@ export const StoreMapPreview = ({
       }
 
       if (markerColorInfo && markerColorInfo.extraServices.length > 0) {
-        const extraColorBadge = document.createElement("span");
-        const extraColorTooltip = document.createElement("span");
-        const extraServicesText = markerColorInfo.extraServices
-          .map((service) => service.label)
-          .join(", ");
-
-        extraColorBadge.setAttribute(
-          "aria-label",
-          `추가 필터 조건: ${extraServicesText}`,
+        marker.append(
+          createExtraServiceBadgeElement(markerColorInfo.extraServices),
         );
-        extraColorBadge.className =
-          "group/extra absolute -top-1 left-0 z-[2] flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-950/90 px-1 text-[9px] leading-none font-black text-white shadow-sm";
-        extraColorBadge.textContent = `+${markerColorInfo.extraServices.length}`;
-        extraColorTooltip.className =
-          "pointer-events-none absolute top-[calc(100%+6px)] left-0 z-[4] flex min-w-max translate-y-1 flex-col gap-1 rounded-sm bg-slate-950/95 px-2.5 py-1.5 text-[10px] leading-snug font-extrabold whitespace-nowrap text-white opacity-0 shadow-lg transition group-hover/extra:translate-y-0 group-hover/extra:opacity-100 group-focus-visible/extra:translate-y-0 group-focus-visible/extra:opacity-100";
-        markerColorInfo.extraServices.forEach((service) => {
-          const row = document.createElement("span");
-          const dot = document.createElement("span");
-          const label = document.createElement("span");
-
-          row.className = "flex items-center gap-1.5";
-          dot.className = "h-2 w-2 shrink-0 rounded-full";
-          dot.style.backgroundColor = service.color;
-          label.textContent = service.label;
-          row.append(dot, label);
-          extraColorTooltip.append(row);
-        });
-        extraColorBadge.append(extraColorTooltip);
-        marker.append(extraColorBadge);
       }
 
       marker.append(markerShape, markerLetter, markerTooltip);
@@ -2520,28 +2550,9 @@ export const StoreMapPreview = ({
                 />
                 {markerColorInfo &&
                   markerColorInfo.extraServices.length > 0 && (
-                    <span
-                      className="group/extra absolute -top-1 left-0 z-[2] flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-950/90 px-1 text-[9px] leading-none font-black text-white shadow-sm"
-                      aria-label={`추가 필터 조건: ${markerColorInfo.extraServices
-                        .map((service) => service.label)
-                        .join(", ")}`}
-                    >
-                      +{markerColorInfo.extraServices.length}
-                      <span className="pointer-events-none absolute top-[calc(100%+6px)] left-0 z-[4] flex min-w-max translate-y-1 flex-col gap-1 rounded-sm bg-slate-950/95 px-2.5 py-1.5 text-[10px] leading-snug font-extrabold whitespace-nowrap text-white opacity-0 shadow-lg transition group-hover/extra:translate-y-0 group-hover/extra:opacity-100">
-                        {markerColorInfo.extraServices.map((service) => (
-                          <span
-                            key={service.label}
-                            className="flex items-center gap-1.5"
-                          >
-                            <span
-                              className="h-2 w-2 shrink-0 rounded-full"
-                              style={{ backgroundColor: service.color }}
-                            />
-                            {service.label}
-                          </span>
-                        ))}
-                      </span>
-                    </span>
+                    <ExtraServiceBadge
+                      services={markerColorInfo.extraServices}
+                    />
                   )}
                 <span className="absolute top-[9px] left-1/2 z-[1] -translate-x-1/2 text-xs font-black text-white [text-shadow:_0_1px_2px_rgb(15_23_42_/_0.45)]">
                   {markerLabelById?.[store.id] ?? getStoreMarkerLabel(index)}
