@@ -123,6 +123,11 @@ type ServiceFilterOption = {
   value: string;
 };
 
+type MarkerColorInfo = {
+  colors: string[];
+  extraServices: { color: string; label: string }[];
+};
+
 type RouteSummary = {
   isLoading?: boolean;
   remainingDistanceText: string;
@@ -174,6 +179,25 @@ const serviceFilterIconRules: { icon: LucideIcon; keywords: string[] }[] = [
   { icon: Phone, keywords: ["전화", "번호"] },
   { icon: Headset, keywords: ["상담"] },
 ];
+const serviceFilterColors = [
+  "#ff8f7f",
+  "#f2b84b",
+  "#4fc3ae",
+  "#3f9dcc",
+  "#a98cf0",
+  "#ef7fb4",
+  "#83c95a",
+  "#f39b45",
+  "#61aef2",
+  "#d779df",
+  "#46c4d4",
+  "#c9b63f",
+];
+
+const withHexAlpha = (color: string, alpha: string) => `${color}${alpha}`;
+
+const getServiceFilterColor = (index: number) =>
+  serviceFilterColors[index % serviceFilterColors.length];
 
 const getServiceFilterIcon = (label: string): LucideIcon => {
   const normalizedLabel = label.replace(/\s/g, "").toLowerCase();
@@ -268,6 +292,21 @@ type ServiceFilterCarouselProps = {
   providedValue: string[];
 };
 
+type ServiceFilterBadgeStyle = {
+  backgroundColor: string;
+  borderColor: string;
+  color: string;
+};
+
+const getServiceFilterBadgeStyle = (
+  color: string,
+  isSelected: boolean,
+): ServiceFilterBadgeStyle => ({
+  backgroundColor: isSelected ? color : "#ffffff",
+  borderColor: isSelected ? color : withHexAlpha(color, "55"),
+  color: isSelected ? "#ffffff" : color,
+});
+
 /** 상담/제공 서비스 옵션을 뱃지 항목 하나의 목록으로 합친다(데스크톱·모바일 공용). */
 const buildServiceFilterItems = ({
   consultOptions,
@@ -277,26 +316,22 @@ const buildServiceFilterItems = ({
   providedOptions,
   providedValue,
 }: Omit<ServiceFilterCarouselProps, "aria-label">) => [
-  ...consultOptions.map((option) => ({
+  ...consultOptions.map((option, index) => ({
     icon: getServiceFilterIcon(option.label),
     key: `consult-${option.value}`,
     label: option.label,
     onChange: onConsultChange,
     optionValue: option.value,
-    selectedClassName: "bg-brand text-white",
-    unselectedClassName:
-      "bg-surface text-text-primary shadow-sm ring-1 ring-border hover:bg-surface-brand-hover dark:ring-white/10",
+    pointColor: getServiceFilterColor(index),
     value: consultValue,
   })),
-  ...providedOptions.map((option) => ({
+  ...providedOptions.map((option, index) => ({
     icon: getServiceFilterIcon(option.label),
     key: `provided-${option.value}`,
     label: option.label,
     onChange: onProvidedChange,
     optionValue: option.value,
-    selectedClassName: "bg-brand text-white",
-    unselectedClassName:
-      "bg-surface text-text-primary shadow-sm ring-1 ring-border hover:bg-surface-brand-hover dark:ring-white/10",
+    pointColor: getServiceFilterColor(consultOptions.length + index),
     value: providedValue,
   })),
 ];
@@ -345,8 +380,9 @@ const MobileServiceFilterCarousel = ({
             className={cn(
               serviceFilterBadgeClassName,
               "snap-start",
-              isSelected ? item.selectedClassName : item.unselectedClassName,
+              "border bg-white shadow-sm hover:brightness-95 dark:bg-white",
             )}
+            style={getServiceFilterBadgeStyle(item.pointColor, isSelected)}
             aria-pressed={isSelected}
           >
             <item.icon size={13} aria-hidden="true" />
@@ -508,8 +544,9 @@ const ServiceFilterCarousel = ({
             onClick={() => toggleItem(item)}
             className={cn(
               serviceFilterBadgeClassName,
-              isSelected ? item.selectedClassName : item.unselectedClassName,
+              "border bg-white shadow-sm hover:brightness-95 dark:bg-white",
             )}
+            style={getServiceFilterBadgeStyle(item.pointColor, isSelected)}
             aria-pressed={isSelected}
           >
             <item.icon size={13} aria-hidden="true" />
@@ -556,16 +593,24 @@ const ServiceFilterCarousel = ({
                         className={cn(
                           "flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm font-semibold transition",
                           isSelected
-                            ? "bg-brand-soft text-text-primary dark:bg-brand/10"
+                            ? "dark:bg-white"
                             : "text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-white/[0.04]",
                         )}
+                        style={
+                          isSelected
+                            ? getServiceFilterBadgeStyle(item.pointColor, true)
+                            : undefined
+                        }
                         aria-pressed={isSelected}
                       >
                         <span className="flex min-w-0 items-center gap-2">
                           <item.icon
                             size={14}
                             aria-hidden="true"
-                            className="shrink-0 text-gray-400"
+                            className={cn(
+                              "shrink-0",
+                              !isSelected && "text-gray-400",
+                            )}
                           />
                           <span className="truncate">{item.label}</span>
                         </span>
@@ -574,9 +619,17 @@ const ServiceFilterCarousel = ({
                           className={cn(
                             "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition",
                             isSelected
-                              ? "bg-brand border-brand text-white"
+                              ? "text-white"
                               : "border-gray-300 text-transparent dark:border-white/20",
                           )}
+                          style={
+                            isSelected
+                              ? {
+                                  backgroundColor: item.pointColor,
+                                  borderColor: item.pointColor,
+                                }
+                              : undefined
+                          }
                         >
                           <Check size={12} />
                         </span>
@@ -1046,6 +1099,15 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       ),
     [allStores, stores, providedServiceFilters],
   );
+  const serviceFilterColorByValue = useMemo(
+    () =>
+      Object.fromEntries(
+        [...consultServiceFilterOptions, ...providedServiceFilterOptions].map(
+          (option, index) => [option.value, getServiceFilterColor(index)],
+        ),
+      ),
+    [consultServiceFilterOptions, providedServiceFilterOptions],
+  );
   const filterStoresByServices = (
     storeRows: StoreLocation[],
     consultFilters: string[] = consultServiceFilters,
@@ -1258,6 +1320,41 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const markerLabelById: Record<string, string> = Object.fromEntries(
     pagedMapStores.map((store, index) => [store.id, getStoreListLabel(index)]),
   );
+  const activeServiceFilters = [
+    ...consultServiceFilters,
+    ...providedServiceFilters,
+  ];
+  const markerColorInfoById: Record<string, MarkerColorInfo> =
+    activeServiceFilters.length === 0
+      ? {}
+      : Object.fromEntries(
+          mapStores
+            .map((store) => {
+              const matchedServices = activeServiceFilters.filter(
+                (service) =>
+                  store.consultServices?.includes(service) ||
+                  store.providedServices?.includes(service),
+              );
+
+              if (matchedServices.length === 0) {
+                return null;
+              }
+
+              const visibleServices = matchedServices.slice(0, 4);
+              const extraServices = matchedServices.slice(4).map((service) => ({
+                color: serviceFilterColorByValue[service],
+                label: service,
+              }));
+              const colors = visibleServices.map(
+                (service) => serviceFilterColorByValue[service],
+              );
+
+              return [store.id, { colors, extraServices }];
+            })
+            .filter(
+              (entry): entry is [string, MarkerColorInfo] => entry !== null,
+            ),
+        );
 
   if (selectedStoreOutsidePage) {
     markerLabelById[selectedStoreOutsidePage.id] = "•";
@@ -2468,6 +2565,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         selectedStoreId={showStoreInfoCard ? mapSelectedStoreId : ""}
         stores={visibleMapStores}
         markerLabelById={markerLabelById}
+        markerColorInfoById={markerColorInfoById}
         getRouteObstacleRect={() =>
           isStoreListCollapsed
             ? null
