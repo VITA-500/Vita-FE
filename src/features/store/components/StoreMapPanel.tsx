@@ -3,26 +3,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BadgePercent,
-  Bike,
-  Bus,
-  CalendarCheck,
-  Car,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleX,
   Clock3,
-  CornerUpRight,
   List,
-  MapPinned,
   Menu,
   Search,
-  SportShoe,
   Store,
   X,
 } from "lucide-react";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
 import { StoreMapPreview } from "@/features/store/components/StoreMapPreview";
+import { StorePanelInfoBubble } from "@/features/store/components/StorePanelInfoBubble";
+import { StorePanelModals } from "@/features/store/components/StorePanelModals";
+import { StorePanelRouteSearchOverlay } from "@/features/store/components/StorePanelRouteSearchOverlay";
 import {
   getServiceFilterIcon,
   MobileServiceFilterCarousel,
@@ -43,16 +39,21 @@ import {
   buildServiceFilterColorByValue,
 } from "@/features/store/lib/markerColors";
 import { findServicesInText } from "@/features/store/lib/serviceKeywords";
+import { getPaginationItems } from "@/features/store/lib/storePanelPagination";
+import {
+  getGeolocationPermissionState,
+  LOCATION_CONSENT_STORAGE_KEY,
+  LOCATION_MODAL_DISMISSED_STORAGE_KEY,
+  readStorage,
+  writeStorage,
+} from "@/features/store/lib/storePanelStorage";
 import { storeService } from "@/features/store/lib/storeService";
 import type {
   StoreLocation,
   StoreRoute,
   StoreRouteMode,
 } from "@/features/store/types";
-import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
-import { Button, ButtonLink } from "@/shared/ui/Button";
-import { Modal } from "@/shared/ui/Modal";
 import { showToast } from "@/shared/ui/ToastProvider";
 
 type StoreMapPanelProps = {
@@ -73,19 +74,6 @@ type MapSearchPoint = {
   lng: number;
 };
 
-const serviceBadgeClassName =
-  "bg-surface-muted text-text-secondary rounded-full px-2.5 py-1 text-[11px] font-bold dark:bg-white/10 dark:text-gray-300";
-
-const routeModeOptions: {
-  icon: typeof SportShoe | typeof Car | typeof Bike | typeof Bus;
-  label: string;
-  value: StoreRouteMode;
-}[] = [
-  { icon: SportShoe, label: "도보", value: "walk" },
-  { icon: Car, label: "자동차", value: "car" },
-  { icon: Bike, label: "자전거", value: "bicycle" },
-  { icon: Bus, label: "대중교통", value: "transit" },
-];
 const mapCategoryOptions: {
   icon: typeof Store | typeof BadgePercent;
   label: string;
@@ -109,14 +97,6 @@ const benefitServicePreviewItems = [
 
 const noRouteResultMessage =
   "해당 교통 수단의 길찾기 결과가 없습니다.\n다른 이동 수단을 선택해주세요";
-
-type RouteSummary = {
-  isLoading?: boolean;
-  /** 가까운 매장인데 차량·자전거 경로가 크게 돌아가 도보를 추천하는지 */
-  isWalkRecommended?: boolean;
-  remainingDistanceText: string;
-  travelTimeText: string;
-};
 
 /** 이 직선거리(m) 안의 매장은 차량·자전거 경로가 크게 돌아가면 도보를 추천한다. */
 const WALK_RECOMMEND_MAX_STRAIGHT_METERS = 300;
@@ -145,394 +125,10 @@ const RESTORE_AREA_DELAY_MS = 1400;
 /** 검색 드롭다운에 보여줄 최대 결과 수(스크롤로 확인). */
 const MAX_SEARCH_RESULT_COUNT = 30;
 
-/**
- * 페이지 버튼 목록. 페이지가 많으면 처음·끝·현재 주변만 남기고 나머지는 "…"로 줄인다.
- * 예) 현재 6/12 → 1 … 5 6 7 … 12
- */
-const getPaginationItems = (
-  currentPage: number,
-  pageCount: number,
-): (number | "ellipsis")[] => {
-  if (pageCount <= 7) {
-    return Array.from({ length: pageCount }, (_, page) => page);
-  }
-
-  const lastPage = pageCount - 1;
-  const start = Math.max(1, Math.min(currentPage - 1, lastPage - 4));
-  const end = Math.min(lastPage - 1, Math.max(currentPage + 1, 4));
-  const items: (number | "ellipsis")[] = [0];
-
-  // 한 페이지만 건너뛰는 경우엔 "…" 대신 그 번호를 그대로 보여준다.
-  if (start === 2) items.push(1);
-  else if (start > 2) items.push("ellipsis");
-  for (let page = start; page <= end; page += 1) items.push(page);
-  if (end === lastPage - 2) items.push(lastPage - 1);
-  else if (end < lastPage - 2) items.push("ellipsis");
-  items.push(lastPage);
-
-  return items;
-};
-
-/** 위치 허용 모달에서 "위치 허용"을 누른 적이 있는지(권한 API가 없는 브라우저용 보조 기록). */
-const LOCATION_CONSENT_STORAGE_KEY = "vita-store-location-consent";
-/** 이번 세션에서 위치 허용 모달을 "나중에"로 닫았는지. */
-const LOCATION_MODAL_DISMISSED_STORAGE_KEY =
-  "vita-store-location-modal-dismissed";
-
-const readStorage = (storage: "local" | "session", key: string) => {
-  try {
-    return (
-      storage === "local" ? window.localStorage : window.sessionStorage
-    ).getItem(key);
-  } catch {
-    return null;
-  }
-};
-
-const writeStorage = (
-  storage: "local" | "session",
-  key: string,
-  value: string,
-) => {
-  try {
-    (storage === "local" ? window.localStorage : window.sessionStorage).setItem(
-      key,
-      value,
-    );
-  } catch {
-    // 저장소를 쓸 수 없는 환경에서는 기록 없이 진행한다.
-  }
-};
-
-/** 브라우저의 위치 권한 상태. 권한 API를 지원하지 않으면 null. */
-const getGeolocationPermissionState =
-  async (): Promise<PermissionState | null> => {
-    try {
-      const status = await navigator.permissions?.query({
-        name: "geolocation",
-      });
-
-      return status?.state ?? null;
-    } catch {
-      return null;
-    }
-  };
-
 const toStableServiceOptions = (services: string[], selected: string[]) =>
   Array.from(new Set([...services, ...selected]))
     .sort((first, second) => first.localeCompare(second, "ko"))
     .map((service) => ({ label: service, value: service }));
-
-const ServiceBadges = ({
-  services,
-  title,
-}: {
-  services?: string[];
-  title: string;
-}) => {
-  if (!services || services.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="mt-3">
-      <p className="text-text-secondary mb-2 text-[11px] font-extrabold">
-        {title}
-      </p>
-      <div className="flex flex-wrap gap-1.5">
-        {services.map((service) => (
-          <span key={service} className={serviceBadgeClassName}>
-            {service}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const StoreInfoBubble = ({
-  isLoading,
-  isWaitingForPinSelection,
-  isRouteDestination,
-  onShowNearbyStores,
-  onStartRoute,
-  onReserve,
-  routeResultMessage,
-  routeSummary,
-  selectedRouteMode,
-  onRouteModeChange,
-  onSelectSameLocationStore,
-  sameLocationStores = [],
-  store,
-}: {
-  isLoading: boolean;
-  isWaitingForPinSelection: boolean;
-  isRouteDestination: boolean;
-  onShowNearbyStores: () => void;
-  onStartRoute: (store: StoreLocation) => void;
-  onReserve: (store: StoreLocation) => void;
-  onRouteModeChange: (mode: StoreRouteMode) => void;
-  routeResultMessage?: string | null;
-  routeSummary?: RouteSummary | null;
-  selectedRouteMode: StoreRouteMode;
-  /** 선택 매장과 같은 좌표에 있는 매장들(선택 매장 포함). 2곳 이상이면 카드 상단에서 넘겨 볼 수 있다. */
-  sameLocationStores?: StoreLocation[];
-  onSelectSameLocationStore?: (storeId: string) => void;
-  store?: StoreLocation;
-}) => {
-  const title = isLoading
-    ? "근처 매장 검색"
-    : isWaitingForPinSelection || !store
-      ? "매장 선택"
-      : "선택한 매장";
-
-  const isRouteMode = Boolean(routeSummary || routeResultMessage);
-  const sameLocationIndex = store
-    ? sameLocationStores.findIndex((item) => item.id === store.id)
-    : -1;
-  const canBrowseSameLocation =
-    !isRouteMode &&
-    Boolean(onSelectSameLocationStore) &&
-    sameLocationStores.length > 1 &&
-    sameLocationIndex >= 0;
-  const moveSameLocationStore = (direction: -1 | 1) => {
-    const count = sameLocationStores.length;
-    const nextStore =
-      sameLocationStores[(sameLocationIndex + direction + count) % count];
-
-    onSelectSameLocationStore?.(nextStore.id);
-  };
-  const header = (
-    <div className="flex min-w-0 items-center gap-2">
-      <p className="text-brand text-xs font-bold">{title}</p>
-      {canBrowseSameLocation && (
-        // 같은 위치 매장이 여러 곳이면 좌우 화살표로 바로 넘겨 본다.
-        <div className="text-text-secondary flex items-center gap-0.5 rounded-full bg-gray-100 px-0.5 text-[11px] font-extrabold dark:bg-white/10">
-          <button
-            type="button"
-            onClick={() => moveSameLocationStore(-1)}
-            className="hover:text-text-primary flex h-6 w-6 items-center justify-center rounded-full transition hover:bg-white dark:hover:bg-white/10"
-            aria-label="같은 위치의 이전 매장"
-          >
-            <ChevronLeft size={14} />
-          </button>
-          <span aria-live="polite">
-            {sameLocationIndex + 1}/{sameLocationStores.length}
-          </span>
-          <button
-            type="button"
-            onClick={() => moveSameLocationStore(1)}
-            className="hover:text-text-primary flex h-6 w-6 items-center justify-center rounded-full transition hover:bg-white dark:hover:bg-white/10"
-            aria-label="같은 위치의 다음 매장"
-          >
-            <ChevronRight size={14} />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-  const routeModeControl = isRouteMode ? (
-    <div className="ml-3 flex shrink-0 gap-1 rounded-sm border border-gray-200 bg-white p-1 text-[11px] font-extrabold shadow-md shadow-gray-950/10 dark:border-white/10 dark:bg-zinc-950 dark:shadow-black/30">
-      {routeModeOptions.map((option) => {
-        const Icon = option.icon;
-        const isSelected = selectedRouteMode === option.value;
-        const isUnavailable = Boolean(routeResultMessage && isSelected);
-
-        return (
-          <button
-            key={option.value}
-            type="button"
-            disabled={isUnavailable}
-            onClick={() => onRouteModeChange(option.value)}
-            className={cn(
-              "group relative flex h-8 w-8 items-center justify-center rounded-sm transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none",
-              isUnavailable
-                ? "cursor-not-allowed bg-gray-100 text-gray-300 opacity-70 shadow-none dark:bg-white/5 dark:text-gray-600"
-                : isSelected
-                  ? "bg-brand text-white shadow-sm"
-                  : "text-text-secondary hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand",
-            )}
-            aria-label={`${option.label} 길찾기`}
-            aria-pressed={isSelected}
-          >
-            <Icon size={13} />
-            <span className="pointer-events-none absolute top-[calc(100%+8px)] left-1/2 z-50 flex -translate-x-1/2 -translate-y-1 items-center rounded-full bg-gray-900 px-3 py-1.5 text-xs font-extrabold whitespace-nowrap text-white opacity-0 shadow-xl transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
-              {option.label}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  ) : null;
-
-  if (isLoading) {
-    return (
-      <div className="border-border after:border-border relative w-full rounded-sm border bg-white/95 p-4 text-sm shadow-lg backdrop-blur after:absolute after:bottom-[-7px] after:left-1/2 after:h-3.5 after:w-3.5 after:-translate-x-1/2 after:rotate-45 after:border-r after:border-b after:bg-white/95 dark:border-white/10 dark:bg-zinc-950/92 dark:after:border-white/10 dark:after:bg-zinc-950/92">
-        {header}
-        <div className="mt-3 flex items-center gap-3">
-          <span
-            aria-hidden="true"
-            className="border-brand size-4 animate-spin rounded-full border-2 border-t-transparent"
-          />
-          <div>
-            <p className="font-extrabold text-gray-950 dark:text-white">
-              근처 매장을 불러오는 중
-            </p>
-            <p className="text-text-secondary mt-1 text-xs font-semibold">
-              새 기준 위치 주변 매장을 찾고 있어요.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (isWaitingForPinSelection || !store) {
-    return (
-      <div className="border-border after:border-border relative w-full rounded-sm border bg-white/95 p-4 text-sm shadow-lg backdrop-blur after:absolute after:bottom-[-7px] after:left-1/2 after:h-3.5 after:w-3.5 after:-translate-x-1/2 after:rotate-45 after:border-r after:border-b after:bg-white/95 dark:border-white/10 dark:bg-zinc-950/92 dark:after:border-white/10 dark:after:bg-zinc-950/92">
-        {header}
-        <div className="mt-3">
-          <p className="font-extrabold text-gray-950 dark:text-white">
-            매장 핀을 선택해 주세요
-          </p>
-          <p className="text-text-secondary mt-1 text-xs leading-5 font-semibold">
-            지도 위 매장 핀을 누르면 운영시간과 예약 정보를 확인할 수 있어요.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="border-border after:border-border relative w-full rounded-sm border bg-white/95 p-4 text-left text-sm shadow-lg backdrop-blur after:absolute after:bottom-[-7px] after:left-1/2 after:h-3.5 after:w-3.5 after:-translate-x-1/2 after:rotate-45 after:border-r after:border-b after:bg-white/95 dark:border-white/10 dark:bg-zinc-950/92 dark:after:border-white/10 dark:after:bg-zinc-950/92">
-      <div className="flex items-start justify-between gap-2">
-        {header}
-        {routeModeControl}
-      </div>
-      <div className="mt-3">
-        <p className="text-base font-extrabold text-gray-950 dark:text-white">
-          {store.name}
-        </p>
-
-        <p className="text-text-secondary mt-1 text-xs leading-5 font-semibold">
-          {store.address || "상세 주소 확인 중"}
-        </p>
-        {store.phone && (
-          <p className="text-text-secondary mt-2 text-xs font-semibold">
-            {store.phone}
-          </p>
-        )}
-        {/* 길찾기 중에는 경로 정보에 집중하도록 운영시간·서비스 뱃지를 숨겨 카드 높이를 줄인다. */}
-        {!isRouteMode && store.businessHours && (
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold">
-            <span className="text-text-secondary">
-              운영시간 {store.businessHours}
-            </span>
-          </div>
-        )}
-        {!isRouteMode && (
-          <>
-            <ServiceBadges title="상담 가능" services={store.consultServices} />
-            <ServiceBadges
-              title="제공 서비스"
-              services={store.providedServices}
-            />
-          </>
-        )}
-
-        {routeResultMessage ? (
-          <div className="bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand mt-3 rounded-sm px-3 py-2.5 text-xs leading-5 font-extrabold whitespace-pre-line">
-            {routeResultMessage}
-          </div>
-        ) : routeSummary ? (
-          <>
-            <div className="bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand mt-3 grid grid-cols-2 divide-x divide-current/15 rounded-sm py-2 text-[11px] font-extrabold">
-              <span className="px-3">
-                남은 거리
-                <strong className="mt-0.5 block text-sm">
-                  {routeSummary.isLoading
-                    ? "계산 중"
-                    : routeSummary.remainingDistanceText}
-                </strong>
-              </span>
-              <span className="px-3">
-                예상 시간
-                <strong className="mt-0.5 block text-sm">
-                  {routeSummary.isLoading
-                    ? "계산 중"
-                    : routeSummary.travelTimeText}
-                </strong>
-              </span>
-            </div>
-            {/* 가까운 매장인데 차량·자전거 경로가 크게 돌아가면 도보 길찾기를 권한다. */}
-            {!routeSummary.isLoading && routeSummary.isWalkRecommended && (
-              <div className="text-text-secondary mt-2 flex items-center justify-between gap-2 rounded-sm bg-gray-100 py-1.5 pr-1.5 pl-3 text-[11px] font-bold dark:bg-white/10 dark:text-gray-300">
-                <span>가까운 거리라 도보 이동을 추천해요</span>
-                <button
-                  type="button"
-                  onClick={() => onRouteModeChange("walk")}
-                  className="text-brand-hover dark:text-brand flex shrink-0 items-center gap-1 rounded-sm bg-white px-2 py-1 font-extrabold shadow-sm transition hover:shadow-md dark:bg-zinc-950"
-                >
-                  <SportShoe size={12} />
-                  도보로 보기
-                </button>
-              </div>
-            )}
-          </>
-        ) : null}
-
-        <div
-          className={cn(
-            "gap-2",
-            isRouteMode
-              ? "mt-3 grid grid-cols-2"
-              : "mt-4 flex flex-wrap justify-end",
-          )}
-        >
-          {isRouteDestination ? (
-            <Button
-              variant="primary"
-              size="sm"
-              className={cn(
-                "rounded-sm shadow-sm transition-shadow hover:shadow-md",
-                isRouteMode && "h-9! px-3! text-[13px]!",
-              )}
-              onClick={onShowNearbyStores}
-            >
-              <MapPinned size={16} />
-              다른 매장 보기
-            </Button>
-          ) : (
-            <Button
-              variant="primary"
-              size="sm"
-              className={cn(
-                "rounded-sm shadow-sm transition-shadow hover:shadow-md",
-                isRouteMode && "h-9! px-3! text-[13px]!",
-              )}
-              onClick={() => onStartRoute(store)}
-            >
-              <CornerUpRight size={16} />
-              길찾기
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            className={cn(
-              "rounded-sm shadow-sm transition-shadow hover:shadow-md",
-              isRouteMode && "h-9! px-3! text-[13px]!",
-            )}
-            onClick={() => onReserve(store)}
-          >
-            <CalendarCheck size={16} />
-            예약하기
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // 지도 화면은 검색, 필터, 위치, 길찾기 상태가 강하게 맞물린다.
 // 새 상태를 추가할 때는 useStoreMapState로 먼저 분리할 수 있는지 확인한다.
@@ -2106,7 +1702,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         selectedStore={showStoreInfoCard ? mapSelectedStore : undefined}
         selectedStoreCard={
           showStoreInfoCard ? (
-            <StoreInfoBubble
+            <StorePanelInfoBubble
               isLoading={isMapSearchLoading}
               isWaitingForPinSelection={isWaitingForPinSelection}
               isRouteDestination={Boolean(
@@ -2703,113 +2299,20 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       )}
 
       {isRouteSearchOverlayVisible && (
-        <div className="pointer-events-auto absolute inset-0 z-50 flex items-center justify-center bg-gray-950/45 px-6 backdrop-blur-[2px]">
-          <div className="border-border w-full max-w-[320px] rounded-sm border bg-white/95 p-5 text-center shadow-2xl dark:border-white/10 dark:bg-zinc-950/95">
-            <span
-              aria-hidden="true"
-              className="border-brand mx-auto block size-8 animate-spin rounded-full border-4 border-t-transparent"
-            />
-            <p className="mt-4 text-sm font-extrabold text-gray-950 dark:text-white">
-              경로 탐색 중입니다
-            </p>
-            <p className="text-text-secondary mt-2 text-xs leading-5 font-semibold">
-              {isRouteLoading
-                ? "현재 위치에서 선택한 매장까지의 경로와 예상 시간을 계산하고 있어요."
-                : "출발지부터 도착지까지 한눈에 보이도록 지도를 맞추고 있어요."}
-            </p>
-          </div>
-        </div>
+        <StorePanelRouteSearchOverlay isRouteLoading={isRouteLoading} />
       )}
 
-      <Modal
-        isOpen={isLocationPermissionModalOpen}
-        onClose={dismissLocationPermissionModal}
-        title="내 위치를 사용할까요?"
-        description="현재 위치 주변의 VITA 매장을 지도에서 바로 확인할 수 있어요."
-        size="sm"
-        actions={
-          <>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={dismissLocationPermissionModal}
-            >
-              나중에
-            </Button>
-            <Button
-              size="sm"
-              onClick={requestUserLocationFromModal}
-              disabled={locationStatus === "requesting"}
-            >
-              위치 허용
-            </Button>
-          </>
-        }
-      >
-        위치 정보는 근처 매장 조회와 길찾기 출발지 계산에만 사용됩니다.
-      </Modal>
-
-      <Modal
-        isOpen={reservationStore !== null}
-        onClose={() => setReservationStore(null)}
-        title="예약 확인"
-        description={
-          reservationStore ? (
-            <>
-              <span className="text-text-primary font-bold">
-                {reservationStore.name}
-              </span>
-              <br />
-              방문 예약을 진행할까요?
-            </>
-          ) : undefined
-        }
-        size="sm"
-        // 한국어가 글자 단위로 끊기지 않도록 단어 단위 줄바꿈
-        className="break-keep"
-        actions={
-          <>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setReservationStore(null)}
-            >
-              취소
-            </Button>
-            <Button size="sm" onClick={handleReservationConfirm}>
-              예약하기
-            </Button>
-          </>
-        }
-      >
-        예약 후 매장 방문 전에
-        <br />
-        운영시간과 상담 가능 서비스를 한 번 더 확인해 주세요.
-      </Modal>
-
-      <Modal
-        isOpen={isLoginRequiredModalOpen}
-        onClose={() => setIsLoginRequiredModalOpen(false)}
-        title="로그인이 필요해요"
-        description="매장 방문 예약은 로그인 후 이용할 수 있어요."
-        size="sm"
-        actions={
-          <>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setIsLoginRequiredModalOpen(false)}
-            >
-              닫기
-            </Button>
-            <ButtonLink href={routes.login} size="sm">
-              로그인하기
-            </ButtonLink>
-          </>
-        }
-      >
-        매장 위치 확인과 길찾기는 로그인 없이 계속 이용할 수 있습니다.
-      </Modal>
+      <StorePanelModals
+        isLocationPermissionModalOpen={isLocationPermissionModalOpen}
+        isLocationRequesting={locationStatus === "requesting"}
+        isLoginRequiredModalOpen={isLoginRequiredModalOpen}
+        onDismissLocationPermission={dismissLocationPermissionModal}
+        onLoginRequiredClose={() => setIsLoginRequiredModalOpen(false)}
+        onRequestUserLocation={requestUserLocationFromModal}
+        onReservationCancel={() => setReservationStore(null)}
+        onReservationConfirm={handleReservationConfirm}
+        reservationStore={reservationStore}
+      />
     </div>
   );
 };
