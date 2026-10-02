@@ -1,6 +1,13 @@
 import { Fragment, type ReactNode } from "react";
 import { ChatPlanCardList } from "@/features/chat/components/ChatPlanCardList";
+import {
+  type ChatAnswerUnit,
+  groupAnswerCards,
+} from "@/features/chat/lib/chatAnswerCards";
 import { blockToPlanCards } from "@/features/chat/lib/chatPlanCards";
+import { ChecklistCard } from "@/shared/ui/ChecklistCard";
+import { StepGuideCard } from "@/shared/ui/StepGuideCard";
+import { WarningNotice } from "@/shared/ui/WarningNotice";
 
 /**
  * 챗봇 답변(LLM이 만든 마크다운)을 말풍선 안에서 읽기 좋게 그려주는 가벼운 렌더러.
@@ -334,7 +341,10 @@ const renderLines = (lines: string[], keyPrefix: string) =>
 /* 블록                                                                 */
 /* ------------------------------------------------------------------ */
 
-const renderBlock = (block: ChatMarkdownBlock, index: number): ReactNode => {
+const renderBlock = (
+  block: ChatMarkdownBlock,
+  index: number | string,
+): ReactNode => {
   const key = `b-${index}`;
   const planCards = blockToPlanCards(block);
 
@@ -460,10 +470,63 @@ const renderBlock = (block: ChatMarkdownBlock, index: number): ReactNode => {
   }
 };
 
+/* ------------------------------------------------------------------ */
+/* 안내 카드 (절차 · 준비물 · 주의사항)                                    */
+/* ------------------------------------------------------------------ */
+
+const renderUnit = (unit: ChatAnswerUnit, index: number): ReactNode => {
+  const key = `u-${index}`;
+
+  switch (unit.type) {
+    case "block":
+      return renderBlock(unit.block, index);
+    case "steps":
+      return (
+        <StepGuideCard
+          key={key}
+          title={unit.title ? renderInline(unit.title, `${key}-t`) : undefined}
+          steps={unit.steps.map((step, stepIndex) => ({
+            title: renderInline(step.title, `${key}-${stepIndex}-t`),
+            description:
+              step.description.length > 0
+                ? renderLines(step.description, `${key}-${stepIndex}-d`)
+                : undefined,
+          }))}
+        />
+      );
+    case "checklist":
+      return (
+        <ChecklistCard
+          key={key}
+          title={unit.title ? renderInline(unit.title, `${key}-t`) : undefined}
+          items={unit.items.map((item, itemIndex) => ({
+            label: renderLines(
+              [...item.text.split("\n"), ...item.children],
+              `${key}-${itemIndex}`,
+            ),
+          }))}
+        />
+      );
+    case "notice":
+      return (
+        <WarningNotice
+          key={key}
+          title={unit.title ? renderInline(unit.title, `${key}-t`) : undefined}
+        >
+          <div className="space-y-2">
+            {unit.blocks.map((block, blockIndex) =>
+              renderBlock(block, `${key}-${blockIndex}`),
+            )}
+          </div>
+        </WarningNotice>
+      );
+  }
+};
+
 export const ChatMarkdown = ({ className, content }: ChatMarkdownProps) => (
   <div
     className={["space-y-3 break-words", className].filter(Boolean).join(" ")}
   >
-    {parseChatMarkdown(content).map(renderBlock)}
+    {groupAnswerCards(parseChatMarkdown(content)).map(renderUnit)}
   </div>
 );
