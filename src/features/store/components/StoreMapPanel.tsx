@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
 import { StoreMapPreview } from "@/features/store/components/StoreMapPreview";
 import { StorePanelInfoBubble } from "@/features/store/components/StorePanelInfoBubble";
 import { StorePanelModals } from "@/features/store/components/StorePanelModals";
@@ -14,16 +13,14 @@ import { useLocationPermission } from "@/features/store/hooks/useLocationPermiss
 import { useServiceFilters } from "@/features/store/hooks/useServiceFilters";
 import { useStoreMapState } from "@/features/store/hooks/useStoreMapState";
 import { useStorePagination } from "@/features/store/hooks/useStorePagination";
+import { useStorePanelLayout } from "@/features/store/hooks/useStorePanelLayout";
+import { useStoreReservation } from "@/features/store/hooks/useStoreReservation";
 import { useStoreRoute } from "@/features/store/hooks/useStoreRoute";
 import {
   useStoreSearchHistory,
   type StoreSearchHistoryItem,
 } from "@/features/store/hooks/useStoreSearchHistory";
-import {
-  formatDistance,
-  getDistanceMeters,
-  matchesStoreSearch,
-} from "@/features/store/lib/geo";
+import { matchesStoreSearch } from "@/features/store/lib/geo";
 import { buildMarkerColorInfoById } from "@/features/store/lib/markerColors";
 import { findServicesInText } from "@/features/store/lib/serviceKeywords";
 import {
@@ -31,11 +28,23 @@ import {
   LOCATION_CONSENT_STORAGE_KEY,
   readStorage,
 } from "@/features/store/lib/storePanelStorage";
-import { getStoreMarkerLabel } from "@/features/store/lib/storeMarkerOverlays";
 import {
   buildRoutePreview,
   buildRouteSummary,
 } from "@/features/store/lib/storeRoutePreview";
+import {
+  buildMarkerLabelById,
+  buildSearchableStores,
+  defaultMapLocation,
+  getMapStoreVisibility,
+  getSameLocationStores,
+  getViewportAreaQuery,
+  isStoreInVisibleArea,
+  SEARCH_RADIUS_KM,
+  sortStoresByDistance,
+  type MapSearchPoint,
+  type MapViewport,
+} from "@/features/store/lib/storePanelStores";
 import { storeService } from "@/features/store/lib/storeService";
 import type { MapCategory, StoreLocation } from "@/features/store/types";
 import { showToast } from "@/shared/ui/ToastProvider";
@@ -44,41 +53,40 @@ type StoreMapPanelProps = {
   onOpenSidebar?: () => void;
 };
 
-const defaultMapLocation = {
-  lat: 37.50312732327876,
-  lng: 127.04987850743296,
-};
-
-type MapSearchPoint = {
-  lat: number;
-  lng: number;
-};
-
-/** 텍스트 검색 반경(km). 주변 매장 조회 반경(storeService)과 같다. */
-const SEARCH_RADIUS_KM = 1.5;
 /** 마지막 필터 해제 후 매장을 다시 불러오는 동안 지도를 자동으로 옮기지 않는 시간(ms) */
 const PIN_AUTO_FIT_SKIP_MS = 2500;
 
-/** 지금 보이는 지도 영역 (중심·북동·남서 모서리) */
-type MapViewport = {
-  center: { lat: number; lng: number };
-  northEast: { lat: number; lng: number };
-  southWest: { lat: number; lng: number };
-};
-/** 화면 영역 검색 시 조회 반경 상한(km). 지도를 크게 축소해도 이 반경까지만 불러온다. */
-const MAX_VIEWPORT_SEARCH_RADIUS_KM = 3;
 /** "이 지역에 매장 없음" 안내 후 직전 지역으로 지도를 되돌리기까지의 지연(ms). */
 const RESTORE_AREA_DELAY_MS = 1400;
 
 // 지도 화면은 검색, 필터, 위치, 길찾기 상태가 강하게 맞물린다.
 // 새 상태를 추가할 때는 useStoreMapState로 먼저 분리할 수 있는지 확인한다.
 export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuthUser();
+  const {
+    cancelReservation,
+    closeLoginRequiredModal,
+    handleReservationConfirm,
+    handleReserve,
+    isLoginRequiredModalOpen,
+    isToastBackdropVisible,
+    reservationStore,
+  } = useStoreReservation();
   const [stores, setStores] = useState<StoreLocation[]>([]);
   const [focusPoint, setFocusPoint] = useState<MapSearchPoint | null>(
     defaultMapLocation,
   );
-  const [isSearchHistoryOpen, setIsSearchHistoryOpen] = useState(false);
+  const {
+    collapsedSearchRef,
+    getMapPinFitPadding,
+    isSearchHistoryOpen,
+    isStoreListCollapsed,
+    mapTopBarRef,
+    panelRootRef,
+    routeLeftInset,
+    setIsSearchHistoryOpen,
+    setIsStoreListCollapsed,
+    storeListPanelRef,
+  } = useStorePanelLayout();
   const [soloStoreId, setSoloStoreId] = useState("");
   const [mapCenter, setMapCenter] = useState<MapSearchPoint | null>(null);
   // 현재 stores를 조회한 기준 지점(내 위치·지도에서 고른 지점 등). 매장 순서(A, B, C…)는 이 지점에서 가까운 순이다.
@@ -129,15 +137,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const [isWaitingForPinSelection, setIsWaitingForPinSelection] =
     useState(false);
   const [hasSelectedStoreInfo, setHasSelectedStoreInfo] = useState(false);
-  const [reservationStore, setReservationStore] =
-    useState<StoreLocation | null>(null);
-  const [isLoginRequiredModalOpen, setIsLoginRequiredModalOpen] =
-    useState(false);
-  const [isStoreListCollapsed, setIsStoreListCollapsed] = useState(true);
-  const [isToastBackdropVisible, setIsToastBackdropVisible] = useState(false);
   const [activeMapCategory, setActiveMapCategory] =
     useState<MapCategory>("store");
-  const collapsedSearchRef = useRef<HTMLDivElement>(null);
   const hasFocusedInitialLocationRef = useRef(false);
   const lastNearbyLookupKeyRef = useRef("");
   // 지도 영역 검색(searchVisibleArea) 요청 번호. 가장 최근 요청의 응답만 화면에 반영한다.
@@ -158,11 +159,6 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   // 마지막으로 매장이 1곳 이상 조회된 지역. "이 위치에서 검색" 결과가 없으면 이곳으로 지도를 되돌린다.
   const lastStoreAreaRef = useRef<MapSearchPoint>(defaultMapLocation);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const panelRootRef = useRef<HTMLDivElement>(null);
-  const storeListPanelRef = useRef<HTMLDivElement>(null);
-  // 지도 위 상단 영역(검색창 + 필터 뱃지 줄). 핀이 이 아래로 꽂히도록 높이를 잰다.
-  const mapTopBarRef = useRef<HTMLDivElement>(null);
-  const [routeLeftInset, setRouteLeftInset] = useState(0);
   const {
     displayStores,
     locationStatus,
@@ -226,27 +222,10 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         categoryStores[0])
       : undefined;
   // 검색 풀 = 지역별로 조회해 둔 매장(allStores) + 현재 지도에 불러온 매장(stores).
-  const searchableStores = useMemo(() => {
-    const storeMap = new Map<string, StoreLocation>();
-
-    allStores.forEach((store) => {
-      storeMap.set(store.id, store);
-    });
-    stores.forEach((store) => {
-      storeMap.set(store.id, { ...storeMap.get(store.id), ...store });
-    });
-
-    return Array.from(storeMap.values()).map((store) =>
-      userLocation
-        ? {
-            ...store,
-            distanceText: formatDistance(
-              getDistanceMeters(userLocation, store),
-            ),
-          }
-        : store,
-    );
-  }, [allStores, stores, userLocation]);
+  const searchableStores = useMemo(
+    () => buildSearchableStores(allStores, stores, userLocation),
+    [allStores, stores, userLocation],
+  );
   // "#뱃지" 형태의 검색어는 필터 뱃지로 입력된 태그 검색이다(텍스트 매칭 대상 아님).
   const isTagSearchQuery = searchQuery.trim().startsWith("#");
   const matchedSearchStores =
@@ -269,18 +248,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const isInVisibleArea = (
     store: Pick<StoreLocation, "lat" | "lng">,
     viewport: MapViewport | null = mapViewport,
-  ) => {
-    if (!viewport) {
-      return getDistanceMeters(searchCenter, store) <= SEARCH_RADIUS_KM * 1000;
-    }
-
-    return (
-      store.lat >= viewport.southWest.lat &&
-      store.lat <= viewport.northEast.lat &&
-      store.lng >= viewport.southWest.lng &&
-      store.lng <= viewport.northEast.lng
-    );
-  };
+  ) => isStoreInVisibleArea(store, viewport, searchCenter);
   /**
    * 텍스트 검색 정렬 기준(중심 좌표).
    * 내 위치 버튼·위치 허용 후라면 내 위치, 사용자가 지도를 직접 옮겼다면 보이는 지도 중심.
@@ -296,20 +264,13 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       : viewportCenter;
   };
   const getTextSearchResults = (pool: StoreLocation[]) =>
-    pool
-      .filter(
+    sortStoresByDistance(
+      pool.filter(
         (store) =>
           matchesStoreSearch(store, searchQuery) && isInVisibleArea(store),
-      )
-      .map((store) => ({
-        store,
-        distanceMeters: getDistanceMeters(getTextSearchSortCenter(), store),
-      }))
-      .sort((first, second) => first.distanceMeters - second.distanceMeters)
-      .map(({ store, distanceMeters }) => ({
-        ...store,
-        distanceText: formatDistance(distanceMeters),
-      }));
+      ),
+      getTextSearchSortCenter(),
+    );
   // 텍스트 검색 결과(서비스 필터 적용 전). Enter 검색 시 이 목록을 저장해 두고 뱃지로 다시 거른다.
   const textSearchStores = isTagSearchQuery
     ? matchedSearchStores
@@ -343,17 +304,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     (userLocation
       ? { lat: userLocation.lat, lng: userLocation.lng }
       : defaultMapLocation);
-  const sortedMapStoreEntries = unsortedMapStores
-    .map((store) => ({
-      distanceMeters: getDistanceMeters(storesSortOrigin, store),
-      store,
-    }))
-    .sort((first, second) => first.distanceMeters - second.distanceMeters);
   // 목록에 보이는 거리도 같은 기준 지점에서 잰 값으로 맞춰, 순서와 거리 표시가 어긋나지 않게 한다.
-  const mapStores = sortedMapStoreEntries.map(({ distanceMeters, store }) => ({
-    ...store,
-    distanceText: formatDistance(distanceMeters),
-  }));
+  const mapStores = sortStoresByDistance(unsortedMapStores, storesSortOrigin);
   const routeDestinationStore =
     categoryStores.find((store) => store.id === routeDestinationStoreId) ??
     stores.find((store) => store.id === routeDestinationStoreId);
@@ -404,11 +356,9 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     !pagedMapStores.some((store) => store.id === selectedStore.id)
       ? selectedStore
       : undefined;
-  const markerLabelById: Record<string, string> = Object.fromEntries(
-    pagedMapStores.map((store, index) => [
-      store.id,
-      getStoreMarkerLabel(index),
-    ]),
+  const markerLabelById = buildMarkerLabelById(
+    pagedMapStores,
+    selectedStoreOutsidePage,
   );
   const activeServiceFilters = [
     ...consultServiceFilters,
@@ -420,23 +370,14 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     stores: mapStores,
   });
 
-  if (selectedStoreOutsidePage) {
-    markerLabelById[selectedStoreOutsidePage.id] = "•";
-  }
-  const visibleMapStores =
-    routeDestinationStoreId && routeDestinationStore
-      ? [routeDestinationStore]
-      : soloStore
-        ? [soloStore]
-        : selectedStoreOutsidePage
-          ? [...pagedMapStores, selectedStoreOutsidePage]
-          : pagedMapStores;
-  // 목록에는 있지만 지금 핀으로 보이지 않는 매장(다른 페이지). 길찾기·단독 표시 중에는 보여주지 않는다.
-  const visibleMapStoreIds = new Set(visibleMapStores.map((store) => store.id));
-  const otherMapStores =
-    (routeDestinationStoreId && routeDestinationStore) || soloStore
-      ? []
-      : mapStores.filter((store) => !visibleMapStoreIds.has(store.id));
+  const { otherMapStores, visibleMapStores } = getMapStoreVisibility({
+    mapStores,
+    pagedMapStores,
+    routeDestinationStore,
+    routeDestinationStoreId,
+    selectedStoreOutsidePage,
+    soloStore,
+  });
   const routeSummary = buildRouteSummary({
     isRouteLoading,
     routeDestinationStore,
@@ -670,22 +611,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     return true;
   };
   /** 지금 보이는 지도 영역을 덮는 조회 중심·반경(km). 반경은 화면 중심→모서리 거리, 최대 3km. */
-  const getVisibleAreaQuery = (viewport: MapViewport | null = mapViewport) => {
-    if (!viewport) {
-      return { center: searchCenter, radiusKm: SEARCH_RADIUS_KM };
-    }
-
-    const halfDiagonalKm =
-      getDistanceMeters(viewport.center, viewport.northEast) / 1000;
-
-    return {
-      center: viewport.center,
-      radiusKm: Math.min(
-        MAX_VIEWPORT_SEARCH_RADIUS_KM,
-        Math.max(0.3, Number(halfDiagonalKm.toFixed(2))),
-      ),
-    };
-  };
+  const getVisibleAreaQuery = (viewport: MapViewport | null = mapViewport) =>
+    getViewportAreaQuery(viewport, searchCenter);
   /**
    * 보이는 지도 영역 기준 검색.
    * - text: 검색어에 맞는 매장을 영역 안에서 찾고, 중심 좌표(내 위치 또는 지도 중심)에서 가까운 순
@@ -742,45 +669,6 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     }
   };
   /** 지도 이동·확대/축소가 끝날 때: 보이는 영역을 기억하고, 텍스트 검색 중 사용자가 지도를 옮겼으면 자동 재검색 */
-  /**
-   * 핀을 꽂을 때 비워 둘 여백(지도 기준 px). 매장 목록이 펼쳐져 있는지에 따라 달라진다.
-   * - 위: 검색창·필터 줄 아래 + 핀 높이 (모바일에서 목록을 펼쳤으면 목록 아래)
-   * - 왼쪽(데스크톱): 목록을 펼쳤으면 목록 오른쪽 끝 + 여유, 접었으면 기본 여유만
-   * - 오른쪽·아래: 지도 컨트롤 버튼 자리
-   */
-  const getMapPinFitPadding = (container: {
-    height: number;
-    width: number;
-  }) => {
-    const rootRect = panelRootRef.current?.getBoundingClientRect();
-    const topBarRect = mapTopBarRef.current?.getBoundingClientRect();
-
-    if (!rootRect || !topBarRect) {
-      return null;
-    }
-
-    const listRect = isStoreListCollapsed
-      ? null
-      : (storeListPanelRef.current?.getBoundingClientRect() ?? null);
-    const isDesktop = container.width >= 768;
-    // 핀은 좌표 지점에서 위로 46px 솟으므로 그만큼 + 여유를 더 비운다.
-    const pinTopSpace = 56;
-    const edgeGap = 24;
-    const topBarBottom = topBarRect.bottom - rootRect.top;
-    const top =
-      (!isDesktop && listRect
-        ? Math.max(topBarBottom, listRect.bottom - rootRect.top)
-        : topBarBottom) + pinTopSpace;
-    const left =
-      isDesktop && listRect ? listRect.right - rootRect.left + edgeGap : 32;
-
-    return {
-      bottom: 56,
-      left,
-      right: isDesktop ? 96 : 76,
-      top,
-    };
-  };
   const handleViewportChange = (viewport: MapViewport) => {
     // 지도를 옮겨도 자동으로 다시 검색하지 않는다(화면만 둘러보려는 사용자를 헷갈리게 하지 않도록).
     // 다시 찾기는 "이 위치에서 검색" 버튼으로만 한다(searchInCurrentArea).
@@ -1037,33 +925,6 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     });
   };
 
-  const handleReservationConfirm = () => {
-    if (!reservationStore) {
-      return;
-    }
-
-    setReservationStore(null);
-    setIsToastBackdropVisible(true);
-    showToast("예약이 완료되었습니다.");
-
-    window.setTimeout(() => {
-      setIsToastBackdropVisible(false);
-    }, 1700);
-  };
-  const handleReserve = (store: StoreLocation) => {
-    if (isAuthLoading) {
-      showToast("로그인 상태를 확인하고 있어요.");
-      return;
-    }
-
-    if (!isAuthenticated) {
-      setIsLoginRequiredModalOpen(true);
-      return;
-    }
-
-    setReservationStore(store);
-  };
-
   const closeSelectedStoreInfo = () => {
     setHasSelectedStoreInfo(false);
     setSoloStoreId("");
@@ -1152,17 +1013,11 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   const mapSelectedStoreId =
     categorySelectedStore?.id ?? routeDestinationStore?.id ?? "";
   // 선택 매장과 같은 좌표(소수 5자리, 지도 묶음 핀과 같은 기준)에 있는 매장들
-  const getCoordinateKey = (store: Pick<StoreLocation, "lat" | "lng">) =>
-    `${store.lat.toFixed(5)}:${store.lng.toFixed(5)}`;
-  const sameLocationStores = mapSelectedStore
-    ? (mapStores.some((store) => store.id === mapSelectedStore.id)
-        ? mapStores
-        : stores
-      ).filter(
-        (store) =>
-          getCoordinateKey(store) === getCoordinateKey(mapSelectedStore),
-      )
-    : [];
+  const sameLocationStores = getSameLocationStores(
+    mapSelectedStore,
+    mapStores,
+    stores,
+  );
   const showStoreInfoCard =
     hasSelectedStoreInfo &&
     (isWaitingForPinSelection || Boolean(mapSelectedStore));
@@ -1287,80 +1142,6 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     }
     setIsSearchHistoryOpen(false);
   };
-
-  // 검색창/매장 목록 패널의 오른쪽 끝(지도 기준 px)을 재서 길찾기 경로 여백으로 쓴다.
-  useEffect(() => {
-    const panelRoot = panelRootRef.current;
-    const searchPanel = collapsedSearchRef.current;
-
-    if (!panelRoot || !searchPanel) {
-      return;
-    }
-
-    const updateRouteLeftInset = () => {
-      const rootRect = panelRoot.getBoundingClientRect();
-      const searchRect = searchPanel.getBoundingClientRect();
-
-      setRouteLeftInset(
-        Math.max(0, Math.round(searchRect.right - rootRect.left)),
-      );
-    };
-
-    updateRouteLeftInset();
-
-    const resizeObserver = new ResizeObserver(updateRouteLeftInset);
-
-    resizeObserver.observe(panelRoot);
-    resizeObserver.observe(searchPanel);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isSearchHistoryOpen) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (
-        event.target instanceof Node &&
-        collapsedSearchRef.current?.contains(event.target)
-      ) {
-        return;
-      }
-
-      setIsSearchHistoryOpen(false);
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [isSearchHistoryOpen]);
-
-  useEffect(() => {
-    if (!isSearchHistoryOpen && isStoreListCollapsed) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") {
-        return;
-      }
-
-      setIsSearchHistoryOpen(false);
-      setIsStoreListCollapsed(true);
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isSearchHistoryOpen, isStoreListCollapsed]);
 
   /** 검색어 입력: 태그·텍스트 검색어를 모두 지웠을 때의 정리와 검색 풀 조회를 함께 처리한다. */
   const handleSearchQueryChange = (nextQuery: string) => {
@@ -1611,9 +1392,9 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         isLocationRequesting={locationStatus === "requesting"}
         isLoginRequiredModalOpen={isLoginRequiredModalOpen}
         onDismissLocationPermission={dismissLocationPermissionModal}
-        onLoginRequiredClose={() => setIsLoginRequiredModalOpen(false)}
+        onLoginRequiredClose={closeLoginRequiredModal}
         onRequestUserLocation={requestUserLocationFromModal}
-        onReservationCancel={() => setReservationStore(null)}
+        onReservationCancel={cancelReservation}
         onReservationConfirm={handleReservationConfirm}
         reservationStore={reservationStore}
       />
