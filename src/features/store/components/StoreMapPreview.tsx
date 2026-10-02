@@ -2,18 +2,17 @@
 
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
-import {
-  Layers,
-  LocateFixed,
-  LocateOff,
-  Minus,
-  Plus,
-  RotateCcw,
-} from "lucide-react";
+import { RotateCcw } from "lucide-react";
+import { StoreMapControls } from "@/features/store/components/StoreMapControls";
+import { StoreMapFallbackMarkers } from "@/features/store/components/StoreMapFallbackMarkers";
 import { useKakaoMapReady } from "@/features/store/hooks/useKakaoMapReady";
 import { hasKakaoMapKey } from "@/shared/config/env";
 import type { UserLocation } from "@/features/store/lib/geo";
+import type {
+  KakaoMapEventApi,
+  KakaoMapWithCenter,
+  MapOverlayHandle,
+} from "@/features/store/lib/kakaoMapTypes";
 import {
   arePointsInFreeArea,
   fitPointsSmoothlyOnMap,
@@ -44,17 +43,18 @@ import {
 } from "@/features/store/lib/routeMarkerElements";
 import type { StoreLocation } from "@/features/store/types";
 import type { MarkerColorInfo } from "@/features/store/lib/markerColors";
+import { createOtherStoreOverlay } from "@/features/store/lib/mapOverlayElements";
+import { getFallbackMarkerStyle } from "@/features/store/lib/storeMapFallbackLayout";
 import {
-  getMarkerGradientId,
-  getStorePinSvgMarkup,
-  STORE_PIN_SHAPE_CLASS_NAME,
-} from "@/features/store/lib/storePinSvg";
+  createCurrentLocationOverlay,
+  createRoutePointOverlay,
+  createStoreMarkerOverlay,
+  groupStoresByCoordinate,
+} from "@/features/store/lib/storeMarkerOverlays";
 import { cn } from "@/shared/lib/cn";
-import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
 
 export type { MapFitPadding } from "@/features/store/lib/mapFit";
 
-const clampPercent = (value: number) => Math.min(88, Math.max(12, value));
 const clampValue = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
 
@@ -72,556 +72,11 @@ const ROUTE_CARD_REVEAL_DELAY_MS = 220;
 const ZOOM_ANIMATION_MS = 320;
 /** 새 핀이 꽂히거나 목록을 펼친 뒤 가림 여부를 확인하기까지 기다리는 시간(ms) */
 const PIN_AUTO_FIT_DELAY_MS = 160;
-/** 페이지 전환 등으로 새로 나타나는 핀·원이 서서히 보이는 시간(ms) */
-const MARKER_ENTER_ANIMATION_MS = 280;
-
-/** 핀·원 DOM이 아래에서 살짝 떠오르며 나타나게 한다. */
-const playMarkerEnterAnimation = (element: HTMLElement) => {
-  element.animate?.(
-    [
-      { opacity: 0, transform: "translateY(6px) scale(0.85)" },
-      { opacity: 1, transform: "translateY(0) scale(1)" },
-    ],
-    { duration: MARKER_ENTER_ANIMATION_MS, easing: "ease-out", fill: "both" },
-  );
-};
 /** 길찾기 중 확대/축소 전에 초점 지점으로 지도를 미리 옮기는 시간(ms, 카카오 panTo 애니메이션 여유 포함) */
 const ZOOM_FOCUS_PAN_MS = 280;
 
-const getStoreMarkerLabel = (index: number) =>
-  String.fromCharCode(65 + (index % 26));
-
-const getFallbackMarkerStyle = (
-  store: StoreLocation,
-  stores: StoreLocation[],
-  index: number,
-): CSSProperties => {
-  const lats = stores.map((item) => item.lat);
-  const lngs = stores.map((item) => item.lng);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const latRange = maxLat - minLat;
-  const lngRange = maxLng - minLng;
-  const duplicateOffset = (index % 5) * 1.8;
-
-  return {
-    left: `${clampPercent(
-      lngRange === 0
-        ? 50 + duplicateOffset
-        : 12 + ((store.lng - minLng) / lngRange) * 76,
-    )}%`,
-    top: `${clampPercent(
-      latRange === 0
-        ? 50 + duplicateOffset
-        : 88 - ((store.lat - minLat) / latRange) * 76,
-    )}%`,
-  };
-};
-
-type KakaoMapEventApi = {
-  addListener: (
-    target: KakaoMap,
-    eventName:
-      | "dragend"
-      | "zoom_changed"
-      | "idle"
-      | "center_changed"
-      | "click"
-      | "tilesloaded",
-    callback: () => void,
-  ) => void;
-  removeListener: (
-    target: KakaoMap,
-    eventName:
-      | "dragend"
-      | "zoom_changed"
-      | "idle"
-      | "center_changed"
-      | "click"
-      | "tilesloaded",
-    callback: () => void,
-  ) => void;
-};
-
-type KakaoMapWithCenter = KakaoMap & {
-  getCenter: () => {
-    getLat: () => number;
-    getLng: () => number;
-  };
-};
-
 type SearchPointRef = MapPoint | null | undefined;
 type FocusPointRef = MapPoint | null | undefined;
-
-type MapOverlayHandle = {
-  marker?: KakaoMarker;
-  overlay: KakaoCustomOverlay;
-  cleanup?: () => void;
-};
-
-type StoreMarkerGroupEntry = {
-  index: number;
-  store: StoreLocation;
-};
-
-type ExtraService = MarkerColorInfo["extraServices"][number];
-
-const getExtraServicesLabel = (services: ExtraService[]) =>
-  services.map((service) => service.label).join(", ");
-
-const createExtraServiceBadgeElement = (services: ExtraService[]) => {
-  const badge = document.createElement("span");
-  const tooltip = document.createElement("span");
-
-  badge.setAttribute(
-    "aria-label",
-    `추가 필터 조건: ${getExtraServicesLabel(services)}`,
-  );
-  badge.className =
-    "group/extra absolute -top-1 left-0 z-[2] flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-950/90 px-1 text-[9px] leading-none font-black text-white shadow-sm";
-  badge.textContent = `+${services.length}`;
-  tooltip.className =
-    "pointer-events-none absolute top-[calc(100%+6px)] left-0 z-[4] flex min-w-max translate-y-1 flex-col gap-1 rounded-sm bg-slate-950/95 px-2.5 py-1.5 text-[10px] leading-snug font-extrabold whitespace-nowrap text-white opacity-0 shadow-lg transition group-hover/extra:translate-y-0 group-hover/extra:opacity-100 group-focus-visible/extra:translate-y-0 group-focus-visible/extra:opacity-100";
-
-  services.forEach((service) => {
-    const row = document.createElement("span");
-    const dot = document.createElement("span");
-    const label = document.createElement("span");
-
-    row.className = "flex items-center gap-1.5";
-    dot.className = "h-2 w-2 shrink-0 rounded-full";
-    dot.style.backgroundColor = service.color;
-    label.textContent = service.label;
-    row.append(dot, label);
-    tooltip.append(row);
-  });
-
-  badge.append(tooltip);
-  return badge;
-};
-
-const ExtraServiceBadge = ({ services }: { services: ExtraService[] }) => (
-  <span
-    className="group/extra absolute -top-1 left-0 z-[2] flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-950/90 px-1 text-[9px] leading-none font-black text-white shadow-sm"
-    aria-label={`추가 필터 조건: ${getExtraServicesLabel(services)}`}
-  >
-    +{services.length}
-    <span className="pointer-events-none absolute top-[calc(100%+6px)] left-0 z-[4] flex min-w-max translate-y-1 flex-col gap-1 rounded-sm bg-slate-950/95 px-2.5 py-1.5 text-[10px] leading-snug font-extrabold whitespace-nowrap text-white opacity-0 shadow-lg transition group-hover/extra:translate-y-0 group-hover/extra:opacity-100">
-      {services.map((service) => (
-        <span key={service.label} className="flex items-center gap-1.5">
-          <span
-            className="h-2 w-2 shrink-0 rounded-full"
-            style={{ backgroundColor: service.color }}
-          />
-          {service.label}
-        </span>
-      ))}
-    </span>
-  </span>
-);
-
-const createClusterListElement = ({
-  group,
-  getLabel,
-  onSelect,
-  selectedStoreId,
-}: {
-  group: StoreMarkerGroupEntry[];
-  getLabel: (entry: StoreMarkerGroupEntry) => string;
-  onSelect: (entry: StoreMarkerGroupEntry, event: MouseEvent) => void;
-  selectedStoreId: string;
-}) => {
-  const clusterList = document.createElement("div");
-  const listTitle = document.createElement("p");
-  const list = document.createElement("div");
-
-  clusterList.className =
-    "absolute bottom-[calc(100%+4px)] left-1/2 z-[3] w-56 -translate-x-1/2 overflow-hidden rounded-sm bg-white text-left shadow-lg ring-1 ring-gray-950/5 dark:bg-zinc-950 dark:ring-white/10";
-  listTitle.className =
-    "border-b border-gray-100 px-3 py-2 text-[11px] font-extrabold text-gray-400 dark:border-white/10";
-  listTitle.textContent = `같은 위치 매장 ${group.length}곳`;
-  list.className = "max-h-56 overflow-y-auto py-1";
-
-  group.forEach((entry) => {
-    const item = document.createElement("button");
-    const itemLabel = document.createElement("span");
-    const itemName = document.createElement("span");
-    const isItemSelected = entry.store.id === selectedStoreId;
-
-    item.type = "button";
-    item.className = cn(
-      "flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-bold transition",
-      isItemSelected
-        ? "bg-brand-soft text-gray-900 dark:bg-brand/10 dark:text-white"
-        : "text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-white/[0.04]",
-    );
-    itemLabel.className =
-      "bg-brand flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-[10px] font-black text-white";
-    itemLabel.textContent = getLabel(entry);
-    itemName.className = "min-w-0 truncate";
-    itemName.textContent = entry.store.name;
-    item.append(itemLabel, itemName);
-    item.addEventListener("click", (event) => onSelect(entry, event));
-    list.append(item);
-  });
-
-  clusterList.append(listTitle, list);
-  return clusterList;
-};
-
-type KakaoMapsApi = NonNullable<NonNullable<Window["kakao"]>["maps"]>;
-
-/** 나머지 매장 위치를 표시하는 반투명 원(+ 매장명 툴팁) DOM을 만든다. */
-const createOtherStoreDotElement = (store: StoreLocation) => {
-  const dot = document.createElement("button");
-  const tooltip = document.createElement("span");
-
-  dot.type = "button";
-  dot.setAttribute("aria-label", `${store.name} 선택`);
-  // 지도 위에서도 잘 보이도록 브랜드 진한 색(brand-hover) + 흰 테두리 + 그림자로 표시한다.
-  dot.className =
-    "group bg-brand-hover relative block h-4 w-4 rounded-full border-2 border-white p-0 opacity-80 shadow-[0_2px_6px_rgba(15,23,42,0.35)] transition duration-150 hover:scale-125 hover:opacity-100";
-
-  playMarkerEnterAnimation(dot);
-  tooltip.className =
-    "pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 z-[2] max-w-[180px] -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-sm bg-slate-950/90 px-2.5 py-1.5 text-xs leading-tight font-extrabold text-white opacity-0 shadow-lg transition group-hover:translate-y-0 group-hover:opacity-100";
-  tooltip.textContent = store.name;
-  dot.append(tooltip);
-
-  return dot;
-};
-
-/**
- * 나머지 매장 원을 지도 위 overlay로 올리고, 클릭·hover 이벤트를 연결한다.
- * 선택 시 처리(최신 ref·state 반영)는 호출하는 effect가 onSelect로 넘긴다.
- */
-const createOtherStoreOverlay = ({
-  kakaoMaps,
-  map,
-  store,
-  onSelect,
-}: {
-  kakaoMaps: KakaoMapsApi;
-  map: KakaoMap;
-  store: StoreLocation;
-  onSelect: (event: MouseEvent) => void;
-}): MapOverlayHandle => {
-  const dot = createOtherStoreDotElement(store);
-
-  dot.addEventListener("click", onSelect);
-
-  const overlay = new kakaoMaps.CustomOverlay({
-    content: dot,
-    map,
-    position: new kakaoMaps.LatLng(store.lat, store.lng),
-    xAnchor: 0.5,
-    yAnchor: 0.5,
-    // 핀(10~)보다 아래에 깔아 핀을 가리지 않게 한다.
-    zIndex: 5,
-  });
-  const handleDotEnter = () => overlay.setZIndex?.(40);
-  const handleDotLeave = () => overlay.setZIndex?.(5);
-
-  dot.addEventListener("mouseenter", handleDotEnter);
-  dot.addEventListener("mouseleave", handleDotLeave);
-
-  return {
-    cleanup: () => {
-      dot.removeEventListener("click", onSelect);
-      dot.removeEventListener("mouseenter", handleDotEnter);
-      dot.removeEventListener("mouseleave", handleDotLeave);
-    },
-    overlay,
-  };
-};
-
-/** 같은 좌표(소수 5자리, 약 1m)에 있는 매장들을 한 묶음으로 모은다. 묶음 순서는 stores에서 처음 나온 순서를 따른다. */
-const groupStoresByCoordinate = (stores: StoreLocation[]) => {
-  const storeGroups = new Map<string, StoreMarkerGroupEntry[]>();
-
-  stores.forEach((store, index) => {
-    const coordinateKey = `${store.lat.toFixed(5)}:${store.lng.toFixed(5)}`;
-    const group = storeGroups.get(coordinateKey) ?? [];
-
-    group.push({ index, store });
-    storeGroups.set(coordinateKey, group);
-  });
-
-  return Array.from(storeGroups.values());
-};
-
-/** 매장 핀(묶음 핀 포함) DOM을 만든다. 이벤트 연결과 overlay 생성은 createStoreMarkerOverlay가 맡는다. */
-const createStoreMarkerElement = ({
-  getLabel,
-  group,
-  isStoreCardShown,
-  markerColorInfo,
-  selectedEntry,
-  shouldAnimateEnter,
-}: {
-  getLabel: (entry: StoreMarkerGroupEntry) => string;
-  group: StoreMarkerGroupEntry[];
-  isStoreCardShown: boolean;
-  markerColorInfo?: MarkerColorInfo;
-  selectedEntry?: StoreMarkerGroupEntry;
-  shouldAnimateEnter: boolean;
-}) => {
-  const [{ store: firstStore }] = group;
-  const isCluster = group.length > 1;
-  const isSelected = Boolean(selectedEntry);
-  const markerColors = markerColorInfo?.colors ?? [];
-  const coordinateKey = `${firstStore.lat.toFixed(5)}:${firstStore.lng.toFixed(5)}`;
-  const gradientId = getMarkerGradientId({
-    colors: markerColors,
-    coordinateKey,
-    storeIds: group.map(({ store }) => store.id),
-  });
-  const container = document.createElement("div");
-  container.className = "relative";
-
-  if (shouldAnimateEnter) {
-    playMarkerEnterAnimation(container);
-  }
-  const marker = document.createElement("button");
-  marker.type = "button";
-  marker.setAttribute(
-    "aria-label",
-    isCluster
-      ? `같은 위치 매장 ${group.length}곳 보기`
-      : `${firstStore.name} 선택`,
-  );
-  marker.className = cn(
-    "group relative block h-[46px] w-[38px] translate-y-[-8px] border-0 bg-transparent p-0 text-xs leading-none font-black text-white transition duration-150 hover:translate-y-[-10px] hover:scale-[1.04]",
-    isSelected && "translate-y-[-10px] scale-[1.04]",
-  );
-  const markerShape = document.createElement("span");
-  markerShape.className = STORE_PIN_SHAPE_CLASS_NAME;
-  markerShape.innerHTML = getStorePinSvgMarkup({
-    colors: markerColors,
-    gradientId,
-  });
-
-  const markerLetter = document.createElement("span");
-  markerLetter.className =
-    "absolute top-[9px] left-1/2 z-[1] -translate-x-1/2 text-xs font-black text-white [text-shadow:_0_1px_2px_rgb(15_23_42_/_0.45)]";
-  markerLetter.textContent = isCluster
-    ? String(group.length)
-    : getLabel(group[0]);
-
-  const markerTooltip = document.createElement("span");
-  markerTooltip.className = cn(
-    "pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-[2] max-w-[180px] -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-sm bg-slate-950/90 px-2.5 py-1.5 text-xs leading-tight font-extrabold text-white opacity-0 shadow-lg transition group-hover:translate-y-0 group-hover:opacity-100",
-    isSelected && "translate-y-0 opacity-100",
-    // 정보 카드가 떠 있으면 카드에 매장명이 있으므로 선택 핀의 이름 툴팁은 숨긴다.
-    isSelected && isStoreCardShown && "hidden",
-  );
-  markerTooltip.textContent = selectedEntry
-    ? selectedEntry.store.name
-    : isCluster
-      ? `같은 위치 매장 ${group.length}곳`
-      : firstStore.name;
-
-  if (isCluster) {
-    // 묶음 핀임을 알 수 있도록 오른쪽 위에 작은 겹침 표시를 단다.
-    const clusterBadge = document.createElement("span");
-
-    clusterBadge.setAttribute("aria-hidden", "true");
-    clusterBadge.className =
-      "text-brand absolute -top-1 right-0 z-[2] flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[9px] leading-none font-black shadow-sm";
-    clusterBadge.style.color = markerColors[0] ?? "";
-    clusterBadge.textContent = "+";
-    marker.append(clusterBadge);
-  }
-
-  if (markerColorInfo && markerColorInfo.extraServices.length > 0) {
-    marker.append(
-      createExtraServiceBadgeElement(markerColorInfo.extraServices),
-    );
-  }
-
-  marker.append(markerShape, markerLetter, markerTooltip);
-  container.append(marker);
-
-  return { container, marker };
-};
-
-/**
- * 매장 핀을 지도 위 overlay로 올리고, 클릭(단일 선택·묶음 목록 열기/닫기)·hover 이벤트를 연결한다.
- * 매장 선택 시 처리(최신 state 반영, 카드 초기화 등)는 호출하는 effect가 콜백으로 넘긴다.
- */
-const createStoreMarkerOverlay = ({
-  group,
-  isStoreCardShown,
-  kakaoMaps,
-  map,
-  markerColorInfoById,
-  markerLabelById,
-  selectedStoreId,
-  shouldAnimateEnter,
-  onMarkerClick,
-  onSelectClusterStore,
-  onSelectStore,
-}: {
-  group: StoreMarkerGroupEntry[];
-  isStoreCardShown: boolean;
-  kakaoMaps: KakaoMapsApi;
-  map: KakaoMap;
-  markerColorInfoById?: Record<string, MarkerColorInfo>;
-  markerLabelById?: Record<string, string>;
-  selectedStoreId: string;
-  shouldAnimateEnter: boolean;
-  /** 핀을 누를 때마다(단일·묶음 공통) 호출한다. */
-  onMarkerClick: () => void;
-  /** 묶음 핀의 목록에서 매장을 골랐을 때 */
-  onSelectClusterStore: (storeId: string) => void;
-  /** 단일 핀을 눌러 매장을 골랐을 때 */
-  onSelectStore: (storeId: string) => void;
-}): MapOverlayHandle => {
-  const [{ store: firstStore }] = group;
-  const isCluster = group.length > 1;
-  const selectedEntry = group.find(({ store }) => store.id === selectedStoreId);
-  const isSelected = Boolean(selectedEntry);
-  const getLabel = ({ index, store }: StoreMarkerGroupEntry) =>
-    markerLabelById?.[store.id] ?? getStoreMarkerLabel(index);
-  const colorTargetStore = selectedEntry?.store ?? firstStore;
-  const { container, marker } = createStoreMarkerElement({
-    getLabel,
-    group,
-    isStoreCardShown,
-    markerColorInfo: markerColorInfoById?.[colorTargetStore.id],
-    selectedEntry,
-    shouldAnimateEnter,
-  });
-
-  let clusterList: HTMLDivElement | null = null;
-  const closeClusterList = () => {
-    clusterList?.remove();
-    clusterList = null;
-    marker.setAttribute("aria-expanded", "false");
-  };
-  const handleDocumentPointerDown = (event: PointerEvent) => {
-    if (event.target instanceof Node && container.contains(event.target)) {
-      return;
-    }
-
-    closeClusterList();
-  };
-  const openClusterList = () => {
-    clusterList = createClusterListElement({
-      getLabel,
-      group,
-      onSelect: (entry, event) => {
-        event.stopPropagation();
-        closeClusterList();
-        onSelectClusterStore(entry.store.id);
-      },
-      selectedStoreId,
-    });
-    container.append(clusterList);
-    marker.setAttribute("aria-expanded", "true");
-  };
-  const handleMarkerClick = (event: MouseEvent) => {
-    event.stopPropagation();
-    onMarkerClick();
-
-    if (!isCluster) {
-      onSelectStore(firstStore.id);
-      return;
-    }
-
-    if (clusterList) {
-      closeClusterList();
-    } else {
-      openClusterList();
-    }
-  };
-
-  const baseZIndex = isSelected ? 20 : 10;
-  const overlay = new kakaoMaps.CustomOverlay({
-    content: container,
-    map,
-    position: new kakaoMaps.LatLng(firstStore.lat, firstStore.lng),
-    xAnchor: 0.5,
-    yAnchor: 1,
-    zIndex: baseZIndex,
-  });
-  // hover 중인 핀의 툴팁(매장명)·묶음 목록이 이웃 핀 뒤로 가려지지 않도록 최상단으로 올린다.
-  const handleMarkerEnter = () => overlay.setZIndex?.(40);
-  const handleMarkerLeave = () => {
-    if (!clusterList) {
-      overlay.setZIndex?.(baseZIndex);
-    }
-  };
-
-  marker.addEventListener("click", handleMarkerClick);
-  container.addEventListener("mouseenter", handleMarkerEnter);
-  container.addEventListener("mouseleave", handleMarkerLeave);
-  document.addEventListener("pointerdown", handleDocumentPointerDown);
-
-  return {
-    cleanup: () => {
-      closeClusterList();
-      marker.removeEventListener("click", handleMarkerClick);
-      container.removeEventListener("mouseenter", handleMarkerEnter);
-      container.removeEventListener("mouseleave", handleMarkerLeave);
-      document.removeEventListener("pointerdown", handleDocumentPointerDown);
-    },
-    overlay,
-  };
-};
-
-/** 내 위치 표시 overlay를 만든다. */
-const createCurrentLocationOverlay = ({
-  kakaoMaps,
-  map,
-  userLocation,
-}: {
-  kakaoMaps: KakaoMapsApi;
-  map: KakaoMap;
-  userLocation: UserLocation;
-}): MapOverlayHandle => {
-  const currentLocationMarker = document.createElement("div");
-  currentLocationMarker.className = "vita-current-location-marker";
-  currentLocationMarker.setAttribute("aria-label", "내 위치");
-
-  return {
-    overlay: new kakaoMaps.CustomOverlay({
-      content: currentLocationMarker,
-      map,
-      position: new kakaoMaps.LatLng(userLocation.lat, userLocation.lng),
-      xAnchor: 0.5,
-      yAnchor: 0.5,
-      zIndex: 30,
-    }),
-  };
-};
-
-/** 경로 위 한 지점(출발·도착·환승·진행 지점)에 표시 DOM을 올린다. */
-const createRoutePointOverlay = ({
-  content,
-  kakaoMaps,
-  map,
-  point,
-  yAnchor = 0.5,
-  zIndex,
-}: {
-  content: HTMLElement;
-  kakaoMaps: KakaoMapsApi;
-  map: KakaoMap;
-  point: MapPoint;
-  yAnchor?: number;
-  zIndex: number;
-}) =>
-  new kakaoMaps.CustomOverlay({
-    content,
-    map,
-    position: new kakaoMaps.LatLng(point.lat, point.lng),
-    xAnchor: 0.5,
-    yAnchor,
-    zIndex,
-  });
 
 type RoutePreviewRef = RoutePreview | null | undefined;
 
@@ -747,9 +202,6 @@ export const StoreMapPreview = ({
   // 핀 등장 애니메이션을 마지막으로 재생한 key(같은 key로 다시 그릴 때는 재생하지 않음)
   const animatedMarkerEnterKeyRef = useRef("");
   const fitZoomTimeoutRef = useRef<number | undefined>(undefined);
-  const [controlTooltip, setControlTooltip] = useState<RailTooltipProps | null>(
-    null,
-  );
   const otherStoresRef = useRef(otherStores);
   const storesRef = useRef(stores);
   const getPinFitPaddingRef = useRef(getPinFitPadding);
@@ -2029,25 +1481,6 @@ export const StoreMapPreview = ({
     };
   }, [isKakaoMapReady, routeDrawProgress, routeFitReadyKey, routePreview]);
 
-  const otherStoresToggleLabel = isOtherStoresVisible
-    ? "나머지 매장 위치 숨기기"
-    : `나머지 매장 ${otherStoreCount}곳 위치 보기`;
-  /** 지도 컨트롤 툴팁: 공용 RailTooltip을 버튼 왼쪽(화면 오른쪽 끝이라)에 띄운다. */
-  const showControlTooltip = (target: HTMLElement) => {
-    const rect = target.getBoundingClientRect();
-
-    setControlTooltip({
-      label: otherStoresToggleLabel,
-      placement: "left",
-      x: rect.left - 8,
-      y: rect.top + rect.height / 2,
-    });
-  };
-  // 켜고 끌 때 툴팁 문구도 바로 바꾼다.
-  const visibleControlTooltip = controlTooltip
-    ? { ...controlTooltip, label: otherStoresToggleLabel }
-    : null;
-
   // SDK를 끝내 불러오지 못하면 로딩 화면을 걷고 대체 지도(가짜 핀)를 보여준다.
   const isMapLoadingVisible =
     hasKakaoMapKey &&
@@ -2101,130 +1534,25 @@ export const StoreMapPreview = ({
           </>
         )}
 
-        {!isKakaoMapReady &&
-          stores.map((store, index) => {
-            const isSelected = selectedStoreId === store.id;
-            const markerColorInfo = markerColorInfoById?.[store.id];
-            const markerColors = markerColorInfo?.colors ?? [];
-            const gradientId = getMarkerGradientId({
-              colors: markerColors,
-              coordinateKey: `${store.lat.toFixed(5)}:${store.lng.toFixed(5)}`,
-              storeIds: [store.id],
-            });
+        {!isKakaoMapReady && (
+          <StoreMapFallbackMarkers
+            markerColorInfoById={markerColorInfoById}
+            markerLabelById={markerLabelById}
+            onSelectStore={onSelectStore}
+            selectedStoreId={selectedStoreId}
+            stores={stores}
+          />
+        )}
 
-            return (
-              <button
-                key={store.id}
-                type="button"
-                onClick={() => onSelectStore(store.id)}
-                aria-pressed={isSelected}
-                className={cn(
-                  "group pointer-events-auto absolute block h-[46px] w-[38px] -translate-x-1/2 -translate-y-[calc(50%+8px)] border-0 bg-transparent p-0 text-xs leading-none font-black text-white transition duration-150 hover:-translate-y-[calc(50%+10px)] hover:scale-[1.04]",
-                  isSelected && "-translate-y-[calc(50%+10px)] scale-[1.04]",
-                )}
-                style={getFallbackMarkerStyle(store, stores, index)}
-              >
-                <span
-                  className={STORE_PIN_SHAPE_CLASS_NAME}
-                  dangerouslySetInnerHTML={{
-                    __html: getStorePinSvgMarkup({
-                      colors: markerColors,
-                      gradientId,
-                    }),
-                  }}
-                />
-                {markerColorInfo &&
-                  markerColorInfo.extraServices.length > 0 && (
-                    <ExtraServiceBadge
-                      services={markerColorInfo.extraServices}
-                    />
-                  )}
-                <span className="absolute top-[9px] left-1/2 z-[1] -translate-x-1/2 text-xs font-black text-white [text-shadow:_0_1px_2px_rgb(15_23_42_/_0.45)]">
-                  {markerLabelById?.[store.id] ?? getStoreMarkerLabel(index)}
-                </span>
-                <span
-                  className={cn(
-                    "pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-[2] max-w-[180px] -translate-x-1/2 translate-y-1 rounded-sm bg-slate-950/90 px-2.5 py-1.5 text-xs leading-tight font-extrabold whitespace-nowrap text-white opacity-0 shadow-lg transition group-hover:translate-y-0 group-hover:opacity-100",
-                    isSelected && "translate-y-0 opacity-100",
-                  )}
-                >
-                  {store.name}
-                </span>
-              </button>
-            );
-          })}
-
-        <div className="pointer-events-none absolute right-4 bottom-6 z-30 flex flex-col items-end gap-1 md:right-6 md:bottom-8">
-          {/* 나머지 매장 보기: 내 위치 버튼 묶음 바로 위(4px 간격) */}
-          {onToggleOtherStores && otherStoreCount > 0 && (
-            <div className="pointer-events-auto rounded-sm border border-gray-200 bg-white p-1 shadow-md shadow-gray-950/10 dark:border-white/10 dark:bg-zinc-950 dark:shadow-black/30">
-              <button
-                type="button"
-                onClick={onToggleOtherStores}
-                aria-pressed={isOtherStoresVisible}
-                aria-label={otherStoresToggleLabel}
-                onMouseEnter={(event) =>
-                  showControlTooltip(event.currentTarget)
-                }
-                onMouseLeave={() => setControlTooltip(null)}
-                onFocus={(event) => showControlTooltip(event.currentTarget)}
-                onBlur={() => setControlTooltip(null)}
-                className={cn(
-                  "relative flex h-10 w-10 items-center justify-center rounded-sm transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none",
-                  isOtherStoresVisible
-                    ? "bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand"
-                    : "hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand text-gray-700 dark:text-gray-200",
-                )}
-              >
-                <Layers size={18} />
-                <span className="bg-brand absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] leading-none font-black text-white">
-                  {otherStoreCount}
-                </span>
-              </button>
-              {/* 다른 화면 툴팁과 같은 공용 RailTooltip. 지도 패널 안 transform·overflow에 갇히지 않게 body로 띄운다. */}
-              {visibleControlTooltip &&
-                createPortal(
-                  <RailTooltip {...visibleControlTooltip} />,
-                  document.body,
-                )}
-            </div>
-          )}
-          <div className="pointer-events-auto flex flex-col gap-1 rounded-sm border border-gray-200 bg-white p-1 shadow-md shadow-gray-950/10 dark:border-white/10 dark:bg-zinc-950 dark:shadow-black/30">
-            {onFocusUserLocation && (
-              <>
-                <button
-                  type="button"
-                  onClick={onFocusUserLocation}
-                  disabled={isUserLocationLoading}
-                  className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none disabled:cursor-wait disabled:opacity-60 dark:text-gray-200"
-                  aria-label="내 위치로 이동"
-                >
-                  {userLocation ? (
-                    <LocateFixed size={18} className="text-brand" />
-                  ) : (
-                    <LocateOff size={18} />
-                  )}
-                </button>
-              </>
-            )}
-            <button
-              type="button"
-              onClick={() => adjustZoomLevel("in")}
-              className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none dark:text-gray-200"
-              aria-label="지도 확대"
-            >
-              <Plus size={18} />
-            </button>
-            <button
-              type="button"
-              onClick={() => adjustZoomLevel("out")}
-              className="hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand flex h-10 w-10 items-center justify-center rounded-sm text-gray-700 transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none dark:text-gray-200"
-              aria-label="지도 축소"
-            >
-              <Minus size={18} />
-            </button>
-          </div>
-        </div>
+        <StoreMapControls
+          hasUserLocation={Boolean(userLocation)}
+          isOtherStoresVisible={isOtherStoresVisible}
+          isUserLocationLoading={isUserLocationLoading}
+          onFocusUserLocation={onFocusUserLocation}
+          onToggleOtherStores={onToggleOtherStores}
+          onZoom={adjustZoomLevel}
+          otherStoreCount={otherStoreCount}
+        />
 
         {/*
           카드 바깥 클릭으로 닫기는 지도 자체의 click 이벤트로 처리한다.
