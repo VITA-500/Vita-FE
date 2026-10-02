@@ -50,6 +50,12 @@ import {
   getDistanceMeters,
   matchesStoreSearch,
 } from "@/features/store/lib/geo";
+import {
+  buildMarkerColorInfoById,
+  buildServiceFilterColorByValue,
+  getServiceFilterBadgeStyle,
+  getServiceFilterColor,
+} from "@/features/store/lib/markerColors";
 import { findServicesInText } from "@/features/store/lib/serviceKeywords";
 import { storeService } from "@/features/store/lib/storeService";
 import type {
@@ -123,11 +129,6 @@ type ServiceFilterOption = {
   value: string;
 };
 
-type MarkerColorInfo = {
-  colors: string[];
-  extraServices: { color: string; label: string }[];
-};
-
 type RouteSummary = {
   isLoading?: boolean;
   remainingDistanceText: string;
@@ -179,25 +180,6 @@ const serviceFilterIconRules: { icon: LucideIcon; keywords: string[] }[] = [
   { icon: Phone, keywords: ["전화", "번호"] },
   { icon: Headset, keywords: ["상담"] },
 ];
-const serviceFilterColors = [
-  "#ff8f7f",
-  "#f2b84b",
-  "#4fc3ae",
-  "#3f9dcc",
-  "#a98cf0",
-  "#ef7fb4",
-  "#83c95a",
-  "#f39b45",
-  "#61aef2",
-  "#d779df",
-  "#46c4d4",
-  "#c9b63f",
-];
-
-const withHexAlpha = (color: string, alpha: string) => `${color}${alpha}`;
-
-const getServiceFilterColor = (index: number) =>
-  serviceFilterColors[index % serviceFilterColors.length];
 
 const getServiceFilterIcon = (label: string): LucideIcon => {
   const normalizedLabel = label.replace(/\s/g, "").toLowerCase();
@@ -291,21 +273,6 @@ type ServiceFilterCarouselProps = {
   providedOptions: readonly ServiceFilterOption[];
   providedValue: string[];
 };
-
-type ServiceFilterBadgeStyle = {
-  backgroundColor: string;
-  borderColor: string;
-  color: string;
-};
-
-const getServiceFilterBadgeStyle = (
-  color: string,
-  isSelected: boolean,
-): ServiceFilterBadgeStyle => ({
-  backgroundColor: isSelected ? color : "#ffffff",
-  borderColor: isSelected ? color : withHexAlpha(color, "55"),
-  color: isSelected ? "#ffffff" : color,
-});
 
 /** 상담/제공 서비스 옵션을 뱃지 항목 하나의 목록으로 합친다(데스크톱·모바일 공용). */
 const buildServiceFilterItems = ({
@@ -1101,11 +1068,10 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
   );
   const serviceFilterColorByValue = useMemo(
     () =>
-      Object.fromEntries(
-        [...consultServiceFilterOptions, ...providedServiceFilterOptions].map(
-          (option, index) => [option.value, getServiceFilterColor(index)],
-        ),
-      ),
+      buildServiceFilterColorByValue([
+        ...consultServiceFilterOptions,
+        ...providedServiceFilterOptions,
+      ]),
     [consultServiceFilterOptions, providedServiceFilterOptions],
   );
   const filterStoresByServices = (
@@ -1324,37 +1290,11 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     ...consultServiceFilters,
     ...providedServiceFilters,
   ];
-  const markerColorInfoById: Record<string, MarkerColorInfo> =
-    activeServiceFilters.length === 0
-      ? {}
-      : Object.fromEntries(
-          mapStores
-            .map((store) => {
-              const matchedServices = activeServiceFilters.filter(
-                (service) =>
-                  store.consultServices?.includes(service) ||
-                  store.providedServices?.includes(service),
-              );
-
-              if (matchedServices.length === 0) {
-                return null;
-              }
-
-              const visibleServices = matchedServices.slice(0, 4);
-              const extraServices = matchedServices.slice(4).map((service) => ({
-                color: serviceFilterColorByValue[service],
-                label: service,
-              }));
-              const colors = visibleServices.map(
-                (service) => serviceFilterColorByValue[service],
-              );
-
-              return [store.id, { colors, extraServices }];
-            })
-            .filter(
-              (entry): entry is [string, MarkerColorInfo] => entry !== null,
-            ),
-        );
+  const markerColorInfoById = buildMarkerColorInfoById({
+    activeServiceFilters,
+    colorByValue: serviceFilterColorByValue,
+    stores: mapStores,
+  });
 
   if (selectedStoreOutsidePage) {
     markerLabelById[selectedStoreOutsidePage.id] = "•";
