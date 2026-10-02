@@ -112,9 +112,16 @@ const noRouteResultMessage =
 
 type RouteSummary = {
   isLoading?: boolean;
+  /** 가까운 매장인데 차량·자전거 경로가 크게 돌아가 도보를 추천하는지 */
+  isWalkRecommended?: boolean;
   remainingDistanceText: string;
   travelTimeText: string;
 };
+
+/** 이 직선거리(m) 안의 매장은 차량·자전거 경로가 크게 돌아가면 도보를 추천한다. */
+const WALK_RECOMMEND_MAX_STRAIGHT_METERS = 300;
+/** 경로 거리가 직선거리의 이 배수 이상이면 "크게 돌아간다"고 본다(일방통행·유턴 등). */
+const WALK_RECOMMEND_DETOUR_RATIO = 2;
 
 /** 텍스트 검색 반경(km). 주변 매장 조회 반경(storeService)과 같다. */
 const SEARCH_RADIUS_KM = 1.5;
@@ -438,24 +445,40 @@ const StoreInfoBubble = ({
             {routeResultMessage}
           </div>
         ) : routeSummary ? (
-          <div className="bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand mt-3 grid grid-cols-2 divide-x divide-current/15 rounded-sm py-2 text-[11px] font-extrabold">
-            <span className="px-3">
-              남은 거리
-              <strong className="mt-0.5 block text-sm">
-                {routeSummary.isLoading
-                  ? "계산 중"
-                  : routeSummary.remainingDistanceText}
-              </strong>
-            </span>
-            <span className="px-3">
-              예상 시간
-              <strong className="mt-0.5 block text-sm">
-                {routeSummary.isLoading
-                  ? "계산 중"
-                  : routeSummary.travelTimeText}
-              </strong>
-            </span>
-          </div>
+          <>
+            <div className="bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand mt-3 grid grid-cols-2 divide-x divide-current/15 rounded-sm py-2 text-[11px] font-extrabold">
+              <span className="px-3">
+                남은 거리
+                <strong className="mt-0.5 block text-sm">
+                  {routeSummary.isLoading
+                    ? "계산 중"
+                    : routeSummary.remainingDistanceText}
+                </strong>
+              </span>
+              <span className="px-3">
+                예상 시간
+                <strong className="mt-0.5 block text-sm">
+                  {routeSummary.isLoading
+                    ? "계산 중"
+                    : routeSummary.travelTimeText}
+                </strong>
+              </span>
+            </div>
+            {/* 가까운 매장인데 차량·자전거 경로가 크게 돌아가면 도보 길찾기를 권한다. */}
+            {!routeSummary.isLoading && routeSummary.isWalkRecommended && (
+              <div className="text-text-secondary mt-2 flex items-center justify-between gap-2 rounded-sm bg-gray-100 py-1.5 pr-1.5 pl-3 text-[11px] font-bold dark:bg-white/10 dark:text-gray-300">
+                <span>가까운 거리라 도보 이동을 추천해요</span>
+                <button
+                  type="button"
+                  onClick={() => onRouteModeChange("walk")}
+                  className="text-brand-hover dark:text-brand flex shrink-0 items-center gap-1 rounded-sm bg-white px-2 py-1 font-extrabold shadow-sm transition hover:shadow-md dark:bg-zinc-950"
+                >
+                  <SportShoe size={12} />
+                  도보로 보기
+                </button>
+              </div>
+            )}
+          </>
         ) : null}
 
         <div
@@ -962,12 +985,24 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
       return null;
     }
 
+    const straightDistanceMeters = getDistanceMeters(
+      userLocation,
+      routeDestinationStore,
+    );
     const remainingDistanceMeters =
-      walkingRoute?.distanceMeters ??
-      getDistanceMeters(userLocation, routeDestinationStore);
+      walkingRoute?.distanceMeters ?? straightDistanceMeters;
+    // 가까운 매장이라도 차량·자전거는 일방통행·유턴 등으로 크게 돌아가는 경로가 나올 수 있다.
+    // 경로는 그대로 보여주되, 이런 경우 도보 길찾기를 함께 권한다.
+    const isWalkRecommended =
+      (routeMode === "car" || routeMode === "bicycle") &&
+      Boolean(walkingRoute) &&
+      straightDistanceMeters < WALK_RECOMMEND_MAX_STRAIGHT_METERS &&
+      remainingDistanceMeters >=
+        straightDistanceMeters * WALK_RECOMMEND_DETOUR_RATIO;
 
     return {
       isLoading: isRouteLoading,
+      isWalkRecommended,
       remainingDistanceText: formatRemainingDistance(remainingDistanceMeters),
       travelTimeText: walkingRoute
         ? formatDurationSeconds(walkingRoute.durationSeconds)
