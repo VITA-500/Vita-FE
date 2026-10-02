@@ -18,7 +18,7 @@ type FilterDropdownProps = {
   value: string;
 };
 
-// SortDropdown/SearchInput과 나란히 놓였을 때 높이/모양이 맞도록 같은 크기
+// 검색창과 나란히 놓였을 때 높이/모양이 맞도록 같은 크기
 // 규칙(h-12, rounded-2xl, border-border, shadow-sm)을 그대로 따르고, 열고
 // 닫힐 때는 motion으로 부드럽게 스케일·페이드되도록 했어요.
 export const FilterDropdown = ({

@@ -405,6 +405,8 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
         setStoreSortField("updatedAt");
         setStoreSortDirection("desc");
         setStorePage(0);
+        // 저장 직후에는 백엔드 정렬 반영이 늦거나 null 정렬이 섞일 수 있어,
+        // 운영자가 방금 수정한 행을 잃어버리지 않도록 먼저 목록 맨 위에 고정한다.
         setStores((currentStores) => [
           nextStore,
           ...currentStores.filter((store) => store.storeId !== storeId),

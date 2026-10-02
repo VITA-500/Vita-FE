@@ -811,6 +811,8 @@ type StoreMapPreviewProps = {
   onRouteMapReady?: (routeKey: string) => void;
 };
 
+// 카카오맵 overlay는 React 렌더링 밖의 DOM을 직접 다루므로 lifecycle 정리가 중요하다.
+// 마커/경로/카드 동작을 바꿀 때는 cleanup effect가 같이 따라가는지 확인한다.
 export const StoreMapPreview = ({
   className,
   focusPoint,
