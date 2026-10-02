@@ -59,7 +59,13 @@ type ChatSidebarProps = {
   activeMode: ChatMode;
   currentChatTitle?: string;
   chatSessions?: readonly ChatSessionSummary[];
+  /** 불러오는 중인 상담. 응답 전에도 사이드바에서 바로 선택 표시를 옮기기 위해 쓴다. */
+  pendingSessionId?: number | null;
   activeSessionId?: number | null;
+  /** 상담별 제목(첫 질문). BE 세션 title이 비어 있어 FE가 알게 된 제목을 넘겨받는다. */
+  sessionTitles?: Readonly<Record<number, string>>;
+  /** 최근 상담 목록(제목)을 아직 불러오는 중. 그동안은 목록을 접어 두고, 다 불러오면 펼친다. */
+  isRecentChatsLoading?: boolean;
   onSelectChat?: (sessionId: number) => void;
 };
 
@@ -107,7 +113,10 @@ export const ChatSidebar = ({
   onOpenProfile,
   onOpenSearch,
   onSelectChat,
+  pendingSessionId = null,
   onStartTour,
+  sessionTitles = {},
+  isRecentChatsLoading = false,
   onShowHeaderTooltip,
   onShowRailTooltip,
 }: ChatSidebarProps) => {
@@ -117,36 +126,50 @@ export const ChatSidebar = ({
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [chatMenu, setChatMenu] = useState<{
     left: number;
-    title: string;
+    chatKey: string;
     top: number;
   } | null>(null);
-  const [pinnedChatTitles, setPinnedChatTitles] = useState<string[]>([]);
+  // 고정은 제목이 아니라 상담 key(session-{id})로 기억한다.
+  // 제목은 선택 여부에 따라 바뀌어서(첫 질문 ↔ 날짜), 제목으로 고정하면 다른 상담을 누를 때 고정이 풀려 보였다.
+  const [pinnedChatKeys, setPinnedChatKeys] = useState<string[]>([]);
   const [isRecentChatsCollapsed, setIsRecentChatsCollapsed] = useState(false);
+  // 사용자가 직접 접었는지(isRecentChatsCollapsed)와 불러오는 중인지를 합쳐 실제로 접어 보일지 정한다.
+  const isRecentChatsHidden = isRecentChatsCollapsed || isRecentChatsLoading;
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const chatMenuRef = useRef<HTMLDivElement>(null);
   const displayName = user?.name ?? "사용자";
   const isDarkMode = resolvedTheme === "dark";
   const isGuest = isAuthReady && !isAuthenticated && !isAuthLoading;
 
+  // 선택 표시는 불러오는 중인 상담이 있으면 그쪽으로 먼저 옮긴다.
+  const selectedSessionId = pendingSessionId ?? activeSessionId;
+  const isViewingLoadedSession = pendingSessionId == null;
+
   const sessionChats: SidebarChatItem[] = chatSessions.map((session) => {
-    const isActive = session.sessionId === activeSessionId;
+    const isActive = session.sessionId === selectedSessionId;
+    const isShowingThisSession =
+      isViewingLoadedSession && session.sessionId === activeSessionId;
 
     return {
       key: `session-${session.sessionId}`,
       title:
-        isActive && currentChatTitle
-          ? currentChatTitle
-          : formatSessionTitle(session),
+        (isShowingThisSession && currentChatTitle) ||
+        sessionTitles[session.sessionId] ||
+        formatSessionTitle(session),
       active: isActive,
       sessionId: session.sessionId,
     };
   });
   const hasActiveSessionInList = sessionChats.some((chat) => chat.active);
   const visibleRecentChats: SidebarChatItem[] =
-    currentChatTitle && !hasActiveSessionInList
+    currentChatTitle && !hasActiveSessionInList && isViewingLoadedSession
       ? [
           {
-            key: `current-${activeSessionId ?? "new"}`,
+            // 아직 서버 목록에 없는 지금 대화. 세션이 있으면 목록과 같은 key를 써서 고정이 유지되게 한다.
+            key:
+              activeSessionId != null
+                ? `session-${activeSessionId}`
+                : "current-new",
             title: currentChatTitle,
             active: true,
             sessionId: activeSessionId,
@@ -154,11 +177,11 @@ export const ChatSidebar = ({
           ...sessionChats,
         ]
       : sessionChats;
-  const pinnedChats = pinnedChatTitles
-    .map((title) => visibleRecentChats.find((chat) => chat.title === title))
+  const pinnedChats = pinnedChatKeys
+    .map((chatKey) => visibleRecentChats.find((chat) => chat.key === chatKey))
     .filter((chat): chat is SidebarChatItem => Boolean(chat));
   const unpinnedRecentChats = visibleRecentChats.filter(
-    (chat) => !pinnedChatTitles.includes(chat.title),
+    (chat) => !pinnedChatKeys.includes(chat.key),
   );
   const selectChat = (chat: SidebarChatItem) => {
     if (chat.sessionId !== null) {
@@ -183,18 +206,24 @@ export const ChatSidebar = ({
     showToast("로그아웃되었습니다.");
   };
 
-  const handlePinChat = (title: string) => {
-    setPinnedChatTitles((currentTitles) =>
-      currentTitles.includes(title)
-        ? currentTitles.filter((currentTitle) => currentTitle !== title)
-        : [...currentTitles, title],
+  const handlePinChat = (chatKey: string) => {
+    // 아직 저장되지 않은 새 대화는 고정할 대상이 없다.
+    if (chatKey === "current-new") {
+      setChatMenu(null);
+      return;
+    }
+
+    setPinnedChatKeys((currentKeys) =>
+      currentKeys.includes(chatKey)
+        ? currentKeys.filter((currentKey) => currentKey !== chatKey)
+        : [...currentKeys, chatKey],
     );
     setChatMenu(null);
   };
 
   const handleOpenChatMenu = (
     event: MouseEvent<HTMLButtonElement>,
-    title: string,
+    chatKey: string,
   ) => {
     event.stopPropagation();
     const rect = event.currentTarget.getBoundingClientRect();
@@ -214,11 +243,11 @@ export const ChatSidebar = ({
     );
 
     setChatMenu((currentMenu) =>
-      currentMenu?.title === title
+      currentMenu?.chatKey === chatKey
         ? null
         : {
             left,
-            title,
+            chatKey,
             top,
           },
     );
@@ -391,15 +420,15 @@ export const ChatSidebar = ({
 
             <button
               type="button"
-              onClick={() => handlePinChat(chatMenu.title)}
+              onClick={() => handlePinChat(chatMenu.chatKey)}
               className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
             >
-              {pinnedChatTitles.includes(chatMenu.title) ? (
+              {pinnedChatKeys.includes(chatMenu.chatKey) ? (
                 <PinOff size={18} />
               ) : (
                 <Pin size={18} />
               )}
-              {pinnedChatTitles.includes(chatMenu.title)
+              {pinnedChatKeys.includes(chatMenu.chatKey)
                 ? "채팅 고정 해제"
                 : "채팅 고정"}
             </button>
@@ -442,9 +471,15 @@ export const ChatSidebar = ({
           <nav className="space-y-1">
             {serviceMenus.map((menu) => {
               const Icon = menu.icon;
+              // "새 상담"은 아직 아무 상담도 열지 않은 빈 화면일 때만 선택 표시한다.
+              // (지난 상담을 보고 있는데 새 상담이 같이 강조돼 화면이 바뀐 것처럼 보이던 문제)
+              const isNewChatEmpty =
+                activeSessionId == null &&
+                !currentChatTitle &&
+                pendingSessionId == null;
               const isActive =
                 menu.mode === activeMode &&
-                (!isGuest || menu.label !== "새 상담");
+                (menu.label !== "새 상담" || (!isGuest && isNewChatEmpty));
               const shortcut =
                 menu.label === "새 상담"
                   ? "Ctrl+Shift+O"
@@ -582,19 +617,30 @@ export const ChatSidebar = ({
                     {pinnedChats.map((chat) => (
                       <div
                         key={chat.key}
-                        className="group relative mx-1 flex h-11 w-[calc(100%-0.5rem)] items-center rounded-xl text-left transition-colors duration-150 hover:bg-gray-300/70 dark:hover:bg-white/10"
+                        className={cn(
+                          "group relative mx-1 flex h-11 w-[calc(100%-0.5rem)] items-center rounded-xl text-left transition-colors duration-150",
+                          chat.active
+                            ? "bg-white dark:bg-white/10"
+                            : "hover:bg-gray-300/70 dark:hover:bg-white/10",
+                        )}
                       >
                         <button
                           type="button"
                           onClick={() => selectChat(chat)}
-                          className="min-w-0 flex-1 truncate px-5 text-left text-sm font-semibold text-gray-500 transition-colors group-hover:text-gray-950 dark:text-gray-400 dark:group-hover:text-white"
+                          aria-current={chat.active ? "true" : undefined}
+                          className={cn(
+                            "focus-visible:ring-brand/30 min-w-0 flex-1 truncate px-5 text-left text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                            chat.active
+                              ? "text-brand"
+                              : "text-gray-500 group-hover:text-gray-950 dark:text-gray-400 dark:group-hover:text-white",
+                          )}
                         >
                           {chat.title}
                         </button>
 
                         <button
                           type="button"
-                          onClick={() => handlePinChat(chat.title)}
+                          onClick={() => handlePinChat(chat.key)}
                           className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
                           aria-label="채팅 고정 해제"
                         >
@@ -605,7 +651,7 @@ export const ChatSidebar = ({
                           type="button"
                           data-chat-menu-trigger="true"
                           onClick={(event) =>
-                            handleOpenChatMenu(event, chat.title)
+                            handleOpenChatMenu(event, chat.key)
                           }
                           className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
                           aria-label="채팅 메뉴"
@@ -619,10 +665,12 @@ export const ChatSidebar = ({
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setIsRecentChatsCollapsed((isCollapsed) => !isCollapsed)
-                  }
-                  aria-expanded={!isRecentChatsCollapsed}
+                  onClick={() => {
+                    if (isRecentChatsLoading) return;
+                    setIsRecentChatsCollapsed((isCollapsed) => !isCollapsed);
+                  }}
+                  aria-expanded={!isRecentChatsHidden}
+                  aria-busy={isRecentChatsLoading || undefined}
                   aria-controls="chat-sidebar-recent-list"
                   className="group/recent focus-visible:ring-brand/30 mx-1 mt-4 mb-2 flex h-7 w-[calc(100%-0.5rem)] items-center gap-1 rounded-lg px-2 text-left text-xs font-bold text-gray-400 transition-colors hover:text-gray-700 focus-visible:ring-2 focus-visible:outline-none dark:hover:text-gray-200"
                 >
@@ -633,32 +681,32 @@ export const ChatSidebar = ({
                     aria-hidden="true"
                     className={cn(
                       "transition-transform duration-200",
-                      isRecentChatsCollapsed && "-rotate-90",
+                      isRecentChatsHidden && "-rotate-90",
                     )}
                   />
-                  {isRecentChatsCollapsed && unpinnedRecentChats.length > 0 && (
-                    <span className="ml-auto font-semibold text-gray-400/80">
-                      {unpinnedRecentChats.length}
-                    </span>
-                  )}
+                  {isRecentChatsCollapsed &&
+                    !isRecentChatsLoading &&
+                    unpinnedRecentChats.length > 0 && (
+                      <span className="ml-auto font-semibold text-gray-400/80">
+                        {unpinnedRecentChats.length}
+                      </span>
+                    )}
                 </button>
 
                 <div
                   id="chat-sidebar-recent-list"
-                  aria-hidden={isRecentChatsCollapsed}
-                  inert={isRecentChatsCollapsed}
+                  aria-hidden={isRecentChatsHidden}
+                  inert={isRecentChatsHidden}
                   className={cn(
                     "grid transition-[grid-template-rows] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                    isRecentChatsCollapsed
-                      ? "grid-rows-[0fr]"
-                      : "grid-rows-[1fr]",
+                    isRecentChatsHidden ? "grid-rows-[0fr]" : "grid-rows-[1fr]",
                   )}
                 >
                   <div className="min-h-0 overflow-hidden">
                     <div
                       className={cn(
                         "space-y-1 transition-[opacity,translate] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                        isRecentChatsCollapsed
+                        isRecentChatsHidden
                           ? "-translate-y-3 opacity-0"
                           : "translate-y-0 opacity-100",
                       )}
@@ -675,14 +723,14 @@ export const ChatSidebar = ({
                           style={
                             {
                               // hover 배경색 전환에는 지연이 붙지 않도록, 나타나는 모션에만 쓰는 변수로 넘긴다.
-                              "--recent-chat-delay": isRecentChatsCollapsed
+                              "--recent-chat-delay": isRecentChatsHidden
                                 ? "0ms"
                                 : `${Math.min(index, RECENT_CHAT_STAGGER_LIMIT) * RECENT_CHAT_STAGGER_MS}ms`,
                             } as CSSProperties
                           }
                           className={cn(
                             "group relative mx-1 flex h-11 w-[calc(100%-0.5rem)] items-center rounded-xl text-left [transition:background-color_150ms,opacity_450ms_cubic-bezier(0.22,1,0.36,1)_var(--recent-chat-delay),translate_450ms_cubic-bezier(0.22,1,0.36,1)_var(--recent-chat-delay)]",
-                            isRecentChatsCollapsed
+                            isRecentChatsHidden
                               ? "-translate-y-2 opacity-0"
                               : "translate-y-0 opacity-100",
                             chat.active
@@ -706,7 +754,7 @@ export const ChatSidebar = ({
 
                           <button
                             type="button"
-                            onClick={() => handlePinChat(chat.title)}
+                            onClick={() => handlePinChat(chat.key)}
                             className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
                             aria-label="채팅 고정"
                           >
@@ -717,7 +765,7 @@ export const ChatSidebar = ({
                             type="button"
                             data-chat-menu-trigger="true"
                             onClick={(event) =>
-                              handleOpenChatMenu(event, chat.title)
+                              handleOpenChatMenu(event, chat.key)
                             }
                             className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
                             aria-label="채팅 메뉴"
