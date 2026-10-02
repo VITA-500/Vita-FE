@@ -12,6 +12,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useKakaoMapReady } from "@/features/store/hooks/useKakaoMapReady";
+import { hasKakaoMapKey } from "@/shared/config/env";
 import type { UserLocation } from "@/features/store/lib/geo";
 import type {
   StoreLocation,
@@ -26,15 +27,92 @@ const clampValue = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
 // 매장 핀: 원형 헤드 + 길게 뻗은 하단 꼬리 (흰 테두리 없음, 끝부분 radius 최소화)
 const STORE_PIN_PATH = "M17 44 L4.16 22.75 A15 15 0 1 1 29.84 22.75 Z";
-const STORE_PIN_SVG_MARKUP = `<svg viewBox="0 0 34 46" width="34" height="46" aria-hidden="true" style="display:block"><path d="${STORE_PIN_PATH}" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" /></svg>`;
 const STORE_PIN_SHAPE_CLASS_NAME =
   "text-brand absolute inset-x-0 top-0 mx-auto block h-[46px] w-[34px] drop-shadow-[0_8px_14px_rgba(15,23,42,0.2)] transition group-hover:text-[#f5a400]";
+
+type MarkerColorInfo = {
+  colors: string[];
+  extraServices: { color: string; label: string }[];
+};
+
+const getStableHash = (value: string) => {
+  let hash = 0;
+
+  for (const character of value) {
+    hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  }
+
+  return hash.toString(36);
+};
+
+const getMarkerGradientId = ({
+  colors,
+  coordinateKey,
+  storeIds,
+}: {
+  colors: string[];
+  coordinateKey: string;
+  storeIds: string[];
+}) =>
+  `vita-store-pin-gradient-${getStableHash(
+    `${coordinateKey}|${[...storeIds].sort().join(",")}|${colors.join(",")}`,
+  )}`;
+
+const getStorePinSvgMarkup = ({
+  colors,
+  gradientId,
+}: {
+  colors: string[];
+  gradientId: string;
+}) => {
+  if (colors.length <= 1) {
+    const color = colors[0] ?? "currentColor";
+
+    return `<svg viewBox="0 0 34 46" width="34" height="46" aria-hidden="true" style="display:block"><path d="${STORE_PIN_PATH}" fill="${color}" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" /></svg>`;
+  }
+
+  const center = { x: 17, y: 20 };
+  const radius = 38;
+  const angleStep = 360 / colors.length;
+  const getPoint = (angle: number) => {
+    const radian = ((angle - 90) * Math.PI) / 180;
+
+    return {
+      x: Number((center.x + Math.cos(radian) * radius).toFixed(3)),
+      y: Number((center.y + Math.sin(radian) * radius).toFixed(3)),
+    };
+  };
+  const clipPaths = colors
+    .map((_, index) => {
+      const startAngle = index * angleStep;
+      const endAngle = (index + 1) * angleStep;
+      const start = getPoint(startAngle);
+      const end = getPoint(endAngle);
+      const largeArcFlag = angleStep > 180 ? 1 : 0;
+      const clipId = `${gradientId}-slice-${index}`;
+
+      return `<clipPath id="${clipId}"><path d="M ${center.x} ${center.y} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${end.x} ${end.y} Z" /></clipPath>`;
+    })
+    .join("");
+  const slices = colors
+    .map(
+      (color, index) =>
+        `<path d="${STORE_PIN_PATH}" fill="${color}" clip-path="url(#${gradientId}-slice-${index})" />`,
+    )
+    .join("");
+
+  return `<svg viewBox="0 0 34 46" width="34" height="46" aria-hidden="true" style="display:block"><defs>${clipPaths}</defs>${slices}<path d="${STORE_PIN_PATH}" fill="none" stroke="rgba(255,255,255,0.86)" stroke-width="1.5" stroke-linejoin="round" /></svg>`;
+};
 
 /**
  * 매장 정보 카드 위치 계산 공통 값.
  * - 선택 매장으로 지도 중심을 옮길 때와, 카드가 지도 위쪽 밖으로 나가지 않게 막을 때 같은 값을 쓴다.
  * - 위쪽 여백은 좌측 상단 검색창 영역(데스크톱: 위 20px + 높이 48px, 모바일: 상단 여백 포함 약 124px)을 피하는 높이다.
  */
+/** 지도 타일이 그려졌다는 이벤트(tilesloaded)가 오지 않아도 로딩 화면을 걷는 시간(ms) */
+const MAP_FIRST_PAINT_FALLBACK_MS = 3000;
+/** 카카오맵 SDK가 이 시간 안에 준비되지 않으면 로딩 화면을 걷고 대체 지도를 보여준다(ms) */
+const MAP_SDK_LOAD_TIMEOUT_MS = 10000;
 const STORE_CARD_TOP_INSET_DESKTOP = 80;
 const STORE_CARD_TOP_INSET_MOBILE = 140;
 /** 카드가 아직 그려지지 않아 높이를 잴 수 없을 때 쓰는 추정 높이 */
@@ -413,12 +491,24 @@ const getFallbackMarkerStyle = (
 type KakaoMapEventApi = {
   addListener: (
     target: KakaoMap,
-    eventName: "dragend" | "zoom_changed" | "idle" | "center_changed" | "click",
+    eventName:
+      | "dragend"
+      | "zoom_changed"
+      | "idle"
+      | "center_changed"
+      | "click"
+      | "tilesloaded",
     callback: () => void,
   ) => void;
   removeListener: (
     target: KakaoMap,
-    eventName: "dragend" | "zoom_changed" | "idle" | "center_changed" | "click",
+    eventName:
+      | "dragend"
+      | "zoom_changed"
+      | "idle"
+      | "center_changed"
+      | "click"
+      | "tilesloaded",
     callback: () => void,
   ) => void;
 };
@@ -682,6 +772,8 @@ type StoreMapPreviewProps = {
   }) => void;
   /** 매장 id별 핀 글자. 없으면 stores 순서대로 A, B, C… */
   markerLabelById?: Record<string, string>;
+  /** 매장 id별 핀 색상 정보. 선택된 서비스 필터가 있으면 색 분할·추가 개수를 반영한다. */
+  markerColorInfoById?: Record<string, MarkerColorInfo>;
   /** 핀(현재 페이지) 외 나머지 매장. 핀 대신 반투명 원으로 위치만 표시한다. */
   otherStores?: StoreLocation[];
   /** 핀 외 나머지 매장 수. 0보다 크면 "나머지 매장 보기" 버튼을 보여준다. */
@@ -742,6 +834,7 @@ export const StoreMapPreview = ({
   onCenterChange,
   onViewportChange,
   markerLabelById,
+  markerColorInfoById,
   otherStores = [],
   otherStoreCount = 0,
   isOtherStoresVisible = false,
@@ -758,6 +851,10 @@ export const StoreMapPreview = ({
   onSearchFromMapPoint,
 }: StoreMapPreviewProps) => {
   const isKakaoMapReady = useKakaoMapReady();
+  // 지도가 처음 화면에 그려졌는지. 그 전(SDK 로딩, 내 위치·매장 기준점 대기, 타일 로딩)에는
+  // 빈 화면 대신 로딩 화면을 보여준다.
+  const [isMapFirstPainted, setIsMapFirstPainted] = useState(false);
+  const [isMapSdkLoadTimedOut, setIsMapSdkLoadTimedOut] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<KakaoMap | null>(null);
   const overlayRefs = useRef<MapOverlayHandle[]>([]);
@@ -1060,6 +1157,17 @@ export const StoreMapPreview = ({
   }, [routePreviewKey, routeFitReadyKey]);
 
   useEffect(() => {
+    if (!hasKakaoMapKey) return;
+
+    const timeoutId = window.setTimeout(
+      () => setIsMapSdkLoadTimedOut(true),
+      MAP_SDK_LOAD_TIMEOUT_MS,
+    );
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  useEffect(() => {
     if (!isKakaoMapReady || !mapContainerRef.current || !window.kakao?.maps) {
       return;
     }
@@ -1092,6 +1200,26 @@ export const StoreMapPreview = ({
 
     mapRef.current = map;
     focusPointRef.current = focusPoint;
+
+    if (isNewMap) {
+      // 첫 타일이 그려지면 로딩 화면을 걷는다. 이벤트가 오지 않아도 잠시 뒤에는 걷는다.
+      const firstPaintEventApi = kakaoMaps.event as unknown as KakaoMapEventApi;
+      const handleFirstTilesLoaded = () => {
+        firstPaintEventApi.removeListener(
+          map,
+          "tilesloaded",
+          handleFirstTilesLoaded,
+        );
+        setIsMapFirstPainted(true);
+      };
+
+      firstPaintEventApi.addListener(
+        map,
+        "tilesloaded",
+        handleFirstTilesLoaded,
+      );
+      window.setTimeout(handleFirstTilesLoaded, MAP_FIRST_PAINT_FALLBACK_MS);
+    }
     searchPointRef.current = searchPoint;
     routePreviewRef.current = routePreview;
 
@@ -1544,6 +1672,15 @@ export const StoreMapPreview = ({
       const isSelected = Boolean(selectedEntry);
       const getLabel = ({ index, store }: (typeof group)[number]) =>
         markerLabelById?.[store.id] ?? getStoreMarkerLabel(index);
+      const colorTargetStore = selectedEntry?.store ?? firstStore;
+      const markerColorInfo = markerColorInfoById?.[colorTargetStore.id];
+      const markerColors = markerColorInfo?.colors ?? [];
+      const coordinateKey = `${firstStore.lat.toFixed(5)}:${firstStore.lng.toFixed(5)}`;
+      const gradientId = getMarkerGradientId({
+        colors: markerColors,
+        coordinateKey,
+        storeIds: group.map(({ store }) => store.id),
+      });
       const position = new kakaoMaps.LatLng(firstStore.lat, firstStore.lng);
       const container = document.createElement("div");
       container.className = "relative";
@@ -1565,11 +1702,14 @@ export const StoreMapPreview = ({
       );
       const markerShape = document.createElement("span");
       markerShape.className = STORE_PIN_SHAPE_CLASS_NAME;
-      markerShape.innerHTML = STORE_PIN_SVG_MARKUP;
+      markerShape.innerHTML = getStorePinSvgMarkup({
+        colors: markerColors,
+        gradientId,
+      });
 
       const markerLetter = document.createElement("span");
       markerLetter.className =
-        "absolute top-[9px] left-1/2 z-[1] -translate-x-1/2 text-xs font-black text-white";
+        "absolute top-[9px] left-1/2 z-[1] -translate-x-1/2 text-xs font-black text-white [text-shadow:_0_1px_2px_rgb(15_23_42_/_0.45)]";
       markerLetter.textContent = isCluster
         ? String(group.length)
         : getLabel(group[0]);
@@ -1594,8 +1734,41 @@ export const StoreMapPreview = ({
         clusterBadge.setAttribute("aria-hidden", "true");
         clusterBadge.className =
           "text-brand absolute -top-1 right-0 z-[2] flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[9px] leading-none font-black shadow-sm";
+        clusterBadge.style.color = markerColors[0] ?? "";
         clusterBadge.textContent = "+";
         marker.append(clusterBadge);
+      }
+
+      if (markerColorInfo && markerColorInfo.extraServices.length > 0) {
+        const extraColorBadge = document.createElement("span");
+        const extraColorTooltip = document.createElement("span");
+        const extraServicesText = markerColorInfo.extraServices
+          .map((service) => service.label)
+          .join(", ");
+
+        extraColorBadge.setAttribute(
+          "aria-label",
+          `추가 필터 조건: ${extraServicesText}`,
+        );
+        extraColorBadge.className =
+          "group/extra absolute -top-1 left-0 z-[2] flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-950/90 px-1 text-[9px] leading-none font-black text-white shadow-sm";
+        extraColorBadge.textContent = `+${markerColorInfo.extraServices.length}`;
+        extraColorTooltip.className =
+          "pointer-events-none absolute top-[calc(100%+6px)] left-0 z-[4] flex min-w-max translate-y-1 flex-col gap-1 rounded-sm bg-slate-950/95 px-2.5 py-1.5 text-[10px] leading-snug font-extrabold whitespace-nowrap text-white opacity-0 shadow-lg transition group-hover/extra:translate-y-0 group-hover/extra:opacity-100 group-focus-visible/extra:translate-y-0 group-focus-visible/extra:opacity-100";
+        markerColorInfo.extraServices.forEach((service) => {
+          const row = document.createElement("span");
+          const dot = document.createElement("span");
+          const label = document.createElement("span");
+
+          row.className = "flex items-center gap-1.5";
+          dot.className = "h-2 w-2 shrink-0 rounded-full";
+          dot.style.backgroundColor = service.color;
+          label.textContent = service.label;
+          row.append(dot, label);
+          extraColorTooltip.append(row);
+        });
+        extraColorBadge.append(extraColorTooltip);
+        marker.append(extraColorBadge);
       }
 
       marker.append(markerShape, markerLetter, markerTooltip);
@@ -1776,6 +1949,7 @@ export const StoreMapPreview = ({
     markerLabelById,
     markerEnterKey,
     getRouteObstacleRect,
+    markerColorInfoById,
     onRouteObstructed,
     onSelectedStoreCardClose,
     onSearchFromMapPoint,
@@ -2329,9 +2503,16 @@ export const StoreMapPreview = ({
     ? { ...controlTooltip, label: otherStoresToggleLabel }
     : null;
 
+  // SDK를 끝내 불러오지 못하면 로딩 화면을 걷고 대체 지도(가짜 핀)를 보여준다.
+  const isMapLoadingVisible =
+    hasKakaoMapKey &&
+    !isMapFirstPainted &&
+    !(isMapSdkLoadTimedOut && !isKakaoMapReady);
+
   return (
     <section
       data-kakao-map-ready={isKakaoMapReady}
+      aria-busy={isMapLoadingVisible || undefined}
       className={cn(
         "relative overflow-hidden bg-white dark:bg-zinc-950",
         isFullBleed
@@ -2349,6 +2530,24 @@ export const StoreMapPreview = ({
         </>
       )}
 
+      <div
+        aria-hidden={!isMapLoadingVisible}
+        className={cn(
+          "absolute inset-0 z-40 flex items-center justify-center bg-gray-50 transition-opacity duration-300 dark:bg-zinc-950",
+          isMapLoadingVisible ? "opacity-100" : "pointer-events-none opacity-0",
+        )}
+      >
+        <div className="flex flex-col items-center gap-3" role="status">
+          <span
+            aria-hidden="true"
+            className="border-brand size-8 animate-spin rounded-full border-4 border-t-transparent"
+          />
+          <p className="text-sm font-extrabold text-gray-700 dark:text-gray-200">
+            지도를 불러오는 중이에요
+          </p>
+        </div>
+      </div>
+
       <div className="pointer-events-none relative h-full min-h-[420px] p-5 sm:p-7">
         {!isKakaoMapReady && (
           <>
@@ -2360,6 +2559,13 @@ export const StoreMapPreview = ({
         {!isKakaoMapReady &&
           stores.map((store, index) => {
             const isSelected = selectedStoreId === store.id;
+            const markerColorInfo = markerColorInfoById?.[store.id];
+            const markerColors = markerColorInfo?.colors ?? [];
+            const gradientId = getMarkerGradientId({
+              colors: markerColors,
+              coordinateKey: `${store.lat.toFixed(5)}:${store.lng.toFixed(5)}`,
+              storeIds: [store.id],
+            });
 
             return (
               <button
@@ -2375,9 +2581,39 @@ export const StoreMapPreview = ({
               >
                 <span
                   className={STORE_PIN_SHAPE_CLASS_NAME}
-                  dangerouslySetInnerHTML={{ __html: STORE_PIN_SVG_MARKUP }}
+                  dangerouslySetInnerHTML={{
+                    __html: getStorePinSvgMarkup({
+                      colors: markerColors,
+                      gradientId,
+                    }),
+                  }}
                 />
-                <span className="absolute top-[9px] left-1/2 z-[1] -translate-x-1/2 text-xs font-black text-white">
+                {markerColorInfo &&
+                  markerColorInfo.extraServices.length > 0 && (
+                    <span
+                      className="group/extra absolute -top-1 left-0 z-[2] flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-950/90 px-1 text-[9px] leading-none font-black text-white shadow-sm"
+                      aria-label={`추가 필터 조건: ${markerColorInfo.extraServices
+                        .map((service) => service.label)
+                        .join(", ")}`}
+                    >
+                      +{markerColorInfo.extraServices.length}
+                      <span className="pointer-events-none absolute top-[calc(100%+6px)] left-0 z-[4] flex min-w-max translate-y-1 flex-col gap-1 rounded-sm bg-slate-950/95 px-2.5 py-1.5 text-[10px] leading-snug font-extrabold whitespace-nowrap text-white opacity-0 shadow-lg transition group-hover/extra:translate-y-0 group-hover/extra:opacity-100">
+                        {markerColorInfo.extraServices.map((service) => (
+                          <span
+                            key={service.label}
+                            className="flex items-center gap-1.5"
+                          >
+                            <span
+                              className="h-2 w-2 shrink-0 rounded-full"
+                              style={{ backgroundColor: service.color }}
+                            />
+                            {service.label}
+                          </span>
+                        ))}
+                      </span>
+                    </span>
+                  )}
+                <span className="absolute top-[9px] left-1/2 z-[1] -translate-x-1/2 text-xs font-black text-white [text-shadow:_0_1px_2px_rgb(15_23_42_/_0.45)]">
                   {markerLabelById?.[store.id] ?? getStoreMarkerLabel(index)}
                 </span>
                 <span
