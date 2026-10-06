@@ -4,7 +4,7 @@ import type { RefObject } from "react";
 import { ChatComposer } from "@/features/chat/components/ChatComposer";
 import { ChatMessageList } from "@/features/chat/components/ChatMessageList";
 import { PromptSuggestions } from "@/features/chat/components/PromptSuggestions";
-import type { ChatMessage } from "@/features/chat/types";
+import type { ChatMessage, ChatStreamingReply } from "@/features/chat/types";
 import { cn } from "@/shared/lib/cn";
 
 type ChatConversationContentProps = {
@@ -17,6 +17,7 @@ type ChatConversationContentProps = {
   onChatInputChange: (value: string) => void;
   onSubmitPrompt: (prompt?: string) => void;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
+  streamingReply?: ChatStreamingReply | null;
 };
 
 export const ChatConversationContent = ({
@@ -29,6 +30,7 @@ export const ChatConversationContent = ({
   onChatInputChange,
   onSubmitPrompt,
   scrollContainerRef,
+  streamingReply,
 }: ChatConversationContentProps) => (
   <div className="relative min-h-0 flex-1">
     {hasChatStarted ? (
@@ -45,6 +47,7 @@ export const ChatConversationContent = ({
               <ChatMessageList
                 isLoading={chatStatus === "loading"}
                 messages={messages}
+                streamingReply={streamingReply}
               />
             </div>
           </div>
