@@ -81,6 +81,9 @@ export type AdminStore = {
   name: string;
   address: string;
   storeType: AdminStoreType;
+  benefitId?: number | null;
+  brand?: string | null;
+  category?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -94,9 +97,22 @@ export type AdminStoreDetail = AdminStore & {
   phone?: string;
   consultServices: string[];
   providedServices: string[];
+  benefitName?: string | null;
 };
 
-export type AdminStoreRequest = Omit<AdminStoreDetail, "storeId" | "storeType">;
+export type AdminStoreRequest = Omit<
+  AdminStoreDetail,
+  "brand" | "category" | "benefitName" | "storeId" | "storeType"
+>;
+
+export type AdminBenefit = {
+  benefitId: number;
+  brand: string;
+  name: string;
+  category: string;
+  description: string;
+  storeCount: number;
+};
 
 export type PageResponse<T> = {
   totalCount: number;

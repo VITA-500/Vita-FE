@@ -8,7 +8,12 @@ import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { FilterDropdown } from "@/features/admin/components/FilterDropdown";
 import { useActionStatus } from "@/features/admin/context/ActionStatusContext";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
-import type { AdminStoreDetail, AdminStoreType } from "@/features/admin/types";
+import { adminStoreService } from "@/features/admin/lib/adminStoreService";
+import type {
+  AdminBenefit,
+  AdminStoreDetail,
+  AdminStoreType,
+} from "@/features/admin/types";
 import { cn } from "@/shared/lib/cn";
 import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/Button";
@@ -19,7 +24,13 @@ import { showToast } from "@/shared/ui/ToastProvider";
 
 type StoreInput = Omit<
   AdminStoreDetail,
-  "createdAt" | "storeId" | "storeType" | "updatedAt"
+  | "brand"
+  | "category"
+  | "benefitName"
+  | "createdAt"
+  | "storeId"
+  | "storeType"
+  | "updatedAt"
 >;
 
 const pageSizeOptions = [20, 50, 100] as const;
@@ -83,6 +94,7 @@ export const StoreManagement = ({
     storePageSize,
     storeSortDirection,
     storeSortField,
+    storeTypeFilter,
     stores,
     storeTotalCount,
     storeTotalPages,
@@ -94,7 +106,11 @@ export const StoreManagement = ({
   const [editingStoreId, setEditingStoreId] = useState<number | null>(null);
   const [deletingStoreId, setDeletingStoreId] = useState<number | null>(null);
   const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
+  const [benefits, setBenefits] = useState<AdminBenefit[]>([]);
+  const [benefitError, setBenefitError] = useState<string | null>(null);
   const hasSearchKeyword = storeKeyword.trim().length > 0;
+  const isPartnerStore = storeType === "PARTNER";
+  const isStoreTypeSynced = storeTypeFilter === storeType;
 
   const editingStore = editingStoreId
     ? getStoreDetail(editingStoreId)
@@ -105,7 +121,7 @@ export const StoreManagement = ({
   );
   const rangeStart = storeTotalCount === 0 ? 0 : storePage * storePageSize + 1;
   const rangeEnd = Math.min(storeTotalCount, rangeStart + stores.length - 1);
-  const shouldShowSkeletonRows = isStoreLoading;
+  const shouldShowSkeletonRows = isStoreLoading || !isStoreTypeSynced;
   const visibleSkeletonRows = shouldShowSkeletonRows
     ? Math.min(storePageSize, MIN_TABLE_ROWS)
     : 0;
@@ -117,6 +133,36 @@ export const StoreManagement = ({
   useEffect(() => {
     setStoreTypeFilter(storeType);
   }, [setStoreTypeFilter, storeType]);
+
+  useEffect(() => {
+    if (!isPartnerStore) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    void adminStoreService
+      .fetchBenefits()
+      .then((nextBenefits) => {
+        if (!isCancelled) {
+          setBenefits(nextBenefits);
+          setBenefitError(null);
+        }
+      })
+      .catch((error) => {
+        if (!isCancelled) {
+          setBenefitError(
+            error instanceof Error
+              ? error.message
+              : "제휴 브랜드 목록을 불러오지 못했습니다.",
+          );
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isPartnerStore]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -244,6 +290,11 @@ export const StoreManagement = ({
           {storeError}
         </div>
       )}
+      {isPartnerStore && benefitError && (
+        <div className="mb-7 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+          {benefitError}
+        </div>
+      )}
 
       <div className="space-y-3 md:hidden">
         {shouldShowSkeletonRows ? (
@@ -272,8 +323,12 @@ export const StoreManagement = ({
                     {store.address}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-bold text-gray-400">
+                    {isPartnerStore && (
+                      <span>
+                        {store.brand ?? "-"} · {store.category ?? "-"}
+                      </span>
+                    )}
                     <span>등록 {formatKoreanDate(store.createdAt)}</span>
-                    <span>수정 {formatKoreanDate(store.updatedAt)}</span>
                   </div>
                 </div>
                 <StoreRowActions
@@ -297,25 +352,38 @@ export const StoreManagement = ({
 
       <Card padding="none" className="hidden overflow-hidden md:block">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[920px] table-fixed border-collapse text-sm">
+          <table
+            className={cn(
+              "w-full table-fixed border-collapse text-sm",
+              isPartnerStore ? "min-w-[1040px]" : "min-w-[860px]",
+            )}
+          >
             <thead className="bg-surface-muted text-xs font-extrabold text-gray-400 dark:bg-white/5">
               <tr>
                 <th className="w-[88px] px-5 py-4 text-left">ID</th>
                 <th className="w-[22%] px-4 py-4 text-left">매장명</th>
                 <th className="px-4 py-4 text-left">주소</th>
+                {isPartnerStore && (
+                  <th className="w-[180px] px-4 py-4 text-left">제휴 브랜드</th>
+                )}
                 <th className="w-[128px] px-4 py-4 text-center">등록일</th>
-                <th className="w-[128px] px-4 py-4 text-center">수정일</th>
                 <th className="w-[160px] px-5 py-4 text-center">관리</th>
               </tr>
             </thead>
             <tbody className="divide-border-soft divide-y dark:divide-white/10">
               {shouldShowSkeletonRows ? (
                 Array.from({ length: visibleSkeletonRows }, (_, index) => (
-                  <StoreSkeletonRow key={`store-skeleton-${index}`} />
+                  <StoreSkeletonRow
+                    key={`store-skeleton-${index}`}
+                    showPartnerColumn={isPartnerStore}
+                  />
                 ))
               ) : stores.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="h-[640px] px-5 py-0">
+                  <td
+                    colSpan={isPartnerStore ? 6 : 5}
+                    className="h-[640px] px-5 py-0"
+                  >
                     <AdminEmptyState
                       title="조건에 맞는 매장이 없습니다."
                       description={`검색어를 조정하거나 새 ${labels.emptyName}을 추가해 주세요.`}
@@ -340,11 +408,24 @@ export const StoreManagement = ({
                       <td className="truncate px-4 py-4 font-semibold text-gray-500">
                         {store.address}
                       </td>
+                      {isPartnerStore && (
+                        <td className="truncate px-4 py-4 font-semibold text-gray-500">
+                          {store.brand ? (
+                            <>
+                              <span className="font-extrabold text-gray-700 dark:text-gray-200">
+                                {store.brand}
+                              </span>
+                              <span className="ml-2 text-gray-400">
+                                {store.category ?? "-"}
+                              </span>
+                            </>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                      )}
                       <td className="px-4 py-4 text-center font-semibold text-gray-400">
                         {formatKoreanDate(store.createdAt)}
-                      </td>
-                      <td className="px-4 py-4 text-center font-semibold text-gray-400">
-                        {formatKoreanDate(store.updatedAt)}
                       </td>
                       <td className="px-5 py-4 text-center">
                         <StoreRowActions
@@ -360,7 +441,7 @@ export const StoreManagement = ({
                       aria-hidden="true"
                       className="h-20"
                     >
-                      <td colSpan={6} />
+                      <td colSpan={isPartnerStore ? 6 : 5} />
                     </tr>
                   ))}
                 </>
@@ -391,6 +472,8 @@ export const StoreManagement = ({
         key={isAddModalOpen ? "create-open" : "create-closed"}
         isOpen={isAddModalOpen}
         mode="create"
+        benefits={benefits}
+        storeType={storeType}
         storeLabel={labels.name}
         onClose={() => setIsAddModalOpen(false)}
         onSave={handleCreate}
@@ -400,7 +483,9 @@ export const StoreManagement = ({
         key={editingStore?.storeId ?? "edit-closed"}
         isOpen={editingStore !== undefined}
         mode="edit"
+        benefits={benefits}
         store={editingStore}
+        storeType={storeType}
         storeLabel={labels.name}
         onClose={() => setEditingStoreId(null)}
         onSave={handleUpdate}
@@ -492,7 +577,11 @@ const StoreRowActions = ({
   </div>
 );
 
-const StoreSkeletonRow = () => (
+const StoreSkeletonRow = ({
+  showPartnerColumn,
+}: {
+  showPartnerColumn: boolean;
+}) => (
   <tr className="h-20" aria-hidden="true">
     <td className="px-5 py-4">
       <div className="bg-surface-muted h-4 w-12 animate-pulse rounded-full dark:bg-white/10" />
@@ -503,9 +592,11 @@ const StoreSkeletonRow = () => (
     <td className="px-4 py-4">
       <div className="bg-surface-muted h-4 w-[min(360px,80%)] animate-pulse rounded-full dark:bg-white/10" />
     </td>
-    <td className="px-4 py-4">
-      <div className="bg-surface-muted mx-auto h-4 w-20 animate-pulse rounded-full dark:bg-white/10" />
-    </td>
+    {showPartnerColumn && (
+      <td className="px-4 py-4">
+        <div className="bg-surface-muted h-4 w-32 animate-pulse rounded-full dark:bg-white/10" />
+      </td>
+    )}
     <td className="px-4 py-4">
       <div className="bg-surface-muted mx-auto h-4 w-20 animate-pulse rounded-full dark:bg-white/10" />
     </td>
@@ -534,25 +625,34 @@ const StoreSkeletonCard = () => (
 );
 
 type StoreFormModalProps = {
+  benefits: AdminBenefit[];
   isOpen: boolean;
   mode: "create" | "edit";
   onClose: () => void;
   onSave: (input: StoreInput) => Promise<void>;
   storeLabel: string;
+  storeType: AdminStoreType;
   store?: AdminStoreDetail;
 };
 
 const StoreFormModal = ({
+  benefits,
   isOpen,
   mode,
   onClose,
   onSave,
   store,
   storeLabel,
+  storeType,
 }: StoreFormModalProps) => {
   const formId = mode === "create" ? "store-create-form" : "store-edit-form";
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isPartnerStore = storeType === "PARTNER";
+  const benefitOptions = benefits.map((benefit) => ({
+    label: `${benefit.brand} · ${benefit.name}`,
+    value: String(benefit.benefitId),
+  }));
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -583,7 +683,20 @@ const StoreFormModal = ({
       }
       description={`백엔드 관리자 API에 저장할 ${storeLabel} 정보를 입력해 주세요.`}
       size="lg"
+      className="max-h-[calc(100svh-48px)] overflow-y-auto"
     >
+      {mode === "edit" && store && (
+        <div className="mb-5 flex flex-wrap gap-x-4 gap-y-1 rounded-2xl bg-gray-50 px-4 py-3 text-xs font-bold text-gray-400 dark:bg-white/5">
+          <span>등록일 {formatKoreanDate(store.createdAt)}</span>
+          <span>
+            수정일{" "}
+            {store.updatedAt
+              ? formatKoreanDate(store.updatedAt)
+              : "수정 이력 없음"}
+          </span>
+        </div>
+      )}
+
       <form
         id={formId}
         className="grid gap-5 sm:grid-cols-2"
@@ -637,6 +750,18 @@ const StoreFormModal = ({
           defaultValue={store?.phone}
           placeholder="예: 02-1234-5678"
         />
+        {isPartnerStore && (
+          <AdminField
+            label="제휴 브랜드"
+            name="benefitId"
+            defaultValue={store?.benefitId ? String(store.benefitId) : ""}
+            options={benefitOptions}
+            placeholder="제휴 브랜드 선택"
+            required
+            className="sm:col-span-2"
+            description="백엔드 제휴 혜택 API의 benefitId로 연결됩니다."
+          />
+        )}
         <AdminField
           label="상담 가능 업무"
           name="consultServices"
@@ -686,6 +811,7 @@ const readStoreForm = (form: HTMLFormElement): StoreInput => {
     lng: parseCoordinate(formData.get("lng")),
     businessHours: String(formData.get("businessHours") ?? "").trim(),
     phone: String(formData.get("phone") ?? "").trim(),
+    benefitId: parseOptionalNumber(formData.get("benefitId")),
     consultServices: toServiceArray(formData.get("consultServices")),
     providedServices: toServiceArray(formData.get("providedServices")),
   };
@@ -699,6 +825,20 @@ const parseCoordinate = (value: FormDataEntryValue | string | null) => {
   }
 
   return coordinate;
+};
+
+const parseOptionalNumber = (value: FormDataEntryValue | string | null) => {
+  const text = String(value ?? "").trim();
+
+  if (!text) return undefined;
+
+  const numberValue = Number(text);
+
+  if (!Number.isFinite(numberValue)) {
+    throw new Error("제휴 브랜드를 다시 선택해 주세요.");
+  }
+
+  return numberValue;
 };
 
 const toServiceArray = (value: FormDataEntryValue | string | null) =>
