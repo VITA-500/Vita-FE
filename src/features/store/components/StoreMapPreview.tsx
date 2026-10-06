@@ -39,6 +39,7 @@ type RoutePreviewRef = RoutePreview | null | undefined;
 export const StoreMapPreview = ({
   className,
   focusPoint,
+  isCompact = false,
   isFullBleed = false,
   isRouteCardDocked = false,
   isSearchFromMapPointLoading = false,
@@ -276,7 +277,12 @@ export const StoreMapPreview = ({
 
       <StoreMapLoadingOverlay isVisible={isMapLoadingVisible} />
 
-      <div className="pointer-events-none relative h-full min-h-[420px] p-5 sm:p-7">
+      <div
+        className={cn(
+          "pointer-events-none relative h-full",
+          isCompact ? "p-3" : "min-h-[420px] p-5 sm:p-7",
+        )}
+      >
         {!isKakaoMapReady && <StoreMapFallbackGlow />}
 
         {!isKakaoMapReady && (
@@ -290,6 +296,7 @@ export const StoreMapPreview = ({
         )}
 
         <StoreMapControls
+          isCompact={isCompact}
           hasUserLocation={Boolean(userLocation)}
           isOtherStoresVisible={isOtherStoresVisible}
           isUserLocationLoading={isUserLocationLoading}

@@ -14,6 +14,8 @@ import type { StoreLocation } from "@/features/store/types";
 
 export type StoreMapPreviewProps = {
   className?: string;
+  /** 채팅 답변 안처럼 낮은 지도. 최소 높이를 두지 않고 컨트롤을 모서리에 붙여 모두 보이게 한다. */
+  isCompact?: boolean;
   isFullBleed?: boolean;
   /** 길찾기 중 도착 매장 카드인지. 데스크톱에서는 지도 조작(드래그·확대/축소·클릭)으로 닫히지 않는다. */
   isRouteCardDocked?: boolean;
