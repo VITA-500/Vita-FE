@@ -53,6 +53,7 @@ const toNearbyStoreLocation = (
   lat: Number(store.lat),
   lng: Number(store.lng),
   distanceText: formatDistance(store.distanceKm * 1000),
+  storeType: "PHONE",
 });
 
 const toStoreLocation = (
@@ -63,12 +64,17 @@ const toStoreLocation = (
   name: store.name,
   address: store.address,
   businessHours: store.businessHours,
+  benefitBrand: fallback?.benefitBrand,
+  benefitCategory: fallback?.benefitCategory,
+  benefitId: fallback?.benefitId,
+  benefitName: fallback?.benefitName,
   consultServices: store.consultServices ?? fallback?.consultServices,
   phone: store.phone ?? "",
   providedServices: store.providedServices ?? fallback?.providedServices,
   lat: Number(store.lat),
   lng: Number(store.lng),
   distanceText: fallback?.distanceText,
+  storeType: fallback?.storeType ?? "PHONE",
 });
 
 export const storeService = {
