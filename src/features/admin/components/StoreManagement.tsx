@@ -1,14 +1,20 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Edit2, Plus, Trash2 } from "lucide-react";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { type FieldErrors, useForm, useWatch } from "react-hook-form";
+import { AdminControlledField } from "@/features/admin/components/AdminControlledField";
 import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
-import { AdminField } from "@/features/admin/components/AdminField";
 import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { FilterDropdown } from "@/features/admin/components/FilterDropdown";
 import { useActionStatus } from "@/features/admin/context/ActionStatusContext";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
 import { adminStoreService } from "@/features/admin/lib/adminStoreService";
+import {
+  storeFormSchema,
+  type StoreFormValues,
+} from "@/features/admin/lib/adminFormSchemas";
 import type {
   AdminBenefit,
   AdminStoreDetail,
@@ -653,14 +659,101 @@ const StoreFormModal = ({
     label: `${benefit.brand} · ${benefit.name}`,
     value: String(benefit.benefitId),
   }));
+  const placeholders = isPartnerStore
+    ? {
+        businessHours: "예: 09:00~18:00",
+        consultServices: "입장권 문의, 예약 변경",
+        name: "예: 어진월드 어드벤처",
+        phone: "예: 02-9876-5432",
+        providedServices: "제휴 할인, 현장 결제",
+        address: "예: 서울 송파구 올림픽로 240",
+      }
+    : {
+        businessHours: "예: 10:00~20:00",
+        consultServices: "휴대폰상담, 요금제변경",
+        name: "예: VITA 강남점",
+        phone: "예: 02-1234-5678",
+        providedServices: "유심발급, 기기변경",
+        address: "예: 서울 강남구 테헤란로 111",
+      };
+  const fieldLabels = isPartnerStore
+    ? {
+        consultServices: "이용 안내",
+        providedServices: "제휴 제공 내용",
+      }
+    : {
+        consultServices: "상담 가능 업무",
+        providedServices: "제공 가능 서비스",
+      };
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setError,
+    clearErrors,
+    formState: { errors, isValid },
+  } = useForm<StoreFormValues>({
+    defaultValues: {
+      address: store?.address ?? "",
+      benefitId: store?.benefitId ? String(store.benefitId) : "",
+      businessHours: store?.businessHours ?? "",
+      consultServices: store?.consultServices.join(", ") ?? "",
+      lat: store ? String(store.lat) : "",
+      lng: store ? String(store.lng) : "",
+      name: store?.name ?? "",
+      phone: store?.phone ?? "",
+      providedServices: store?.providedServices.join(", ") ?? "",
+    },
+    mode: "onChange",
+    resolver: zodResolver(storeFormSchema),
+  });
+  const selectedBenefitId = useWatch({ control, name: "benefitId" });
+  const canSubmit = isValid && (!isPartnerStore || Boolean(selectedBenefitId));
+  const validationMessage =
+    errorMessage ??
+    errors.benefitId?.message ??
+    errors.businessHours?.message ??
+    errors.phone?.message;
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  useEffect(() => {
+    reset({
+      address: store?.address ?? "",
+      benefitId: store?.benefitId ? String(store.benefitId) : "",
+      businessHours: store?.businessHours ?? "",
+      consultServices: store?.consultServices.join(", ") ?? "",
+      lat: store ? String(store.lat) : "",
+      lng: store ? String(store.lng) : "",
+      name: store?.name ?? "",
+      phone: store?.phone ?? "",
+      providedServices: store?.providedServices.join(", ") ?? "",
+    });
+  }, [reset, store]);
+
+  const submitStore = async (values: StoreFormValues) => {
     setErrorMessage(null);
+
+    if (isPartnerStore && !values.benefitId?.trim()) {
+      const message = "제휴 브랜드를 선택해 주세요.";
+      setError("benefitId", { message, type: "manual" });
+      showToast(message);
+      return;
+    }
+
+    clearErrors("benefitId");
     setIsSubmitting(true);
 
     try {
-      await onSave(readStoreForm(event.currentTarget));
+      await onSave({
+        address: values.address.trim(),
+        benefitId: parseOptionalNumber(values.benefitId),
+        businessHours: values.businessHours?.trim() ?? "",
+        consultServices: toServiceArray(values.consultServices),
+        lat: Number(values.lat.trim()),
+        lng: Number(values.lng.trim()),
+        name: values.name.trim(),
+        phone: values.phone?.trim() ?? "",
+        providedServices: toServiceArray(values.providedServices),
+      });
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -670,6 +763,15 @@ const StoreFormModal = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+  const handleInvalidSubmit = (formErrors: FieldErrors<StoreFormValues>) => {
+    const firstMessage = Object.values(formErrors)[0]?.message;
+
+    showToast(
+      typeof firstMessage === "string"
+        ? firstMessage
+        : `${storeLabel} 정보를 다시 확인해 주세요.`,
+    );
   };
 
   return (
@@ -700,61 +802,61 @@ const StoreFormModal = ({
       <form
         id={formId}
         className="grid gap-5 sm:grid-cols-2"
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(submitStore, handleInvalidSubmit)}
       >
-        <AdminField
-          label={`${storeLabel}명`}
+        <AdminControlledField
+          control={control}
           name="name"
-          defaultValue={store?.name}
-          placeholder="예: VITA 강남점"
+          label={`${storeLabel}명`}
+          placeholder={placeholders.name}
           className="sm:col-span-2"
           required
         />
-        <AdminField
-          label="주소"
+        <AdminControlledField
+          control={control}
           name="address"
-          defaultValue={store?.address}
-          placeholder="예: 서울 강남구 테헤란로 111"
+          label="주소"
+          placeholder={placeholders.address}
           className="sm:col-span-2"
           required
         />
-        <AdminField
-          label="위도"
+        <AdminControlledField
+          control={control}
           name="lat"
+          label="위도"
           inputMode="decimal"
-          defaultValue={store ? String(store.lat) : undefined}
           placeholder="37.2660"
           required
           step="any"
           type="number"
         />
-        <AdminField
-          label="경도"
+        <AdminControlledField
+          control={control}
           name="lng"
+          label="경도"
           inputMode="decimal"
-          defaultValue={store ? String(store.lng) : undefined}
           placeholder="127.0000"
           required
           step="any"
           type="number"
         />
-        <AdminField
-          label="운영시간"
+        <AdminControlledField
+          control={control}
           name="businessHours"
-          defaultValue={store?.businessHours}
-          placeholder="예: 10:00~20:00"
+          label="운영시간"
+          placeholder={placeholders.businessHours}
         />
-        <AdminField
-          label="전화번호"
+        <AdminControlledField
+          control={control}
           name="phone"
-          defaultValue={store?.phone}
-          placeholder="예: 02-1234-5678"
+          label="전화번호"
+          placeholder={placeholders.phone}
         />
         {isPartnerStore && (
-          <AdminField
-            label="제휴 브랜드"
+          <AdminControlledField
+            control={control}
             name="benefitId"
-            defaultValue={store?.benefitId ? String(store.benefitId) : ""}
+            label="제휴 브랜드"
             options={benefitOptions}
             placeholder="제휴 브랜드 선택"
             required
@@ -762,25 +864,25 @@ const StoreFormModal = ({
             description="백엔드 제휴 혜택 API의 benefitId로 연결됩니다."
           />
         )}
-        <AdminField
-          label="상담 가능 업무"
+        <AdminControlledField
+          control={control}
           name="consultServices"
-          defaultValue={store?.consultServices.join(", ")}
-          placeholder="휴대폰상담, 요금제변경"
+          label={fieldLabels.consultServices}
+          placeholder={placeholders.consultServices}
           className="sm:col-span-2"
         />
-        <AdminField
-          label="제공 가능 서비스"
+        <AdminControlledField
+          control={control}
           name="providedServices"
-          defaultValue={store?.providedServices.join(", ")}
-          placeholder="유심발급, 기기변경"
+          label={fieldLabels.providedServices}
+          placeholder={placeholders.providedServices}
           className="sm:col-span-2"
         />
       </form>
 
-      {errorMessage && (
+      {validationMessage && (
         <p className="mt-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
-          {errorMessage}
+          {validationMessage}
         </p>
       )}
 
@@ -793,7 +895,13 @@ const StoreFormModal = ({
         >
           취소
         </Button>
-        <Button size="sm" form={formId} type="submit" isLoading={isSubmitting}>
+        <Button
+          size="sm"
+          form={formId}
+          type="submit"
+          disabled={!canSubmit}
+          isLoading={isSubmitting}
+        >
           {mode === "create" ? "추가" : "저장"}
         </Button>
       </div>
@@ -801,33 +909,7 @@ const StoreFormModal = ({
   );
 };
 
-const readStoreForm = (form: HTMLFormElement): StoreInput => {
-  const formData = new FormData(form);
-
-  return {
-    name: String(formData.get("name") ?? "").trim(),
-    address: String(formData.get("address") ?? "").trim(),
-    lat: parseCoordinate(formData.get("lat")),
-    lng: parseCoordinate(formData.get("lng")),
-    businessHours: String(formData.get("businessHours") ?? "").trim(),
-    phone: String(formData.get("phone") ?? "").trim(),
-    benefitId: parseOptionalNumber(formData.get("benefitId")),
-    consultServices: toServiceArray(formData.get("consultServices")),
-    providedServices: toServiceArray(formData.get("providedServices")),
-  };
-};
-
-const parseCoordinate = (value: FormDataEntryValue | string | null) => {
-  const coordinate = Number(String(value ?? "").trim());
-
-  if (!Number.isFinite(coordinate)) {
-    throw new Error("좌표는 숫자로 입력해 주세요.");
-  }
-
-  return coordinate;
-};
-
-const parseOptionalNumber = (value: FormDataEntryValue | string | null) => {
+const parseOptionalNumber = (value?: string) => {
   const text = String(value ?? "").trim();
 
   if (!text) return undefined;
@@ -841,7 +923,7 @@ const parseOptionalNumber = (value: FormDataEntryValue | string | null) => {
   return numberValue;
 };
 
-const toServiceArray = (value: FormDataEntryValue | string | null) =>
+const toServiceArray = (value?: string) =>
   String(value ?? "")
     .split(",")
     .map((item) => item.trim())
