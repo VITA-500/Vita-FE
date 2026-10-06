@@ -100,11 +100,21 @@ export const createSelectedStoreCardController = ({
       return;
     }
 
-    // 카드는 항상 핀 바로 위에 붙어 있다(핀에서 떨어지지 않도록 위치를 제한하지 않는다).
+    // 데스크톱: 카드는 항상 핀 바로 위에 붙어 있다(핀에서 떨어지지 않도록 위치를 제한하지 않는다).
     // 카드가 화면·왼쪽 패널 밖으로 빠져나가는 경우는 panToFitSelectedCard가 지도를 살짝 밀어 해결한다.
+    // 모바일: 화면이 좁아 지도를 밀어도 카드가 넘치거나(길찾기 중엔 밀지 않음, 이후 드래그 등)
+    // 화면 밖으로 잘리기 쉬우므로, 카드가 들어갈 수 있는 범위 안으로 위치를 붙잡아 둔다.
+    const isMobile = containerRect.width < 768;
+    const left = isMobile
+      ? clampValue(point.x, layout.minX, layout.maxX)
+      : point.x;
+    const top = isMobile
+      ? clampValue(point.y, layout.minY, layout.maxY)
+      : point.y;
+
     setSelectedStoreCardPosition({
-      left: `${point.x}px`,
-      top: `${point.y}px`,
+      left: `${left}px`,
+      top: `${top}px`,
     });
   };
   /** 카드가 핀 위에 온전히 들어가는지 */

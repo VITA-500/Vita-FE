@@ -1,8 +1,22 @@
 import type { MapPoint } from "@/features/store/lib/mapFit";
+import {
+  getPartialRoutePath,
+  getPathDistance,
+  getRoutePathDistance,
+} from "@/features/store/lib/routePathGeometry";
+import {
+  getTransitSegmentStyle,
+  routeStyleByMode,
+} from "@/features/store/lib/routeStyles";
 import type {
   StoreRouteMode,
   StoreRouteSegmentKind,
 } from "@/features/store/types";
+
+// 기존 import 경로(@/features/store/lib/mapRoute)를 유지하기 위해 나눈 모듈을 다시 내보낸다.
+export { getPartialRoutePath };
+export { getTransitSegmentStyle, routeStyleByMode };
+export type { RouteStyle } from "@/features/store/lib/routeStyles";
 
 export type RoutePreview = {
   destination: MapPoint;
@@ -20,105 +34,6 @@ export type RoutePreviewSegment = {
   kind: StoreRouteSegmentKind;
   lineName?: string;
   path: MapPoint[];
-};
-
-export type RouteStyle = {
-  color: string;
-  glow: string;
-  opacity: number;
-  strokeStyle: "solid" | "shortdot";
-  weight: number;
-};
-
-export const routeStyleByMode: Record<StoreRouteMode, RouteStyle> = {
-  walk: {
-    color: "#fdb61d",
-    glow: "rgba(253, 182, 29, 0.22)",
-    opacity: 1,
-    strokeStyle: "shortdot",
-    weight: 6,
-  },
-  car: {
-    color: "#2563eb",
-    glow: "rgba(37, 99, 235, 0.2)",
-    opacity: 0.92,
-    strokeStyle: "solid",
-    weight: 7,
-  },
-  bicycle: {
-    color: "#16a34a",
-    glow: "rgba(22, 163, 74, 0.2)",
-    opacity: 0.92,
-    strokeStyle: "solid",
-    weight: 7,
-  },
-  transit: {
-    color: "#7c3aed",
-    glow: "rgba(124, 58, 237, 0.2)",
-    opacity: 0.92,
-    strokeStyle: "solid",
-    weight: 7,
-  },
-};
-
-const getPathDistance = (from: MapPoint, to: MapPoint) => {
-  const latDistance = to.lat - from.lat;
-  const lngDistance = to.lng - from.lng;
-
-  return Math.sqrt(latDistance ** 2 + lngDistance ** 2);
-};
-
-export const getPartialRoutePath = (path: MapPoint[], progress: number) => {
-  if (path.length <= 1 || progress >= 1) {
-    return path;
-  }
-
-  const segmentDistances = path.slice(0, -1).map((point, index) => {
-    return getPathDistance(point, path[index + 1]);
-  });
-  const totalDistance = segmentDistances.reduce(
-    (sum, distance) => sum + distance,
-    0,
-  );
-
-  if (totalDistance === 0) {
-    return [path[0]];
-  }
-
-  let remainingDistance = totalDistance * Math.max(0, progress);
-  const partialPath = [path[0]];
-
-  for (let index = 0; index < segmentDistances.length; index += 1) {
-    const segmentDistance = segmentDistances[index];
-    const from = path[index];
-    const to = path[index + 1];
-
-    if (remainingDistance >= segmentDistance) {
-      partialPath.push(to);
-      remainingDistance -= segmentDistance;
-      continue;
-    }
-
-    const segmentProgress =
-      segmentDistance === 0 ? 0 : remainingDistance / segmentDistance;
-
-    partialPath.push({
-      lat: from.lat + (to.lat - from.lat) * segmentProgress,
-      lng: from.lng + (to.lng - from.lng) * segmentProgress,
-    });
-    break;
-  }
-
-  return partialPath;
-};
-
-const getRoutePathDistance = (path: MapPoint[]) => {
-  return path
-    .slice(0, -1)
-    .reduce(
-      (sum, point, index) => sum + getPathDistance(point, path[index + 1]),
-      0,
-    );
 };
 
 export const getSequentialRouteSegments = (
@@ -208,65 +123,6 @@ export const getFlatTransitFallbackSegments = (path: MapPoint[]) => {
       path: path.slice(lastTransferIndex),
     },
   ];
-};
-
-export const getTransitSegmentStyle = (
-  segment: RoutePreviewSegment,
-  fallbackMode: StoreRouteMode,
-) => {
-  // 차량·자전거 경로의 연결선은 경로 색 점선으로 얇게 그려 실제 도로 경로와 구분한다.
-  // (도보·대중교통은 아래 도보 구간 스타일을 그대로 쓴다)
-  if (
-    segment.isConnector &&
-    (fallbackMode === "car" || fallbackMode === "bicycle")
-  ) {
-    return {
-      ...routeStyleByMode[fallbackMode],
-      opacity: 0.75,
-      strokeStyle: "shortdot" as const,
-      weight: 5,
-    };
-  }
-
-  if (segment.kind === "walk") {
-    if (fallbackMode === "transit") {
-      return {
-        ...routeStyleByMode.transit,
-        color: "#a78bfa",
-        glow: "rgba(167, 139, 250, 0.18)",
-        opacity: 0.82,
-        strokeStyle: "shortdot" as const,
-        weight: 6,
-      };
-    }
-
-    return {
-      ...routeStyleByMode.walk,
-      strokeStyle: "shortdot" as const,
-      weight: 9,
-    };
-  }
-
-  if (segment.kind === "subway") {
-    return {
-      ...routeStyleByMode.transit,
-      color: segment.color ?? routeStyleByMode.transit.color,
-      weight: 8,
-    };
-  }
-
-  if (segment.kind === "bus") {
-    return {
-      ...routeStyleByMode.transit,
-      color: segment.color ?? "#2563eb",
-      weight: 7,
-    };
-  }
-
-  return {
-    ...routeStyleByMode[fallbackMode],
-    color: segment.color ?? routeStyleByMode[fallbackMode].color,
-  };
 };
 
 export const getTransferStops = (

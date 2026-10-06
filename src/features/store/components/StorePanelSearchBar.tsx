@@ -1,6 +1,5 @@
 import type { RefObject } from "react";
 import { CircleX, List, Menu, Search } from "lucide-react";
-import { benefitServicePreviewItems } from "@/features/store/constants";
 import type { MapCategory } from "@/features/store/types";
 
 type StorePanelSearchBarProps = {
@@ -118,11 +117,9 @@ export const StorePanelSearchBar = ({
       />
       <span className="absolute inset-0 flex scale-75 items-center justify-center opacity-0 transition group-hover:scale-100 group-hover:opacity-100">
         {/* 지도에 찍힌 핀(현재 페이지) 개수 기준. 전체가 더 많으면 "현재/전체"로 표시 */}
-        {activeMapCategory === "store"
-          ? hasMoreStorePages
-            ? `${pagedStoreCount}/${storeCount}`
-            : `${storeCount}개`
-          : `${benefitServicePreviewItems.length}개`}
+        {hasMoreStorePages
+          ? `${pagedStoreCount}/${storeCount}`
+          : `${storeCount}개`}
       </span>
       <span className="pointer-events-none absolute top-[calc(100%+8px)] right-0 z-50 flex translate-y-1 items-center rounded-full bg-gray-900 px-3 py-1.5 text-xs font-extrabold whitespace-nowrap text-white opacity-0 shadow-xl transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
         {activeMapCategory === "store" ? "매장 목록" : "제휴 혜택/서비스 목록"}
