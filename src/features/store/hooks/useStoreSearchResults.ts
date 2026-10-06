@@ -35,6 +35,9 @@ type UseStoreSearchResultsParams = Pick<
     | "providedServiceFilterOptions"
   > & {
     activeMapCategory: MapCategory;
+    /** 제휴 혜택 탭에 보여줄 제휴 매장(혜택 뱃지 필터 적용 후) */
+    benefitStores: StoreLocation[];
+    benefitStoresOrigin: MapSearchPoint | null;
     /** 지금 지도에 불러온 매장(기본 정렬·필터 적용 전 목록은 displayStores) */
     displayStores: StoreLocation[];
     searchQuery: string;
@@ -50,6 +53,8 @@ type UseStoreSearchResultsParams = Pick<
 export const useStoreSearchResults = ({
   activeMapCategory,
   allStores,
+  benefitStores,
+  benefitStoresOrigin,
   consultServiceFilterOptions,
   displayStores,
   filterStoresByServices,
@@ -66,11 +71,15 @@ export const useStoreSearchResults = ({
   userLocation,
 }: UseStoreSearchResultsParams) => {
   const categoryStores =
-    activeMapCategory === "store" ? filterStoresByServices(stores) : [];
-  const categoryDisplayStores =
-    activeMapCategory === "store" ? filterStoresByServices(displayStores) : [];
-  const categorySelectedStore =
     activeMapCategory === "store"
+      ? filterStoresByServices(stores)
+      : benefitStores;
+  const categoryDisplayStores =
+    activeMapCategory === "store"
+      ? filterStoresByServices(displayStores)
+      : benefitStores;
+  const categorySelectedStore =
+    activeMapCategory === "store" || activeMapCategory === "benefit"
       ? (categoryDisplayStores.find(
           (store) => store.id === selectedStore?.id,
         ) ??
@@ -120,16 +129,24 @@ export const useStoreSearchResults = ({
     ? textSearchStores
     : filterStoresByServices(textSearchStores);
   // Enter로 검색하면 검색 결과 매장들을 지도 핀·매장 목록에 보여주고, 상단 뱃지로 그 안에서 다시 거른다.
-  const unsortedMapStores = submittedSearchStores
-    ? filterStoresByServices(submittedSearchStores)
-    : hasActiveServiceFilter
-      ? categoryDisplayStores
-      : categoryStores;
+  // 제휴 혜택 탭은 매장 탭의 검색 결과·상담/서비스 필터와 무관하게 제휴 매장(혜택 뱃지로 거른 목록)만 보여준다.
+  // (매장 탭 뱃지 검색 결과가 남아 있어도 제휴 탭 지도에 일반 매장 핀이 섞이지 않도록)
+  const unsortedMapStores =
+    activeMapCategory === "benefit"
+      ? categoryStores
+      : submittedSearchStores
+        ? filterStoresByServices(submittedSearchStores)
+        : hasActiveServiceFilter
+          ? categoryDisplayStores
+          : categoryStores;
   // 매장 목록·핀 순서(A, B, C…)는 필터 여부와 상관없이 항상 기준 지점에서 가까운 순이다.
   // 기준 지점: Enter 검색 결과면 검색한 순간의 검색 중심, 그 외에는 매장을 조회한 지점.
   // (지도가 움직여 검색 중심이 바뀌어도 순서·거리 표시가 흔들리지 않도록 고정된 지점을 쓴다)
   const storesSortOrigin =
-    (submittedSearchStores ? submittedSearchOrigin : null) ??
+    (activeMapCategory === "benefit" ? benefitStoresOrigin : null) ??
+    (activeMapCategory === "store" && submittedSearchStores
+      ? submittedSearchOrigin
+      : null) ??
     storesOrigin ??
     (userLocation
       ? { lat: userLocation.lat, lng: userLocation.lng }

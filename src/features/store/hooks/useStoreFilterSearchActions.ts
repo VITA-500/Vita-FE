@@ -1,83 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import type { Dispatch, RefObject, SetStateAction } from "react";
+import { useRef } from "react";
+import type { StoreSearchActionsParams } from "@/features/store/hooks/storeSearchActionsParams";
+import { usePinAutoFitSkip } from "@/features/store/hooks/usePinAutoFitSkip";
 import type { MapViewport } from "@/features/store/lib/storePanelStores";
-import type { useNearbyStores } from "@/features/store/hooks/useNearbyStores";
-import type { useServiceFilters } from "@/features/store/hooks/useServiceFilters";
-import type { useStoreMapState } from "@/features/store/hooks/useStoreMapState";
-import type { useStorePanelLayout } from "@/features/store/hooks/useStorePanelLayout";
-import type { useStoreRoute } from "@/features/store/hooks/useStoreRoute";
-import type { useStoreSearchHistory } from "@/features/store/hooks/useStoreSearchHistory";
-import type { useStoreSearchResults } from "@/features/store/hooks/useStoreSearchResults";
-import type { useStoreSearchState } from "@/features/store/hooks/useStoreSearchState";
-import type { useStoreSelectionActions } from "@/features/store/hooks/useStoreSelectionActions";
-import type { MapSearchPoint } from "@/features/store/lib/storePanelStores";
-import type { StoreLocation } from "@/features/store/types";
 import { showToast } from "@/shared/ui/ToastProvider";
 
-/** 마지막 필터 해제 후 매장을 다시 불러오는 동안 지도를 자동으로 옮기지 않는 시간(ms) */
-const PIN_AUTO_FIT_SKIP_MS = 2500;
-
-/** 검색 동작 hook(필터·텍스트)이 함께 받는 값. 지도 패널의 상태·다른 hook 결과를 그대로 넘긴다. */
-export type StoreSearchActionsParams = Pick<
-  ReturnType<typeof useStoreMapState>,
-  "searchQuery" | "setSearchQuery"
-> &
-  Pick<
-    ReturnType<typeof useServiceFilters>,
-    | "consultServiceFilterOptions"
-    | "consultServiceFilters"
-    | "filterStoresByServices"
-    | "hasActiveServiceFilter"
-    | "providedServiceFilterOptions"
-    | "providedServiceFilters"
-    | "setConsultServiceFilters"
-    | "setProvidedServiceFilters"
-  > &
-  Pick<
-    ReturnType<typeof useStoreSearchState>,
-    | "areaSearchRequestIdRef"
-    | "loadedSearchAreaKeyRef"
-    | "loadSearchAreaStores"
-    | "mapViewport"
-    | "restorePreTagSearchStores"
-    | "searchAddedStoreIdsRef"
-    | "searchCenter"
-    | "searchVisibleArea"
-    | "setAllStores"
-    | "setMapViewport"
-    | "setSubmittedSearchStores"
-    | "submittedSearchStores"
-    | "updateMapCenter"
-  > &
-  Pick<
-    ReturnType<typeof useStoreSearchResults>,
-    "isTagSearchQuery" | "searchedServices"
-  > &
-  Pick<
-    ReturnType<typeof useNearbyStores>,
-    "lastNearbyLookupKeyRef" | "nearbyLookup" | "updateStoresByLocation"
-  > &
-  Pick<ReturnType<typeof useStoreSelectionActions>, "handleStoreSelect"> &
-  Pick<
-    ReturnType<typeof useStoreRoute>,
-    "resetRouteState" | "routeDestinationStoreId"
-  > &
-  Pick<
-    ReturnType<typeof useStorePanelLayout>,
-    "setIsSearchHistoryOpen" | "setIsStoreListCollapsed"
-  > &
-  Pick<ReturnType<typeof useStoreSearchHistory>, "addHistory"> & {
-    /** 지금 정보 카드가 떠 있는(또는 길찾기 도착) 매장 */
-    mapSelectedStore?: StoreLocation;
-    searchInputRef: RefObject<HTMLInputElement | null>;
-    searchPoint: MapSearchPoint | null;
-    setHasSelectedStoreInfo: Dispatch<SetStateAction<boolean>>;
-    setSearchPoint: Dispatch<SetStateAction<MapSearchPoint | null>>;
-    setSoloStoreId: Dispatch<SetStateAction<string>>;
-    setStores: Dispatch<SetStateAction<StoreLocation[]>>;
-  };
+export type { StoreSearchActionsParams };
 
 /**
  * 필터 뱃지(태그) 검색: 뱃지 변경, 태그 검색 시작·갱신, 검색어에서 찾은 서비스로 검색, 필터 해제,
@@ -120,16 +49,9 @@ export const useStoreFilterSearchActions = ({
   updateMapCenter,
   updateStoresByLocation,
 }: StoreSearchActionsParams) => {
-  // true인 동안 핀 자동 맞춤(지도 이동)을 하지 않는다. 필터 해제 직후 보던 화면을 그대로 두기 위해 쓴다.
-  const isPinAutoFitSkippedRef = useRef(false);
-  const pinAutoFitSkipTimeoutRef = useRef<number | undefined>(undefined);
-
-  useEffect(
-    () => () => {
-      window.clearTimeout(pinAutoFitSkipTimeoutRef.current);
-    },
-    [],
-  );
+  // 필터 해제 직후 잠시 핀 자동 맞춤(지도 이동)을 멈춰 보던 화면을 그대로 둔다.
+  const { isPinAutoFitSkippedRef, skipPinAutoFitForAWhile } =
+    usePinAutoFitSkip();
   // 뱃지(필터) 검색 중 사용자가 지도를 끌어 옮겼다: 이동이 끝나면(idle) 보이는 영역에서 다시 찾는다.
   const shouldRefreshTagSearchOnIdleRef = useRef(false);
   /**
@@ -176,11 +98,7 @@ export const useStoreFilterSearchActions = ({
     // 그 화면의 매장(필터 없이)을 불러와, 사용자가 그 지역에서 다시 검색하거나 뱃지를 고를 수 있게 한다.
     if (tags.length === 0) {
       restorePreTagSearchStores();
-      isPinAutoFitSkippedRef.current = true;
-      window.clearTimeout(pinAutoFitSkipTimeoutRef.current);
-      pinAutoFitSkipTimeoutRef.current = window.setTimeout(() => {
-        isPinAutoFitSkippedRef.current = false;
-      }, PIN_AUTO_FIT_SKIP_MS);
+      skipPinAutoFitForAWhile();
       updateStoresByLocation(mapViewport?.center ?? searchCenter);
       return;
     }

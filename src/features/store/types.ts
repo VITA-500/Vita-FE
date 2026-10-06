@@ -3,9 +3,14 @@ export type StoreLocation = {
   name: string;
   address: string;
   businessHours?: string;
+  benefitBrand?: string;
+  benefitCategory?: string;
+  benefitId?: number;
+  benefitName?: string;
   consultServices?: string[];
   phone: string;
   providedServices?: string[];
+  storeType?: "PHONE" | "PARTNER";
   lat: number;
   lng: number;
   distanceText?: string;

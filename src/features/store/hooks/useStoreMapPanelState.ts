@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useBenefitStores } from "@/features/store/hooks/useBenefitStores";
 import { useServiceFilters } from "@/features/store/hooks/useServiceFilters";
 import { useStoreMapState } from "@/features/store/hooks/useStoreMapState";
 import { useStorePagination } from "@/features/store/hooks/useStorePagination";
@@ -86,6 +87,10 @@ export const useStoreMapPanelState = () => {
     submittedSearchStores,
   } = searchState;
   const route = useStoreRoute(userLocation);
+  const benefit = useBenefitStores({
+    activeMapCategory,
+    userLocation,
+  });
   const {
     isRouteLoading,
     routeDestinationStoreId,
@@ -107,6 +112,8 @@ export const useStoreMapPanelState = () => {
   const results = useStoreSearchResults({
     activeMapCategory,
     allStores,
+    benefitStores: benefit.filteredBenefitStores,
+    benefitStoresOrigin: benefit.benefitStoresOrigin,
     consultServiceFilterOptions,
     displayStores,
     filterStoresByServices,
@@ -171,11 +178,15 @@ export const useStoreMapPanelState = () => {
     ...consultServiceFilters,
     ...providedServiceFilters,
   ];
-  const markerColorInfoById = buildMarkerColorInfoById({
-    activeServiceFilters,
-    colorByValue: serviceFilterColorByValue,
-    stores: mapStores,
-  });
+  // 핀 색: 탭마다 필터가 다르므로 매장 탭은 상담·서비스 필터, 제휴 탭은 혜택 뱃지 필터 기준으로 칠한다.
+  const markerColorInfoById =
+    activeMapCategory === "benefit"
+      ? benefit.benefitMarkerColorInfoById
+      : buildMarkerColorInfoById({
+          activeServiceFilters,
+          colorByValue: serviceFilterColorByValue,
+          stores: mapStores,
+        });
 
   const { otherMapStores, visibleMapStores } = getMapStoreVisibility({
     mapStores,
@@ -229,6 +240,7 @@ export const useStoreMapPanelState = () => {
     ...mapState,
     ...searchState,
     ...route,
+    ...benefit,
     ...filters,
     ...results,
     ...pagination,

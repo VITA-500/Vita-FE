@@ -53,7 +53,11 @@ type UseStoreSelectionActionsParams = Pick<
     ReturnType<typeof useLocationPermission>,
     "openLocationPermissionModal"
   > &
-  Pick<ReturnType<typeof useStorePanelLayout>, "setIsSearchHistoryOpen"> & {
+  Pick<
+    ReturnType<typeof useStorePanelLayout>,
+    "setIsSearchHistoryOpen" | "setIsStoreListCollapsed"
+  > & {
+    activeMapCategory: MapCategory;
     routeDestinationStore?: StoreLocation;
     setActiveMapCategory: Dispatch<SetStateAction<MapCategory>>;
     setFocusPoint: Dispatch<SetStateAction<MapSearchPoint | null>>;
@@ -69,6 +73,7 @@ type UseStoreSelectionActionsParams = Pick<
 
 /** 매장 선택·길찾기 시작·내 위치로 이동·길찾기 후 주변 매장 보기 */
 export const useStoreSelectionActions = ({
+  activeMapCategory,
   categoryDisplayStores,
   categoryStores,
   hasFocusedInitialLocationRef,
@@ -85,6 +90,7 @@ export const useStoreSelectionActions = ({
   setFocusPoint,
   setHasSelectedStoreInfo,
   setIsSearchHistoryOpen,
+  setIsStoreListCollapsed,
   setIsWaitingForPinSelection,
   setSearchAnchorSource,
   setSearchPoint,
@@ -174,9 +180,10 @@ export const useStoreSelectionActions = ({
     startRoute(store.id);
     handleStoreSelect(store.id, { focusMap: true });
 
-    // 모바일은 화면이 좁아 카드가 경로를 가리므로 기본으로 닫아 둔다(도착 핀을 누르면 다시 열림).
+    // 모바일은 화면이 좁아 카드·매장 목록이 경로를 가리므로 기본으로 닫아 둔다(도착 핀을 누르면 카드가 다시 열림).
     if (window.innerWidth < 768) {
       setHasSelectedStoreInfo(false);
+      setIsStoreListCollapsed(true);
     }
 
     if (userLocation) {
@@ -213,6 +220,24 @@ export const useStoreSelectionActions = ({
     setHasSelectedStoreInfo(false);
     setSoloStoreId("");
   };
+  /**
+   * 목록 토글(매장/제휴 혜택) 전환. 이전 탭에서 고른 매장의 정보 카드·길찾기는 새 탭 목록과 맞지 않으므로 닫는다.
+   */
+  const changeMapCategory = (category: MapCategory) => {
+    if (category === activeMapCategory) {
+      return;
+    }
+
+    if (routeDestinationStoreId) {
+      resetRouteState();
+    }
+
+    setActiveMapCategory(category);
+    setHasSelectedStoreInfo(false);
+    setIsWaitingForPinSelection(false);
+    setSoloStoreId("");
+    setSelectedStoreId("");
+  };
   const showNearbyStoresAfterRoute = () => {
     const currentPoint = routeDestinationStore
       ? { lat: routeDestinationStore.lat, lng: routeDestinationStore.lng }
@@ -221,6 +246,18 @@ export const useStoreSelectionActions = ({
         : defaultMapLocation;
 
     resetRouteState();
+
+    // 제휴 혜택 탭에서 길찾기를 했다면 탭을 유지하고, 이미 불러온 제휴 매장 핀으로 돌아간다.
+    // (매장 탭으로 넘기거나 주변 일반 매장을 다시 조회하지 않는다)
+    if (activeMapCategory === "benefit") {
+      setIsSearchHistoryOpen(false);
+      setHasSelectedStoreInfo(false);
+      setSoloStoreId("");
+      setSelectedStoreId("");
+      setFocusPoint(currentPoint);
+      return;
+    }
+
     setActiveMapCategory("store");
     setSearchQuery("");
     setIsSearchHistoryOpen(false);
@@ -269,6 +306,7 @@ export const useStoreSelectionActions = ({
   };
 
   return {
+    changeMapCategory,
     closeSelectedStoreInfo,
     focusUserLocation,
     handleRouteStart,

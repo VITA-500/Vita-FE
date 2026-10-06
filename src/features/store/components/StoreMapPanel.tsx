@@ -1,6 +1,7 @@
 "use client";
 
 import { StoreMapPreview } from "@/features/store/components/StoreMapPreview";
+import { StorePanelBenefitFilters } from "@/features/store/components/StorePanelBenefitFilters";
 import { StorePanelInfoBubble } from "@/features/store/components/StorePanelInfoBubble";
 import { StorePanelModals } from "@/features/store/components/StorePanelModals";
 import { StorePanelRouteSearchOverlay } from "@/features/store/components/StorePanelRouteSearchOverlay";
@@ -22,7 +23,13 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     activeStorePage,
     addSearchHistory,
     applyServiceFilterSearch,
+    benefitCategories,
+    benefitServiceFilterOptions,
+    benefitServiceFilters,
     cancelReservation,
+    changeBenefitCategory,
+    changeMapCategory,
+    clearBenefitServiceFilters,
     changeRouteMode,
     clearSearchHistory,
     clearServiceFilters,
@@ -45,6 +52,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     handleServiceFilterChange,
     handleStoreSelect,
     handleViewportChange,
+    hasActiveBenefitServiceFilter,
     hasActiveServiceFilter,
     hasMoreStorePages,
     hasSelectedStoreInfo,
@@ -59,6 +67,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     isSearchHistoryOpen,
     isStoreListCollapsed,
     isStorePaginationOn,
+    isBenefitStoreLoading,
     isTagSearchQuery,
     isToastBackdropVisible,
     isWaitingForPinSelection,
@@ -96,7 +105,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     searchQuery,
     searchResultStores,
     selectSearchHistory,
-    setActiveMapCategory,
+    selectedBenefitCategory,
+    setBenefitServiceFilters,
     setIsOtherStoresVisible,
     setIsStoreListCollapsed,
     setRouteMapReadyKey,
@@ -116,6 +126,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     userLocation,
     visibleMapStores,
   } = useStoreMapPanel();
+  const isBenefitCategory = activeMapCategory === "benefit";
 
   return (
     <div
@@ -198,8 +209,9 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         onMapPointSelect={(point) => {
           setSearchPoint(point);
           // 뱃지(필터) 검색 중이면 이동이 끝난 뒤 보이는 영역에서 자동으로 다시 찾는다.
+          // 제휴 혜택 탭에서는 매장 뱃지 검색을 다시 돌리지 않는다(제휴 탭 지도에 매장 결과가 섞이지 않도록).
           shouldRefreshTagSearchOnIdleRef.current =
-            isTagSearchQuery && hasActiveServiceFilter;
+            !isBenefitCategory && isTagSearchQuery && hasActiveServiceFilter;
           // 사용자가 지도를 직접 옮김: 이후 텍스트 검색 정렬 중심은 보이는 지도 중심
           setSearchAnchorSource("map");
         }}
@@ -229,11 +241,19 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
             >
               <StorePanelSearchBar
                 activeMapCategory={activeMapCategory}
-                hasActiveServiceFilter={hasActiveServiceFilter}
+                hasActiveServiceFilter={
+                  isBenefitCategory
+                    ? hasActiveBenefitServiceFilter
+                    : hasActiveServiceFilter
+                }
                 hasMoreStorePages={hasMoreStorePages}
                 isStoreListCollapsed={isStoreListCollapsed}
                 isTagSearchQuery={isTagSearchQuery}
-                onClearFilters={clearServiceFilters}
+                onClearFilters={
+                  isBenefitCategory
+                    ? clearBenefitServiceFilters
+                    : clearServiceFilters
+                }
                 onInputFocus={openSearchHistory}
                 onInputMouseDown={toggleSearchHistoryOnInputMouseDown}
                 onOpenSidebar={onOpenSidebar}
@@ -273,12 +293,15 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                 <StorePanelStoreList
                   activeMapCategory={activeMapCategory}
                   activeStorePage={activeStorePage}
+                  benefitCategories={benefitCategories}
                   currentStorePage={currentStorePage}
                   firstPageSize={firstPageSize}
                   hasMoreStorePages={hasMoreStorePages}
+                  isBenefitStoreLoading={isBenefitStoreLoading}
                   isStorePaginationOn={isStorePaginationOn}
                   mapSelectedStoreId={mapSelectedStoreId}
-                  onCategoryChange={setActiveMapCategory}
+                  onBenefitCategoryChange={changeBenefitCategory}
+                  onCategoryChange={changeMapCategory}
                   onClose={() => setIsStoreListCollapsed(true)}
                   onPageChange={goToStorePage}
                   onSelectStore={(storeId) =>
@@ -292,16 +315,26 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                   panelRef={storeListPanelRef}
                   storeCount={mapStores.length}
                   storePageCount={storePageCount}
+                  selectedBenefitCategory={selectedBenefitCategory}
                 />
               )}
             </div>
-            <StorePanelServiceFilters
-              consultOptions={consultServiceFilterOptions}
-              consultValue={consultServiceFilters}
-              onChange={handleServiceFilterChange}
-              providedOptions={providedServiceFilterOptions}
-              providedValue={providedServiceFilters}
-            />
+            {/* 탭마다 필터 대상·로직이 달라 뱃지 줄을 바꿔 보여준다(매장: 상담·서비스, 제휴: 혜택/서비스). */}
+            {isBenefitCategory ? (
+              <StorePanelBenefitFilters
+                onChange={setBenefitServiceFilters}
+                options={benefitServiceFilterOptions}
+                value={benefitServiceFilters}
+              />
+            ) : (
+              <StorePanelServiceFilters
+                consultOptions={consultServiceFilterOptions}
+                consultValue={consultServiceFilters}
+                onChange={handleServiceFilterChange}
+                providedOptions={providedServiceFilterOptions}
+                providedValue={providedServiceFilters}
+              />
+            )}
           </div>
         </div>
       </div>
