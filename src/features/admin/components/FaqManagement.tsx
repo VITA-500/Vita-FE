@@ -248,21 +248,11 @@ export const FaqManagement = () => {
                     <span>#{faq.faqId}</span>
                     <span>{faq.category}</span>
                     <span>{faq.createdAt.slice(0, 10)}</span>
-                    <span>수정 {formatKoreanDate(faq.updatedAt)}</span>
                   </div>
                 </div>
               </div>
 
               <div className="mt-4 flex flex-wrap justify-end gap-1.5">
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  className="h-9 w-9 rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white"
-                  aria-label="FAQ 수정"
-                  onClick={() => setEditingFaqId(faq.faqId)}
-                >
-                  <Edit2 size={20} />
-                </Button>
                 {faq.status === "ACTIVE" ? (
                   <Button
                     variant="dangerGhost"
@@ -286,6 +276,15 @@ export const FaqManagement = () => {
                     활성화
                   </Button>
                 )}
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="h-9 w-9 rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                  aria-label="FAQ 수정"
+                  onClick={() => setEditingFaqId(faq.faqId)}
+                >
+                  <Edit2 size={20} />
+                </Button>
                 <Button
                   variant="dangerGhost"
                   size="xs"
@@ -318,7 +317,6 @@ export const FaqManagement = () => {
                 <th className="px-4 py-4 text-left">질문</th>
                 <th className="w-[22%] px-4 py-4 text-left">카테고리</th>
                 <th className="w-[128px] px-4 py-4 text-center">등록일</th>
-                <th className="w-[128px] px-4 py-4 text-center">수정일</th>
                 <th className="w-[270px] px-5 py-4 text-center">관리</th>
               </tr>
             </thead>
@@ -329,7 +327,7 @@ export const FaqManagement = () => {
                 ))
               ) : faqs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="h-[640px] px-5 py-0">
+                  <td colSpan={5} className="h-[640px] px-5 py-0">
                     <AdminEmptyState
                       title="조건에 맞는 FAQ가 없습니다."
                       description="검색어와 카테고리 필터를 조정하거나 새 FAQ를 등록해 주세요."
@@ -355,20 +353,8 @@ export const FaqManagement = () => {
                       <td className="px-4 py-4 text-center font-semibold text-gray-400">
                         {formatKoreanDate(faq.createdAt)}
                       </td>
-                      <td className="px-4 py-4 text-center font-semibold text-gray-400">
-                        {formatKoreanDate(faq.updatedAt)}
-                      </td>
                       <td className="px-5 py-4 text-center">
                         <div className="inline-flex items-center justify-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-12 w-12 rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white"
-                            aria-label="FAQ 수정"
-                            onClick={() => setEditingFaqId(faq.faqId)}
-                          >
-                            <Edit2 size={30} />
-                          </Button>
                           {faq.status === "ACTIVE" ? (
                             <Button
                               variant="dangerGhost"
@@ -393,6 +379,15 @@ export const FaqManagement = () => {
                             </Button>
                           )}
                           <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-12 w-12 rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                            aria-label="FAQ 수정"
+                            onClick={() => setEditingFaqId(faq.faqId)}
+                          >
+                            <Edit2 size={30} />
+                          </Button>
+                          <Button
                             variant="dangerGhost"
                             size="sm"
                             className="h-12 w-12 rounded-lg p-0"
@@ -413,7 +408,7 @@ export const FaqManagement = () => {
                       aria-hidden="true"
                       className="h-20"
                     >
-                      <td colSpan={6} />
+                      <td colSpan={5} />
                     </tr>
                   ))}
                 </>
@@ -668,6 +663,18 @@ const FaqFormModal = ({
         </>
       }
     >
+      {mode === "edit" && initialValues && (
+        <div className="mb-5 flex flex-wrap gap-x-4 gap-y-1 rounded-2xl bg-gray-50 px-4 py-3 text-xs font-bold text-gray-400 dark:bg-white/5">
+          <span>등록일 {formatKoreanDate(initialValues.createdAt)}</span>
+          <span>
+            수정일{" "}
+            {initialValues.updatedAt
+              ? formatKoreanDate(initialValues.updatedAt)
+              : "수정 이력 없음"}
+          </span>
+        </div>
+      )}
+
       <form
         id={formId}
         className="grid gap-5 sm:grid-cols-2"
@@ -735,13 +742,10 @@ const FaqSkeletonRow = () => (
     <td className="px-4 py-4">
       <div className="bg-surface-muted mx-auto h-4 w-20 animate-pulse rounded-full dark:bg-white/10" />
     </td>
-    <td className="px-4 py-4">
-      <div className="bg-surface-muted mx-auto h-4 w-20 animate-pulse rounded-full dark:bg-white/10" />
-    </td>
     <td className="px-5 py-4">
       <div className="mx-auto flex justify-center gap-3">
-        <div className="bg-surface-muted h-10 w-10 animate-pulse rounded-lg dark:bg-white/10" />
         <div className="bg-surface-muted h-10 w-24 animate-pulse rounded-lg dark:bg-white/10" />
+        <div className="bg-surface-muted h-10 w-10 animate-pulse rounded-lg dark:bg-white/10" />
         <div className="bg-surface-muted h-10 w-10 animate-pulse rounded-lg dark:bg-white/10" />
       </div>
     </td>

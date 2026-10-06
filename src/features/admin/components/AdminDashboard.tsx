@@ -1,21 +1,57 @@
 "use client";
 
-import { AlertTriangle, ChevronRight } from "lucide-react";
+import { AlertTriangle, MessageSquareWarning } from "lucide-react";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
-import type { AdminFaqCategory } from "@/features/admin/types";
 import { routes } from "@/shared/constants/routes";
 import { formatKoreanMonthDay } from "@/shared/lib/date";
 import { ButtonLink } from "@/shared/ui/Button";
 import { Card, CardContent, CardHeader } from "@/shared/ui/Card";
 import { StatCard } from "@/shared/ui/StatCard";
 
+type UnresolvedFaqCandidate = {
+  count: number;
+  failReason: "LOW_SIMILARITY" | "NO_MATCH" | "ANSWER_FAILED";
+  id: number;
+  lastOccurredAt: string;
+  question: string;
+  source: "CHAT" | "SEARCH";
+};
+
+const unresolvedFaqCandidates: UnresolvedFaqCandidate[] = [
+  {
+    id: 1,
+    question: "해외에서 데이터가 갑자기 안 터질 때 바로 확인할 설정이 있나요?",
+    source: "CHAT",
+    failReason: "LOW_SIMILARITY",
+    count: 18,
+    lastOccurredAt: "2026-10-06T08:45:00",
+  },
+  {
+    id: 2,
+    question: "가족 결합 중 한 명만 알뜰폰으로 이동하면 할인은 어떻게 되나요?",
+    source: "CHAT",
+    failReason: "NO_MATCH",
+    count: 11,
+    lastOccurredAt: "2026-10-05T21:10:00",
+  },
+  {
+    id: 3,
+    question: "분실 신고 후 유심 재발급까지 대리점 방문 없이 가능한가요?",
+    source: "SEARCH",
+    failReason: "ANSWER_FAILED",
+    count: 7,
+    lastOccurredAt: "2026-10-05T18:32:00",
+  },
+];
+
+const failReasonLabels: Record<UnresolvedFaqCandidate["failReason"], string> = {
+  ANSWER_FAILED: "답변 실패",
+  LOW_SIMILARITY: "유사도 낮음",
+  NO_MATCH: "검색 결과 없음",
+};
+
 export const AdminDashboard = () => {
-  const { faqTotalCount, faqs, storeDetails, storeTotalCount, stores } =
-    useAdminData();
-  const activeFaqCount = faqs.filter((faq) => faq.status === "ACTIVE").length;
-  const inactiveFaqCount = faqs.filter(
-    (faq) => faq.status === "INACTIVE",
-  ).length;
+  const { storeDetails } = useAdminData();
   const storesMissingPhone = storeDetails.filter(
     (store) => !store.phone?.trim(),
   );
@@ -31,49 +67,29 @@ export const AdminDashboard = () => {
     storesMissingBusinessHours.length +
     storesMissingServices.length;
 
-  const recentFaqs = faqs
-    .toSorted((first, second) =>
-      second.createdAt.localeCompare(first.createdAt),
-    )
-    .slice(0, 5);
-  const recentStores = stores
-    .toSorted((first, second) =>
-      second.createdAt.localeCompare(first.createdAt),
-    )
-    .slice(0, 5);
-  const categoryCounts = faqs.reduce(
-    (acc, faq) => {
-      acc[faq.category] = (acc[faq.category] ?? 0) + 1;
-      return acc;
-    },
-    {} as Partial<Record<AdminFaqCategory, number>>,
+  const unresolvedRepeatCount = unresolvedFaqCandidates.reduce(
+    (sum, candidate) => sum + candidate.count,
+    0,
   );
-  const categoryRows = Object.entries(categoryCounts)
-    .toSorted(([, firstCount], [, secondCount]) => secondCount - firstCount)
-    .slice(0, 6);
-  const maxCategoryCount = Math.max(
-    1,
-    ...categoryRows.map(([, count]) => count),
-  );
+  const todayUnresolvedCount = unresolvedFaqCandidates.filter((candidate) =>
+    candidate.lastOccurredAt.startsWith("2026-10-06"),
+  ).length;
 
   const adminStats = [
     {
-      label: "FAQ 관리 대상",
-      value: faqTotalCount.toLocaleString("ko-KR"),
-      helper: `현재 목록 ${faqs.length.toLocaleString("ko-KR")}개`,
+      label: "미해결 질문",
+      value: unresolvedFaqCandidates.length.toLocaleString("ko-KR"),
+      helper: "FAQ 등록 후보",
     },
     {
-      label: "활성 FAQ",
-      value: activeFaqCount.toLocaleString("ko-KR"),
-      helper:
-        inactiveFaqCount > 0
-          ? `비활성 ${inactiveFaqCount.toLocaleString("ko-KR")}개`
-          : "현재 필터 기준",
+      label: "반복 문의",
+      value: unresolvedRepeatCount.toLocaleString("ko-KR"),
+      helper: "미해결 질문 누적 발생",
     },
     {
-      label: "대리점 관리 대상",
-      value: storeTotalCount.toLocaleString("ko-KR"),
-      helper: `현재 목록 ${stores.length.toLocaleString("ko-KR")}개`,
+      label: "오늘 발생",
+      value: todayUnresolvedCount.toLocaleString("ko-KR"),
+      helper: "최근 미해결 질문",
     },
     {
       label: "데이터 점검",
@@ -104,153 +120,59 @@ export const AdminDashboard = () => {
         ))}
       </section>
 
-      <section className="mt-8 grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+      <section className="mt-8">
+        <Card>
+          <CardHeader
+            title="미해결 질문 큐"
+            description="반복되는 답변 실패 질문을 확인하고 FAQ로 전환합니다."
+          />
+          <CardContent>
+            <div className="space-y-3">
+              {unresolvedFaqCandidates.map((candidate) => (
+                <UnresolvedQuestionRow
+                  key={candidate.id}
+                  candidate={candidate}
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mt-8">
         <Card>
           <CardHeader
             title="데이터 품질 점검"
-            description="고객 화면과 상담 품질에 바로 영향을 주는 누락 항목입니다."
+            description={
+              dataQualityIssueCount > 0
+                ? "고객 화면과 상담 품질에 바로 영향을 주는 누락 항목입니다."
+                : "현재 확인된 필수 데이터 누락은 없습니다."
+            }
           />
-          <CardContent className="space-y-3">
-            <QualityRow
-              label="전화번호 누락"
-              count={storesMissingPhone.length}
-              description="전화 연결 버튼과 매장 상세 안내에 영향"
-            />
-            <QualityRow
-              label="운영시간 누락"
-              count={storesMissingBusinessHours.length}
-              description="방문 전 안내 정확도에 영향"
-            />
-            <QualityRow
-              label="서비스 정보 누락"
-              count={storesMissingServices.length}
-              description="상담 가능 업무와 제공 서비스 필터에 영향"
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader
-            title="FAQ 카테고리 분포"
-            description="특정 카테고리에 데이터가 몰려 있는지 확인합니다."
-          />
-          <CardContent className="space-y-3">
-            {categoryRows.length === 0 ? (
-              <p className="text-text-secondary py-8 text-center text-sm font-bold">
-                표시할 FAQ 데이터가 없습니다.
-              </p>
+          <CardContent>
+            {dataQualityIssueCount === 0 ? (
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-extrabold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+                점검할 누락 항목이 없습니다.
+              </div>
             ) : (
-              categoryRows.map(([category, count]) => (
-                <div key={category} className="space-y-2">
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="font-extrabold text-gray-700 dark:text-gray-200">
-                      {category}
-                    </span>
-                    <span className="font-bold text-gray-400">{count}개</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-gray-100 dark:bg-white/10">
-                    <div
-                      className="bg-brand h-2 rounded-full"
-                      style={{
-                        width: `${Math.max(8, (count / maxCategoryCount) * 100)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              ))
+              <div className="grid gap-3 md:grid-cols-3">
+                <QualityRow
+                  label="전화번호 누락"
+                  count={storesMissingPhone.length}
+                  description="전화 연결 버튼과 매장 상세 안내에 영향"
+                />
+                <QualityRow
+                  label="운영시간 누락"
+                  count={storesMissingBusinessHours.length}
+                  description="방문 전 안내 정확도에 영향"
+                />
+                <QualityRow
+                  label="서비스 정보 누락"
+                  count={storesMissingServices.length}
+                  description="상담 가능 업무와 제공 서비스 필터에 영향"
+                />
+              </div>
             )}
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="mt-5 grid gap-5 xl:grid-cols-2">
-        <Card>
-          <CardHeader
-            title="최근 등록 FAQ"
-            description="방금 추가된 FAQ의 카테고리와 상태를 확인합니다."
-            action={
-              <ButtonLink
-                href={routes.adminFaqs}
-                variant="secondary"
-                size="sm"
-                rightIcon={<ChevronRight size={16} />}
-              >
-                FAQ 관리
-              </ButtonLink>
-            }
-          />
-          <CardContent>
-            <RecentList
-              emptyText="최근 등록 FAQ가 없습니다."
-              rows={recentFaqs.map((faq) => ({
-                id: `#${faq.faqId}`,
-                meta: `${faq.category} · ${formatKoreanMonthDay(faq.createdAt)}`,
-                title: faq.question,
-              }))}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader
-            title="최근 등록 대리점"
-            description="신규 대리점 데이터가 올바르게 들어왔는지 확인합니다."
-            action={
-              <ButtonLink
-                href={routes.adminStores}
-                size="sm"
-                rightIcon={<ChevronRight size={16} />}
-              >
-                대리점 관리
-              </ButtonLink>
-            }
-          />
-          <CardContent>
-            <RecentList
-              emptyText="최근 등록 대리점이 없습니다."
-              rows={recentStores.map((store) => ({
-                id: `#${store.storeId}`,
-                meta: `${formatKoreanMonthDay(store.createdAt)} · ${store.address}`,
-                title: store.name,
-              }))}
-            />
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="mt-5">
-        <Card>
-          <CardHeader
-            title="관리 바로가기"
-            description="자주 쓰는 운영 화면으로 이동합니다."
-          />
-          <CardContent className="grid gap-3 sm:grid-cols-3">
-            <ButtonLink
-              href={routes.adminFaqs}
-              variant="secondary"
-              size="sm"
-              fullWidth
-              rightIcon={<ChevronRight size={16} />}
-            >
-              FAQ 관리
-            </ButtonLink>
-            <ButtonLink
-              href={routes.adminStores}
-              size="sm"
-              fullWidth
-              rightIcon={<ChevronRight size={16} />}
-            >
-              대리점 관리
-            </ButtonLink>
-            <ButtonLink
-              href={routes.adminPartners}
-              variant="secondary"
-              size="sm"
-              fullWidth
-              rightIcon={<ChevronRight size={16} />}
-            >
-              제휴점 관리
-            </ButtonLink>
           </CardContent>
         </Card>
       </section>
@@ -283,44 +205,56 @@ const QualityRow = ({ count, description, label }: QualityRowProps) => (
   </div>
 );
 
-type RecentListProps = {
-  emptyText: string;
-  rows: Array<{
-    id: string;
-    meta: string;
-    title: string;
-  }>;
+type UnresolvedQuestionRowProps = {
+  candidate: UnresolvedFaqCandidate;
 };
 
-const RecentList = ({ emptyText, rows }: RecentListProps) => {
-  if (rows.length === 0) {
-    return (
-      <p className="text-text-secondary py-8 text-center text-sm font-bold">
-        {emptyText}
+const UnresolvedQuestionRow = ({ candidate }: UnresolvedQuestionRowProps) => (
+  <div className="border-border-soft grid gap-4 rounded-2xl border px-4 py-3 md:grid-cols-[1fr_92px_120px_92px_152px] md:items-center dark:border-white/10">
+    <div className="min-w-0">
+      <div className="mb-2 flex flex-wrap items-center gap-2 md:hidden">
+        <span className="bg-brand-soft text-brand rounded-full px-2.5 py-1 text-xs font-extrabold">
+          {failReasonLabels[candidate.failReason]}
+        </span>
+        <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-500 dark:bg-white/10 dark:text-gray-300">
+          {candidate.source}
+        </span>
+      </div>
+      <p className="line-clamp-2 text-sm font-extrabold text-gray-800 dark:text-gray-100">
+        {candidate.question}
       </p>
-    );
-  }
-
-  return (
-    <div className="divide-border-soft divide-y dark:divide-white/10">
-      {rows.map((row) => (
-        <div
-          key={`${row.id}-${row.title}`}
-          className="py-3 first:pt-0 last:pb-0"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <p className="min-w-0 truncate text-sm font-extrabold text-gray-800 dark:text-gray-100">
-              {row.title}
-            </p>
-            <span className="shrink-0 text-xs font-bold text-gray-400">
-              {row.id}
-            </span>
-          </div>
-          <p className="text-text-secondary mt-1 truncate text-xs font-semibold">
-            {row.meta}
-          </p>
-        </div>
-      ))}
+      <p className="mt-1 text-xs font-bold text-gray-400">
+        출처 {candidate.source}
+      </p>
     </div>
-  );
-};
+
+    <div className="text-brand flex items-center gap-1">
+      <MessageSquareWarning size={17} />
+      <span className="text-lg font-black">
+        {candidate.count.toLocaleString("ko-KR")}
+      </span>
+      <span className="text-xs font-bold text-gray-400">회</span>
+    </div>
+
+    <span className="bg-brand-soft text-brand hidden w-fit rounded-full px-2.5 py-1 text-xs font-extrabold md:inline-flex">
+      {failReasonLabels[candidate.failReason]}
+    </span>
+
+    <span className="text-xs font-bold text-gray-400">
+      {formatKoreanMonthDay(candidate.lastOccurredAt)}
+    </span>
+
+    <div className="flex flex-wrap justify-end gap-2 md:flex-nowrap">
+      <ButtonLink href={routes.adminFaqs} variant="secondary" size="xs">
+        FAQ 등록
+      </ButtonLink>
+      <button
+        type="button"
+        className="h-8 rounded-2xl px-3 text-xs font-bold text-gray-400"
+        disabled
+      >
+        무시
+      </button>
+    </div>
+  </div>
+);

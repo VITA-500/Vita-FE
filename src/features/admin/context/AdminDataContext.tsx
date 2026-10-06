@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import {
   createContext,
   type ReactNode,
@@ -26,6 +27,9 @@ import type {
 } from "@/features/admin/types";
 import { env } from "@/shared/config/env";
 
+const getInitialStoreType = (pathname?: string | null): AdminStoreType =>
+  pathname?.includes("/admin/partners") ? "PARTNER" : "PHONE";
+
 type FaqSaveInput = Pick<AdminFaq, "category" | "question"> & {
   answer: string;
   subcategory?: string;
@@ -33,7 +37,13 @@ type FaqSaveInput = Pick<AdminFaq, "category" | "question"> & {
 
 type StoreSaveInput = Omit<
   AdminStoreDetail,
-  "createdAt" | "storeId" | "storeType" | "updatedAt"
+  | "brand"
+  | "category"
+  | "benefitName"
+  | "createdAt"
+  | "storeId"
+  | "storeType"
+  | "updatedAt"
 >;
 type StoreSortField = "createdAt" | "name" | "updatedAt";
 type StoreSortDirection = "asc" | "desc";
@@ -94,6 +104,8 @@ type AdminDataContextValue = {
 const AdminDataContext = createContext<AdminDataContextValue | null>(null);
 
 export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
+  const pathname = usePathname();
+  const initialStoreType = getInitialStoreType(pathname);
   const [faqs, setFaqs] = useState<AdminFaq[]>(env.apiBaseUrl ? [] : faqRows);
   const [faqError, setFaqError] = useState<string | null>(null);
   const [faqKeyword, setFaqKeywordState] = useState("");
@@ -126,7 +138,7 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
   const [storeSortDirection, setStoreSortDirection] =
     useState<StoreSortDirection>("desc");
   const [storeTypeFilter, setStoreTypeFilterState] =
-    useState<AdminStoreType>("PHONE");
+    useState<AdminStoreType>(initialStoreType);
   const [storeTotalCount, setStoreTotalCount] = useState(
     env.apiBaseUrl ? 0 : storeRows.length,
   );

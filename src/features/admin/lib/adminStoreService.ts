@@ -1,4 +1,5 @@
 import type {
+  AdminBenefit,
   AdminStore,
   AdminStoreDetail,
   AdminStoreType,
@@ -7,7 +8,13 @@ import { requestJson } from "@/shared/api/http";
 
 type AdminStoreRequest = Omit<
   AdminStoreDetail,
-  "createdAt" | "storeId" | "storeType" | "updatedAt"
+  | "brand"
+  | "category"
+  | "benefitName"
+  | "createdAt"
+  | "storeId"
+  | "storeType"
+  | "updatedAt"
 >;
 type AdminStoreCreateRequest = AdminStoreRequest & {
   storeType: AdminStoreType;
@@ -25,6 +32,9 @@ type StoreListItemResponse = Omit<AdminStore, "storeType"> &
 type StoreDetailResponse = Omit<AdminStoreDetail, "storeType"> &
   Partial<Pick<AdminStoreDetail, "storeType">>;
 type StoreUpdateResponse = Pick<AdminStore, "storeId" | "updatedAt">;
+type BenefitListResponse = {
+  benefits: AdminBenefit[];
+};
 
 export const adminStoreService = {
   fetchStores: async ({
@@ -102,6 +112,24 @@ export const adminStoreService = {
       method: "DELETE",
       timeoutMs: 8000,
     });
+  },
+
+  fetchBenefits: async (category?: string) => {
+    const params = new URLSearchParams();
+
+    if (category?.trim()) {
+      params.set("category", category.trim());
+    }
+
+    const query = params.toString();
+    const response = await requestJson<BenefitListResponse>(
+      `/benefits/list${query ? `?${query}` : ""}`,
+      {
+        timeoutMs: 8000,
+      },
+    );
+
+    return response.benefits;
   },
 };
 
