@@ -1,7 +1,19 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { AdminDataProvider, useAdminData } from "./AdminDataContext";
+
+const renderWithQueryClient = (children: ReactNode) => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>,
+  );
+};
 
 const FaqProbe = () => {
   const { addFaq, faqs, saveFaq } = useAdminData();
@@ -42,7 +54,7 @@ describe("AdminDataProvider", () => {
   it("keeps FAQ answers when creating and editing FAQ rows", async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithQueryClient(
       <AdminDataProvider>
         <FaqProbe />
       </AdminDataProvider>,

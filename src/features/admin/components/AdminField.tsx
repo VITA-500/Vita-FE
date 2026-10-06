@@ -52,6 +52,7 @@ export const AdminField = ({
   label,
   ...props
 }: AdminFieldProps) => {
+  const isRequired = Boolean(props.required);
   let field;
 
   if ("options" in props && props.options) {
@@ -76,6 +77,11 @@ export const AdminField = ({
     <label className={cn("block", className)}>
       <span className="mb-2 block text-xs font-extrabold text-gray-500">
         {label}
+        {isRequired && (
+          <span className="ml-1 text-[11px] font-extrabold text-red-500">
+            필수
+          </span>
+        )}
       </span>
 
       {field}
@@ -103,16 +109,22 @@ const AdminSelectField = ({
   options,
   placeholder,
   required,
+  value: controlledValue,
   ...props
 }: AdminSelectFieldProps) => {
   const initialValue = normalizeSelectValue(defaultValue);
-  const [value, setValue] = useState(initialValue);
+  const normalizedControlledValue =
+    controlledValue === undefined ? undefined : String(controlledValue);
+  const [value, setValue] = useState(normalizedControlledValue ?? initialValue);
+  const currentValue = normalizedControlledValue ?? value;
   const dropdownOptions = placeholder
     ? [{ label: placeholder, value: "" }, ...options]
     : options;
 
   const handleChange = (nextValue: string) => {
-    setValue(nextValue);
+    if (normalizedControlledValue === undefined) {
+      setValue(nextValue);
+    }
 
     onChange?.({
       target: { name, value: nextValue },
@@ -126,14 +138,14 @@ const AdminSelectField = ({
         aria-label={props["aria-label"] ?? placeholder ?? name}
         className="w-full"
         options={dropdownOptions}
-        value={value}
+        value={currentValue}
         onChange={handleChange}
       />
       {name && (
         <input
           type="hidden"
           name={name}
-          value={value}
+          value={currentValue}
           disabled={disabled}
           required={required}
         />

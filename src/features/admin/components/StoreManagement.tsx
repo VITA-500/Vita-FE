@@ -1,14 +1,27 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Edit2, Plus, Trash2 } from "lucide-react";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Edit2, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { type FieldErrors, useForm, useWatch } from "react-hook-form";
+import { AdminControlledField } from "@/features/admin/components/AdminControlledField";
 import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
-import { AdminField } from "@/features/admin/components/AdminField";
+import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { FilterDropdown } from "@/features/admin/components/FilterDropdown";
 import { useActionStatus } from "@/features/admin/context/ActionStatusContext";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
-import type { AdminStoreDetail, AdminStoreType } from "@/features/admin/types";
+import { adminStoreService } from "@/features/admin/lib/adminStoreService";
+import {
+  storeFormSchema,
+  type StoreFormValues,
+} from "@/features/admin/lib/adminFormSchemas";
+import type {
+  AdminBenefit,
+  AdminStoreDetail,
+  AdminStoreType,
+} from "@/features/admin/types";
 import { cn } from "@/shared/lib/cn";
+import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { Modal } from "@/shared/ui/Modal";
@@ -17,7 +30,13 @@ import { showToast } from "@/shared/ui/ToastProvider";
 
 type StoreInput = Omit<
   AdminStoreDetail,
-  "createdAt" | "storeId" | "storeType" | "updatedAt"
+  | "brand"
+  | "category"
+  | "benefitName"
+  | "createdAt"
+  | "storeId"
+  | "storeType"
+  | "updatedAt"
 >;
 
 const pageSizeOptions = [20, 50, 100] as const;
@@ -81,6 +100,7 @@ export const StoreManagement = ({
     storePageSize,
     storeSortDirection,
     storeSortField,
+    storeTypeFilter,
     stores,
     storeTotalCount,
     storeTotalPages,
@@ -92,7 +112,11 @@ export const StoreManagement = ({
   const [editingStoreId, setEditingStoreId] = useState<number | null>(null);
   const [deletingStoreId, setDeletingStoreId] = useState<number | null>(null);
   const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
+  const [benefits, setBenefits] = useState<AdminBenefit[]>([]);
+  const [benefitError, setBenefitError] = useState<string | null>(null);
   const hasSearchKeyword = storeKeyword.trim().length > 0;
+  const isPartnerStore = storeType === "PARTNER";
+  const isStoreTypeSynced = storeTypeFilter === storeType;
 
   const editingStore = editingStoreId
     ? getStoreDetail(editingStoreId)
@@ -103,7 +127,7 @@ export const StoreManagement = ({
   );
   const rangeStart = storeTotalCount === 0 ? 0 : storePage * storePageSize + 1;
   const rangeEnd = Math.min(storeTotalCount, rangeStart + stores.length - 1);
-  const shouldShowSkeletonRows = isStoreLoading;
+  const shouldShowSkeletonRows = isStoreLoading || !isStoreTypeSynced;
   const visibleSkeletonRows = shouldShowSkeletonRows
     ? Math.min(storePageSize, MIN_TABLE_ROWS)
     : 0;
@@ -115,6 +139,36 @@ export const StoreManagement = ({
   useEffect(() => {
     setStoreTypeFilter(storeType);
   }, [setStoreTypeFilter, storeType]);
+
+  useEffect(() => {
+    if (!isPartnerStore) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    void adminStoreService
+      .fetchBenefits()
+      .then((nextBenefits) => {
+        if (!isCancelled) {
+          setBenefits(nextBenefits);
+          setBenefitError(null);
+        }
+      })
+      .catch((error) => {
+        if (!isCancelled) {
+          setBenefitError(
+            error instanceof Error
+              ? error.message
+              : "제휴 브랜드 목록을 불러오지 못했습니다.",
+          );
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isPartnerStore]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -242,6 +296,11 @@ export const StoreManagement = ({
           {storeError}
         </div>
       )}
+      {isPartnerStore && benefitError && (
+        <div className="mb-7 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+          {benefitError}
+        </div>
+      )}
 
       <div className="space-y-3 md:hidden">
         {shouldShowSkeletonRows ? (
@@ -270,8 +329,12 @@ export const StoreManagement = ({
                     {store.address}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-bold text-gray-400">
-                    <span>등록 {formatDate(store.createdAt)}</span>
-                    <span>수정 {formatDate(store.updatedAt)}</span>
+                    {isPartnerStore && (
+                      <span>
+                        {store.brand ?? "-"} · {store.category ?? "-"}
+                      </span>
+                    )}
+                    <span>등록 {formatKoreanDate(store.createdAt)}</span>
                   </div>
                 </div>
                 <StoreRowActions
@@ -284,7 +347,7 @@ export const StoreManagement = ({
           ))
         )}
         {!shouldShowSkeletonRows && stores.length > 0 && (
-          <StorePagination
+          <AdminPagination
             currentPage={storePage + 1}
             disabled={isStoreLoading}
             totalPages={storeTotalPages}
@@ -295,25 +358,38 @@ export const StoreManagement = ({
 
       <Card padding="none" className="hidden overflow-hidden md:block">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[920px] table-fixed border-collapse text-sm">
+          <table
+            className={cn(
+              "w-full table-fixed border-collapse text-sm",
+              isPartnerStore ? "min-w-[1040px]" : "min-w-[860px]",
+            )}
+          >
             <thead className="bg-surface-muted text-xs font-extrabold text-gray-400 dark:bg-white/5">
               <tr>
                 <th className="w-[88px] px-5 py-4 text-left">ID</th>
                 <th className="w-[22%] px-4 py-4 text-left">매장명</th>
                 <th className="px-4 py-4 text-left">주소</th>
+                {isPartnerStore && (
+                  <th className="w-[180px] px-4 py-4 text-left">제휴 브랜드</th>
+                )}
                 <th className="w-[128px] px-4 py-4 text-center">등록일</th>
-                <th className="w-[128px] px-4 py-4 text-center">수정일</th>
                 <th className="w-[160px] px-5 py-4 text-center">관리</th>
               </tr>
             </thead>
             <tbody className="divide-border-soft divide-y dark:divide-white/10">
               {shouldShowSkeletonRows ? (
                 Array.from({ length: visibleSkeletonRows }, (_, index) => (
-                  <StoreSkeletonRow key={`store-skeleton-${index}`} />
+                  <StoreSkeletonRow
+                    key={`store-skeleton-${index}`}
+                    showPartnerColumn={isPartnerStore}
+                  />
                 ))
               ) : stores.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="h-[640px] px-5 py-0">
+                  <td
+                    colSpan={isPartnerStore ? 6 : 5}
+                    className="h-[640px] px-5 py-0"
+                  >
                     <AdminEmptyState
                       title="조건에 맞는 매장이 없습니다."
                       description={`검색어를 조정하거나 새 ${labels.emptyName}을 추가해 주세요.`}
@@ -338,11 +414,24 @@ export const StoreManagement = ({
                       <td className="truncate px-4 py-4 font-semibold text-gray-500">
                         {store.address}
                       </td>
+                      {isPartnerStore && (
+                        <td className="truncate px-4 py-4 font-semibold text-gray-500">
+                          {store.brand ? (
+                            <>
+                              <span className="font-extrabold text-gray-700 dark:text-gray-200">
+                                {store.brand}
+                              </span>
+                              <span className="ml-2 text-gray-400">
+                                {store.category ?? "-"}
+                              </span>
+                            </>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                      )}
                       <td className="px-4 py-4 text-center font-semibold text-gray-400">
-                        {formatDate(store.createdAt)}
-                      </td>
-                      <td className="px-4 py-4 text-center font-semibold text-gray-400">
-                        {formatDate(store.updatedAt)}
+                        {formatKoreanDate(store.createdAt)}
                       </td>
                       <td className="px-5 py-4 text-center">
                         <StoreRowActions
@@ -358,7 +447,7 @@ export const StoreManagement = ({
                       aria-hidden="true"
                       className="h-20"
                     >
-                      <td colSpan={6} />
+                      <td colSpan={isPartnerStore ? 6 : 5} />
                     </tr>
                   ))}
                 </>
@@ -369,7 +458,7 @@ export const StoreManagement = ({
 
         <div className="border-border-soft flex min-h-[65px] items-center justify-center gap-1 border-t px-5 py-4 dark:border-white/10">
           {!shouldShowSkeletonRows && stores.length > 0 && (
-            <StorePagination
+            <AdminPagination
               currentPage={storePage + 1}
               disabled={isStoreLoading}
               totalPages={storeTotalPages}
@@ -389,6 +478,8 @@ export const StoreManagement = ({
         key={isAddModalOpen ? "create-open" : "create-closed"}
         isOpen={isAddModalOpen}
         mode="create"
+        benefits={benefits}
+        storeType={storeType}
         storeLabel={labels.name}
         onClose={() => setIsAddModalOpen(false)}
         onSave={handleCreate}
@@ -398,7 +489,9 @@ export const StoreManagement = ({
         key={editingStore?.storeId ?? "edit-closed"}
         isOpen={editingStore !== undefined}
         mode="edit"
+        benefits={benefits}
         store={editingStore}
+        storeType={storeType}
         storeLabel={labels.name}
         onClose={() => setEditingStoreId(null)}
         onSave={handleUpdate}
@@ -490,7 +583,11 @@ const StoreRowActions = ({
   </div>
 );
 
-const StoreSkeletonRow = () => (
+const StoreSkeletonRow = ({
+  showPartnerColumn,
+}: {
+  showPartnerColumn: boolean;
+}) => (
   <tr className="h-20" aria-hidden="true">
     <td className="px-5 py-4">
       <div className="bg-surface-muted h-4 w-12 animate-pulse rounded-full dark:bg-white/10" />
@@ -501,9 +598,11 @@ const StoreSkeletonRow = () => (
     <td className="px-4 py-4">
       <div className="bg-surface-muted h-4 w-[min(360px,80%)] animate-pulse rounded-full dark:bg-white/10" />
     </td>
-    <td className="px-4 py-4">
-      <div className="bg-surface-muted mx-auto h-4 w-20 animate-pulse rounded-full dark:bg-white/10" />
-    </td>
+    {showPartnerColumn && (
+      <td className="px-4 py-4">
+        <div className="bg-surface-muted h-4 w-32 animate-pulse rounded-full dark:bg-white/10" />
+      </td>
+    )}
     <td className="px-4 py-4">
       <div className="bg-surface-muted mx-auto h-4 w-20 animate-pulse rounded-full dark:bg-white/10" />
     </td>
@@ -531,190 +630,130 @@ const StoreSkeletonCard = () => (
   </Card>
 );
 
-type StorePaginationProps = {
-  currentPage: number;
-  disabled?: boolean;
-  onPageChange: (page: number) => void;
-  totalPages: number;
-};
-
-const StorePagination = ({
-  currentPage,
-  disabled = false,
-  onPageChange,
-  totalPages,
-}: StorePaginationProps) => {
-  const pages = getVisiblePages(currentPage, totalPages);
-  const [jumpValue, setJumpValue] = useState("");
-
-  const handleJumpSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const nextPage = Number(jumpValue);
-
-    if (!Number.isInteger(nextPage)) return;
-
-    onPageChange(Math.min(totalPages, Math.max(1, nextPage)));
-    setJumpValue("");
-  };
-
-  return (
-    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 pt-2 md:pt-0">
-      <div className="flex items-center justify-center gap-1">
-        <Button
-          variant="ghost"
-          size="xs"
-          className="h-8 w-8 rounded-lg p-0 disabled:pointer-events-none disabled:opacity-30"
-          disabled={currentPage === 1 || disabled}
-          aria-label="이전 페이지"
-          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-        >
-          <ChevronLeft size={15} />
-        </Button>
-        {pages.map((page, index) =>
-          page === "ellipsis" ? (
-            <span
-              key={`ellipsis-${index}`}
-              className="flex h-8 min-w-8 items-center justify-center px-1 text-sm font-extrabold text-gray-400"
-            >
-              ...
-            </span>
-          ) : (
-            <PaginationPageButton
-              key={page}
-              disabled={disabled}
-              isActive={page === currentPage}
-              page={page}
-              onClick={() => onPageChange(page)}
-            />
-          ),
-        )}
-        <Button
-          variant="ghost"
-          size="xs"
-          className="h-8 w-8 rounded-lg p-0 disabled:pointer-events-none disabled:opacity-30"
-          disabled={currentPage === totalPages || disabled}
-          aria-label="다음 페이지"
-          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-        >
-          <ChevronRight size={15} />
-        </Button>
-      </div>
-
-      {totalPages > 7 && (
-        <form className="flex items-center gap-1.5" onSubmit={handleJumpSubmit}>
-          <input
-            type="number"
-            min={1}
-            max={totalPages}
-            value={jumpValue}
-            disabled={disabled}
-            placeholder="페이지"
-            onChange={(event) => setJumpValue(event.target.value)}
-            className="border-border focus:border-brand h-8 w-20 rounded-lg border bg-white px-2 text-center text-xs font-bold text-gray-700 transition outline-none dark:border-white/10 dark:bg-white/5 dark:text-gray-200"
-          />
-          <Button
-            variant="secondary"
-            size="xs"
-            type="submit"
-            disabled={disabled || !jumpValue}
-            className="h-8 rounded-lg px-2"
-          >
-            이동
-          </Button>
-        </form>
-      )}
-    </div>
-  );
-};
-
-type PaginationItem = number | "ellipsis";
-
-const getVisiblePages = (
-  currentPage: number,
-  totalPages: number,
-): PaginationItem[] => {
-  if (totalPages <= 7) {
-    return Array.from({ length: totalPages }, (_, index) => index + 1);
-  }
-
-  const start = Math.max(2, currentPage - 1);
-  const end = Math.min(totalPages - 1, currentPage + 1);
-  const pages: PaginationItem[] = [1];
-
-  if (start > 2) {
-    pages.push("ellipsis");
-  }
-
-  for (let page = start; page <= end; page += 1) {
-    pages.push(page);
-  }
-
-  if (end < totalPages - 1) {
-    pages.push("ellipsis");
-  }
-
-  pages.push(totalPages);
-  return pages;
-};
-
-type PaginationPageButtonProps = {
-  disabled?: boolean;
-  isActive: boolean;
-  onClick: () => void;
-  page: number;
-};
-
-const PaginationPageButton = ({
-  disabled,
-  isActive,
-  onClick,
-  page,
-}: PaginationPageButtonProps) => (
-  <button
-    type="button"
-    aria-label={`${page}페이지`}
-    aria-current={isActive ? "page" : undefined}
-    disabled={disabled}
-    onClick={onClick}
-    className={cn(
-      "flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-extrabold transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50",
-      isActive
-        ? "bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand"
-        : "text-gray-500 hover:bg-gray-100 hover:text-gray-950 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white",
-    )}
-  >
-    {page}
-  </button>
-);
-
 type StoreFormModalProps = {
+  benefits: AdminBenefit[];
   isOpen: boolean;
   mode: "create" | "edit";
   onClose: () => void;
   onSave: (input: StoreInput) => Promise<void>;
   storeLabel: string;
+  storeType: AdminStoreType;
   store?: AdminStoreDetail;
 };
 
 const StoreFormModal = ({
+  benefits,
   isOpen,
   mode,
   onClose,
   onSave,
   store,
   storeLabel,
+  storeType,
 }: StoreFormModalProps) => {
   const formId = mode === "create" ? "store-create-form" : "store-edit-form";
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isPartnerStore = storeType === "PARTNER";
+  const benefitOptions = benefits.map((benefit) => ({
+    label: `${benefit.brand} · ${benefit.name}`,
+    value: String(benefit.benefitId),
+  }));
+  const placeholders = isPartnerStore
+    ? {
+        businessHours: "예: 09:00~18:00",
+        consultServices: "입장권 문의, 예약 변경",
+        name: "예: 어진월드 어드벤처",
+        phone: "예: 02-9876-5432",
+        providedServices: "제휴 할인, 현장 결제",
+        address: "예: 서울 송파구 올림픽로 240",
+      }
+    : {
+        businessHours: "예: 10:00~20:00",
+        consultServices: "휴대폰상담, 요금제변경",
+        name: "예: VITA 강남점",
+        phone: "예: 02-1234-5678",
+        providedServices: "유심발급, 기기변경",
+        address: "예: 서울 강남구 테헤란로 111",
+      };
+  const fieldLabels = isPartnerStore
+    ? {
+        consultServices: "이용 안내",
+        providedServices: "제휴 제공 내용",
+      }
+    : {
+        consultServices: "상담 가능 업무",
+        providedServices: "제공 가능 서비스",
+      };
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setError,
+    clearErrors,
+    formState: { errors, isValid },
+  } = useForm<StoreFormValues>({
+    defaultValues: {
+      address: store?.address ?? "",
+      benefitId: store?.benefitId ? String(store.benefitId) : "",
+      businessHours: store?.businessHours ?? "",
+      consultServices: store?.consultServices.join(", ") ?? "",
+      lat: store ? String(store.lat) : "",
+      lng: store ? String(store.lng) : "",
+      name: store?.name ?? "",
+      phone: store?.phone ?? "",
+      providedServices: store?.providedServices.join(", ") ?? "",
+    },
+    mode: "onChange",
+    resolver: zodResolver(storeFormSchema),
+  });
+  const selectedBenefitId = useWatch({ control, name: "benefitId" });
+  const canSubmit = isValid && (!isPartnerStore || Boolean(selectedBenefitId));
+  const validationMessage =
+    errorMessage ??
+    errors.benefitId?.message ??
+    errors.businessHours?.message ??
+    errors.phone?.message;
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  useEffect(() => {
+    reset({
+      address: store?.address ?? "",
+      benefitId: store?.benefitId ? String(store.benefitId) : "",
+      businessHours: store?.businessHours ?? "",
+      consultServices: store?.consultServices.join(", ") ?? "",
+      lat: store ? String(store.lat) : "",
+      lng: store ? String(store.lng) : "",
+      name: store?.name ?? "",
+      phone: store?.phone ?? "",
+      providedServices: store?.providedServices.join(", ") ?? "",
+    });
+  }, [reset, store]);
+
+  const submitStore = async (values: StoreFormValues) => {
     setErrorMessage(null);
+
+    if (isPartnerStore && !values.benefitId?.trim()) {
+      const message = "제휴 브랜드를 선택해 주세요.";
+      setError("benefitId", { message, type: "manual" });
+      showToast(message);
+      return;
+    }
+
+    clearErrors("benefitId");
     setIsSubmitting(true);
 
     try {
-      await onSave(readStoreForm(event.currentTarget));
+      await onSave({
+        address: values.address.trim(),
+        benefitId: parseOptionalNumber(values.benefitId),
+        businessHours: values.businessHours?.trim() ?? "",
+        consultServices: toServiceArray(values.consultServices),
+        lat: Number(values.lat.trim()),
+        lng: Number(values.lng.trim()),
+        name: values.name.trim(),
+        phone: values.phone?.trim() ?? "",
+        providedServices: toServiceArray(values.providedServices),
+      });
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -724,6 +763,15 @@ const StoreFormModal = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+  const handleInvalidSubmit = (formErrors: FieldErrors<StoreFormValues>) => {
+    const firstMessage = Object.values(formErrors)[0]?.message;
+
+    showToast(
+      typeof firstMessage === "string"
+        ? firstMessage
+        : `${storeLabel} 정보를 다시 확인해 주세요.`,
+    );
   };
 
   return (
@@ -737,79 +785,104 @@ const StoreFormModal = ({
       }
       description={`백엔드 관리자 API에 저장할 ${storeLabel} 정보를 입력해 주세요.`}
       size="lg"
+      className="max-h-[calc(100svh-48px)] overflow-y-auto"
     >
+      {mode === "edit" && store && (
+        <div className="mb-5 flex flex-wrap gap-x-4 gap-y-1 rounded-2xl bg-gray-50 px-4 py-3 text-xs font-bold text-gray-400 dark:bg-white/5">
+          <span>등록일 {formatKoreanDate(store.createdAt)}</span>
+          <span>
+            수정일{" "}
+            {store.updatedAt
+              ? formatKoreanDate(store.updatedAt)
+              : "수정 이력 없음"}
+          </span>
+        </div>
+      )}
+
       <form
         id={formId}
         className="grid gap-5 sm:grid-cols-2"
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(submitStore, handleInvalidSubmit)}
       >
-        <AdminField
-          label={`${storeLabel}명`}
+        <AdminControlledField
+          control={control}
           name="name"
-          defaultValue={store?.name}
-          placeholder="예: VITA 강남점"
+          label={`${storeLabel}명`}
+          placeholder={placeholders.name}
           className="sm:col-span-2"
           required
         />
-        <AdminField
-          label="주소"
+        <AdminControlledField
+          control={control}
           name="address"
-          defaultValue={store?.address}
-          placeholder="예: 서울 강남구 테헤란로 111"
+          label="주소"
+          placeholder={placeholders.address}
           className="sm:col-span-2"
           required
         />
-        <AdminField
-          label="위도"
+        <AdminControlledField
+          control={control}
           name="lat"
+          label="위도"
           inputMode="decimal"
-          defaultValue={store ? String(store.lat) : undefined}
           placeholder="37.2660"
           required
           step="any"
           type="number"
         />
-        <AdminField
-          label="경도"
+        <AdminControlledField
+          control={control}
           name="lng"
+          label="경도"
           inputMode="decimal"
-          defaultValue={store ? String(store.lng) : undefined}
           placeholder="127.0000"
           required
           step="any"
           type="number"
         />
-        <AdminField
-          label="운영시간"
+        <AdminControlledField
+          control={control}
           name="businessHours"
-          defaultValue={store?.businessHours}
-          placeholder="예: 10:00~20:00"
+          label="운영시간"
+          placeholder={placeholders.businessHours}
         />
-        <AdminField
-          label="전화번호"
+        <AdminControlledField
+          control={control}
           name="phone"
-          defaultValue={store?.phone}
-          placeholder="예: 02-1234-5678"
+          label="전화번호"
+          placeholder={placeholders.phone}
         />
-        <AdminField
-          label="상담 가능 업무"
+        {isPartnerStore && (
+          <AdminControlledField
+            control={control}
+            name="benefitId"
+            label="제휴 브랜드"
+            options={benefitOptions}
+            placeholder="제휴 브랜드 선택"
+            required
+            className="sm:col-span-2"
+            description="백엔드 제휴 혜택 API의 benefitId로 연결됩니다."
+          />
+        )}
+        <AdminControlledField
+          control={control}
           name="consultServices"
-          defaultValue={store?.consultServices.join(", ")}
-          placeholder="휴대폰상담, 요금제변경"
+          label={fieldLabels.consultServices}
+          placeholder={placeholders.consultServices}
           className="sm:col-span-2"
         />
-        <AdminField
-          label="제공 가능 서비스"
+        <AdminControlledField
+          control={control}
           name="providedServices"
-          defaultValue={store?.providedServices.join(", ")}
-          placeholder="유심발급, 기기변경"
+          label={fieldLabels.providedServices}
+          placeholder={placeholders.providedServices}
           className="sm:col-span-2"
         />
       </form>
 
-      {errorMessage && (
+      {validationMessage && (
         <p className="mt-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
-          {errorMessage}
+          {validationMessage}
         </p>
       )}
 
@@ -822,7 +895,13 @@ const StoreFormModal = ({
         >
           취소
         </Button>
-        <Button size="sm" form={formId} type="submit" isLoading={isSubmitting}>
+        <Button
+          size="sm"
+          form={formId}
+          type="submit"
+          disabled={!canSubmit}
+          isLoading={isSubmitting}
+        >
           {mode === "create" ? "추가" : "저장"}
         </Button>
       </div>
@@ -830,48 +909,21 @@ const StoreFormModal = ({
   );
 };
 
-const readStoreForm = (form: HTMLFormElement): StoreInput => {
-  const formData = new FormData(form);
+const parseOptionalNumber = (value?: string) => {
+  const text = String(value ?? "").trim();
 
-  return {
-    name: String(formData.get("name") ?? "").trim(),
-    address: String(formData.get("address") ?? "").trim(),
-    lat: parseCoordinate(formData.get("lat")),
-    lng: parseCoordinate(formData.get("lng")),
-    businessHours: String(formData.get("businessHours") ?? "").trim(),
-    phone: String(formData.get("phone") ?? "").trim(),
-    consultServices: toServiceArray(formData.get("consultServices")),
-    providedServices: toServiceArray(formData.get("providedServices")),
-  };
-};
+  if (!text) return undefined;
 
-const parseCoordinate = (value: FormDataEntryValue | string | null) => {
-  const coordinate = Number(String(value ?? "").trim());
+  const numberValue = Number(text);
 
-  if (!Number.isFinite(coordinate)) {
-    throw new Error("좌표는 숫자로 입력해 주세요.");
+  if (!Number.isFinite(numberValue)) {
+    throw new Error("제휴 브랜드를 다시 선택해 주세요.");
   }
 
-  return coordinate;
+  return numberValue;
 };
 
-const formatDate = (value?: string) => {
-  if (!value) return "-";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value.slice(0, 10);
-  }
-
-  return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
-};
-
-const toServiceArray = (value: FormDataEntryValue | string | null) =>
+const toServiceArray = (value?: string) =>
   String(value ?? "")
     .split(",")
     .map((item) => item.trim())

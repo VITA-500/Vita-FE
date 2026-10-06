@@ -1,31 +1,28 @@
 "use client";
 
-import {
-  ChevronLeft,
-  ChevronRight,
-  Edit2,
-  Eye,
-  EyeOff,
-  Plus,
-  Trash2,
-} from "lucide-react";
-import { type FormEvent, useEffect, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Edit2, Eye, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { type FieldErrors, useForm, useWatch } from "react-hook-form";
+import { AdminControlledField } from "@/features/admin/components/AdminControlledField";
 import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
-import { AdminField } from "@/features/admin/components/AdminField";
+import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { FilterDropdown } from "@/features/admin/components/FilterDropdown";
 import { useActionStatus } from "@/features/admin/context/ActionStatusContext";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
+import {
+  faqFormSchema,
+  type FaqFormValues,
+} from "@/features/admin/lib/adminFormSchemas";
 import {
   adminFaqCategories,
   adminFaqSubcategories,
   type AdminFaq,
   type AdminFaqCategory,
 } from "@/features/admin/types";
-import { cn } from "@/shared/lib/cn";
-import { AnimatedLockIcon } from "@/shared/ui/AnimatedLockIcon";
+import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
-import { ConfirmCheckbox } from "@/shared/ui/ConfirmCheckbox";
 import { Modal } from "@/shared/ui/Modal";
 import { SearchInput } from "@/shared/ui/SearchInput";
 import { showToast } from "@/shared/ui/ToastProvider";
@@ -98,12 +95,8 @@ export const FaqManagement = () => {
   const { runWithStatus } = useActionStatus();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingFaqId, setEditingFaqId] = useState<number | null>(null);
-  const [deactivatingFaqId, setDeactivatingFaqId] = useState<number | null>(
-    null,
-  );
   const [activatingFaqId, setActivatingFaqId] = useState<number | null>(null);
   const [deletingFaqId, setDeletingFaqId] = useState<number | null>(null);
-  const [isFaqDeleteAcknowledged, setIsFaqDeleteAcknowledged] = useState(false);
   const [searchDraft, setSearchDraft] = useState(faqKeyword);
   const hasSearchKeyword = faqKeyword.trim().length > 0;
   const shouldShowSkeletonRows = isFaqLoading;
@@ -115,7 +108,6 @@ export const FaqManagement = () => {
     : 0;
 
   const editingFaq = faqs.find((faq) => faq.faqId === editingFaqId);
-  const deactivatingFaq = faqs.find((faq) => faq.faqId === deactivatingFaqId);
   const activatingFaq = faqs.find((faq) => faq.faqId === activatingFaqId);
   const deletingFaq = faqs.find((faq) => faq.faqId === deletingFaqId);
   const rangeStart = faqTotalCount === 0 ? 0 : faqPage * faqPageSize + 1;
@@ -255,7 +247,6 @@ export const FaqManagement = () => {
                     <span>#{faq.faqId}</span>
                     <span>{faq.category}</span>
                     <span>{faq.createdAt.slice(0, 10)}</span>
-                    <span>수정 {formatDate(faq.updatedAt)}</span>
                   </div>
                 </div>
               </div>
@@ -274,40 +265,29 @@ export const FaqManagement = () => {
                   <Button
                     variant="dangerGhost"
                     size="xs"
-                    className="h-9 rounded-lg px-2.5"
-                    aria-label="FAQ 비활성화"
-                    leftIcon={<EyeOff size={15} />}
-                    onClick={() => setDeactivatingFaqId(faq.faqId)}
+                    className="h-9 w-9 rounded-lg p-0"
+                    aria-label="FAQ 삭제"
+                    onClick={() => setDeletingFaqId(faq.faqId)}
                   >
-                    비활성화
+                    <Trash2 size={20} />
                   </Button>
                 ) : (
                   <Button
                     variant="ghost"
                     size="xs"
-                    className="h-9 rounded-lg px-2.5 text-green-500 hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-500/10 dark:hover:text-green-300"
+                    className="h-9 w-9 rounded-lg p-0 text-green-500 hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-500/10 dark:hover:text-green-300"
                     aria-label="FAQ 활성화"
-                    leftIcon={<Eye size={15} />}
                     onClick={() => setActivatingFaqId(faq.faqId)}
                   >
-                    활성화
+                    <Eye size={20} />
                   </Button>
                 )}
-                <Button
-                  variant="dangerGhost"
-                  size="xs"
-                  className="h-9 w-9 rounded-lg p-0"
-                  aria-label="FAQ 삭제"
-                  onClick={() => setDeletingFaqId(faq.faqId)}
-                >
-                  <Trash2 size={20} />
-                </Button>
               </div>
             </Card>
           ))
         )}
         {!shouldShowSkeletonRows && faqs.length > 0 && (
-          <FaqPagination
+          <AdminPagination
             currentPage={faqPage + 1}
             disabled={isFaqLoading}
             totalPages={faqTotalPages}
@@ -325,8 +305,7 @@ export const FaqManagement = () => {
                 <th className="px-4 py-4 text-left">질문</th>
                 <th className="w-[22%] px-4 py-4 text-left">카테고리</th>
                 <th className="w-[128px] px-4 py-4 text-center">등록일</th>
-                <th className="w-[128px] px-4 py-4 text-center">수정일</th>
-                <th className="w-[270px] px-5 py-4 text-center">관리</th>
+                <th className="w-[180px] px-5 py-4 text-center">관리</th>
               </tr>
             </thead>
             <tbody className="divide-border-soft divide-y dark:divide-white/10">
@@ -336,7 +315,7 @@ export const FaqManagement = () => {
                 ))
               ) : faqs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="h-[640px] px-5 py-0">
+                  <td colSpan={5} className="h-[640px] px-5 py-0">
                     <AdminEmptyState
                       title="조건에 맞는 FAQ가 없습니다."
                       description="검색어와 카테고리 필터를 조정하거나 새 FAQ를 등록해 주세요."
@@ -360,10 +339,7 @@ export const FaqManagement = () => {
                         {faq.category}
                       </td>
                       <td className="px-4 py-4 text-center font-semibold text-gray-400">
-                        {formatDate(faq.createdAt)}
-                      </td>
-                      <td className="px-4 py-4 text-center font-semibold text-gray-400">
-                        {formatDate(faq.updatedAt)}
+                        {formatKoreanDate(faq.createdAt)}
                       </td>
                       <td className="px-5 py-4 text-center">
                         <div className="inline-flex items-center justify-center gap-2">
@@ -380,34 +356,23 @@ export const FaqManagement = () => {
                             <Button
                               variant="dangerGhost"
                               size="sm"
-                              className="h-10 rounded-lg px-3.5"
-                              aria-label="FAQ 비활성화"
-                              leftIcon={<EyeOff size={16} />}
-                              onClick={() => setDeactivatingFaqId(faq.faqId)}
+                              className="h-12 w-12 rounded-lg p-0"
+                              aria-label="FAQ 삭제"
+                              onClick={() => setDeletingFaqId(faq.faqId)}
                             >
-                              비활성화
+                              <Trash2 size={30} />
                             </Button>
                           ) : (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-10 rounded-lg px-3.5 text-green-500 hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-500/10 dark:hover:text-green-300"
+                              className="h-12 w-12 rounded-lg p-0 text-green-500 hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-500/10 dark:hover:text-green-300"
                               aria-label="FAQ 활성화"
-                              leftIcon={<Eye size={16} />}
                               onClick={() => setActivatingFaqId(faq.faqId)}
                             >
-                              활성화
+                              <Eye size={30} />
                             </Button>
                           )}
-                          <Button
-                            variant="dangerGhost"
-                            size="sm"
-                            className="h-12 w-12 rounded-lg p-0"
-                            aria-label="FAQ 삭제"
-                            onClick={() => setDeletingFaqId(faq.faqId)}
-                          >
-                            <Trash2 size={30} />
-                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -420,7 +385,7 @@ export const FaqManagement = () => {
                       aria-hidden="true"
                       className="h-20"
                     >
-                      <td colSpan={6} />
+                      <td colSpan={5} />
                     </tr>
                   ))}
                 </>
@@ -430,7 +395,7 @@ export const FaqManagement = () => {
         </div>
         {!shouldShowSkeletonRows && faqs.length > 0 && (
           <div className="border-border-soft flex items-center justify-center gap-1 border-t px-5 py-4 dark:border-white/10">
-            <FaqPagination
+            <AdminPagination
               currentPage={faqPage + 1}
               disabled={isFaqLoading}
               totalPages={faqTotalPages}
@@ -470,49 +435,14 @@ export const FaqManagement = () => {
       />
 
       <Modal
-        isOpen={deactivatingFaq !== undefined}
-        onClose={() => setDeactivatingFaqId(null)}
-        title="FAQ를 비활성화할까요?"
-        description="비활성화된 FAQ는 관리자 목록에는 남지만 사용자 검색 및 RAG 답변 대상에서는 제외됩니다."
-        actions={
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setDeactivatingFaqId(null)}
-            >
-              취소
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => {
-                if (deactivatingFaq) {
-                  const faqId = deactivatingFaq.faqId;
-                  void runWithStatus("FAQ 비활성화", () =>
-                    setFaqStatus(faqId, "INACTIVE"),
-                  );
-                }
-                setDeactivatingFaqId(null);
-              }}
-            >
-              비활성화
-            </Button>
-          </>
-        }
-      >
-        {deactivatingFaq && (
-          <p className="bg-surface-muted rounded-2xl p-4 text-sm font-bold text-gray-700 dark:bg-white/5 dark:text-gray-200">
-            {deactivatingFaq.question}
-          </p>
-        )}
-      </Modal>
-
-      <Modal
         isOpen={activatingFaq !== undefined}
         onClose={() => setActivatingFaqId(null)}
         title="FAQ를 활성화할까요?"
-        description="활성화된 FAQ는 다시 사용자 검색 및 RAG 답변 대상에 포함됩니다."
+        description={
+          <span className="whitespace-nowrap">
+            활성화하면 FAQ가 다시 노출됩니다.
+          </span>
+        }
         actions={
           <>
             <Button
@@ -548,40 +478,31 @@ export const FaqManagement = () => {
 
       <Modal
         isOpen={deletingFaq !== undefined}
-        onClose={() => {
-          setDeletingFaqId(null);
-          setIsFaqDeleteAcknowledged(false);
-        }}
+        onClose={() => setDeletingFaqId(null)}
         title="FAQ를 삭제할까요?"
-        description="API 명세에 따라 실제 row를 지우지 않고 INACTIVE로 전환합니다. 사용자 검색 및 RAG 답변 대상에서는 제외됩니다."
+        description={
+          <span className="whitespace-nowrap">
+            삭제하면 FAQ가 비활성 상태로 전환됩니다.
+          </span>
+        }
         actions={
           <>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                setDeletingFaqId(null);
-                setIsFaqDeleteAcknowledged(false);
-              }}
+              onClick={() => setDeletingFaqId(null)}
             >
               취소
             </Button>
             <Button
               variant="danger"
               size="sm"
-              disabled={!isFaqDeleteAcknowledged}
-              // 체크 전에는 눌러도 막혀 있다는 게 바로 보이도록 자물쇠
-              // 아이콘을 같이 보여줍니다. 체크 여부가 바뀔 때 아이콘이
-              // 부드럽게 사라지고 나타나도록 애니메이션을 줘요.
-              leftIcon={
-                <AnimatedLockIcon show={!isFaqDeleteAcknowledged} size={16} />
-              }
               onClick={() => {
-                if (!deletingFaq || !isFaqDeleteAcknowledged) return;
-                const faqId = deletingFaq.faqId;
-                void runWithStatus("FAQ 삭제", () => deleteFaq(faqId));
+                if (deletingFaq) {
+                  const faqId = deletingFaq.faqId;
+                  void runWithStatus("FAQ 삭제", () => deleteFaq(faqId));
+                }
                 setDeletingFaqId(null);
-                setIsFaqDeleteAcknowledged(false);
               }}
             >
               삭제
@@ -590,19 +511,9 @@ export const FaqManagement = () => {
         }
       >
         {deletingFaq && (
-          <div className="space-y-4">
-            <p className="bg-surface-muted rounded-2xl p-4 text-sm font-bold text-gray-700 dark:bg-white/5 dark:text-gray-200">
-              {deletingFaq.question}
-            </p>
-            <ConfirmCheckbox
-              checked={isFaqDeleteAcknowledged}
-              onChange={(event) =>
-                setIsFaqDeleteAcknowledged(event.target.checked)
-              }
-            >
-              FAQ 삭제가 비활성화 처리로 반영됨을 확인했습니다.
-            </ConfirmCheckbox>
-          </div>
+          <p className="bg-surface-muted rounded-2xl p-4 text-sm font-bold text-gray-700 dark:bg-white/5 dark:text-gray-200">
+            {deletingFaq.question}
+          </p>
         )}
       </Modal>
     </div>
@@ -630,31 +541,49 @@ const FaqFormModal = ({
   onSave,
 }: FaqFormModalProps) => {
   const formId = `faq-${mode}-form`;
-  const [selectedCategory, setSelectedCategory] = useState(
-    initialValues?.category ?? "",
-  );
+  const {
+    control,
+    formState: { isValid },
+    handleSubmit,
+    reset,
+  } = useForm<FaqFormValues>({
+    defaultValues: {
+      answer: initialValues?.answer ?? "",
+      category: initialValues?.category,
+      question: initialValues?.question ?? "",
+      subcategory: initialValues?.subcategory ?? "",
+    },
+    mode: "onChange",
+    resolver: zodResolver(faqFormSchema),
+  });
+  const selectedCategory = useWatch({ control, name: "category" });
   const subcategoryOptions = getFaqSubcategoryOptions(selectedCategory);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const formData = new FormData(event.currentTarget);
-    const answer = String(formData.get("answer") ?? "").trim();
-    const category = String(formData.get("category") ?? "") as AdminFaqCategory;
-    const question = String(formData.get("question") ?? "").trim();
-    const subcategory = String(formData.get("subcategory") ?? "").trim();
-
-    if (!category || !question || !answer) {
-      showToast("카테고리, 질문, 답변을 입력해 주세요.");
-      return;
-    }
-
-    onSave?.({
-      answer,
-      category,
-      question,
-      subcategory: subcategory || undefined,
+  useEffect(() => {
+    reset({
+      answer: initialValues?.answer ?? "",
+      category: initialValues?.category,
+      question: initialValues?.question ?? "",
+      subcategory: initialValues?.subcategory ?? "",
     });
+  }, [initialValues, reset]);
+
+  const submitFaq = (values: FaqFormValues) => {
+    onSave?.({
+      answer: values.answer.trim(),
+      category: values.category,
+      question: values.question.trim(),
+      subcategory: values.subcategory?.trim() || undefined,
+    });
+  };
+  const handleInvalidSubmit = (formErrors: FieldErrors<FaqFormValues>) => {
+    const firstMessage = Object.values(formErrors)[0]?.message;
+
+    showToast(
+      typeof firstMessage === "string"
+        ? firstMessage
+        : "카테고리, 질문, 답변을 입력해 주세요.",
+    );
   };
 
   return (
@@ -669,55 +598,65 @@ const FaqFormModal = ({
           <Button variant="ghost" size="sm" onClick={onClose}>
             취소
           </Button>
-          <Button size="sm" form={formId} type="submit">
+          <Button size="sm" form={formId} type="submit" disabled={!isValid}>
             {mode === "create" ? "등록" : "저장"}
           </Button>
         </>
       }
     >
+      {mode === "edit" && initialValues && (
+        <div className="mb-5 flex flex-wrap gap-x-4 gap-y-1 rounded-2xl bg-gray-50 px-4 py-3 text-xs font-bold text-gray-400 dark:bg-white/5">
+          <span>등록일 {formatKoreanDate(initialValues.createdAt)}</span>
+          <span>
+            수정일{" "}
+            {initialValues.updatedAt
+              ? formatKoreanDate(initialValues.updatedAt)
+              : "수정 이력 없음"}
+          </span>
+        </div>
+      )}
+
       <form
         id={formId}
         className="grid gap-5 sm:grid-cols-2"
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(submitFaq, handleInvalidSubmit)}
       >
-        <AdminField
-          label="카테고리"
+        <AdminControlledField
+          control={control}
           name="category"
-          defaultValue={initialValues?.category}
+          label="카테고리"
           options={faqCategoryOptions}
           placeholder="카테고리 선택"
-          onChange={(event) => setSelectedCategory(event.target.value)}
           required
         />
-        <AdminField
+        <AdminControlledField
           key={selectedCategory || "subcategory"}
-          label="세부 주제"
+          control={control}
           name="subcategory"
-          defaultValue={
-            subcategoryOptions.some(
-              (option) => option.value === initialValues?.subcategory,
-            )
-              ? initialValues?.subcategory
-              : undefined
+          formatValue={(value) =>
+            subcategoryOptions.some((option) => option.value === value)
+              ? String(value)
+              : ""
           }
+          label="세부 주제 (선택)"
           options={subcategoryOptions}
           placeholder={
             selectedCategory ? "세부 주제 선택" : "카테고리를 먼저 선택"
           }
-          description="선택한 카테고리에 속한 세부 주제만 저장할 수 있습니다."
+          description="선택하지 않아도 등록할 수 있습니다."
         />
-        <AdminField
-          label="질문"
+        <AdminControlledField
+          control={control}
           name="question"
-          defaultValue={initialValues?.question}
+          label="질문"
           placeholder="예: 해외 로밍 데이터는 언제부터 적용되나요?"
           className="sm:col-span-2"
           required
         />
-        <AdminField
-          label="답변"
+        <AdminControlledField
+          control={control}
           name="answer"
-          defaultValue={initialValues?.answer}
+          label="답변"
           placeholder="예: 로밍 요금제는 신청한 시작일 0시부터 적용되며, 국가별 제공량과 요금은 상품에 따라 달라질 수 있습니다."
           className="sm:col-span-2"
           multiline
@@ -742,14 +681,10 @@ const FaqSkeletonRow = () => (
     <td className="px-4 py-4">
       <div className="bg-surface-muted mx-auto h-4 w-20 animate-pulse rounded-full dark:bg-white/10" />
     </td>
-    <td className="px-4 py-4">
-      <div className="bg-surface-muted mx-auto h-4 w-20 animate-pulse rounded-full dark:bg-white/10" />
-    </td>
     <td className="px-5 py-4">
-      <div className="mx-auto flex justify-center gap-3">
-        <div className="bg-surface-muted h-10 w-10 animate-pulse rounded-lg dark:bg-white/10" />
-        <div className="bg-surface-muted h-10 w-24 animate-pulse rounded-lg dark:bg-white/10" />
-        <div className="bg-surface-muted h-10 w-10 animate-pulse rounded-lg dark:bg-white/10" />
+      <div className="mx-auto flex justify-center gap-2">
+        <div className="bg-surface-muted h-12 w-12 animate-pulse rounded-lg dark:bg-white/10" />
+        <div className="bg-surface-muted h-12 w-12 animate-pulse rounded-lg dark:bg-white/10" />
       </div>
     </td>
   </tr>
@@ -763,177 +698,9 @@ const FaqSkeletonCard = () => (
         <div className="bg-surface-muted h-3 w-2/3 animate-pulse rounded-full dark:bg-white/10" />
       </div>
     </div>
+    <div className="mt-4 flex justify-end gap-1.5">
+      <div className="bg-surface-muted h-9 w-9 animate-pulse rounded-lg dark:bg-white/10" />
+      <div className="bg-surface-muted h-9 w-9 animate-pulse rounded-lg dark:bg-white/10" />
+    </div>
   </Card>
 );
-
-type FaqPaginationProps = {
-  currentPage: number;
-  disabled?: boolean;
-  onPageChange: (page: number) => void;
-  totalPages: number;
-};
-
-const FaqPagination = ({
-  currentPage,
-  disabled = false,
-  onPageChange,
-  totalPages,
-}: FaqPaginationProps) => {
-  const pages = getVisiblePages(currentPage, totalPages);
-  const [jumpValue, setJumpValue] = useState("");
-
-  const handleJumpSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const nextPage = Number(jumpValue);
-
-    if (!Number.isInteger(nextPage)) return;
-
-    onPageChange(Math.min(totalPages, Math.max(1, nextPage)));
-    setJumpValue("");
-  };
-
-  return (
-    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 pt-2 md:pt-0">
-      <div className="flex items-center justify-center gap-1">
-        <Button
-          variant="ghost"
-          size="xs"
-          className="h-8 w-8 rounded-lg p-0 disabled:pointer-events-none disabled:opacity-30"
-          disabled={currentPage === 1 || disabled}
-          aria-label="이전 페이지"
-          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-        >
-          <ChevronLeft size={15} />
-        </Button>
-        {pages.map((page, index) =>
-          page === "ellipsis" ? (
-            <span
-              key={`ellipsis-${index}`}
-              className="flex h-8 min-w-8 items-center justify-center px-1 text-sm font-extrabold text-gray-400"
-            >
-              ...
-            </span>
-          ) : (
-            <PaginationPageButton
-              key={page}
-              disabled={disabled}
-              isActive={page === currentPage}
-              page={page}
-              onClick={() => onPageChange(page)}
-            />
-          ),
-        )}
-        <Button
-          variant="ghost"
-          size="xs"
-          className="h-8 w-8 rounded-lg p-0 disabled:pointer-events-none disabled:opacity-30"
-          disabled={currentPage === totalPages || disabled}
-          aria-label="다음 페이지"
-          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-        >
-          <ChevronRight size={15} />
-        </Button>
-      </div>
-
-      {totalPages > 7 && (
-        <form className="flex items-center gap-1.5" onSubmit={handleJumpSubmit}>
-          <input
-            type="number"
-            min={1}
-            max={totalPages}
-            value={jumpValue}
-            disabled={disabled}
-            placeholder="페이지"
-            onChange={(event) => setJumpValue(event.target.value)}
-            className="border-border focus:border-brand h-8 w-20 rounded-lg border bg-white px-2 text-center text-xs font-bold text-gray-700 transition outline-none dark:border-white/10 dark:bg-white/5 dark:text-gray-200"
-          />
-          <Button
-            variant="secondary"
-            size="xs"
-            type="submit"
-            disabled={disabled || !jumpValue}
-            className="h-8 rounded-lg px-2"
-          >
-            이동
-          </Button>
-        </form>
-      )}
-    </div>
-  );
-};
-
-type PaginationItem = number | "ellipsis";
-
-const getVisiblePages = (
-  currentPage: number,
-  totalPages: number,
-): PaginationItem[] => {
-  if (totalPages <= 7) {
-    return Array.from({ length: totalPages }, (_, index) => index + 1);
-  }
-
-  const start = Math.max(2, currentPage - 1);
-  const end = Math.min(totalPages - 1, currentPage + 1);
-  const pages: PaginationItem[] = [1];
-
-  if (start > 2) {
-    pages.push("ellipsis");
-  }
-
-  for (let page = start; page <= end; page += 1) {
-    pages.push(page);
-  }
-
-  if (end < totalPages - 1) {
-    pages.push("ellipsis");
-  }
-
-  pages.push(totalPages);
-  return pages;
-};
-
-type PaginationPageButtonProps = {
-  disabled?: boolean;
-  isActive: boolean;
-  onClick: () => void;
-  page: number;
-};
-
-const PaginationPageButton = ({
-  disabled,
-  isActive,
-  onClick,
-  page,
-}: PaginationPageButtonProps) => (
-  <button
-    type="button"
-    aria-label={`${page}페이지`}
-    aria-current={isActive ? "page" : undefined}
-    disabled={disabled}
-    onClick={onClick}
-    className={cn(
-      "flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-extrabold transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50",
-      isActive
-        ? "bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand"
-        : "text-gray-500 hover:bg-gray-100 hover:text-gray-950 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white",
-    )}
-  >
-    {page}
-  </button>
-);
-
-const formatDate = (value?: string) => {
-  if (!value) return "-";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value.slice(0, 10);
-  }
-
-  return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
-};

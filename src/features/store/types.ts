@@ -3,9 +3,14 @@ export type StoreLocation = {
   name: string;
   address: string;
   businessHours?: string;
+  benefitBrand?: string;
+  benefitCategory?: string;
+  benefitId?: number;
+  benefitName?: string;
   consultServices?: string[];
   phone: string;
   providedServices?: string[];
+  storeType?: "PHONE" | "PARTNER";
   lat: number;
   lng: number;
   distanceText?: string;
@@ -35,3 +40,6 @@ export type StoreRoute = {
   path: StoreRoutePoint[];
   segments?: StoreRouteSegment[];
 };
+
+/** 매장 지도 패널 목록 탭: 매장 / 제휴 혜택 */
+export type MapCategory = "store" | "benefit";
