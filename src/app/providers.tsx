@@ -3,14 +3,17 @@
 import { AuthProvider } from "@/features/auth/hooks/useAuthUser";
 import { ThemeProvider } from "@/shared/ui/ThemeProvider";
 import { ToastProvider } from "@/shared/ui/ToastProvider";
+import { QueryProvider } from "./query-provider";
 
 const Providers = ({ children }: { children: React.ReactNode }) => {
   return (
     <AuthProvider>
-      <ThemeProvider>
-        {children}
-        <ToastProvider />
-      </ThemeProvider>
+      <QueryProvider>
+        <ThemeProvider>
+          {children}
+          <ToastProvider />
+        </ThemeProvider>
+      </QueryProvider>
     </AuthProvider>
   );
 };
