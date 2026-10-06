@@ -1,8 +1,10 @@
 import Image from "next/image";
 import { ChatMarkdown } from "@/features/chat/components/ChatMarkdown";
 import { ChatProgressSteps } from "@/features/chat/components/ChatProgressSteps";
+import { ChatStoreMap } from "@/features/chat/components/ChatStoreMap";
 import type { ChatMessage } from "@/features/chat/types";
 import { ButtonLink } from "@/shared/ui/Button";
+import { cn } from "@/shared/lib/cn";
 
 const ASSISTANT_PROFILE_IMAGE = "/images/chatbot/profile-robot.png";
 
@@ -45,13 +47,18 @@ export const ChatMessageList = ({
       return (
         <div
           key={message.id}
-          className="mr-auto flex max-w-full items-start gap-2 md:max-w-[76%] md:gap-3"
+          className={cn(
+            "mr-auto flex max-w-full items-start gap-2 md:gap-3",
+            message.storeMap ? "md:max-w-[92%]" : "md:max-w-[76%]",
+          )}
         >
           <AssistantProfile />
 
           <div className="min-w-0 flex-1">
             <article className="border-border text-text-primary rounded-3xl border bg-white px-4 py-4 text-sm leading-6 shadow-sm md:px-5 dark:border-white/10 dark:bg-zinc-950 dark:text-white">
               <ChatMarkdown content={message.content ?? ""} />
+
+              {message.storeMap && <ChatStoreMap storeMap={message.storeMap} />}
 
               {/* 참고한 FAQ 표시는 사용하지 않기로 해서 숨김 처리 (BE relatedFaqs 미요청).
                   다시 표시하려면 아래 블록의 주석을 해제하세요.
