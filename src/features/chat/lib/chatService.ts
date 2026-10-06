@@ -1,6 +1,7 @@
 import type {
   // ChatAnswerSource, // 참고한 FAQ 표시 숨김 처리로 미사용
   ChatMessage,
+  ChatStoreMap,
   ChatSessionListResponse,
   SessionMessagesResponse,
 } from "@/features/chat/types";
@@ -19,6 +20,9 @@ type ChatMessageResponse = {
   relatedFaqIds: number[];
   createAt: string;
   latencyMs: number;
+  storeMap?: ChatStoreMap | null;
+  stores?: ChatStoreMap["stores"] | null;
+  nearbyStores?: ChatStoreMap["stores"] | null;
 };
 
 type SendChatMessageOptions = {
@@ -137,6 +141,13 @@ const toAssistantMessage = (response: ChatMessageResponse): ChatMessage => {
     role: "assistant",
     content: hasAnswer ? answer : FAILED_ANSWER_MESSAGE,
     createdAt: response.createAt,
+    storeMap:
+      response.storeMap ??
+      (response.stores?.length
+        ? { stores: response.stores }
+        : response.nearbyStores?.length
+          ? { stores: response.nearbyStores }
+          : undefined),
     // sources: hasAnswer ? sources : [],
   };
 };
