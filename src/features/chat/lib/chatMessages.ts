@@ -3,7 +3,10 @@ import type {
   ChatStoreMap,
   SessionMessage,
 } from "@/features/chat/types";
-import { FAILED_ANSWER_MESSAGE } from "@/features/chat/lib/chatService";
+import {
+  FAILED_ANSWER_MESSAGE,
+  PENDING_ANSWER_MESSAGE,
+} from "@/features/chat/lib/chatService";
 import {
   createChatStoreMap,
   isStoreRelatedPrompt,
@@ -17,11 +20,16 @@ export { isStoreRelatedPrompt };
 
 export const toChatMessage = (message: SessionMessage): ChatMessage => {
   const isUser = message.role === "USER";
+  // 답변 생성 중에 화면을 떠났다가 기록을 열면 아직 PENDING일 수 있다.
+  const isAnswerPending =
+    !isUser && (message.status === "PENDING" || message.status === "RETRYING");
 
   return {
     id: `${isUser ? "user" : "assistant"}-${message.messageId}`,
     role: isUser ? "user" : "assistant",
-    content: message.content ?? (isUser ? "" : FAILED_ANSWER_MESSAGE),
+    content: isAnswerPending
+      ? PENDING_ANSWER_MESSAGE
+      : (message.content ?? (isUser ? "" : FAILED_ANSWER_MESSAGE)),
     createdAt: message.createdAt,
   };
 };

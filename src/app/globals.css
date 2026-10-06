@@ -87,6 +87,28 @@
   }
 }
 
+/* 채팅 답변 스트리밍: 다 받은 목록·표·카드가 붙을 때만 부드럽게 나타난다(글 문단은 타이핑으로 보이므로 제외). */
+.chat-stream-blocks > :not(p) {
+  animation: chat-block-in 360ms ease-out both;
+}
+
+@keyframes chat-block-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-stream-blocks > :not(p) {
+    animation: none;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

@@ -18,10 +18,12 @@ import {
   toChatTitle,
 } from "@/features/chat/lib/chatMessages";
 import { createChatStoreMap } from "@/features/chat/lib/chatStoreMap";
+import { createTextReveal } from "@/features/chat/lib/chatTextReveal";
 import { useChatSessionList } from "@/features/chat/hooks/useChatSessionList";
 import type {
   ChatMessage,
   ChatMode,
+  ChatStreamingReply,
   SessionMessagesResponse,
 } from "@/features/chat/types";
 import { showToast } from "@/shared/ui/ToastProvider";
@@ -52,6 +54,10 @@ export const useChatConversationController = ({
     number | undefined
   >();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [streamingReply, setStreamingReply] =
+    useState<ChatStreamingReply | null>(null);
+  /** 기다리는 중인 답변 요청. 새 대화를 시작하면 끊어서 이전 답변이 섞이지 않게 한다. */
+  const answerAbortRef = useRef<AbortController | null>(null);
   const {
     chatSessions,
     clearChatSessions,
@@ -224,11 +230,28 @@ export const useChatConversationController = ({
   }, [currentChatTitle, currentGuestId, currentSessionId, messages]);
 
   useEffect(() => {
+    return () => answerAbortRef.current?.abort();
+  }, []);
+
+  const isStreamingAnswer = Boolean(streamingReply?.content);
+
+  useEffect(() => {
     if (activeMode !== "chat" || messages.length === 0) return;
 
-    const behavior: ScrollBehavior = shouldJumpToBottomRef.current
-      ? "auto"
-      : "smooth";
+    const container = scrollContainerRef.current;
+
+    // 답변이 글자 단위로 늘어나는 동안에는 사용자가 위로 스크롤해 읽고 있으면 끌어내리지 않는다.
+    if (
+      isStreamingAnswer &&
+      container &&
+      container.scrollHeight - container.scrollTop - container.clientHeight >
+        160
+    ) {
+      return;
+    }
+
+    const behavior: ScrollBehavior =
+      shouldJumpToBottomRef.current || isStreamingAnswer ? "auto" : "smooth";
     shouldJumpToBottomRef.current = false;
 
     window.requestAnimationFrame(() => {
@@ -243,7 +266,7 @@ export const useChatConversationController = ({
         });
       });
     });
-  }, [activeMode, chatStatus, messages]);
+  }, [activeMode, chatStatus, isStreamingAnswer, messages, streamingReply]);
 
   const submitChatPrompt = async (prompt: string = chatInput) => {
     const trimmedPrompt = prompt.trim();
@@ -261,9 +284,25 @@ export const useChatConversationController = ({
       setCurrentChatTitle(toChatTitle(trimmedPrompt));
     }
 
+    const answerController = new AbortController();
+    const { signal } = answerController;
+
+    answerAbortRef.current?.abort();
+    answerAbortRef.current = answerController;
+
     setMessages((currentMessages) => [...currentMessages, userMessage]);
     setChatInput("");
     setChatStatus("loading");
+    setStreamingReply({ content: "" });
+
+    const textReveal = createTextReveal(({ content, isPreparingBlock }) => {
+      if (signal.aborted) return;
+      setStreamingReply((reply) => ({ ...reply, content, isPreparingBlock }));
+    });
+
+    signal.addEventListener("abort", () => textReveal.cancel(), {
+      once: true,
+    });
     window.requestAnimationFrame(() => chatInputRef.current?.focus());
 
     try {
@@ -283,15 +322,31 @@ export const useChatConversationController = ({
           : { ...titles, [nextSessionId]: toChatTitle(trimmedPrompt) },
       );
 
+      if (signal.aborted) return;
+
       const assistantMessage = await chatService.sendMessage({
         content: trimmedPrompt,
         guestId: nextGuestId,
         sessionId: nextSessionId,
+        signal,
+        onStage: (stage) => {
+          if (signal.aborted) return;
+          setStreamingReply((reply) => ({ content: "", ...reply, stage }));
+        },
+        onDelta: (content) => {
+          if (signal.aborted) return;
+          textReveal.push(content);
+        },
       });
-      const storeMap =
+      const [storeMap] = await Promise.all([
         isStoreRelatedPrompt(trimmedPrompt) && !assistantMessage.storeMap
-          ? await createChatStoreMap(trimmedPrompt).catch(() => undefined)
-          : undefined;
+          ? createChatStoreMap(trimmedPrompt).catch(() => undefined)
+          : undefined,
+        // 화면에 덜 풀린 글이 남아 있으면 끝까지 보여준 뒤 최종 메시지로 바꾼다(마지막에 한 번에 붙는 현상 방지).
+        textReveal.finish(assistantMessage.content),
+      ]);
+
+      if (signal.aborted) return;
 
       setMessages((currentMessages) => [
         ...currentMessages,
@@ -302,18 +357,32 @@ export const useChatConversationController = ({
         void refreshChatSessions();
       }
     } catch (error) {
+      textReveal.cancel();
+
+      if (signal.aborted) return;
+
       console.error("Chat API request failed", error);
       const fallbackMessage =
         await createFallbackAssistantMessage(trimmedPrompt);
 
+      if (signal.aborted) return;
+
       setMessages((currentMessages) => [...currentMessages, fallbackMessage]);
     } finally {
-      setChatStatus("idle");
-      window.requestAnimationFrame(() => chatInputRef.current?.focus());
+      // 새 대화 시작 등으로 끊긴 요청이면 이미 다음 상태로 넘어갔으니 건드리지 않는다.
+      if (answerAbortRef.current === answerController) {
+        answerAbortRef.current = null;
+        setStreamingReply(null);
+        setChatStatus("idle");
+        window.requestAnimationFrame(() => chatInputRef.current?.focus());
+      }
     }
   };
 
   const resetChat = () => {
+    answerAbortRef.current?.abort();
+    answerAbortRef.current = null;
+    setStreamingReply(null);
     latestSelectRequestRef.current += 1;
     setLoadingSessionId(null);
     setMessages([]);
@@ -388,6 +457,7 @@ export const useChatConversationController = ({
     sessionTitles,
     setChatInput,
     startNewChat,
+    streamingReply,
     submitChatPrompt,
   };
 };

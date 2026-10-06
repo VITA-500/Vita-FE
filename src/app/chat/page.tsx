@@ -66,6 +66,7 @@ const ChatPageContent = () => {
     sessionTitles,
     setChatInput,
     startNewChat,
+    streamingReply,
     submitChatPrompt,
   } = useChatConversationController({
     activeMode,
@@ -204,6 +205,7 @@ const ChatPageContent = () => {
               onChatInputChange={setChatInput}
               onSubmitPrompt={submitChatPrompt}
               scrollContainerRef={scrollContainerRef}
+              streamingReply={streamingReply}
             />
           )}
         </div>

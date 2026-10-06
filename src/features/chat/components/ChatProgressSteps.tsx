@@ -3,17 +3,17 @@
 import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import type { ChatProgressStage } from "@/features/chat/types";
 import { cn } from "@/shared/lib/cn";
 
 /**
  * 답변을 기다리는 동안 보여주는 진행 단계.
  *
- * 지금 채팅 API는 답변이 다 만들어진 뒤 한 번에 응답해서 실제 진행 상황을 알 수 없다.
- * 그래서 `stage`를 주지 않으면 경과 시간으로 단계를 넘긴다. BE가 SSE로 진행 단계를 보내주면
- * 그 값을 `stage`로 넘겨 실제 단계와 맞추면 된다.
+ * BE SSE의 assistant_status를 `stage`로 받아 실제 단계를 보여준다.
+ * 스트림이 연결되지 않아 `stage`가 없으면 경과 시간으로 단계를 넘긴다.
  */
 
-export type ChatProgressStage = "understanding" | "retrieving" | "generating";
+export type { ChatProgressStage };
 
 const steps: Array<{
   stage: ChatProgressStage;
