@@ -25,6 +25,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { ChatDeleteConfirmDialog } from "@/features/chat/components/ChatDeleteConfirmDialog";
 import { serviceMenus } from "@/features/chat/constants";
 import type { ChatMode, ChatSessionSummary } from "@/features/chat/types";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
@@ -67,6 +68,10 @@ type ChatSidebarProps = {
   /** 최근 상담 목록(제목)을 아직 불러오는 중. 그동안은 목록을 접어 두고, 다 불러오면 펼친다. */
   isRecentChatsLoading?: boolean;
   onSelectChat?: (sessionId: number) => void;
+  /** 고정한 상담 id(고정한 순서). */
+  pinnedSessionIds?: readonly number[];
+  onTogglePinChat?: (sessionId: number) => void;
+  onDeleteChat?: (sessionId: number) => void;
 };
 
 type SidebarChatItem = {
@@ -112,8 +117,11 @@ export const ChatSidebar = ({
   onOpen,
   onOpenProfile,
   onOpenSearch,
+  onDeleteChat,
   onSelectChat,
+  onTogglePinChat,
   pendingSessionId = null,
+  pinnedSessionIds = [],
   onStartTour,
   sessionTitles = {},
   isRecentChatsLoading = false,
@@ -129,9 +137,8 @@ export const ChatSidebar = ({
     chatKey: string;
     top: number;
   } | null>(null);
-  // 고정은 제목이 아니라 상담 key(session-{id})로 기억한다.
-  // 제목은 선택 여부에 따라 바뀌어서(첫 질문 ↔ 날짜), 제목으로 고정하면 다른 상담을 누를 때 고정이 풀려 보였다.
-  const [pinnedChatKeys, setPinnedChatKeys] = useState<string[]>([]);
+  const [deleteTargetChat, setDeleteTargetChat] =
+    useState<SidebarChatItem | null>(null);
   const [isRecentChatsCollapsed, setIsRecentChatsCollapsed] = useState(false);
   // 사용자가 직접 접었는지(isRecentChatsCollapsed)와 불러오는 중인지를 합쳐 실제로 접어 보일지 정한다.
   const isRecentChatsHidden = isRecentChatsCollapsed || isRecentChatsLoading;
@@ -177,12 +184,24 @@ export const ChatSidebar = ({
           ...sessionChats,
         ]
       : sessionChats;
-  const pinnedChats = pinnedChatKeys
-    .map((chatKey) => visibleRecentChats.find((chat) => chat.key === chatKey))
+  // 고정은 제목이 아니라 상담 id로 기억한다.
+  // 제목은 선택 여부에 따라 바뀌어서(첫 질문 ↔ 날짜), 제목으로 고정하면 다른 상담을 누를 때 고정이 풀려 보였다.
+  const isPinnedChat = (chat: SidebarChatItem) =>
+    chat.sessionId !== null && pinnedSessionIds.includes(chat.sessionId);
+  const pinnedChats = pinnedSessionIds
+    .map((sessionId) =>
+      visibleRecentChats.find((chat) => chat.sessionId === sessionId),
+    )
     .filter((chat): chat is SidebarChatItem => Boolean(chat));
   const unpinnedRecentChats = visibleRecentChats.filter(
-    (chat) => !pinnedChatKeys.includes(chat.key),
+    (chat) => !isPinnedChat(chat),
   );
+  const menuChat = chatMenu
+    ? (visibleRecentChats.find((chat) => chat.key === chatMenu.chatKey) ?? null)
+    : null;
+  const isMenuChatPinned = menuChat ? isPinnedChat(menuChat) : false;
+  /** 아직 저장되지 않은 새 대화는 고정·삭제할 대상이 없다. */
+  const canManageMenuChat = menuChat?.sessionId != null;
   const selectChat = (chat: SidebarChatItem) => {
     if (chat.sessionId !== null) {
       onSelectChat?.(chat.sessionId);
@@ -206,19 +225,30 @@ export const ChatSidebar = ({
     showToast("로그아웃되었습니다.");
   };
 
-  const handlePinChat = (chatKey: string) => {
+  const handlePinChat = (chat: SidebarChatItem) => {
+    setChatMenu(null);
+
     // 아직 저장되지 않은 새 대화는 고정할 대상이 없다.
-    if (chatKey === "current-new") {
-      setChatMenu(null);
-      return;
+    if (chat.sessionId === null) return;
+
+    onTogglePinChat?.(chat.sessionId);
+  };
+
+  const handleRequestDeleteChat = (chat: SidebarChatItem) => {
+    setChatMenu(null);
+
+    if (chat.sessionId === null) return;
+
+    onHideTooltip();
+    setDeleteTargetChat(chat);
+  };
+
+  const handleConfirmDeleteChat = () => {
+    if (deleteTargetChat?.sessionId != null) {
+      onDeleteChat?.(deleteTargetChat.sessionId);
     }
 
-    setPinnedChatKeys((currentKeys) =>
-      currentKeys.includes(chatKey)
-        ? currentKeys.filter((currentKey) => currentKey !== chatKey)
-        : [...currentKeys, chatKey],
-    );
-    setChatMenu(null);
+    setDeleteTargetChat(null);
   };
 
   const handleOpenChatMenu = (
@@ -394,7 +424,7 @@ export const ChatSidebar = ({
           </div>
         </div>
 
-        {chatMenu && (
+        {chatMenu && menuChat && (
           <div
             ref={chatMenuRef}
             className="fixed z-[130] w-[260px] rounded-3xl border border-gray-200 bg-white p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-zinc-900"
@@ -420,17 +450,12 @@ export const ChatSidebar = ({
 
             <button
               type="button"
-              onClick={() => handlePinChat(chatMenu.chatKey)}
-              className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
+              disabled={!canManageMenuChat}
+              onClick={() => handlePinChat(menuChat)}
+              className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
             >
-              {pinnedChatKeys.includes(chatMenu.chatKey) ? (
-                <PinOff size={18} />
-              ) : (
-                <Pin size={18} />
-              )}
-              {pinnedChatKeys.includes(chatMenu.chatKey)
-                ? "채팅 고정 해제"
-                : "채팅 고정"}
+              {isMenuChatPinned ? <PinOff size={18} /> : <Pin size={18} />}
+              {isMenuChatPinned ? "채팅 고정 해제" : "채팅 고정"}
             </button>
 
             <button
@@ -443,7 +468,9 @@ export const ChatSidebar = ({
 
             <button
               type="button"
-              className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-red-500 transition hover:bg-red-50 dark:hover:bg-red-500/10"
+              disabled={!canManageMenuChat}
+              onClick={() => handleRequestDeleteChat(menuChat)}
+              className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent dark:hover:bg-red-500/10"
             >
               <Trash2 size={18} />
               삭제
@@ -640,7 +667,7 @@ export const ChatSidebar = ({
 
                         <button
                           type="button"
-                          onClick={() => handlePinChat(chat.key)}
+                          onClick={() => handlePinChat(chat)}
                           className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
                           aria-label="채팅 고정 해제"
                         >
@@ -754,7 +781,7 @@ export const ChatSidebar = ({
 
                           <button
                             type="button"
-                            onClick={() => handlePinChat(chat.key)}
+                            onClick={() => handlePinChat(chat)}
                             className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
                             aria-label="채팅 고정"
                           >
@@ -854,6 +881,14 @@ export const ChatSidebar = ({
                 로그아웃
               </button>
             </div>
+          )}
+
+          {deleteTargetChat && (
+            <ChatDeleteConfirmDialog
+              title={deleteTargetChat.title}
+              onCancel={() => setDeleteTargetChat(null)}
+              onConfirm={handleConfirmDeleteChat}
+            />
           )}
 
           {isLogoutConfirmOpen && (

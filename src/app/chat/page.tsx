@@ -59,11 +59,13 @@ const ChatPageContent = () => {
     editHintMessageId,
     currentChatTitle,
     currentSessionId,
+    deleteChatSession,
     handleSelectChat,
     hasChatStarted,
     hasLoadedRecentChats,
     loadingSessionId,
     messages,
+    pinnedSessionIds,
     scrollContainerRef,
     sessionTitles,
     setChatInput,
@@ -72,6 +74,7 @@ const ChatPageContent = () => {
     retryAnswer,
     stopChatAnswer,
     submitChatPrompt,
+    togglePinChatSession,
   } = useChatConversationController({
     activeMode,
     currentUserId: user?.userId,
@@ -168,6 +171,9 @@ const ChatPageContent = () => {
         onSelectChat={(targetSessionId) => {
           void handleSelectChat(targetSessionId);
         }}
+        pinnedSessionIds={pinnedSessionIds}
+        onTogglePinChat={togglePinChatSession}
+        onDeleteChat={deleteChatSession}
       />
 
       {/* Main */}

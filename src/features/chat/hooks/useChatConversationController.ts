@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   chatConversationStorage,
   createGuestId,
@@ -21,6 +21,7 @@ import {
 import { createChatStoreMap } from "@/features/chat/lib/chatStoreMap";
 import { createTextReveal } from "@/features/chat/lib/chatTextReveal";
 import { useChatSessionList } from "@/features/chat/hooks/useChatSessionList";
+import { useChatSessionPreferences } from "@/features/chat/hooks/useChatSessionPreferences";
 import type {
   ChatMessage,
   ChatMode,
@@ -65,13 +66,27 @@ export const useChatConversationController = ({
   );
   const editHintTimeoutRef = useRef<number | undefined>(undefined);
   const {
-    chatSessions,
+    chatSessions: serverChatSessions,
     clearChatSessions,
     hasLoadedRecentChats,
     refreshChatSessions,
     sessionTitles,
     setSessionTitles,
   } = useChatSessionList(isAuthenticated);
+  const {
+    deletedSessionIds,
+    markDeleted: markSessionDeleted,
+    pinnedSessionIds,
+    togglePin: togglePinChatSession,
+  } = useChatSessionPreferences(isAuthenticated ? currentUserId : undefined);
+  // 삭제한 상담은 BE 기록이 남아 있어도 목록에서 뺀다.
+  const chatSessions = useMemo(
+    () =>
+      serverChatSessions.filter(
+        (session) => !deletedSessionIds.includes(session.sessionId),
+      ),
+    [deletedSessionIds, serverChatSessions],
+  );
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const shouldJumpToBottomRef = useRef(false);
   const latestSelectRequestRef = useRef(0);
@@ -496,6 +511,20 @@ export const useChatConversationController = ({
     }
   };
 
+  const deleteChatSession = (targetSessionId: number) => {
+    markSessionDeleted(targetSessionId);
+
+    // 보고 있거나 불러오는 중인 상담을 지우면 빈 새 상담으로 돌아간다.
+    if (
+      targetSessionId === currentSessionId ||
+      targetSessionId === loadingSessionId
+    ) {
+      resetChat();
+    }
+
+    showToast("상담을 삭제했어요.");
+  };
+
   const handleSelectChat = async (targetSessionId: number) => {
     if (activeMode !== "chat") {
       onRequireChatMode();
@@ -541,6 +570,7 @@ export const useChatConversationController = ({
     chatStatus,
     currentChatTitle,
     currentSessionId,
+    deleteChatSession,
     editAndResubmitPrompt,
     editHintMessageId,
     handleSelectChat,
@@ -548,6 +578,7 @@ export const useChatConversationController = ({
     hasLoadedRecentChats,
     loadingSessionId,
     messages,
+    pinnedSessionIds,
     retryAnswer,
     scrollContainerRef,
     sessionTitles,
@@ -556,5 +587,6 @@ export const useChatConversationController = ({
     stopChatAnswer,
     streamingReply,
     submitChatPrompt,
+    togglePinChatSession,
   };
 };
