@@ -22,6 +22,7 @@ import {
   getMatchedServices,
   rankStoresByServices,
 } from "@/features/chat/lib/chatStoreMap";
+import { ChatCardRail } from "@/features/chat/components/ChatCardRail";
 import type { ChatStoreMap as ChatStoreMapData } from "@/features/chat/types";
 import { cn } from "@/shared/lib/cn";
 import { showToast } from "@/shared/ui/ToastProvider";
@@ -263,10 +264,13 @@ export const ChatStoreMap = ({
             </span>
           </div>
         )}
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {stores.map((store, index) => (
+        <ChatCardRail
+          items={stores}
+          ariaLabel={`주변 매장 ${stores.length}곳`}
+          itemLabel="매장"
+          getKey={(store) => store.id}
+          renderItem={(store, index) => (
             <StoreResultCard
-              key={store.id}
               cardRef={(element) => {
                 if (element) {
                   cardRefs.current.set(store.id, element);
@@ -281,8 +285,8 @@ export const ChatStoreMap = ({
               store={store}
               onSelect={() => handleSelectCard(store.id)}
             />
-          ))}
-        </div>
+          )}
+        />
       </div>
     </div>
   );
@@ -316,7 +320,7 @@ const StoreResultCard = ({
       tabIndex={0}
       aria-pressed={isSelected}
       className={cn(
-        "focus-visible:ring-brand/30 min-w-0 cursor-pointer scroll-my-4 rounded-xl border bg-white p-3.5 text-left transition outline-none focus-visible:ring-2 dark:bg-zinc-900",
+        "focus-visible:ring-brand/30 w-full min-w-0 cursor-pointer scroll-my-4 rounded-xl border bg-white p-3.5 text-left transition outline-none focus-visible:ring-2 dark:bg-zinc-900",
         isSelected
           ? "border-brand shadow-[0_8px_24px_rgba(253,182,29,0.18)]"
           : "border-gray-200 hover:border-gray-300 dark:border-white/10 dark:hover:border-white/20",
