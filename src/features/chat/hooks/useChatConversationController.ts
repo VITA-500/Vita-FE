@@ -13,6 +13,7 @@ import {
 } from "@/features/chat/lib/chatService";
 import {
   createFallbackAssistantMessage,
+  createStoppedAssistantMessage,
   isStoreRelatedPrompt,
   toChatMessage,
   toChatTitle,
@@ -58,6 +59,11 @@ export const useChatConversationController = ({
     useState<ChatStreamingReply | null>(null);
   /** 기다리는 중인 답변 요청. 새 대화를 시작하면 끊어서 이전 답변이 섞이지 않게 한다. */
   const answerAbortRef = useRef<AbortController | null>(null);
+  /** 답변을 중단한 직후 "질문 수정" 툴팁을 잠깐 띄울 질문 메시지 id */
+  const [editHintMessageId, setEditHintMessageId] = useState<string | null>(
+    null,
+  );
+  const editHintTimeoutRef = useRef<number | undefined>(undefined);
   const {
     chatSessions,
     clearChatSessions,
@@ -230,7 +236,15 @@ export const useChatConversationController = ({
   }, [currentChatTitle, currentGuestId, currentSessionId, messages]);
 
   useEffect(() => {
-    return () => answerAbortRef.current?.abort();
+    return () => {
+      answerAbortRef.current?.abort();
+      window.clearTimeout(editHintTimeoutRef.current);
+    };
+  }, []);
+
+  const clearEditHint = useCallback(() => {
+    window.clearTimeout(editHintTimeoutRef.current);
+    setEditHintMessageId(null);
   }, []);
 
   const isStreamingAnswer = Boolean(streamingReply?.content);
@@ -268,10 +282,20 @@ export const useChatConversationController = ({
     });
   }, [activeMode, chatStatus, isStreamingAnswer, messages, streamingReply]);
 
-  const submitChatPrompt = async (prompt: string = chatInput) => {
+  type SubmitChatPromptOptions = {
+    /** 이 메시지부터 뒤를 지우고 새 질문으로 다시 묻는다(질문 수정 · 다시 시도). */
+    replaceFromMessageId?: string;
+  };
+
+  const submitChatPrompt = async (
+    prompt: string = chatInput,
+    { replaceFromMessageId }: SubmitChatPromptOptions = {},
+  ) => {
     const trimmedPrompt = prompt.trim();
 
     if (!trimmedPrompt || chatStatus === "loading") return;
+
+    clearEditHint();
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -290,8 +314,19 @@ export const useChatConversationController = ({
     answerAbortRef.current?.abort();
     answerAbortRef.current = answerController;
 
-    setMessages((currentMessages) => [...currentMessages, userMessage]);
-    setChatInput("");
+    setMessages((currentMessages) => {
+      const replaceIndex = replaceFromMessageId
+        ? currentMessages.findIndex(({ id }) => id === replaceFromMessageId)
+        : -1;
+      const baseMessages =
+        replaceIndex >= 0
+          ? currentMessages.slice(0, replaceIndex)
+          : currentMessages;
+
+      return [...baseMessages, userMessage];
+    });
+    // 질문 수정 · 다시 시도는 입력창에 쓰던 글을 건드리지 않는다.
+    if (!replaceFromMessageId) setChatInput("");
     setChatStatus("loading");
     setStreamingReply({ content: "" });
 
@@ -379,7 +414,65 @@ export const useChatConversationController = ({
     }
   };
 
+  /**
+   * 답변 생성을 중단한다. 그때까지 받은 글은 남기고, 질문에는 수정 버튼(펜)을 띄워
+   * 고쳐서 다시 물어볼 수 있게 한다.
+   * BE에 취소 API가 없어 서버에서는 답변 생성이 계속될 수 있다(기록을 다시 열면 보일 수 있음).
+   */
+  const stopChatAnswer = () => {
+    const answerController = answerAbortRef.current;
+
+    if (!answerController || chatStatus !== "loading") return;
+
+    answerAbortRef.current = null;
+    answerController.abort();
+
+    const partialContent = streamingReply?.content ?? "";
+    const lastUserMessage = [...messages]
+      .reverse()
+      .find((message) => message.role === "user");
+
+    setStreamingReply(null);
+    setChatStatus("idle");
+    setMessages((currentMessages) => [
+      ...currentMessages,
+      createStoppedAssistantMessage(partialContent),
+    ]);
+
+    if (lastUserMessage) {
+      window.clearTimeout(editHintTimeoutRef.current);
+      setEditHintMessageId(lastUserMessage.id);
+      editHintTimeoutRef.current = window.setTimeout(
+        () => setEditHintMessageId(null),
+        4000,
+      );
+    }
+  };
+
+  /** 질문을 고쳐서 다시 답변을 요청한다. 고친 질문 뒤의 메시지(중단·실패한 답변)는 지운다. */
+  const editAndResubmitPrompt = (userMessageId: string, prompt: string) => {
+    void submitChatPrompt(prompt, { replaceFromMessageId: userMessageId });
+  };
+
+  /** 실패한 답변을 같은 질문으로 다시 요청한다. */
+  const retryAnswer = (assistantMessageId: string) => {
+    const assistantIndex = messages.findIndex(
+      ({ id }) => id === assistantMessageId,
+    );
+    const userMessage = messages
+      .slice(0, Math.max(assistantIndex, 0))
+      .reverse()
+      .find((message) => message.role === "user");
+
+    if (assistantIndex < 0 || !userMessage) return;
+
+    void submitChatPrompt(userMessage.content, {
+      replaceFromMessageId: userMessage.id,
+    });
+  };
+
   const resetChat = () => {
+    clearEditHint();
     answerAbortRef.current?.abort();
     answerAbortRef.current = null;
     setStreamingReply(null);
@@ -448,15 +541,19 @@ export const useChatConversationController = ({
     chatStatus,
     currentChatTitle,
     currentSessionId,
+    editAndResubmitPrompt,
+    editHintMessageId,
     handleSelectChat,
     hasChatStarted,
     hasLoadedRecentChats,
     loadingSessionId,
     messages,
+    retryAnswer,
     scrollContainerRef,
     sessionTitles,
     setChatInput,
     startNewChat,
+    stopChatAnswer,
     streamingReply,
     submitChatPrompt,
   };
