@@ -39,6 +39,16 @@ const SERVICE_KEYWORD_RULES: { keywords: string[]; service: string }[] = [
   { service: "주차 가능", keywords: ["주차"] },
 ];
 
+/** 매장 데이터의 상담 가능 업무(consultServices) 이름. 채팅 지도에서 매장 지도와 같은 색을 정하는 데 쓴다. */
+export const KNOWN_CONSULT_SERVICES = SERVICE_KEYWORD_RULES.map(
+  ({ service }) => service,
+).filter((service) => !service.endsWith("가능"));
+
+/** 매장 데이터의 제공 서비스(providedServices) 이름 */
+export const KNOWN_PROVIDED_SERVICES = SERVICE_KEYWORD_RULES.map(
+  ({ service }) => service,
+).filter((service) => service.endsWith("가능"));
+
 const normalize = (text: string) =>
   text.replace(/[\s·.,/_-]/g, "").toLowerCase();
 

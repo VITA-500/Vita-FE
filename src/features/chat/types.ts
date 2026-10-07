@@ -47,12 +47,17 @@ export type ChatStoreSummary = {
   distanceText?: string;
 };
 
+/** 매장을 찾은 기준 위치가 어디서 왔는지. current: 브라우저 현재 위치, default: 위치를 못 받아 쓴 기본 위치. */
+export type ChatStoreOriginSource = "current" | "default";
+
 export type ChatStoreMap = {
   activeServices?: string[];
   origin?: {
     lat: number;
     lng: number;
   };
+  /** 없으면(예전에 저장된 메시지·BE 응답) 실제 위치로 본다. */
+  originSource?: ChatStoreOriginSource;
   stores: ChatStoreSummary[];
 };
 
