@@ -23,6 +23,10 @@ import {
   getLastUserMessage,
 } from "@/features/chat/lib/chatConversationFlow";
 import { createChatStoreMap } from "@/features/chat/lib/chatStoreMap";
+import {
+  chatStoreMapCache,
+  restoreCachedStoreMaps,
+} from "@/features/chat/lib/chatStoreMapCache";
 import { createTextReveal } from "@/features/chat/lib/chatTextReveal";
 import { useChatSessionList } from "@/features/chat/hooks/useChatSessionList";
 import { useChatSessionPreferences } from "@/features/chat/hooks/useChatSessionPreferences";
@@ -101,7 +105,10 @@ export const useChatConversationController = ({
 
   const applyChatSession = useCallback(
     (response: SessionMessagesResponse) => {
-      const nextMessages = response.messages.map(toChatMessage);
+      // 기록 조회에는 매장 지도가 없어서, 이 브라우저에 보관해 둔 지도를 다시 붙인다.
+      const nextMessages = restoreCachedStoreMaps(
+        response.messages.map(toChatMessage),
+      );
       const firstPrompt = response.messages.find(
         (message) => message.role === "USER" && message.content,
       )?.content;
@@ -266,6 +273,47 @@ export const useChatConversationController = ({
     setEditHintMessageId(null);
   }, []);
 
+  /**
+   * 답변을 다 보여준 뒤 바로 이어서 입력할 수 있게 입력창에 포커스를 준다.
+   * 검색창·확인 창처럼 다른 입력을 쓰는 중이면 빼앗지 않는다.
+   */
+  const focusChatInput = useCallback(() => {
+    const input = chatInputRef.current;
+
+    if (!input || input.disabled) return;
+
+    const activeElement = document.activeElement;
+
+    if (
+      activeElement instanceof HTMLElement &&
+      activeElement !== input &&
+      (activeElement.closest("[role='dialog']") ||
+        activeElement.matches(
+          "input, textarea, select, [contenteditable='true']",
+        ))
+    ) {
+      return;
+    }
+
+    input.focus({ preventScroll: true });
+  }, []);
+
+  // 답변이 끝나 입력 가능 상태(loading → idle)가 되면 화면이 다시 그려진 뒤 포커스를 준다.
+  const previousChatStatusRef = useRef(chatStatus);
+
+  useEffect(() => {
+    const wasLoading = previousChatStatusRef.current === "loading";
+    previousChatStatusRef.current = chatStatus;
+
+    if (!wasLoading || chatStatus !== "idle" || activeMode !== "chat") return;
+
+    let frameId = window.requestAnimationFrame(() => {
+      frameId = window.requestAnimationFrame(focusChatInput);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [activeMode, chatStatus, focusChatInput]);
+
   const isStreamingAnswer = Boolean(streamingReply?.content);
 
   useEffect(() => {
@@ -392,15 +440,27 @@ export const useChatConversationController = ({
           textReveal.push(content);
         },
       });
-      const [storeMap] = await Promise.all([
+      const storeMapPromise =
         isStoreRelatedPrompt(trimmedPrompt) && !assistantMessage.storeMap
           ? createChatStoreMap(trimmedPrompt).catch(() => undefined)
-          : undefined,
-        // 화면에 덜 풀린 글이 남아 있으면 끝까지 보여준 뒤 최종 메시지로 바꾼다(마지막에 한 번에 붙는 현상 방지).
-        textReveal.finish(assistantMessage.content),
-      ]);
+          : Promise.resolve(undefined);
+
+      // 화면에 덜 풀린 글이 남아 있으면 끝까지 보여준 뒤 최종 메시지로 바꾼다(마지막에 한 번에 붙는 현상 방지).
+      await textReveal.finish(assistantMessage.content);
+
+      // 답변 글이 다 나오면 바로 입력창으로. 매장 지도(위치 확인 + 매장 조회)는 몇 초 더 걸릴 수 있어 기다리지 않는다.
+      if (!signal.aborted) focusChatInput();
+
+      const storeMap = await storeMapPromise;
 
       if (signal.aborted) return;
+
+      const answerStoreMap = storeMap ?? assistantMessage.storeMap;
+
+      // 상담 기록을 다시 열었을 때 지도 블록을 되살릴 수 있게 보관해 둔다.
+      if (answerStoreMap) {
+        chatStoreMapCache.save(assistantMessage.id, answerStoreMap);
+      }
 
       setMessages((currentMessages) => [
         ...currentMessages,
@@ -428,7 +488,6 @@ export const useChatConversationController = ({
         answerAbortRef.current = null;
         setStreamingReply(null);
         setChatStatus("idle");
-        window.requestAnimationFrame(() => chatInputRef.current?.focus());
       }
     }
   };
