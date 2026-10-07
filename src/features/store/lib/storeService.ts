@@ -15,9 +15,14 @@ import { requestJson } from "@/shared/api/http";
 type StoreNearbyItemResponse = {
   storeId: number;
   name: string;
+  /** 2026-10-06 BE 반영. 예전 응답에는 없을 수 있다. */
+  address?: string | null;
+  phone?: string | null;
   lat: number;
   lng: number;
   distanceKm: number;
+  /** 2026-10-07 BE 반영(통신·제휴 모두). 예전 응답에는 없을 수 있다. */
+  businessHours?: string | null;
   consultServices?: string[];
   providedServices?: string[];
 };
@@ -45,10 +50,11 @@ const toNearbyStoreLocation = (
 ): StoreLocation => ({
   id: String(store.storeId),
   name: store.name,
-  // 주변 조회 응답에는 주소가 없다. 빈 값으로 두고 UI에서 안내 문구를 보여준다.
-  address: "",
+  // 주소가 없으면(예전 응답) 빈 값으로 두고 UI에서 안내 문구를 보여준다.
+  address: store.address ?? "",
+  businessHours: store.businessHours ?? undefined,
   consultServices: store.consultServices,
-  phone: "",
+  phone: store.phone ?? "",
   providedServices: store.providedServices,
   lat: Number(store.lat),
   lng: Number(store.lng),
@@ -62,14 +68,15 @@ const toStoreLocation = (
 ): StoreLocation => ({
   id: String(store.storeId),
   name: store.name,
-  address: store.address,
-  businessHours: store.businessHours,
+  // 상세에 값이 비어 있으면 주변 조회에서 받은 값을 유지한다.
+  address: store.address || fallback?.address || "",
+  businessHours: store.businessHours || fallback?.businessHours,
   benefitBrand: fallback?.benefitBrand,
   benefitCategory: fallback?.benefitCategory,
   benefitId: fallback?.benefitId,
   benefitName: fallback?.benefitName,
   consultServices: store.consultServices ?? fallback?.consultServices,
-  phone: store.phone ?? "",
+  phone: store.phone || fallback?.phone || "",
   providedServices: store.providedServices ?? fallback?.providedServices,
   lat: Number(store.lat),
   lng: Number(store.lng),
