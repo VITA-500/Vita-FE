@@ -300,7 +300,14 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                   isBenefitStoreLoading={isBenefitStoreLoading}
                   isStorePaginationOn={isStorePaginationOn}
                   mapSelectedStoreId={mapSelectedStoreId}
-                  onBenefitCategoryChange={changeBenefitCategory}
+                  // 제휴 카테고리를 바꾸면 이전에 고른 매장은 새 목록에 없을 수 있어 정보 카드를 닫는다.
+                  // (닫지 않으면 목록은 비었는데 이전 매장 핀만 "•"로 남는다)
+                  onBenefitCategoryChange={(category) => {
+                    if (category !== selectedBenefitCategory) {
+                      closeSelectedStoreInfo();
+                    }
+                    changeBenefitCategory(category);
+                  }}
                   onCategoryChange={changeMapCategory}
                   onClose={() => setIsStoreListCollapsed(true)}
                   onPageChange={goToStorePage}
@@ -322,7 +329,11 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
             {/* 탭마다 필터 대상·로직이 달라 뱃지 줄을 바꿔 보여준다(매장: 상담·서비스, 제휴: 혜택/서비스). */}
             {isBenefitCategory ? (
               <StorePanelBenefitFilters
-                onChange={setBenefitServiceFilters}
+                // 혜택 뱃지를 바꿔도 고른 매장이 결과에서 빠질 수 있어 정보 카드를 닫는다.
+                onChange={(nextValue) => {
+                  closeSelectedStoreInfo();
+                  setBenefitServiceFilters(nextValue);
+                }}
                 options={benefitServiceFilterOptions}
                 value={benefitServiceFilters}
               />

@@ -1,6 +1,11 @@
 "use client";
 
-import type { Dispatch, RefObject, SetStateAction } from "react";
+import {
+  useRef,
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+} from "react";
 import type { useLocationPermission } from "@/features/store/hooks/useLocationPermission";
 import type { useNearbyStores } from "@/features/store/hooks/useNearbyStores";
 import type { useStoreMapState } from "@/features/store/hooks/useStoreMapState";
@@ -223,10 +228,24 @@ export const useStoreSelectionActions = ({
   /**
    * 목록 토글(매장/제휴 혜택) 전환. 이전 탭에서 고른 매장의 정보 카드·길찾기는 새 탭 목록과 맞지 않으므로 닫는다.
    */
+  // 매장 탭에서 쓰던 검색어(텍스트·"#뱃지")를 제휴 탭에 다녀오는 동안 보관한다.
+  const storeTabSearchQueryRef = useRef("");
   const changeMapCategory = (category: MapCategory) => {
     if (category === activeMapCategory) {
       return;
     }
+
+    // 검색창은 두 탭이 함께 쓴다. 매장 탭의 검색어·뱃지 태그(#…)가 제휴 탭 검색창에 남지 않게 비우고,
+    // 매장 탭으로 돌아오면 원래 검색어를 되돌린다(매장 탭의 뱃지 선택·검색 결과는 그대로 유지돼 있다).
+    if (category === "benefit") {
+      storeTabSearchQueryRef.current = searchQuery;
+      setSearchQuery("");
+    } else {
+      setSearchQuery(storeTabSearchQueryRef.current);
+      storeTabSearchQueryRef.current = "";
+    }
+
+    setIsSearchHistoryOpen(false);
 
     if (routeDestinationStoreId) {
       resetRouteState();
