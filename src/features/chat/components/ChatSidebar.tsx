@@ -1,28 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import type { CSSProperties, MouseEvent } from "react";
+import type { MouseEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
-  ChevronDown,
-  ChevronRight,
   CircleHelp,
-  LogOut,
-  MessageCircle,
   Moon,
-  MoreHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
-  Pin,
-  PinOff,
-  Settings,
   Sun,
   Search,
   X,
 } from "lucide-react";
+import { ChatAccountMenu } from "@/features/chat/components/ChatAccountMenu";
 import { ChatDeleteConfirmDialog } from "@/features/chat/components/ChatDeleteConfirmDialog";
+import { ChatSessionList } from "@/features/chat/components/ChatSessionList";
 import { ChatSessionMenu } from "@/features/chat/components/ChatSessionMenu";
-import { serviceMenus } from "@/features/chat/constants";
+import { ChatSidebarNav } from "@/features/chat/components/ChatSidebarNav";
 import {
   buildSidebarChatItems,
   type SidebarChatItem,
@@ -73,11 +67,6 @@ type ChatSidebarProps = {
   onTogglePinChat?: (sessionId: number) => void;
   onDeleteChat?: (sessionId: number) => void;
 };
-
-/** 최근 상담을 펼칠 때 항목이 위에서부터 차례로 나타나도록 주는 지연 간격. */
-const RECENT_CHAT_STAGGER_MS = 40;
-/** 목록이 길어도 마지막 항목이 너무 늦게 나타나지 않도록 지연을 이 순번까지만 늘린다. */
-const RECENT_CHAT_STAGGER_LIMIT = 8;
 
 export const ChatSidebar = ({
   activeMode,
@@ -381,135 +370,18 @@ export const ChatSidebar = ({
             isOpen ? "overflow-x-hidden overflow-y-auto" : "overflow-hidden",
           )}
         >
-          <nav className="space-y-1">
-            {serviceMenus.map((menu) => {
-              const Icon = menu.icon;
-              // "새 상담"은 아직 아무 상담도 열지 않은 빈 화면일 때만 선택 표시한다.
-              // (지난 상담을 보고 있는데 새 상담이 같이 강조돼 화면이 바뀐 것처럼 보이던 문제)
-              const isNewChatEmpty =
-                activeSessionId == null &&
-                !currentChatTitle &&
-                pendingSessionId == null;
-              const isActive =
-                menu.mode === activeMode &&
-                (menu.label !== "새 상담" || (!isGuest && isNewChatEmpty));
-              const shortcut =
-                menu.label === "새 상담"
-                  ? "Ctrl+Shift+O"
-                  : menu.label === "검색"
-                    ? "Ctrl+K"
-                    : undefined;
-              const itemClassName = cn(
-                "group relative flex h-11 w-[296px] items-center pr-3 text-sm font-bold transition-colors duration-150",
-                isActive
-                  ? "text-brand"
-                  : menu.disabled
-                    ? "cursor-not-allowed text-gray-400 dark:text-gray-600"
-                    : "text-gray-500 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white",
-              );
-
-              const itemContent = (
-                <>
-                  {isOpen && (
-                    <span
-                      id={
-                        menu.label === "매장 지도"
-                          ? "vita-store-map-tour"
-                          : undefined
-                      }
-                      className={cn(
-                        "absolute inset-y-0 right-2 left-2 rounded-xl transition-colors",
-                        isActive
-                          ? "bg-white dark:bg-white/10"
-                          : menu.disabled
-                            ? ""
-                            : "group-hover:bg-gray-300/70 dark:group-hover:bg-white/10",
-                      )}
-                    />
-                  )}
-
-                  <span className="relative z-10 flex h-11 w-[64px] shrink-0 items-center justify-center">
-                    <span
-                      className={cn(
-                        "flex h-10 w-10 items-center justify-center rounded-xl transition",
-                        !isOpen && isActive
-                          ? "bg-white text-gray-950 dark:bg-white/10 dark:text-white"
-                          : !isOpen
-                            ? menu.disabled
-                              ? ""
-                              : "group-hover:bg-gray-300/70 group-hover:text-gray-950 dark:group-hover:bg-white/10 dark:group-hover:text-white"
-                            : "",
-                      )}
-                    >
-                      <Icon size={20} strokeWidth={1.8} />
-                    </span>
-                  </span>
-
-                  {isOpen && (
-                    <span className="relative z-10 whitespace-nowrap opacity-100 transition-opacity delay-150 duration-150">
-                      {menu.label}
-                    </span>
-                  )}
-                </>
-              );
-
-              return menu.href ? (
-                menu.label === "새 상담" ? (
-                  <button
-                    key={menu.label}
-                    type="button"
-                    className={itemClassName}
-                    onClick={onNewChat}
-                    onMouseEnter={onShowRailTooltip(menu.label, shortcut)}
-                    onMouseLeave={onHideTooltip}
-                  >
-                    {itemContent}
-                  </button>
-                ) : (
-                  <Link
-                    key={menu.label}
-                    href={menu.href}
-                    className={itemClassName}
-                    onMouseEnter={onShowRailTooltip(menu.label, shortcut)}
-                    onMouseLeave={onHideTooltip}
-                  >
-                    {itemContent}
-                  </Link>
-                )
-              ) : (
-                <button
-                  key={menu.label}
-                  type="button"
-                  disabled={menu.disabled}
-                  onClick={menu.label === "검색" ? onOpenSearch : undefined}
-                  className={itemClassName}
-                  aria-label={
-                    menu.disabled ? `${menu.label} 준비 중` : menu.label
-                  }
-                  onMouseEnter={onShowRailTooltip(menu.label, shortcut)}
-                  onMouseLeave={onHideTooltip}
-                >
-                  {itemContent}
-                </button>
-              );
-            })}
-
-            {!isOpen && (
-              <button
-                type="button"
-                className="group relative flex h-11 w-[296px] items-center pr-3 text-sm font-bold text-gray-500 transition-colors duration-150 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white"
-                aria-label="최근 상담"
-                onMouseEnter={onShowRailTooltip("최근 상담")}
-                onMouseLeave={onHideTooltip}
-              >
-                <span className="relative z-10 flex h-11 w-[64px] shrink-0 items-center justify-center">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl transition group-hover:bg-gray-300/70 group-hover:text-gray-950 dark:group-hover:bg-white/10 dark:group-hover:text-white">
-                    <MessageCircle size={20} strokeWidth={1.8} />
-                  </span>
-                </span>
-              </button>
-            )}
-          </nav>
+          <ChatSidebarNav
+            activeMode={activeMode}
+            activeSessionId={activeSessionId}
+            currentChatTitle={currentChatTitle}
+            isGuest={isGuest}
+            isOpen={isOpen}
+            onHideTooltip={onHideTooltip}
+            onNewChat={onNewChat}
+            onOpenSearch={onOpenSearch}
+            onShowRailTooltip={onShowRailTooltip}
+            pendingSessionId={pendingSessionId}
+          />
 
           {isAuthenticated && (
             <div
@@ -520,177 +392,20 @@ export const ChatSidebar = ({
                   : "pointer-events-none opacity-0",
               )}
             >
-              <div className="space-y-1">
-                {pinnedChats.length > 0 && (
-                  <>
-                    <p className="mb-2 px-3 text-xs font-bold text-gray-400">
-                      고정됨
-                    </p>
-
-                    {pinnedChats.map((chat) => (
-                      <div
-                        key={chat.key}
-                        className={cn(
-                          "group relative mx-1 flex h-11 w-[calc(100%-0.5rem)] items-center rounded-xl text-left transition-colors duration-150",
-                          chat.active
-                            ? "bg-white dark:bg-white/10"
-                            : "hover:bg-gray-300/70 dark:hover:bg-white/10",
-                        )}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => selectChat(chat)}
-                          aria-current={chat.active ? "true" : undefined}
-                          className={cn(
-                            "focus-visible:ring-brand/30 min-w-0 flex-1 truncate px-5 text-left text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
-                            chat.active
-                              ? "text-brand"
-                              : "text-gray-500 group-hover:text-gray-950 dark:text-gray-400 dark:group-hover:text-white",
-                          )}
-                        >
-                          {chat.title}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handlePinChat(chat)}
-                          className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
-                          aria-label="채팅 고정 해제"
-                        >
-                          <PinOff size={16} />
-                        </button>
-
-                        <button
-                          type="button"
-                          data-chat-menu-trigger="true"
-                          onClick={(event) =>
-                            handleOpenChatMenu(event, chat.key)
-                          }
-                          className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
-                          aria-label="채팅 메뉴"
-                        >
-                          <MoreHorizontal size={17} />
-                        </button>
-                      </div>
-                    ))}
-                  </>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isRecentChatsLoading) return;
-                    setIsRecentChatsCollapsed((isCollapsed) => !isCollapsed);
-                  }}
-                  aria-expanded={!isRecentChatsHidden}
-                  aria-busy={isRecentChatsLoading || undefined}
-                  aria-controls="chat-sidebar-recent-list"
-                  className="group/recent focus-visible:ring-brand/30 mx-1 mt-4 mb-2 flex h-7 w-[calc(100%-0.5rem)] items-center gap-1 rounded-lg px-2 text-left text-xs font-bold text-gray-400 transition-colors hover:text-gray-700 focus-visible:ring-2 focus-visible:outline-none dark:hover:text-gray-200"
-                >
-                  최근 상담
-                  <ChevronDown
-                    size={14}
-                    strokeWidth={2.2}
-                    aria-hidden="true"
-                    className={cn(
-                      "transition-transform duration-200",
-                      isRecentChatsHidden && "-rotate-90",
-                    )}
-                  />
-                  {isRecentChatsCollapsed &&
-                    !isRecentChatsLoading &&
-                    unpinnedRecentChats.length > 0 && (
-                      <span className="ml-auto font-semibold text-gray-400/80">
-                        {unpinnedRecentChats.length}
-                      </span>
-                    )}
-                </button>
-
-                <div
-                  id="chat-sidebar-recent-list"
-                  aria-hidden={isRecentChatsHidden}
-                  inert={isRecentChatsHidden}
-                  className={cn(
-                    "grid transition-[grid-template-rows] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                    isRecentChatsHidden ? "grid-rows-[0fr]" : "grid-rows-[1fr]",
-                  )}
-                >
-                  <div className="min-h-0 overflow-hidden">
-                    <div
-                      className={cn(
-                        "space-y-1 transition-[opacity,translate] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                        isRecentChatsHidden
-                          ? "-translate-y-3 opacity-0"
-                          : "translate-y-0 opacity-100",
-                      )}
-                    >
-                      {unpinnedRecentChats.length === 0 && (
-                        <p className="px-5 py-2 text-xs font-medium text-gray-400">
-                          아직 상담 내역이 없어요.
-                        </p>
-                      )}
-
-                      {unpinnedRecentChats.map((chat, index) => (
-                        <div
-                          key={chat.key}
-                          style={
-                            {
-                              // hover 배경색 전환에는 지연이 붙지 않도록, 나타나는 모션에만 쓰는 변수로 넘긴다.
-                              "--recent-chat-delay": isRecentChatsHidden
-                                ? "0ms"
-                                : `${Math.min(index, RECENT_CHAT_STAGGER_LIMIT) * RECENT_CHAT_STAGGER_MS}ms`,
-                            } as CSSProperties
-                          }
-                          className={cn(
-                            "group relative mx-1 flex h-11 w-[calc(100%-0.5rem)] items-center rounded-xl text-left [transition:background-color_150ms,opacity_450ms_cubic-bezier(0.22,1,0.36,1)_var(--recent-chat-delay),translate_450ms_cubic-bezier(0.22,1,0.36,1)_var(--recent-chat-delay)]",
-                            isRecentChatsHidden
-                              ? "-translate-y-2 opacity-0"
-                              : "translate-y-0 opacity-100",
-                            chat.active
-                              ? "bg-white dark:bg-white/10"
-                              : "hover:bg-gray-300/70 dark:hover:bg-white/10",
-                          )}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => selectChat(chat)}
-                            aria-current={chat.active ? "true" : undefined}
-                            className={cn(
-                              "focus-visible:ring-brand/30 min-w-0 flex-1 truncate px-5 text-left text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
-                              chat.active
-                                ? "text-brand"
-                                : "text-gray-500 group-hover:text-gray-950 dark:text-gray-400 dark:group-hover:text-white",
-                            )}
-                          >
-                            {chat.title}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handlePinChat(chat)}
-                            className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
-                            aria-label="채팅 고정"
-                          >
-                            <Pin size={16} />
-                          </button>
-
-                          <button
-                            type="button"
-                            data-chat-menu-trigger="true"
-                            onClick={(event) =>
-                              handleOpenChatMenu(event, chat.key)
-                            }
-                            className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 opacity-0 transition group-hover:opacity-100 hover:bg-white/70 hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white"
-                            aria-label="채팅 메뉴"
-                          >
-                            <MoreHorizontal size={17} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ChatSessionList
+                isCollapsed={isRecentChatsCollapsed}
+                isLoading={isRecentChatsLoading}
+                isRecentChatsHidden={isRecentChatsHidden}
+                onOpenMenu={handleOpenChatMenu}
+                onSelectChat={selectChat}
+                onToggleCollapsed={() => {
+                  if (isRecentChatsLoading) return;
+                  setIsRecentChatsCollapsed((isCollapsed) => !isCollapsed);
+                }}
+                onTogglePin={handlePinChat}
+                pinnedChats={pinnedChats}
+                unpinnedRecentChats={unpinnedRecentChats}
+              />
             </div>
           )}
         </div>
@@ -703,70 +418,18 @@ export const ChatSidebar = ({
           ref={accountMenuRef}
         >
           {isAccountMenuOpen && (
-            <div className="fixed bottom-[64px] left-2 z-[120] w-[280px] rounded-3xl border border-gray-200 bg-white p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-zinc-900">
-              <button
-                type="button"
-                onClick={handleOpenProfile}
-                className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-gray-100 dark:hover:bg-white/10"
-              >
-                <UserAvatar size="xs" />
-
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-extrabold text-gray-950 dark:text-white">
-                    {displayName}
-                  </span>
-                </span>
-
-                <ChevronRight
-                  size={17}
-                  className="text-gray-400 dark:text-gray-500"
-                />
-              </button>
-
-              <div className="my-2 h-px bg-gray-200 dark:bg-white/10" />
-
-              <button
-                type="button"
-                className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
-              >
-                <MessageCircle size={18} />
-                개인 맞춤 설정
-              </button>
-
-              <button
-                type="button"
-                className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
-              >
-                <Settings size={18} />
-                설정
-              </button>
-
-              <div className="my-2 h-px bg-gray-200 dark:bg-white/10" />
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAccountMenuOpen(false);
-                  onStartTour();
-                }}
-                className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
-              >
-                <CircleHelp size={18} />
-                도움말
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAccountMenuOpen(false);
-                  setIsLogoutConfirmOpen(true);
-                }}
-                className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
-              >
-                <LogOut size={18} />
-                로그아웃
-              </button>
-            </div>
+            <ChatAccountMenu
+              displayName={displayName}
+              onLogout={() => {
+                setIsAccountMenuOpen(false);
+                setIsLogoutConfirmOpen(true);
+              }}
+              onOpenProfile={handleOpenProfile}
+              onStartTour={() => {
+                setIsAccountMenuOpen(false);
+                onStartTour();
+              }}
+            />
           )}
 
           {deleteTargetChat && (

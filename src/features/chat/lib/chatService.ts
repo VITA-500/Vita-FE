@@ -1,12 +1,14 @@
 import type {
-  // ChatAnswerSource, // 참고한 FAQ 표시 숨김 처리로 미사용
   ChatApiMessageStatus,
   ChatMessage,
   ChatProgressStage,
-  ChatStoreMap,
   ChatSessionListResponse,
   SessionMessagesResponse,
 } from "@/features/chat/types";
+import {
+  toAssistantMessage,
+  type ChatMessageResponse,
+} from "@/features/chat/lib/chatAnswerMessage";
 import { ApiError, requestJson } from "@/shared/api/http";
 import { readSseStream, type SseEvent } from "@/shared/api/sse";
 import { env } from "@/shared/config/env";
@@ -14,18 +16,6 @@ import { env } from "@/shared/config/env";
 type ChatSessionCreateResponse = {
   sessionId: number;
   createdAt: string;
-};
-
-type ChatMessageResponse = {
-  messageId: number;
-  status: ChatApiMessageStatus;
-  answer: string | null;
-  relatedFaqIds: number[];
-  createAt: string;
-  latencyMs: number;
-  storeMap?: ChatStoreMap | null;
-  stores?: ChatStoreMap["stores"] | null;
-  nearbyStores?: ChatStoreMap["stores"] | null;
 };
 
 type SendChatMessageOptions = {
@@ -127,43 +117,6 @@ const requestClaim = async (
 /** 다시 시도해도 결과가 같은 claim 실패(세션 없음·남의 세션). 게스트 기록을 정리해도 된다. */
 export const isPermanentClaimError = (error: unknown) =>
   error instanceof ApiError && (error.status === 403 || error.status === 404);
-
-export const FAILED_ANSWER_MESSAGE =
-  "답변을 생성하지 못했어요. 잠시 후 다시 시도해 주세요.";
-
-export const PENDING_ANSWER_MESSAGE =
-  "아직 답변을 만들고 있어요. 잠시 후 상담 내역을 다시 열어 주세요.";
-
-const toAssistantMessage = (response: ChatMessageResponse): ChatMessage => {
-  // 참고한 FAQ 표시는 사용하지 않기로 해서 숨김 처리 (BE relatedFaqs 미요청).
-  // const sources: ChatAnswerSource[] = response.relatedFaqIds.map((faqId) => ({
-  //   id: String(faqId),
-  //   title: `FAQ #${faqId}`,
-  //   category: "FAQ",
-  // }));
-
-  // BE는 답변 생성이 실패해도(FAILED) 200으로 answer: null을 준다.
-  // 빈 말풍선 대신 다시 물어보라는 안내를 보여준다.
-  const answer =
-    response.status === "COMPLETED" ? (response.answer?.trim() ?? "") : "";
-  const hasAnswer = answer.length > 0;
-
-  return {
-    id: `assistant-${response.messageId}`,
-    role: "assistant",
-    content: hasAnswer ? answer : FAILED_ANSWER_MESSAGE,
-    status: hasAnswer ? "success" : "error",
-    createdAt: response.createAt,
-    storeMap:
-      response.storeMap ??
-      (response.stores?.length
-        ? { stores: response.stores }
-        : response.nearbyStores?.length
-          ? { stores: response.nearbyStores }
-          : undefined),
-    // sources: hasAnswer ? sources : [],
-  };
-};
 
 /* ------------------------------------------------------------------ */
 /* SSE 스트리밍                                                        */

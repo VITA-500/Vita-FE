@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { chatService, FAILED_ANSWER_MESSAGE } from "./chatService";
+import { FAILED_ANSWER_MESSAGE } from "./chatAnswerMessage";
+import { chatService } from "./chatService";
 
 const encoder = new TextEncoder();
 

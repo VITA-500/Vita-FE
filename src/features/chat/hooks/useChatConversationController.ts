@@ -18,6 +18,10 @@ import {
   toChatMessage,
   toChatTitle,
 } from "@/features/chat/lib/chatMessages";
+import {
+  findUserMessageBeforeAssistant,
+  getLastUserMessage,
+} from "@/features/chat/lib/chatConversationFlow";
 import { createChatStoreMap } from "@/features/chat/lib/chatStoreMap";
 import { createTextReveal } from "@/features/chat/lib/chatTextReveal";
 import { useChatSessionList } from "@/features/chat/hooks/useChatSessionList";
@@ -443,9 +447,7 @@ export const useChatConversationController = ({
     answerController.abort();
 
     const partialContent = streamingReply?.content ?? "";
-    const lastUserMessage = [...messages]
-      .reverse()
-      .find((message) => message.role === "user");
+    const lastUserMessage = getLastUserMessage(messages);
 
     setStreamingReply(null);
     setChatStatus("idle");
@@ -471,15 +473,12 @@ export const useChatConversationController = ({
 
   /** 실패한 답변을 같은 질문으로 다시 요청한다. */
   const retryAnswer = (assistantMessageId: string) => {
-    const assistantIndex = messages.findIndex(
-      ({ id }) => id === assistantMessageId,
+    const userMessage = findUserMessageBeforeAssistant(
+      messages,
+      assistantMessageId,
     );
-    const userMessage = messages
-      .slice(0, Math.max(assistantIndex, 0))
-      .reverse()
-      .find((message) => message.role === "user");
 
-    if (assistantIndex < 0 || !userMessage) return;
+    if (!userMessage) return;
 
     void submitChatPrompt(userMessage.content, {
       replaceFromMessageId: userMessage.id,
