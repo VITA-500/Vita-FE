@@ -55,6 +55,8 @@ const ChatPageContent = () => {
     chatInputRef,
     chatSessions,
     chatStatus,
+    editAndResubmitPrompt,
+    editHintMessageId,
     currentChatTitle,
     currentSessionId,
     handleSelectChat,
@@ -67,6 +69,8 @@ const ChatPageContent = () => {
     setChatInput,
     startNewChat,
     streamingReply,
+    retryAnswer,
+    stopChatAnswer,
     submitChatPrompt,
   } = useChatConversationController({
     activeMode,
@@ -199,11 +203,15 @@ const ChatPageContent = () => {
               chatInput={chatInput}
               chatInputRef={chatInputRef}
               chatStatus={chatStatus}
+              editHintMessageId={editHintMessageId}
               hasChatStarted={hasChatStarted}
               loadingSessionId={loadingSessionId}
               messages={messages}
               onChatInputChange={setChatInput}
-              onSubmitPrompt={submitChatPrompt}
+              onEditPrompt={editAndResubmitPrompt}
+              onRetryAnswer={retryAnswer}
+              onStopAnswer={stopChatAnswer}
+              onSubmitPrompt={(prompt) => void submitChatPrompt(prompt)}
               scrollContainerRef={scrollContainerRef}
               streamingReply={streamingReply}
             />

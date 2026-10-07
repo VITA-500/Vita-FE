@@ -152,6 +152,7 @@ const toAssistantMessage = (response: ChatMessageResponse): ChatMessage => {
     id: `assistant-${response.messageId}`,
     role: "assistant",
     content: hasAnswer ? answer : FAILED_ANSWER_MESSAGE,
+    status: hasAnswer ? "success" : "error",
     createdAt: response.createAt,
     storeMap:
       response.storeMap ??
