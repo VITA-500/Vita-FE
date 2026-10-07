@@ -4,29 +4,29 @@ import Link from "next/link";
 import type { CSSProperties, MouseEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
-  Archive,
   ChevronDown,
   ChevronRight,
   CircleHelp,
-  Folder,
   LogOut,
   MessageCircle,
   Moon,
   MoreHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
-  Pencil,
   Pin,
   PinOff,
   Settings,
-  Share2,
   Sun,
   Search,
-  Trash2,
   X,
 } from "lucide-react";
 import { ChatDeleteConfirmDialog } from "@/features/chat/components/ChatDeleteConfirmDialog";
+import { ChatSessionMenu } from "@/features/chat/components/ChatSessionMenu";
 import { serviceMenus } from "@/features/chat/constants";
+import {
+  buildSidebarChatItems,
+  type SidebarChatItem,
+} from "@/features/chat/lib/chatSidebarItems";
 import type { ChatMode, ChatSessionSummary } from "@/features/chat/types";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
 import { routes } from "@/shared/constants/routes";
@@ -74,33 +74,10 @@ type ChatSidebarProps = {
   onDeleteChat?: (sessionId: number) => void;
 };
 
-type SidebarChatItem = {
-  key: string;
-  title: string;
-  active: boolean;
-  sessionId: number | null;
-};
-
 /** 최근 상담을 펼칠 때 항목이 위에서부터 차례로 나타나도록 주는 지연 간격. */
 const RECENT_CHAT_STAGGER_MS = 40;
 /** 목록이 길어도 마지막 항목이 너무 늦게 나타나지 않도록 지연을 이 순번까지만 늘린다. */
 const RECENT_CHAT_STAGGER_LIMIT = 8;
-
-const formatSessionTitle = (session: ChatSessionSummary) => {
-  if (session.title) {
-    return session.title;
-  }
-
-  const updatedAt = new Date(session.updatedAt);
-
-  if (Number.isNaN(updatedAt.getTime())) {
-    return `상담 #${session.sessionId}`;
-  }
-
-  return `${updatedAt.getMonth() + 1}월 ${updatedAt.getDate()}일 ${String(
-    updatedAt.getHours(),
-  ).padStart(2, "0")}:${String(updatedAt.getMinutes()).padStart(2, "0")} 상담`;
-};
 
 export const ChatSidebar = ({
   activeMode,
@@ -148,54 +125,15 @@ export const ChatSidebar = ({
   const isDarkMode = resolvedTheme === "dark";
   const isGuest = isAuthReady && !isAuthenticated && !isAuthLoading;
 
-  // 선택 표시는 불러오는 중인 상담이 있으면 그쪽으로 먼저 옮긴다.
-  const selectedSessionId = pendingSessionId ?? activeSessionId;
-  const isViewingLoadedSession = pendingSessionId == null;
-
-  const sessionChats: SidebarChatItem[] = chatSessions.map((session) => {
-    const isActive = session.sessionId === selectedSessionId;
-    const isShowingThisSession =
-      isViewingLoadedSession && session.sessionId === activeSessionId;
-
-    return {
-      key: `session-${session.sessionId}`,
-      title:
-        (isShowingThisSession && currentChatTitle) ||
-        sessionTitles[session.sessionId] ||
-        formatSessionTitle(session),
-      active: isActive,
-      sessionId: session.sessionId,
-    };
-  });
-  const hasActiveSessionInList = sessionChats.some((chat) => chat.active);
-  const visibleRecentChats: SidebarChatItem[] =
-    currentChatTitle && !hasActiveSessionInList && isViewingLoadedSession
-      ? [
-          {
-            // 아직 서버 목록에 없는 지금 대화. 세션이 있으면 목록과 같은 key를 써서 고정이 유지되게 한다.
-            key:
-              activeSessionId != null
-                ? `session-${activeSessionId}`
-                : "current-new",
-            title: currentChatTitle,
-            active: true,
-            sessionId: activeSessionId,
-          },
-          ...sessionChats,
-        ]
-      : sessionChats;
-  // 고정은 제목이 아니라 상담 id로 기억한다.
-  // 제목은 선택 여부에 따라 바뀌어서(첫 질문 ↔ 날짜), 제목으로 고정하면 다른 상담을 누를 때 고정이 풀려 보였다.
-  const isPinnedChat = (chat: SidebarChatItem) =>
-    chat.sessionId !== null && pinnedSessionIds.includes(chat.sessionId);
-  const pinnedChats = pinnedSessionIds
-    .map((sessionId) =>
-      visibleRecentChats.find((chat) => chat.sessionId === sessionId),
-    )
-    .filter((chat): chat is SidebarChatItem => Boolean(chat));
-  const unpinnedRecentChats = visibleRecentChats.filter(
-    (chat) => !isPinnedChat(chat),
-  );
+  const { isPinnedChat, pinnedChats, unpinnedRecentChats, visibleRecentChats } =
+    buildSidebarChatItems({
+      activeSessionId,
+      chatSessions,
+      currentChatTitle,
+      pendingSessionId,
+      pinnedSessionIds,
+      sessionTitles,
+    });
   const menuChat = chatMenu
     ? (visibleRecentChats.find((chat) => chat.key === chatMenu.chatKey) ?? null)
     : null;
@@ -425,68 +363,16 @@ export const ChatSidebar = ({
         </div>
 
         {chatMenu && menuChat && (
-          <div
-            ref={chatMenuRef}
-            className="fixed z-[130] w-[260px] rounded-3xl border border-gray-200 bg-white p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-zinc-900"
-            style={{ left: chatMenu.left, top: chatMenu.top }}
-          >
-            <button
-              type="button"
-              className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
-            >
-              <Share2 size={18} />
-              공유하기
-            </button>
-
-            <button
-              type="button"
-              className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
-            >
-              <Pencil size={18} />
-              이름 바꾸기
-            </button>
-
-            <div className="my-2 h-px bg-gray-200 dark:bg-white/10" />
-
-            <button
-              type="button"
-              disabled={!canManageMenuChat}
-              onClick={() => handlePinChat(menuChat)}
-              className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
-            >
-              {isMenuChatPinned ? <PinOff size={18} /> : <Pin size={18} />}
-              {isMenuChatPinned ? "채팅 고정 해제" : "채팅 고정"}
-            </button>
-
-            <button
-              type="button"
-              className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
-            >
-              <Archive size={18} />
-              아카이브에 보관
-            </button>
-
-            <button
-              type="button"
-              disabled={!canManageMenuChat}
-              onClick={() => handleRequestDeleteChat(menuChat)}
-              className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent dark:hover:bg-red-500/10"
-            >
-              <Trash2 size={18} />
-              삭제
-            </button>
-
-            <div className="my-2 h-px bg-gray-200 dark:bg-white/10" />
-
-            <button
-              type="button"
-              className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
-            >
-              <Folder size={18} />
-              프로젝트로 이동
-              <ChevronRight size={17} className="ml-auto text-gray-400" />
-            </button>
-          </div>
+          <ChatSessionMenu
+            canManage={canManageMenuChat}
+            chat={menuChat}
+            isPinned={isMenuChatPinned}
+            left={chatMenu.left}
+            menuRef={chatMenuRef}
+            onDelete={handleRequestDeleteChat}
+            onTogglePin={handlePinChat}
+            top={chatMenu.top}
+          />
         )}
 
         <div

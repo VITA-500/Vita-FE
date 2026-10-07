@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
+import Header from "@/features/home/components/MarketingHeader";
 import Footer from "@/shared/layout/Footer";
-import Header from "@/shared/layout/Header";
 import ScrollTopButton from "@/shared/layout/ScrollTopButton";
 
 export default async function MarketingLayout({

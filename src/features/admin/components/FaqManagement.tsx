@@ -1,48 +1,29 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Edit2, Eye, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { type FieldErrors, useForm, useWatch } from "react-hook-form";
-import { AdminControlledField } from "@/features/admin/components/AdminControlledField";
 import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
+import { AdminErrorBanner } from "@/features/admin/components/AdminErrorBanner";
+import { FaqFormModal } from "@/features/admin/components/FaqFormModal";
 import { AdminPagination } from "@/features/admin/components/AdminPagination";
+import { AdminResultSummary } from "@/features/admin/components/AdminResultSummary";
 import { FilterDropdown } from "@/features/admin/components/FilterDropdown";
+import { FaqStatusModal } from "@/features/admin/components/FaqStatusModal";
 import { useActionStatus } from "@/features/admin/context/ActionStatusContext";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
 import {
-  faqFormSchema,
-  type FaqFormValues,
-} from "@/features/admin/lib/adminFormSchemas";
-import {
   adminFaqCategories,
-  adminFaqSubcategories,
-  type AdminFaq,
   type AdminFaqCategory,
 } from "@/features/admin/types";
 import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
-import { Modal } from "@/shared/ui/Modal";
 import { SearchInput } from "@/shared/ui/SearchInput";
-import { showToast } from "@/shared/ui/ToastProvider";
 import type { SelectOption } from "@/shared/ui/Select";
 
 const faqCategoryOptions: readonly SelectOption[] = adminFaqCategories.map(
   (category) => ({ label: category, value: category }),
 );
-const getFaqSubcategoryOptions = (
-  category?: string,
-): readonly SelectOption[] =>
-  category && category in adminFaqSubcategories
-    ? adminFaqSubcategories[category as AdminFaqCategory].map(
-        (subcategory) => ({
-          label: subcategory,
-          value: subcategory,
-        }),
-      )
-    : [];
-
 type FaqCategoryFilter = "ALL" | AdminFaqCategory;
 type FaqStatusFilter = "ALL" | "ACTIVE" | "INACTIVE";
 
@@ -214,11 +195,7 @@ export const FaqManagement = () => {
         </div>
       </div>
 
-      {faqError && (
-        <div className="mb-7 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
-          {faqError}
-        </div>
-      )}
+      {faqError && <AdminErrorBanner message={faqError} />}
 
       <div className="space-y-3 md:hidden">
         {shouldShowSkeletonRows ? (
@@ -405,11 +382,12 @@ export const FaqManagement = () => {
         )}
       </Card>
 
-      <p className="text-text-secondary mt-4 text-sm font-bold">
-        {hasSearchKeyword && `"${faqKeyword.trim()}" 검색 결과 `}
-        {rangeStart.toLocaleString("ko-KR")}-{rangeEnd.toLocaleString("ko-KR")}{" "}
-        / 총 {faqTotalCount.toLocaleString("ko-KR")}개
-      </p>
+      <AdminResultSummary
+        keyword={hasSearchKeyword ? faqKeyword : ""}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+        totalCount={faqTotalCount}
+      />
 
       <FaqFormModal
         isOpen={isCreateModalOpen}
@@ -434,236 +412,34 @@ export const FaqManagement = () => {
         }}
       />
 
-      <Modal
-        isOpen={activatingFaq !== undefined}
+      <FaqStatusModal
+        mode="activate"
+        faq={activatingFaq}
         onClose={() => setActivatingFaqId(null)}
-        title="FAQ를 활성화할까요?"
-        description={
-          <span className="whitespace-nowrap">
-            활성화하면 FAQ가 다시 노출됩니다.
-          </span>
-        }
-        actions={
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setActivatingFaqId(null)}
-            >
-              취소
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                if (activatingFaq) {
-                  const faqId = activatingFaq.faqId;
-                  void runWithStatus("FAQ 활성화", () =>
-                    setFaqStatus(faqId, "ACTIVE"),
-                  );
-                }
-                setActivatingFaqId(null);
-              }}
-            >
-              활성화
-            </Button>
-          </>
-        }
-      >
-        {activatingFaq && (
-          <p className="bg-surface-muted rounded-2xl p-4 text-sm font-bold text-gray-700 dark:bg-white/5 dark:text-gray-200">
-            {activatingFaq.question}
-          </p>
-        )}
-      </Modal>
+        onConfirm={() => {
+          if (activatingFaq) {
+            const faqId = activatingFaq.faqId;
+            void runWithStatus("FAQ 활성화", () =>
+              setFaqStatus(faqId, "ACTIVE"),
+            );
+          }
+          setActivatingFaqId(null);
+        }}
+      />
 
-      <Modal
-        isOpen={deletingFaq !== undefined}
+      <FaqStatusModal
+        mode="delete"
+        faq={deletingFaq}
         onClose={() => setDeletingFaqId(null)}
-        title="FAQ를 삭제할까요?"
-        description={
-          <span className="whitespace-nowrap">
-            삭제하면 FAQ가 비활성 상태로 전환됩니다.
-          </span>
-        }
-        actions={
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setDeletingFaqId(null)}
-            >
-              취소
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => {
-                if (deletingFaq) {
-                  const faqId = deletingFaq.faqId;
-                  void runWithStatus("FAQ 삭제", () => deleteFaq(faqId));
-                }
-                setDeletingFaqId(null);
-              }}
-            >
-              삭제
-            </Button>
-          </>
-        }
-      >
-        {deletingFaq && (
-          <p className="bg-surface-muted rounded-2xl p-4 text-sm font-bold text-gray-700 dark:bg-white/5 dark:text-gray-200">
-            {deletingFaq.question}
-          </p>
-        )}
-      </Modal>
+        onConfirm={() => {
+          if (deletingFaq) {
+            const faqId = deletingFaq.faqId;
+            void runWithStatus("FAQ 삭제", () => deleteFaq(faqId));
+          }
+          setDeletingFaqId(null);
+        }}
+      />
     </div>
-  );
-};
-
-type FaqFormModalProps = {
-  initialValues?: AdminFaq;
-  isOpen: boolean;
-  mode: "create" | "edit";
-  onClose: () => void;
-  onSave?: (input: {
-    answer: string;
-    category: AdminFaqCategory;
-    question: string;
-    subcategory?: string;
-  }) => void;
-};
-
-const FaqFormModal = ({
-  initialValues,
-  isOpen,
-  mode,
-  onClose,
-  onSave,
-}: FaqFormModalProps) => {
-  const formId = `faq-${mode}-form`;
-  const {
-    control,
-    formState: { isValid },
-    handleSubmit,
-    reset,
-  } = useForm<FaqFormValues>({
-    defaultValues: {
-      answer: initialValues?.answer ?? "",
-      category: initialValues?.category,
-      question: initialValues?.question ?? "",
-      subcategory: initialValues?.subcategory ?? "",
-    },
-    mode: "onChange",
-    resolver: zodResolver(faqFormSchema),
-  });
-  const selectedCategory = useWatch({ control, name: "category" });
-  const subcategoryOptions = getFaqSubcategoryOptions(selectedCategory);
-
-  useEffect(() => {
-    reset({
-      answer: initialValues?.answer ?? "",
-      category: initialValues?.category,
-      question: initialValues?.question ?? "",
-      subcategory: initialValues?.subcategory ?? "",
-    });
-  }, [initialValues, reset]);
-
-  const submitFaq = (values: FaqFormValues) => {
-    onSave?.({
-      answer: values.answer.trim(),
-      category: values.category,
-      question: values.question.trim(),
-      subcategory: values.subcategory?.trim() || undefined,
-    });
-  };
-  const handleInvalidSubmit = (formErrors: FieldErrors<FaqFormValues>) => {
-    const firstMessage = Object.values(formErrors)[0]?.message;
-
-    showToast(
-      typeof firstMessage === "string"
-        ? firstMessage
-        : "카테고리, 질문, 답변을 입력해 주세요.",
-    );
-  };
-
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={mode === "create" ? "FAQ 등록" : "FAQ 수정"}
-      description="운영 중 개별 FAQ를 추가하거나 수정합니다. 질문/답변 변경 시 임베딩도 함께 갱신됩니다."
-      size="lg"
-      actions={
-        <>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            취소
-          </Button>
-          <Button size="sm" form={formId} type="submit" disabled={!isValid}>
-            {mode === "create" ? "등록" : "저장"}
-          </Button>
-        </>
-      }
-    >
-      {mode === "edit" && initialValues && (
-        <div className="mb-5 flex flex-wrap gap-x-4 gap-y-1 rounded-2xl bg-gray-50 px-4 py-3 text-xs font-bold text-gray-400 dark:bg-white/5">
-          <span>등록일 {formatKoreanDate(initialValues.createdAt)}</span>
-          <span>
-            수정일{" "}
-            {initialValues.updatedAt
-              ? formatKoreanDate(initialValues.updatedAt)
-              : "수정 이력 없음"}
-          </span>
-        </div>
-      )}
-
-      <form
-        id={formId}
-        className="grid gap-5 sm:grid-cols-2"
-        onSubmit={handleSubmit(submitFaq, handleInvalidSubmit)}
-      >
-        <AdminControlledField
-          control={control}
-          name="category"
-          label="카테고리"
-          options={faqCategoryOptions}
-          placeholder="카테고리 선택"
-          required
-        />
-        <AdminControlledField
-          key={selectedCategory || "subcategory"}
-          control={control}
-          name="subcategory"
-          formatValue={(value) =>
-            subcategoryOptions.some((option) => option.value === value)
-              ? String(value)
-              : ""
-          }
-          label="세부 주제 (선택)"
-          options={subcategoryOptions}
-          placeholder={
-            selectedCategory ? "세부 주제 선택" : "카테고리를 먼저 선택"
-          }
-          description="선택하지 않아도 등록할 수 있습니다."
-        />
-        <AdminControlledField
-          control={control}
-          name="question"
-          label="질문"
-          placeholder="예: 해외 로밍 데이터는 언제부터 적용되나요?"
-          className="sm:col-span-2"
-          required
-        />
-        <AdminControlledField
-          control={control}
-          name="answer"
-          label="답변"
-          placeholder="예: 로밍 요금제는 신청한 시작일 0시부터 적용되며, 국가별 제공량과 요금은 상품에 따라 달라질 수 있습니다."
-          className="sm:col-span-2"
-          multiline
-          required
-        />
-      </form>
-    </Modal>
   );
 };
 

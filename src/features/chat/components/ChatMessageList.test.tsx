@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { ChatMessage } from "@/features/chat/types";
@@ -24,8 +24,7 @@ const assistant = (
 });
 
 describe("ChatMessageList answer status", () => {
-  it("shows an error block with a retry button on the last failed answer", async () => {
-    const user = userEvent.setup();
+  it("shows an error block with a retry button on the last failed answer", () => {
     const onRetryAnswer = vi.fn();
 
     render(
@@ -40,7 +39,7 @@ describe("ChatMessageList answer status", () => {
     );
 
     expect(screen.getByRole("alert")).toHaveTextContent("답변을 받지 못했어요");
-    await user.click(screen.getByRole("button", { name: "다시 시도" }));
+    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
     expect(onRetryAnswer).toHaveBeenCalledWith("assistant-error");
   });
 
