@@ -274,7 +274,6 @@ export const ChatStoreMap = ({
                   cardRefs.current.delete(store.id);
                 }
               }}
-              activeServices={activeServices}
               index={index}
               isSelected={store.id === selectedStore?.id}
               matchedServices={matchedServicesById.get(store.id) ?? []}
@@ -290,8 +289,6 @@ export const ChatStoreMap = ({
 };
 
 type StoreResultCardProps = {
-  /** 질문에 나온 서비스 */
-  activeServices: readonly string[];
   cardRef: (element: HTMLElement | null) => void;
   index: number;
   isSelected: boolean;
@@ -304,7 +301,6 @@ type StoreResultCardProps = {
 };
 
 const StoreResultCard = ({
-  activeServices,
   cardRef,
   index,
   isSelected,
