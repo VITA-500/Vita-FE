@@ -6,7 +6,7 @@ import type {
 import {
   FAILED_ANSWER_MESSAGE,
   PENDING_ANSWER_MESSAGE,
-} from "@/features/chat/lib/chatService";
+} from "@/features/chat/lib/chatAnswerMessage";
 import {
   createChatStoreMap,
   isStoreRelatedPrompt,

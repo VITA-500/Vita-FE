@@ -1,11 +1,9 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChatDeleteConfirmDialog } from "./ChatDeleteConfirmDialog";
 
 describe("ChatDeleteConfirmDialog", () => {
-  it("shows the chat title and calls the handlers", async () => {
-    const user = userEvent.setup();
+  it("shows the chat title and calls the handlers", () => {
     const onCancel = vi.fn();
     const onConfirm = vi.fn();
 
@@ -22,8 +20,8 @@ describe("ChatDeleteConfirmDialog", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("요금제 추천")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "삭제" }));
-    await user.click(screen.getByRole("button", { name: "취소" }));
+    fireEvent.click(screen.getByRole("button", { name: "삭제" }));
+    fireEvent.click(screen.getByRole("button", { name: "취소" }));
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
     expect(onCancel).toHaveBeenCalledTimes(1);
