@@ -63,6 +63,7 @@ export const useStoreMapPanelState = () => {
   const [hasSelectedStoreInfo, setHasSelectedStoreInfo] = useState(false);
   const [activeMapCategory, setActiveMapCategory] =
     useState<MapCategory>("store");
+  const [routeReturnServices, setRouteReturnServices] = useState<string[]>([]);
   const shouldFocusUserLocationRef = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mapState = useStoreMapState(stores);
@@ -262,6 +263,7 @@ export const useStoreMapPanelState = () => {
     removeSearchHistory,
     routeDestinationStore,
     routePreview,
+    routeReturnServices,
     routeSummary,
     sameLocationStores,
     searchFitTarget,
@@ -274,6 +276,7 @@ export const useStoreMapPanelState = () => {
     setIsMapSearchLoading,
     setIsOtherStoresVisible,
     setIsWaitingForPinSelection,
+    setRouteReturnServices,
     setSearchFitTarget,
     setSearchPoint,
     setSoloStoreId,

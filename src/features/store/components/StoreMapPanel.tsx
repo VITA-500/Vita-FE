@@ -10,14 +10,19 @@ import { StorePanelSearchDropdown } from "@/features/store/components/StorePanel
 import { StorePanelServiceFilters } from "@/features/store/components/StorePanelServiceFilters";
 import { StorePanelStoreList } from "@/features/store/components/StorePanelStoreList";
 import { useStoreMapPanel } from "@/features/store/hooks/useStoreMapPanel";
+import type { StoreMapInitialAction } from "@/features/store/types";
 
 type StoreMapPanelProps = {
+  initialAction?: StoreMapInitialAction | null;
   onOpenSidebar?: () => void;
 };
 
 // 상태와 동작은 useStoreMapPanel(useStoreMapPanelState + useStoreMapPanelActions)에 있고,
 // 이 컴포넌트는 지도·검색창·목록·모달 화면 배치만 맡는다.
-export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
+export const StoreMapPanel = ({
+  initialAction,
+  onOpenSidebar,
+}: StoreMapPanelProps) => {
   const {
     activeMapCategory,
     activeStorePage,
@@ -61,6 +66,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     isMapSearchLoading,
     isOtherStoresVisible,
     isPinAutoFitSkippedRef,
+    isReservationSubmitting,
     isRouteLoading,
     isRouteSearchOverlayVisible,
     isSearchHistoryEnabled,
@@ -77,8 +83,10 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     mapStores,
     mapStoresKey,
     mapTopBarRef,
+    maxReservationDate,
     markerColorInfoById,
     markerLabelById,
+    minReservationDate,
     openSearchHistory,
     otherMapStores,
     pagedMapStores,
@@ -87,7 +95,9 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     providedServiceFilters,
     removeSearchHistory,
     requestUserLocationFromModal,
+    reservationDate,
     reservationStore,
+    reservationTime,
     routeDestinationStoreId,
     routeLeftInset,
     routeMode,
@@ -109,6 +119,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     setBenefitServiceFilters,
     setIsOtherStoresVisible,
     setIsStoreListCollapsed,
+    setReservationDate,
+    setReservationTime,
     setRouteMapReadyKey,
     setSearchAnchorSource,
     setSearchPoint,
@@ -125,7 +137,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     toggleSearchHistoryOnInputMouseDown,
     userLocation,
     visibleMapStores,
-  } = useStoreMapPanel();
+  } = useStoreMapPanel(initialAction);
   const isBenefitCategory = activeMapCategory === "benefit";
 
   return (
@@ -365,12 +377,19 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         isLocationPermissionModalOpen={isLocationPermissionModalOpen}
         isLocationRequesting={locationStatus === "requesting"}
         isLoginRequiredModalOpen={isLoginRequiredModalOpen}
+        isReservationSubmitting={isReservationSubmitting}
+        maxReservationDate={maxReservationDate}
+        minReservationDate={minReservationDate}
         onDismissLocationPermission={dismissLocationPermissionModal}
         onLoginRequiredClose={closeLoginRequiredModal}
         onRequestUserLocation={requestUserLocationFromModal}
         onReservationCancel={cancelReservation}
         onReservationConfirm={handleReservationConfirm}
+        onReservationDateChange={setReservationDate}
+        onReservationTimeChange={setReservationTime}
+        reservationDate={reservationDate}
         reservationStore={reservationStore}
+        reservationTime={reservationTime}
       />
     </div>
   );

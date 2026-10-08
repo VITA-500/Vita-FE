@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useLocationPermission } from "@/features/store/hooks/useLocationPermission";
 import { useNearbyStores } from "@/features/store/hooks/useNearbyStores";
 import { useStoreFilterSearchActions } from "@/features/store/hooks/useStoreFilterSearchActions";
@@ -15,6 +16,7 @@ export type StoreMapPanelState = ReturnType<typeof useStoreMapPanelState>;
  */
 export const useStoreMapPanelActions = (state: StoreMapPanelState) => {
   const nearby = useNearbyStores(state);
+  const pendingServiceReturnRef = useRef<string[] | null>(null);
   const selection = useStoreSelectionActions({
     ...state,
     ...nearby,
@@ -43,6 +45,53 @@ export const useStoreMapPanelActions = (state: StoreMapPanelState) => {
     ...searchActionParams,
     ...filterSearch,
   });
+  const applyRouteReturnServices = (services: string[]) => {
+    state.resetRouteState();
+    state.setActiveMapCategory("store");
+    state.setSearchQuery("");
+    state.setIsSearchHistoryOpen(false);
+    state.setHasSelectedStoreInfo(false);
+    state.setIsWaitingForPinSelection(false);
+    state.setSoloStoreId("");
+    state.setSelectedStoreId("");
+
+    if (!state.userLocation) {
+      pendingServiceReturnRef.current = services;
+      locationPermission.openLocationPermissionModal();
+      return;
+    }
+
+    pendingServiceReturnRef.current = null;
+    state.setFocusPoint({
+      lat: state.userLocation.lat,
+      lng: state.userLocation.lng,
+    });
+    state.setSearchPoint(null);
+
+    if (!filterSearch.applyServiceFilterSearch(services)) {
+      selection.showNearbyStoresAfterRoute();
+    }
+  };
+  const showNearbyStoresAfterRoute = () => {
+    if (state.routeReturnServices.length > 0) {
+      applyRouteReturnServices(state.routeReturnServices);
+      return;
+    }
+
+    selection.showNearbyStoresAfterRoute();
+  };
+
+  useEffect(() => {
+    const services = pendingServiceReturnRef.current;
+
+    if (!services || !state.userLocation) {
+      return;
+    }
+
+    applyRouteReturnServices(services);
+    // 서비스 복귀 요청은 userLocation이 생기는 순간 한 번만 재개한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.userLocation]);
 
   return {
     ...nearby,
@@ -50,5 +99,6 @@ export const useStoreMapPanelActions = (state: StoreMapPanelState) => {
     ...locationPermission,
     ...filterSearch,
     ...textSearch,
+    showNearbyStoresAfterRoute,
   };
 };
