@@ -1,20 +1,21 @@
 "use client";
 
-import { LocateFixed, MapPin, Tag } from "lucide-react";
+import { LocateFixed, Tag } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
+import { ChatStoreResultCard } from "@/features/chat/components/ChatStoreResultCard";
 import { StoreMapPreview } from "@/features/store/components/StoreMapPreview";
+import { StorePanelModals } from "@/features/store/components/StorePanelModals";
+import { useStoreReservation } from "@/features/store/hooks/useStoreReservation";
 import type { MapPoint } from "@/features/store/lib/mapFit";
 import { buildMarkerLabelById } from "@/features/store/lib/storePanelStores";
 import {
   buildMarkerColorInfoById,
   buildStoreServiceColorByValue,
-  getServiceFilterColor,
 } from "@/features/store/lib/markerColors";
 import {
   KNOWN_CONSULT_SERVICES,
   KNOWN_PROVIDED_SERVICES,
 } from "@/features/store/lib/serviceKeywords";
-import type { StoreLocation } from "@/features/store/types";
 import {
   CHAT_STORE_RADIUS_KM,
   DEFAULT_CHAT_STORE_ORIGIN_LABEL,
@@ -24,7 +25,6 @@ import {
 } from "@/features/chat/lib/chatStoreMap";
 import { ChatCardRail } from "@/features/chat/components/ChatCardRail";
 import type { ChatStoreMap as ChatStoreMapData } from "@/features/chat/types";
-import { cn } from "@/shared/lib/cn";
 import { showToast } from "@/shared/ui/ToastProvider";
 
 const MAX_CHAT_STORE_COUNT = 4;
@@ -85,6 +85,7 @@ export const ChatStoreMap = ({
   } | null>(null);
   const [currentLocation, setCurrentLocation] = useState<MapPoint | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+  const reservation = useStoreReservation();
   const userLocation =
     currentLocation ?? (isDefaultOrigin ? null : (storeMap.origin ?? null));
   const cardRefs = useRef(new Map<string, HTMLElement>());
@@ -270,7 +271,8 @@ export const ChatStoreMap = ({
           itemLabel="매장"
           getKey={(store) => store.id}
           renderItem={(store, index) => (
-            <StoreResultCard
+            <ChatStoreResultCard
+              activeServices={activeServices}
               cardRef={(element) => {
                 if (element) {
                   cardRefs.current.set(store.id, element);
@@ -283,150 +285,30 @@ export const ChatStoreMap = ({
               matchedServices={matchedServicesById.get(store.id) ?? []}
               serviceColorByValue={serviceColorByValue}
               store={store}
+              onReserve={reservation.handleReserve}
               onSelect={() => handleSelectCard(store.id)}
             />
           )}
         />
       </div>
-    </div>
-  );
-};
-
-type StoreResultCardProps = {
-  cardRef: (element: HTMLElement | null) => void;
-  index: number;
-  isSelected: boolean;
-  /** 이 매장이 제공하는 activeServices */
-  matchedServices: readonly string[];
-  /** 요청 서비스별 색(핀과 같은 색) */
-  serviceColorByValue: Record<string, string>;
-  onSelect: () => void;
-  store: StoreLocation;
-};
-
-const StoreResultCard = ({
-  cardRef,
-  index,
-  isSelected,
-  matchedServices,
-  onSelect,
-  serviceColorByValue,
-  store,
-}: StoreResultCardProps) => {
-  return (
-    <article
-      ref={cardRef}
-      role="button"
-      tabIndex={0}
-      aria-pressed={isSelected}
-      className={cn(
-        "focus-visible:ring-brand/30 w-full min-w-0 cursor-pointer scroll-my-4 rounded-xl border bg-white p-3.5 text-left transition outline-none focus-visible:ring-2 dark:bg-zinc-900",
-        isSelected
-          ? "border-brand shadow-[0_8px_24px_rgba(253,182,29,0.18)]"
-          : "border-gray-200 hover:border-gray-300 dark:border-white/10 dark:hover:border-white/20",
-      )}
-      onClick={onSelect}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onSelect();
-        }
-      }}
-    >
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <span
-          className={cn(
-            "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-xs font-black",
-            isSelected ? "bg-brand text-white" : "bg-brand/10 text-brand",
-          )}
-        >
-          {String.fromCharCode(65 + index)}
-        </span>
-        <div className="min-w-0 flex-1">
-          <span className="flex items-center justify-between gap-2">
-            <span className="text-text-primary truncate text-sm font-extrabold dark:text-white">
-              {store.name}
-            </span>
-            {store.distanceText && (
-              <span className="shrink-0 text-[11px] font-bold text-gray-400">
-                {store.distanceText}
-              </span>
-            )}
-          </span>
-        </div>
-        <MapPin className="text-brand mt-1 h-4 w-4 shrink-0" />
-      </div>
-
-      <ServiceBadges
-        matchedServices={matchedServices}
-        serviceColorByValue={serviceColorByValue}
-        store={store}
+      <StorePanelModals
+        isLocationPermissionModalOpen={false}
+        isLocationRequesting={false}
+        isLoginRequiredModalOpen={reservation.isLoginRequiredModalOpen}
+        isReservationSubmitting={reservation.isReservationSubmitting}
+        maxReservationDate={reservation.maxReservationDate}
+        minReservationDate={reservation.minReservationDate}
+        onDismissLocationPermission={() => undefined}
+        onLoginRequiredClose={reservation.closeLoginRequiredModal}
+        onRequestUserLocation={() => undefined}
+        onReservationCancel={reservation.cancelReservation}
+        onReservationConfirm={reservation.handleReservationConfirm}
+        onReservationDateChange={reservation.setReservationDate}
+        onReservationTimeChange={reservation.setReservationTime}
+        reservationDate={reservation.reservationDate}
+        reservationStore={reservation.reservationStore}
+        reservationTime={reservation.reservationTime}
       />
-    </article>
-  );
-};
-
-const ServiceBadges = ({
-  matchedServices,
-  serviceColorByValue,
-  store,
-}: {
-  matchedServices: readonly string[];
-  serviceColorByValue: Record<string, string>;
-  store: StoreLocation;
-}) => {
-  // 매장 지도 필터 뱃지와 같은 고정 순서(상담 가나다순 → 제공 가나다순)로 보여준다.
-  // serviceColorByValue가 그 순서로 만들어져 있어 키 순서를 그대로 쓴다. 요청 서비스는 자리 이동 없이 색으로만 강조.
-  // 개수 제한 없이 모두 보여준다(카드 높이가 달라질 수 있음).
-  const serviceOrder = Object.keys(serviceColorByValue);
-  const getServiceOrder = (service: string) => {
-    const order = serviceOrder.indexOf(service);
-
-    return order === -1 ? serviceOrder.length : order;
-  };
-  const uniqueServices = Array.from(
-    new Set([
-      ...(store.consultServices ?? []),
-      ...(store.providedServices ?? []),
-    ]),
-  ).sort((first, second) => getServiceOrder(first) - getServiceOrder(second));
-
-  if (uniqueServices.length === 0) {
-    return (
-      <p className="text-text-secondary truncate text-xs font-medium dark:text-gray-400">
-        제공 서비스 확인 중
-      </p>
-    );
-  }
-
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {uniqueServices.map((service) => {
-        const isMatched = matchedServices.includes(service);
-
-        return (
-          <span
-            key={service}
-            className={cn(
-              "bg-surface-muted text-text-secondary rounded-full border px-2.5 py-1 text-[11px] font-bold dark:bg-white/10 dark:text-gray-300",
-              !isMatched && "border-transparent",
-            )}
-            // 요청한 서비스: 같은 모양에 핀과 같은 색으로 테두리·글자만 강조한다.
-            style={
-              isMatched
-                ? {
-                    borderColor:
-                      serviceColorByValue[service] ?? getServiceFilterColor(0),
-                    color:
-                      serviceColorByValue[service] ?? getServiceFilterColor(0),
-                  }
-                : undefined
-            }
-          >
-            {service}
-          </span>
-        );
-      })}
     </div>
   );
 };
