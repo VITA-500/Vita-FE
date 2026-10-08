@@ -9,6 +9,7 @@ import {
   MapPinned,
   SportShoe,
 } from "lucide-react";
+import { StoreOpenStatusBadge } from "@/features/store/components/StoreOpenStatusBadge";
 import type { StoreLocation, StoreRouteMode } from "@/features/store/types";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/Button";
@@ -231,9 +232,12 @@ export const StorePanelInfoBubble = ({
         {routeModeControl}
       </div>
       <div className="mt-3">
-        <p className="text-base font-extrabold text-gray-950 dark:text-white">
-          {store.name}
-        </p>
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="truncate text-base font-extrabold text-gray-950 dark:text-white">
+            {store.name}
+          </p>
+          <StoreOpenStatusBadge openNow={store.openNow} />
+        </div>
 
         <p className="text-text-secondary mt-1 text-xs leading-5 font-semibold">
           {store.address || "상세 주소 확인 중"}
@@ -250,6 +254,11 @@ export const StorePanelInfoBubble = ({
               운영시간 {store.businessHours}
             </span>
           </div>
+        )}
+        {!isRouteMode && store.benefitDescription && (
+          <p className="text-text-secondary mt-2 text-xs leading-5 font-semibold">
+            {store.benefitDescription}
+          </p>
         )}
         {!isRouteMode && (
           <>

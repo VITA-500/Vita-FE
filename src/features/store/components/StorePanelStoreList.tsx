@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 import { ChevronDown, X } from "lucide-react";
+import { StoreOpenStatusBadge } from "@/features/store/components/StoreOpenStatusBadge";
 import { StorePanelPagination } from "@/features/store/components/StorePanelPagination";
 import { mapCategoryOptions } from "@/features/store/constants";
 import { renderBenefitCategoryIcon } from "@/features/store/lib/benefitCategoryIcons";
@@ -152,11 +153,14 @@ export const StorePanelStoreList = ({
                   <span className="truncate text-sm font-extrabold text-gray-800 dark:text-white">
                     {store.name}
                   </span>
-                  {store.distanceText && (
-                    <span className="shrink-0 text-[11px] font-bold text-gray-400">
-                      {store.distanceText}
-                    </span>
-                  )}
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    <StoreOpenStatusBadge openNow={store.openNow} />
+                    {store.distanceText && (
+                      <span className="text-[11px] font-bold text-gray-400">
+                        {store.distanceText}
+                      </span>
+                    )}
+                  </span>
                 </span>
                 <span className="mt-1 block truncate text-xs font-medium text-gray-400">
                   {store.address || "상세 주소 확인 중"}
@@ -251,11 +255,14 @@ export const StorePanelStoreList = ({
                   <span className="truncate text-sm font-extrabold text-gray-800 dark:text-white">
                     {store.name}
                   </span>
-                  {store.distanceText && (
-                    <span className="shrink-0 text-[11px] font-bold text-gray-400">
-                      {store.distanceText}
-                    </span>
-                  )}
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    <StoreOpenStatusBadge openNow={store.openNow} />
+                    {store.distanceText && (
+                      <span className="text-[11px] font-bold text-gray-400">
+                        {store.distanceText}
+                      </span>
+                    )}
+                  </span>
                 </span>
                 <span className="mt-1 flex min-w-0 items-center gap-1.5">
                   <BenefitCategoryIconBadge category={store.benefitCategory} />
@@ -263,6 +270,11 @@ export const StorePanelStoreList = ({
                     {store.benefitName || store.benefitBrand}
                   </span>
                 </span>
+                {store.benefitDescription && (
+                  <span className="mt-1 block truncate text-xs font-medium text-gray-400">
+                    {store.benefitDescription}
+                  </span>
+                )}
               </span>
             </button>
           ))}
