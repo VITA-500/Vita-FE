@@ -1,36 +1,27 @@
 "use client";
 
-import Link from "next/link";
 import type { MouseEvent } from "react";
-import { useEffect, useRef, useState } from "react";
-import {
-  CircleHelp,
-  Moon,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Sun,
-  Search,
-  X,
-} from "lucide-react";
-import { ChatAccountMenu } from "@/features/chat/components/ChatAccountMenu";
+import { useRef, useState } from "react";
+import { PanelLeftClose, PanelLeftOpen, Search, X } from "lucide-react";
 import { ChatDeleteConfirmDialog } from "@/features/chat/components/ChatDeleteConfirmDialog";
 import { ChatSessionList } from "@/features/chat/components/ChatSessionList";
 import { ChatSessionMenu } from "@/features/chat/components/ChatSessionMenu";
+import { ChatSidebarFooter } from "@/features/chat/components/ChatSidebarFooter";
 import { ChatSidebarNav } from "@/features/chat/components/ChatSidebarNav";
+import { useFloatingChatMenu } from "@/features/chat/hooks/useFloatingChatMenu";
+import { usePointerDownOutside } from "@/features/chat/hooks/usePointerDownOutside";
 import {
   buildSidebarChatItems,
   type SidebarChatItem,
 } from "@/features/chat/lib/chatSidebarItems";
 import type { ChatMode, ChatSessionSummary } from "@/features/chat/types";
-import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
-import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
 import { Logo } from "@/shared/ui/Logo";
-import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
-import { showToast } from "@/shared/ui/ToastProvider";
-import { LogoutConfirmDialog } from "@/shared/ui/LogoutConfirmDialog";
-import { useTheme } from "@/shared/ui/ThemeProvider";
-import { UserAvatar } from "@/shared/ui/UserAvatar";
+
+const sidebarClassName =
+  "bg-surface-muted fixed inset-y-0 left-0 z-[100] flex overflow-hidden border-r border-gray-200 text-gray-950 transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-white/10 dark:text-white";
+const sidebarIconButtonClassName =
+  "flex h-10 w-10 items-center justify-center rounded-xl text-gray-500 transition hover:bg-white hover:text-gray-950 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white";
 
 type ChatSidebarProps = {
   isAuthenticated: boolean;
@@ -39,7 +30,9 @@ type ChatSidebarProps = {
   isOpen: boolean;
   onOpen: () => void;
   onClose: () => void;
+  onOpenHome: () => void;
   onNewChat: () => void;
+  onOpenLogin: () => void;
   onOpenSearch: () => void;
   onOpenProfile: () => void;
   onStartTour: () => void;
@@ -81,6 +74,8 @@ export const ChatSidebar = ({
   onNewChat,
   onHideTooltip,
   onOpen,
+  onOpenHome,
+  onOpenLogin,
   onOpenProfile,
   onOpenSearch,
   onDeleteChat,
@@ -94,24 +89,13 @@ export const ChatSidebar = ({
   onShowHeaderTooltip,
   onShowRailTooltip,
 }: ChatSidebarProps) => {
-  const { logout, user } = useAuthUser();
-  const { resolvedTheme, setTheme } = useTheme();
-  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
-  const [chatMenu, setChatMenu] = useState<{
-    left: number;
-    chatKey: string;
-    top: number;
-  } | null>(null);
+  const { chatMenu, closeChatMenu, openChatMenu } = useFloatingChatMenu();
   const [deleteTargetChat, setDeleteTargetChat] =
     useState<SidebarChatItem | null>(null);
   const [isRecentChatsCollapsed, setIsRecentChatsCollapsed] = useState(false);
   // 사용자가 직접 접었는지(isRecentChatsCollapsed)와 불러오는 중인지를 합쳐 실제로 접어 보일지 정한다.
   const isRecentChatsHidden = isRecentChatsCollapsed || isRecentChatsLoading;
-  const accountMenuRef = useRef<HTMLDivElement>(null);
   const chatMenuRef = useRef<HTMLDivElement>(null);
-  const displayName = user?.name ?? "사용자";
-  const isDarkMode = resolvedTheme === "dark";
   const isGuest = isAuthReady && !isAuthenticated && !isAuthLoading;
 
   const { isPinnedChat, pinnedChats, unpinnedRecentChats, visibleRecentChats } =
@@ -135,25 +119,8 @@ export const ChatSidebar = ({
     }
   };
 
-  const handleAccountMenuToggle = () => {
-    onHideTooltip();
-    setIsAccountMenuOpen((current) => !current);
-  };
-
-  const handleOpenProfile = () => {
-    setIsAccountMenuOpen(false);
-    onOpenProfile();
-  };
-
-  const handleLogout = async () => {
-    await logout();
-    setIsAccountMenuOpen(false);
-    setIsLogoutConfirmOpen(false);
-    showToast("로그아웃되었습니다.");
-  };
-
   const handlePinChat = (chat: SidebarChatItem) => {
-    setChatMenu(null);
+    closeChatMenu();
 
     // 아직 저장되지 않은 새 대화는 고정할 대상이 없다.
     if (chat.sessionId === null) return;
@@ -162,7 +129,7 @@ export const ChatSidebar = ({
   };
 
   const handleRequestDeleteChat = (chat: SidebarChatItem) => {
-    setChatMenu(null);
+    closeChatMenu();
 
     if (chat.sessionId === null) return;
 
@@ -178,87 +145,17 @@ export const ChatSidebar = ({
     setDeleteTargetChat(null);
   };
 
-  const handleOpenChatMenu = (
-    event: MouseEvent<HTMLButtonElement>,
-    chatKey: string,
-  ) => {
-    event.stopPropagation();
-    const rect = event.currentTarget.getBoundingClientRect();
-    const menuHeight = 348;
-    const menuWidth = 260;
-    const gap = 8;
-    const viewportPadding = 12;
-    const sidebarMenuLeft = 244;
-    const canOpenDown =
-      rect.bottom + gap + menuHeight <= window.innerHeight - viewportPadding;
-    const top = canOpenDown
-      ? rect.bottom + gap
-      : Math.max(viewportPadding, rect.top - menuHeight - gap);
-    const left = Math.min(
-      window.innerWidth - menuWidth - viewportPadding,
-      Math.max(viewportPadding, sidebarMenuLeft),
-    );
-
-    setChatMenu((currentMenu) =>
-      currentMenu?.chatKey === chatKey
-        ? null
-        : {
-            left,
-            chatKey,
-            top,
-          },
-    );
-  };
-
-  useEffect(() => {
-    if (!isAccountMenuOpen) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (
-        accountMenuRef.current &&
-        !accountMenuRef.current.contains(event.target as Node)
-      ) {
-        setIsAccountMenuOpen(false);
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [isAccountMenuOpen]);
-
-  useEffect(() => {
-    if (!chatMenu) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target as HTMLElement;
-
-      if (target.closest("[data-chat-menu-trigger='true']")) {
-        return;
-      }
-
-      if (chatMenuRef.current && !chatMenuRef.current.contains(target)) {
-        setChatMenu(null);
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [chatMenu]);
+  usePointerDownOutside({
+    enabled: Boolean(chatMenu),
+    ignoredSelector: "[data-chat-menu-trigger='true']",
+    onPointerDownOutside: closeChatMenu,
+    ref: chatMenuRef,
+  });
 
   return (
     <aside
       className={cn(
-        "bg-surface-muted fixed inset-y-0 left-0 z-[100] flex overflow-hidden border-r border-gray-200 text-gray-950 transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-white/10 dark:text-white",
+        sidebarClassName,
         isOpen ? "w-[296px]" : "w-0 border-r-0 md:w-[64px] md:border-r",
       )}
     >
@@ -266,7 +163,8 @@ export const ChatSidebar = ({
         <div className="flex h-16 items-center justify-between">
           <div className="flex h-10 w-[92px] shrink-0 items-center pl-5 md:hidden">
             <Logo
-              href={routes.home}
+              href=""
+              onClick={onOpenHome}
               priority
               heightClassName="h-9"
               alt="VITA"
@@ -279,15 +177,16 @@ export const ChatSidebar = ({
             onMouseLeave={onHideTooltip}
           >
             {isOpen ? (
-              <Link
-                href={routes.home}
+              <button
+                type="button"
+                onClick={onOpenHome}
                 className="relative flex h-10 w-auto items-center rounded-xl transition"
                 aria-label="홈으로 이동"
               >
                 <span className="translate-x-3 text-xl font-extrabold tracking-normal text-gray-950 dark:text-white">
                   VITA
                 </span>
-              </Link>
+              </button>
             ) : (
               <button
                 type="button"
@@ -326,7 +225,7 @@ export const ChatSidebar = ({
               <button
                 type="button"
                 onClick={onOpenSearch}
-                className="flex h-10 w-10 items-center justify-center rounded-xl text-gray-500 transition hover:bg-white hover:text-gray-950 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
+                className={sidebarIconButtonClassName}
                 aria-label="상담 검색"
               >
                 <Search size={19} />
@@ -341,7 +240,10 @@ export const ChatSidebar = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-10 w-10 items-center justify-center rounded-xl text-gray-500 transition hover:bg-white hover:text-gray-950 md:cursor-ew-resize dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
+                className={cn(
+                  sidebarIconButtonClassName,
+                  "md:cursor-ew-resize",
+                )}
                 aria-label="사이드바 닫기"
               >
                 <X size={20} className="md:hidden" />
@@ -396,7 +298,7 @@ export const ChatSidebar = ({
                 isCollapsed={isRecentChatsCollapsed}
                 isLoading={isRecentChatsLoading}
                 isRecentChatsHidden={isRecentChatsHidden}
-                onOpenMenu={handleOpenChatMenu}
+                onOpenMenu={openChatMenu}
                 onSelectChat={selectChat}
                 onToggleCollapsed={() => {
                   if (isRecentChatsLoading) return;
@@ -410,147 +312,25 @@ export const ChatSidebar = ({
           )}
         </div>
 
-        <div
-          className={cn(
-            "relative mt-auto py-3",
-            isOpen ? "border-t border-gray-200/80 dark:border-white/10" : "",
-          )}
-          ref={accountMenuRef}
-        >
-          {isAccountMenuOpen && (
-            <ChatAccountMenu
-              displayName={displayName}
-              onLogout={() => {
-                setIsAccountMenuOpen(false);
-                setIsLogoutConfirmOpen(true);
-              }}
-              onOpenProfile={handleOpenProfile}
-              onStartTour={() => {
-                setIsAccountMenuOpen(false);
-                onStartTour();
-              }}
-            />
-          )}
+        {deleteTargetChat && (
+          <ChatDeleteConfirmDialog
+            title={deleteTargetChat.title}
+            onCancel={() => setDeleteTargetChat(null)}
+            onConfirm={handleConfirmDeleteChat}
+          />
+        )}
 
-          {deleteTargetChat && (
-            <ChatDeleteConfirmDialog
-              title={deleteTargetChat.title}
-              onCancel={() => setDeleteTargetChat(null)}
-              onConfirm={handleConfirmDeleteChat}
-            />
-          )}
-
-          {isLogoutConfirmOpen && (
-            <LogoutConfirmDialog
-              onCancel={() => setIsLogoutConfirmOpen(false)}
-              onConfirm={handleLogout}
-            />
-          )}
-
-          {!isAuthReady ? (
-            <div
-              className={cn("h-12 shrink-0", isOpen ? "w-[296px]" : "w-[64px]")}
-            />
-          ) : isGuest && isOpen ? (
-            <div className="space-y-3 px-3">
-              <div className="space-y-1 border-b border-gray-200/80 pb-3 dark:border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setTheme(isDarkMode ? "light" : "dark")}
-                  className="flex h-11 w-full items-center gap-3 rounded-xl px-2 text-left text-sm font-bold text-gray-600 transition hover:bg-gray-300/70 hover:text-gray-950 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
-                >
-                  {isDarkMode ? <Sun size={19} /> : <Moon size={19} />}
-                  {isDarkMode ? "라이트 모드" : "다크 모드"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onStartTour}
-                  className="flex h-11 w-full items-center gap-3 rounded-xl px-2 text-left text-sm font-bold text-gray-600 transition hover:bg-gray-300/70 hover:text-gray-950 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
-                >
-                  <CircleHelp size={19} />
-                  도움말
-                </button>
-              </div>
-
-              <div className="space-y-3 pt-1">
-                <div>
-                  <p className="text-sm font-extrabold text-gray-950 dark:text-white">
-                    내게 맞춘 답변을 받아보세요
-                  </p>
-                  <p className="mt-2 text-sm leading-6 font-medium text-gray-500 dark:text-gray-400">
-                    로그인하면 상담 기록을 저장하고 더 정확한 통신 안내를 받을
-                    수 있어요.
-                  </p>
-                </div>
-
-                <Link
-                  href={routes.login}
-                  className="flex h-12 w-full items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-bold text-gray-950 transition hover:bg-gray-100 dark:border-white/15 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
-                >
-                  로그인
-                </Link>
-              </div>
-            </div>
-          ) : isGuest ? (
-            <div className="flex h-12 w-[64px] items-center justify-center">
-              <ThemeToggleButton
-                className="h-9 w-9"
-                iconSize={18}
-                onMouseEnter={onShowRailTooltip(
-                  isDarkMode ? "라이트 모드" : "다크 모드",
-                )}
-                onMouseLeave={onHideTooltip}
-              />
-            </div>
-          ) : isAuthenticated && isOpen ? (
-            <div className="group relative flex h-12 w-[296px] items-center pr-3 text-left transition-colors">
-              <span className="absolute inset-y-0 right-2 left-2 rounded-xl transition group-hover:bg-gray-300/70 dark:group-hover:bg-white/10" />
-
-              <button
-                type="button"
-                className="relative z-10 flex h-12 min-w-0 flex-1 items-center text-left"
-                aria-label="프로필"
-                aria-expanded={isAccountMenuOpen}
-                onClick={handleAccountMenuToggle}
-                onMouseEnter={onShowRailTooltip(displayName)}
-                onMouseLeave={onHideTooltip}
-              >
-                <span className="flex h-12 w-[64px] shrink-0 items-center justify-center">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl">
-                    <UserAvatar size="sm" />
-                  </span>
-                </span>
-
-                <span className="min-w-0 opacity-100 transition-opacity delay-150 duration-150">
-                  <span className="block truncate text-sm font-bold text-gray-950 dark:text-white">
-                    {displayName}
-                  </span>
-                </span>
-              </button>
-
-              <ThemeToggleButton className="relative z-10 ml-auto shrink-0" />
-            </div>
-          ) : isAuthenticated ? (
-            <div className="flex h-12 w-[64px] items-center justify-center">
-              <button
-                type="button"
-                className="flex h-10 w-10 items-center justify-center rounded-xl transition hover:bg-gray-300/70 dark:hover:bg-white/10"
-                aria-label="프로필"
-                aria-expanded={isAccountMenuOpen}
-                onClick={handleAccountMenuToggle}
-                onMouseEnter={onShowRailTooltip(displayName)}
-                onMouseLeave={onHideTooltip}
-              >
-                <UserAvatar size="sm" />
-              </button>
-            </div>
-          ) : (
-            <div
-              className={cn("h-12 shrink-0", isOpen ? "w-[296px]" : "w-[64px]")}
-            />
-          )}
-        </div>
+        <ChatSidebarFooter
+          isAuthReady={isAuthReady}
+          isAuthenticated={isAuthenticated}
+          isGuest={isGuest}
+          isOpen={isOpen}
+          onHideTooltip={onHideTooltip}
+          onOpenLogin={onOpenLogin}
+          onOpenProfile={onOpenProfile}
+          onShowRailTooltip={onShowRailTooltip}
+          onStartTour={onStartTour}
+        />
       </div>
     </aside>
   );
