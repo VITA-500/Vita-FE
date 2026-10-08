@@ -59,16 +59,30 @@ describe("chatService.sendMessage (SSE)", () => {
 
       expect(init?.method).toBe("POST");
       // POST 응답보다 이벤트가 먼저 와도 놓치지 않아야 한다.
-      sse.send("assistant_status", { messageId: 7, status: "retrieving_faq" });
-      sse.send("assistant_delta", { messageId: 6, delta: "다른 메시지" });
-      sse.send("assistant_delta", { messageId: 7, delta: "요금제는 " });
+      sse.send("assistant_status", {
+        sessionId: 3,
+        messageId: 7,
+        status: "retrieving_faq",
+      });
+      sse.send("assistant_delta", {
+        sessionId: 3,
+        messageId: 6,
+        delta: "다른 메시지",
+      });
+      sse.send("assistant_delta", {
+        sessionId: 3,
+        messageId: 7,
+        delta: "요금제는 ",
+      });
 
       setTimeout(() => {
         sse.send("assistant_delta", {
+          sessionId: 3,
           messageId: 7,
           delta: "변경할 수 있어요.",
         });
         sse.send("assistant_done", {
+          sessionId: 3,
           messageId: 7,
           content: "요금제는 변경할 수 있어요.",
         });
@@ -110,7 +124,12 @@ describe("chatService.sendMessage (SSE)", () => {
       }
 
       setTimeout(() =>
-        sse.send("assistant_error", { messageId: 8, code: "INTERNAL_ERROR" }),
+        sse.send("assistant_error", {
+          sessionId: 1,
+          messageId: 8,
+          code: "INTERNAL_ERROR",
+          message: "답변 생성에 실패했습니다.",
+        }),
       );
       return Promise.resolve(pendingResponse(8));
     }) as typeof fetch;
