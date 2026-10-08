@@ -11,19 +11,27 @@ import {
   benefitService,
   type BenefitCategoryOption,
 } from "@/features/store/lib/benefitService";
-import type { MapCategory, StoreLocation } from "@/features/store/types";
+import { getOpenFilterKey } from "@/features/store/lib/storeOpenHours";
+import type {
+  MapCategory,
+  StoreLocation,
+  StoreOpenFilter,
+} from "@/features/store/types";
 import { showToast } from "@/shared/ui/ToastProvider";
 
 type UseBenefitStoresParams = {
   activeMapCategory: MapCategory;
+  openFilter: StoreOpenFilter;
   userLocation: UserLocation | null;
 };
 
 /** 제휴 혜택 탭에서 카테고리별 제휴 매장을 가까운 순으로 불러온다. 상단 혜택 뱃지 필터는 useBenefitServiceFilters가 맡는다. */
 export const useBenefitStores = ({
   activeMapCategory,
+  openFilter,
   userLocation,
 }: UseBenefitStoresParams) => {
+  const openFilterKey = getOpenFilterKey(openFilter);
   const [benefitCategories, setBenefitCategories] = useState<
     BenefitCategoryOption[]
   >([]);
@@ -37,10 +45,15 @@ export const useBenefitStores = ({
     const lng = Number(lookupLocation.lng.toFixed(3));
 
     return {
-      key: `${selectedBenefitCategory}:${lat}:${lng}`,
+      key: `${selectedBenefitCategory}:${lat}:${lng}:${openFilterKey}`,
       location: { lat, lng },
     };
-  }, [lookupLocation.lat, lookupLocation.lng, selectedBenefitCategory]);
+  }, [
+    openFilterKey,
+    lookupLocation.lat,
+    lookupLocation.lng,
+    selectedBenefitCategory,
+  ]);
 
   useEffect(() => {
     let isCurrentRequest = true;
@@ -84,7 +97,13 @@ export const useBenefitStores = ({
     setIsBenefitStoreLoading(true);
 
     benefitService
-      .fetchBenefitStores(selectedBenefitCategory, benefitLookup.location)
+      .fetchBenefitStores(
+        selectedBenefitCategory,
+        benefitLookup.location,
+        undefined,
+        undefined,
+        { openFilter },
+      )
       .then((stores) => {
         isSettled = true;
 
@@ -113,7 +132,7 @@ export const useBenefitStores = ({
         lastLookupKeyRef.current = "";
       }
     };
-  }, [activeMapCategory, benefitLookup, selectedBenefitCategory]);
+  }, [activeMapCategory, benefitLookup, openFilter, selectedBenefitCategory]);
 
   const benefitStoresOrigin: MapSearchPoint = benefitLookup.location;
   const serviceFilters = useBenefitServiceFilters(benefitStores);

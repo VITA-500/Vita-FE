@@ -17,8 +17,6 @@ type StoreMapPanelProps = {
   onOpenSidebar?: () => void;
 };
 
-// 상태와 동작은 useStoreMapPanel(useStoreMapPanelState + useStoreMapPanelActions)에 있고,
-// 이 컴포넌트는 지도·검색창·목록·모달 화면 배치만 맡는다.
 export const StoreMapPanel = ({
   initialAction,
   onOpenSidebar,
@@ -87,6 +85,7 @@ export const StoreMapPanel = ({
     markerColorInfoById,
     markerLabelById,
     minReservationDate,
+    openFilter,
     openSearchHistory,
     otherMapStores,
     pagedMapStores,
@@ -118,6 +117,7 @@ export const StoreMapPanel = ({
     selectedBenefitCategory,
     setBenefitServiceFilters,
     setIsOtherStoresVisible,
+    setOpenFilter,
     setIsStoreListCollapsed,
     setReservationDate,
     setReservationTime,
@@ -151,8 +151,7 @@ export const StoreMapPanel = ({
         fitTarget={searchFitTarget}
         markerEnterKey={`${currentStorePage}:${mapStoresKey}`}
         getPinFitPadding={getMapPinFitPadding}
-        // 새 핀 묶음이 꽂히거나 목록을 펼치고 접을 때 가장 바깥 핀이 가리지 않는지 확인한다.
-        // (페이지 이동은 goToStorePage의 fitTarget이 같은 여백으로 맞춘다)
+        // 새 핀 묶음·목록 토글 시 가장 바깥 핀이 가리지 않는지 확인한다.
         pinAutoFitKey={`${mapStoresKey}|${isStoreListCollapsed ? "collapsed" : "expanded"}`}
         isPinAutoFitPaused={Boolean(
           routeDestinationStoreId || soloStore || hasSelectedStoreInfo,
@@ -273,9 +272,14 @@ export const StoreMapPanel = ({
                 onSubmit={() => {
                   void submitStoreSearch();
                 }}
+                onOpenFilterChange={(nextFilter) => {
+                  closeSelectedStoreInfo();
+                  setOpenFilter(nextFilter);
+                }}
                 onToggleStoreList={() =>
                   setIsStoreListCollapsed((isCollapsed) => !isCollapsed)
                 }
+                openFilter={openFilter}
                 pagedStoreCount={pagedMapStores.length}
                 searchInputRef={searchInputRef}
                 searchQuery={searchQuery}
