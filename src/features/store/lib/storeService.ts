@@ -43,6 +43,15 @@ type StoreDetailResponse = {
   providedServices?: string[];
 };
 
+export type ReservationResponse = {
+  reservationId: number;
+  storeId: number;
+  storeName: string;
+  date: string;
+  time: string;
+  status: "CONFIRMED" | string;
+};
+
 const isApiStoreId = (storeId: string) => /^\d+$/.test(storeId);
 
 const toNearbyStoreLocation = (
@@ -152,5 +161,24 @@ export const storeService = {
       path: getRoutePath(response),
       segments: getRouteSegments(response),
     };
+  },
+  reserveStore: async ({
+    date,
+    storeId,
+    time,
+  }: {
+    date: string;
+    storeId: string;
+    time: string;
+  }) => {
+    if (!isApiStoreId(storeId)) {
+      throw new Error("NON_API_STORE_ID");
+    }
+
+    return requestJson<ReservationResponse>(`/stores/${storeId}/reservations`, {
+      method: "POST",
+      body: JSON.stringify({ date, time }),
+      timeoutMs: 7000,
+    });
   },
 };
