@@ -181,7 +181,11 @@ export const ChatStoreMap = ({
   };
 
   const handleSelectPin = (storeId: string) => {
+    const store = stores.find((item) => item.id === storeId);
+
     setSelectedStoreId(storeId);
+    // 카드를 눌렀을 때처럼 지도도 그 매장으로 옮긴다.
+    if (store) focusMapOn(store);
     // 핀을 누르면 해당 카드가 보이도록 스크롤한다(카드 위치는 선택 여부와 무관해 바로 옮겨도 된다).
     cardRefs.current
       .get(storeId)
@@ -269,6 +273,8 @@ export const ChatStoreMap = ({
           items={stores}
           ariaLabel={`주변 매장 ${stores.length}곳`}
           itemLabel="매장"
+          // 매장명·영업 상태·거리가 한 카드에 들어가도록 요금제 카드보다 조금 넓힌다.
+          itemMinWidthClassName="lg:min-w-[264px]"
           getKey={(store) => store.id}
           renderItem={(store, index) => (
             <ChatStoreResultCard

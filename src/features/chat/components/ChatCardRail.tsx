@@ -13,6 +13,10 @@ import { cn } from "@/shared/lib/cn";
 
 /** 이 폭(px)만큼 좌우 가장자리에 마우스가 들어오면 그쪽 화살표를 보여준다. */
 const ARROW_HOVER_ZONE_PX = 80;
+/** 좌우 버튼으로 카드를 옮기는 시간(ms) */
+const SCROLL_DURATION_MS = 360;
+
+const easeOutCubic = (progress: number) => 1 - (1 - progress) ** 3;
 
 type ChatCardRailProps<T> = {
   items: readonly T[];
@@ -23,6 +27,8 @@ type ChatCardRailProps<T> = {
   /** 좌우 버튼 접근성 이름에 붙는 단위 (예: "요금제") */
   itemLabel: string;
   className?: string;
+  /** 데스크톱(lg) 1줄 배치에서 카드 한 칸의 최소 폭 클래스. cn은 클래스 충돌을 합치지 않으므로 통째로 바꾼다. */
+  itemMinWidthClassName?: string;
 };
 
 /**
@@ -38,6 +44,7 @@ export const ChatCardRail = <T,>({
   className,
   getKey,
   itemLabel,
+  itemMinWidthClassName = "lg:min-w-[240px]",
   items,
   renderItem,
 }: ChatCardRailProps<T>) => {
@@ -47,6 +54,7 @@ export const ChatCardRail = <T,>({
   const [activeIndex, setActiveIndex] = useState(0);
   /** 마우스가 올라간 쪽 가장자리. 그쪽 화살표만 보여준다. */
   const [hoverSide, setHoverSide] = useState<"prev" | "next" | null>(null);
+  const scrollFrameRef = useRef<number | null>(null);
 
   const handleMouseMove = (event: MouseEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -109,14 +117,43 @@ export const ChatCardRail = <T,>({
     return () => observer.disconnect();
   }, [items.length, updateButtons]);
 
-  /** index번째 카드가 맨 앞에 오도록 옮긴다(끝 쪽 카드는 스크롤 끝에서 멈춘다). */
+  useEffect(
+    () => () => {
+      if (scrollFrameRef.current !== null) {
+        cancelAnimationFrame(scrollFrameRef.current);
+      }
+    },
+    [],
+  );
+
+  /**
+   * index번째 카드가 맨 앞에 오도록 옮긴다(끝 쪽 카드는 스크롤 끝에서 멈춘다).
+   * scrollTo의 smooth는 OS 애니메이션 설정·overflow-hidden 트랙에서 즉시 이동하는 경우가 있어 직접 애니메이션한다.
+   */
   const scrollToCard = (index: number) => {
     const track = trackRef.current;
     const step = getStep();
 
     if (!track || step <= 0) return;
 
-    track.scrollTo({ left: index * step, behavior: "smooth" });
+    if (scrollFrameRef.current !== null) {
+      cancelAnimationFrame(scrollFrameRef.current);
+    }
+
+    const maxScroll = track.scrollWidth - track.clientWidth;
+    const from = track.scrollLeft;
+    const to = Math.min(Math.max(index * step, 0), maxScroll);
+    const startedAt = performance.now();
+
+    const animate = (time: number) => {
+      const progress = Math.min((time - startedAt) / SCROLL_DURATION_MS, 1);
+
+      track.scrollLeft = from + (to - from) * easeOutCubic(progress);
+      scrollFrameRef.current =
+        progress < 1 ? requestAnimationFrame(animate) : null;
+    };
+
+    scrollFrameRef.current = requestAnimationFrame(animate);
   };
 
   /** 카드 한 장(카드 폭 + 간격)만큼 옮긴다. */
@@ -151,7 +188,10 @@ export const ChatCardRail = <T,>({
           {items.map((item, index) => (
             <li
               key={getKey(item, index)}
-              className="flex min-w-0 lg:min-w-[240px] lg:flex-1 lg:shrink-0"
+              className={cn(
+                "flex min-w-0 lg:flex-1 lg:shrink-0",
+                itemMinWidthClassName,
+              )}
             >
               {renderItem(item, index)}
             </li>
