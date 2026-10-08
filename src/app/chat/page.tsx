@@ -136,7 +136,9 @@ const ChatPageContent = () => {
         isOpen={isSidebarOpen}
         onOpen={() => setIsSidebarOpen(true)}
         onClose={() => setIsSidebarOpen(false)}
+        onOpenHome={() => router.push(routes.home)}
         onNewChat={handleNewChat}
+        onOpenLogin={() => router.push(routes.login)}
         onOpenSearch={() => {
           setRailTooltip(null);
           setIsSearchOpen(true);
