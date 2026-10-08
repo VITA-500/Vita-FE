@@ -287,12 +287,14 @@ export const StorePanelInfoBubble = ({
             </div>
             {/* 가까운 매장인데 차량·자전거 경로가 크게 돌아가면 도보 길찾기를 권한다. */}
             {!routeSummary.isLoading && routeSummary.isWalkRecommended && (
-              <div className="text-text-secondary mt-2 flex items-center justify-between gap-2 rounded-sm bg-gray-100 py-1.5 pr-1.5 pl-3 text-[11px] font-bold dark:bg-white/10 dark:text-gray-300">
-                <span>가까운 거리라 도보 이동을 추천해요</span>
+              <div className="text-text-secondary mt-2 flex flex-col items-stretch gap-2 rounded-sm bg-gray-100 px-3 py-2 text-[11px] leading-4 font-bold break-keep sm:flex-row sm:items-center sm:justify-between sm:pr-1.5 dark:bg-white/10 dark:text-gray-300">
+                <span className="min-w-0">
+                  가까운 거리라 도보 이동을 추천해요
+                </span>
                 <button
                   type="button"
                   onClick={() => onRouteModeChange("walk")}
-                  className="text-brand-hover dark:text-brand flex shrink-0 items-center gap-1 rounded-sm bg-white px-2 py-1 font-extrabold shadow-sm transition hover:shadow-md dark:bg-zinc-950"
+                  className="text-brand-hover dark:text-brand flex h-7 shrink-0 items-center justify-center gap-1 rounded-sm bg-white px-2 font-extrabold whitespace-nowrap shadow-sm transition hover:shadow-md dark:bg-zinc-950"
                 >
                   <SportShoe size={12} />
                   도보로 보기
