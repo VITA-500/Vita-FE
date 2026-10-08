@@ -40,6 +40,8 @@ export type ChatStoreSummary = {
   address: string;
   businessHours?: string;
   consultServices?: string[];
+  /** BE openNow(조회 시점 기준). 예전에 저장된 답변에는 없을 수 있다. */
+  openNow?: boolean;
   phone: string;
   providedServices?: string[];
   lat: number;
