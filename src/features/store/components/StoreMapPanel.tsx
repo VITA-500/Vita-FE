@@ -10,14 +10,19 @@ import { StorePanelSearchDropdown } from "@/features/store/components/StorePanel
 import { StorePanelServiceFilters } from "@/features/store/components/StorePanelServiceFilters";
 import { StorePanelStoreList } from "@/features/store/components/StorePanelStoreList";
 import { useStoreMapPanel } from "@/features/store/hooks/useStoreMapPanel";
+import type { StoreMapInitialAction } from "@/features/store/types";
 
 type StoreMapPanelProps = {
+  initialAction?: StoreMapInitialAction | null;
   onOpenSidebar?: () => void;
 };
 
 // 상태와 동작은 useStoreMapPanel(useStoreMapPanelState + useStoreMapPanelActions)에 있고,
 // 이 컴포넌트는 지도·검색창·목록·모달 화면 배치만 맡는다.
-export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
+export const StoreMapPanel = ({
+  initialAction,
+  onOpenSidebar,
+}: StoreMapPanelProps) => {
   const {
     activeMapCategory,
     activeStorePage,
@@ -61,6 +66,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     isMapSearchLoading,
     isOtherStoresVisible,
     isPinAutoFitSkippedRef,
+    isReservationSubmitting,
     isRouteLoading,
     isRouteSearchOverlayVisible,
     isSearchHistoryEnabled,
@@ -77,8 +83,10 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     mapStores,
     mapStoresKey,
     mapTopBarRef,
+    maxReservationDate,
     markerColorInfoById,
     markerLabelById,
+    minReservationDate,
     openSearchHistory,
     otherMapStores,
     pagedMapStores,
@@ -87,7 +95,9 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     providedServiceFilters,
     removeSearchHistory,
     requestUserLocationFromModal,
+    reservationDate,
     reservationStore,
+    reservationTime,
     routeDestinationStoreId,
     routeLeftInset,
     routeMode,
@@ -109,6 +119,8 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     setBenefitServiceFilters,
     setIsOtherStoresVisible,
     setIsStoreListCollapsed,
+    setReservationDate,
+    setReservationTime,
     setRouteMapReadyKey,
     setSearchAnchorSource,
     setSearchPoint,
@@ -125,7 +137,7 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
     toggleSearchHistoryOnInputMouseDown,
     userLocation,
     visibleMapStores,
-  } = useStoreMapPanel();
+  } = useStoreMapPanel(initialAction);
   const isBenefitCategory = activeMapCategory === "benefit";
 
   return (
@@ -300,7 +312,14 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
                   isBenefitStoreLoading={isBenefitStoreLoading}
                   isStorePaginationOn={isStorePaginationOn}
                   mapSelectedStoreId={mapSelectedStoreId}
-                  onBenefitCategoryChange={changeBenefitCategory}
+                  // 제휴 카테고리를 바꾸면 이전에 고른 매장은 새 목록에 없을 수 있어 정보 카드를 닫는다.
+                  // (닫지 않으면 목록은 비었는데 이전 매장 핀만 "•"로 남는다)
+                  onBenefitCategoryChange={(category) => {
+                    if (category !== selectedBenefitCategory) {
+                      closeSelectedStoreInfo();
+                    }
+                    changeBenefitCategory(category);
+                  }}
                   onCategoryChange={changeMapCategory}
                   onClose={() => setIsStoreListCollapsed(true)}
                   onPageChange={goToStorePage}
@@ -322,7 +341,11 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
             {/* 탭마다 필터 대상·로직이 달라 뱃지 줄을 바꿔 보여준다(매장: 상담·서비스, 제휴: 혜택/서비스). */}
             {isBenefitCategory ? (
               <StorePanelBenefitFilters
-                onChange={setBenefitServiceFilters}
+                // 혜택 뱃지를 바꿔도 고른 매장이 결과에서 빠질 수 있어 정보 카드를 닫는다.
+                onChange={(nextValue) => {
+                  closeSelectedStoreInfo();
+                  setBenefitServiceFilters(nextValue);
+                }}
                 options={benefitServiceFilterOptions}
                 value={benefitServiceFilters}
               />
@@ -354,12 +377,19 @@ export const StoreMapPanel = ({ onOpenSidebar }: StoreMapPanelProps) => {
         isLocationPermissionModalOpen={isLocationPermissionModalOpen}
         isLocationRequesting={locationStatus === "requesting"}
         isLoginRequiredModalOpen={isLoginRequiredModalOpen}
+        isReservationSubmitting={isReservationSubmitting}
+        maxReservationDate={maxReservationDate}
+        minReservationDate={minReservationDate}
         onDismissLocationPermission={dismissLocationPermissionModal}
         onLoginRequiredClose={closeLoginRequiredModal}
         onRequestUserLocation={requestUserLocationFromModal}
         onReservationCancel={cancelReservation}
         onReservationConfirm={handleReservationConfirm}
+        onReservationDateChange={setReservationDate}
+        onReservationTimeChange={setReservationTime}
+        reservationDate={reservationDate}
         reservationStore={reservationStore}
+        reservationTime={reservationTime}
       />
     </div>
   );

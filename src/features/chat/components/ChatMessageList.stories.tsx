@@ -165,3 +165,134 @@ export const WithStoreAction: Story = {
     </StoryFrame>
   ),
 };
+
+/* ------------------------------------------------------------------ */
+/* 응답 상태별 답변 블록 (성공 · 응답 중 · 실패 · 중단 · 기록 열람 시 생성 중) */
+/* ------------------------------------------------------------------ */
+
+const statusQuestion = {
+  id: "user-status",
+  role: "user",
+  content: "5G 요금제 중에 데이터 무제한인 거 추천해줘",
+  createdAt: "2026-10-07T01:00:00.000Z",
+} satisfies ChatMessage;
+
+const statusAnswer = (
+  status: NonNullable<ChatMessage["status"]>,
+  content: string,
+): ChatMessage => ({
+  id: `assistant-${status}`,
+  role: "assistant",
+  content,
+  status,
+  createdAt: "2026-10-07T01:00:03.000Z",
+});
+
+const noop = () => undefined;
+
+export const StatusSuccess: Story = {
+  name: "상태 · 성공",
+  args: {
+    isLoading: false,
+    messages: [
+      statusQuestion,
+      statusAnswer(
+        "success",
+        "데이터 무제한 5G 요금제로는 **5G 프리미엄**(월 89,000원)과 **5G 스탠다드**(월 75,000원)가 있어요. 영상 시청이 많다면 프리미엄을 추천해요.",
+      ),
+    ],
+  },
+  render: (args) => (
+    <StoryFrame>
+      <ChatMessageList {...args} />
+    </StoryFrame>
+  ),
+};
+
+export const StatusStreaming: Story = {
+  name: "상태 · 응답 중",
+  args: {
+    isLoading: true,
+    messages: [statusQuestion],
+    streamingReply: {
+      stage: "generating",
+      content: "데이터 무제한 5G 요금제로는 **5G 프리미엄**",
+    },
+  },
+  render: (args) => (
+    <StoryFrame>
+      <ChatMessageList {...args} />
+    </StoryFrame>
+  ),
+};
+
+export const StatusError: Story = {
+  name: "상태 · 실패 (다시 시도)",
+  args: {
+    isLoading: false,
+    messages: [
+      statusQuestion,
+      statusAnswer(
+        "error",
+        "답변을 생성하지 못했어요. 잠시 후 다시 시도해 주세요.",
+      ),
+    ],
+    onRetryAnswer: noop,
+  },
+  render: (args) => (
+    <StoryFrame>
+      <ChatMessageList {...args} />
+    </StoryFrame>
+  ),
+};
+
+export const StatusStopped: Story = {
+  name: "상태 · 중단 (받은 글 있음, 툴팁 표시)",
+  args: {
+    editHintMessageId: statusQuestion.id,
+    isLoading: false,
+    messages: [
+      statusQuestion,
+      statusAnswer("stopped", "데이터 무제한 5G 요금제로는 **5G 프리미엄**"),
+    ],
+    onEditPrompt: noop,
+  },
+  render: (args) => (
+    <StoryFrame>
+      <ChatMessageList {...args} />
+    </StoryFrame>
+  ),
+};
+
+export const StatusStoppedEmpty: Story = {
+  name: "상태 · 중단 (받은 글 없음)",
+  args: {
+    isLoading: false,
+    messages: [statusQuestion, statusAnswer("stopped", "")],
+    onEditPrompt: noop,
+  },
+  render: (args) => (
+    <StoryFrame>
+      <ChatMessageList {...args} />
+    </StoryFrame>
+  ),
+};
+
+export const StatusPending: Story = {
+  name: "상태 · 기록 열람 시 생성 중",
+  args: {
+    isLoading: false,
+    messages: [
+      statusQuestion,
+      statusAnswer(
+        "pending",
+        "아직 답변을 만들고 있어요. 잠시 후 상담 내역을 다시 열어 주세요.",
+      ),
+    ],
+  },
+  render: (args) => (
+    <StoryFrame>
+      <ChatMessageList {...args} />
+    </StoryFrame>
+  ),
+};

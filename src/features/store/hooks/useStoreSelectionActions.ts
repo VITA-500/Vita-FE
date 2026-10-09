@@ -1,6 +1,11 @@
 "use client";
 
-import type { Dispatch, RefObject, SetStateAction } from "react";
+import {
+  useRef,
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+} from "react";
 import type { useLocationPermission } from "@/features/store/hooks/useLocationPermission";
 import type { useNearbyStores } from "@/features/store/hooks/useNearbyStores";
 import type { useStoreMapState } from "@/features/store/hooks/useStoreMapState";
@@ -18,7 +23,11 @@ import {
   readStorage,
 } from "@/features/store/lib/storePanelStorage";
 import { storeService } from "@/features/store/lib/storeService";
-import type { MapCategory, StoreLocation } from "@/features/store/types";
+import type {
+  MapCategory,
+  StoreLocation,
+  StoreMapInitialAction,
+} from "@/features/store/types";
 import { showToast } from "@/shared/ui/ToastProvider";
 
 type UseStoreSelectionActionsParams = Pick<
@@ -32,7 +41,10 @@ type UseStoreSelectionActionsParams = Pick<
 > &
   Pick<
     ReturnType<typeof useStoreRoute>,
-    "resetRouteState" | "routeDestinationStoreId" | "startRoute"
+    | "changeRouteMode"
+    | "resetRouteState"
+    | "routeDestinationStoreId"
+    | "startRoute"
   > &
   Pick<
     ReturnType<typeof useStoreSearchResults>,
@@ -63,6 +75,7 @@ type UseStoreSelectionActionsParams = Pick<
     setFocusPoint: Dispatch<SetStateAction<MapSearchPoint | null>>;
     setHasSelectedStoreInfo: Dispatch<SetStateAction<boolean>>;
     setIsWaitingForPinSelection: Dispatch<SetStateAction<boolean>>;
+    setRouteReturnServices: Dispatch<SetStateAction<string[]>>;
     setSearchPoint: Dispatch<SetStateAction<MapSearchPoint | null>>;
     setSoloStoreId: Dispatch<SetStateAction<string>>;
     setStores: Dispatch<SetStateAction<StoreLocation[]>>;
@@ -76,6 +89,7 @@ export const useStoreSelectionActions = ({
   activeMapCategory,
   categoryDisplayStores,
   categoryStores,
+  changeRouteMode,
   hasFocusedInitialLocationRef,
   isTagSearchQuery,
   openLocationPermissionModal,
@@ -92,6 +106,7 @@ export const useStoreSelectionActions = ({
   setIsSearchHistoryOpen,
   setIsStoreListCollapsed,
   setIsWaitingForPinSelection,
+  setRouteReturnServices,
   setSearchAnchorSource,
   setSearchPoint,
   setSearchQuery,
@@ -106,6 +121,27 @@ export const useStoreSelectionActions = ({
   userLocation,
   watchLocation,
 }: UseStoreSelectionActionsParams) => {
+  const addStoreDetailToMap = (storeId: string, storeDetail: StoreLocation) => {
+    setActiveMapCategory("store");
+    setSoloStoreId(storeId);
+    setHasSelectedStoreInfo(true);
+    setIsWaitingForPinSelection(false);
+    setSelectedStoreId(storeId);
+    setFocusPoint({ lat: storeDetail.lat, lng: storeDetail.lng });
+    setSearchPoint(null);
+    setStores((prevStores) => {
+      const hasStore = prevStores.some((store) => store.id === storeId);
+
+      if (!hasStore) {
+        return [...prevStores, storeDetail];
+      }
+
+      return prevStores.map((store) =>
+        store.id === storeId ? { ...store, ...storeDetail } : store,
+      );
+    });
+  };
+
   const handleStoreSelect = (
     storeId: string,
     options?: { focusMap?: boolean; showOnlySelected?: boolean },
@@ -216,6 +252,35 @@ export const useStoreSelectionActions = ({
     });
   };
 
+  const handleInitialStoreAction = async (action: StoreMapInitialAction) => {
+    setRouteReturnServices(action.activeServices ?? []);
+
+    const fallback =
+      categoryDisplayStores.find((store) => store.id === action.storeId) ??
+      categoryStores.find((store) => store.id === action.storeId) ??
+      searchableStores.find((store) => store.id === action.storeId) ??
+      stores.find((store) => store.id === action.storeId);
+    const storeDetail = await storeService
+      .fetchStoreDetail(action.storeId, fallback)
+      .catch(() => null);
+    const store = storeDetail ?? fallback;
+
+    if (!store) {
+      showToast("매장 정보를 불러오지 못했어요.");
+      return;
+    }
+
+    addStoreDetailToMap(action.storeId, store);
+
+    if (action.action === "route") {
+      if (action.routeMode) {
+        changeRouteMode(action.routeMode);
+      }
+
+      handleRouteStart(store);
+    }
+  };
+
   const closeSelectedStoreInfo = () => {
     setHasSelectedStoreInfo(false);
     setSoloStoreId("");
@@ -223,10 +288,24 @@ export const useStoreSelectionActions = ({
   /**
    * 목록 토글(매장/제휴 혜택) 전환. 이전 탭에서 고른 매장의 정보 카드·길찾기는 새 탭 목록과 맞지 않으므로 닫는다.
    */
+  // 매장 탭에서 쓰던 검색어(텍스트·"#뱃지")를 제휴 탭에 다녀오는 동안 보관한다.
+  const storeTabSearchQueryRef = useRef("");
   const changeMapCategory = (category: MapCategory) => {
     if (category === activeMapCategory) {
       return;
     }
+
+    // 검색창은 두 탭이 함께 쓴다. 매장 탭의 검색어·뱃지 태그(#…)가 제휴 탭 검색창에 남지 않게 비우고,
+    // 매장 탭으로 돌아오면 원래 검색어를 되돌린다(매장 탭의 뱃지 선택·검색 결과는 그대로 유지돼 있다).
+    if (category === "benefit") {
+      storeTabSearchQueryRef.current = searchQuery;
+      setSearchQuery("");
+    } else {
+      setSearchQuery(storeTabSearchQueryRef.current);
+      storeTabSearchQueryRef.current = "";
+    }
+
+    setIsSearchHistoryOpen(false);
 
     if (routeDestinationStoreId) {
       resetRouteState();
@@ -309,6 +388,7 @@ export const useStoreSelectionActions = ({
     changeMapCategory,
     closeSelectedStoreInfo,
     focusUserLocation,
+    handleInitialStoreAction,
     handleRouteStart,
     handleStoreSelect,
     showNearbyStoresAfterRoute,

@@ -119,6 +119,13 @@ export const createStoreMarkerOverlay = ({
     }
   };
 
+  // 핀을 누르는 순간 카카오맵이 지도 드래그를 시작하면, 손이 살짝만 움직여도 dragend가 나서
+  // 정보 카드가 닫히거나 핀이 다시 그려져 첫 클릭이 사라진다(두 번 눌러야 카드가 뜨던 원인).
+  // 핀(과 묶음 목록) 위에서 시작한 입력은 지도에 넘기지 않는다.
+  const handleMarkerPressStart = () => {
+    kakaoMaps.event.preventMap?.();
+  };
+
   const baseZIndex = isSelected ? 20 : 10;
   const overlay = new kakaoMaps.CustomOverlay({
     content: container,
@@ -136,6 +143,10 @@ export const createStoreMarkerOverlay = ({
     }
   };
 
+  container.addEventListener("mousedown", handleMarkerPressStart);
+  container.addEventListener("touchstart", handleMarkerPressStart, {
+    passive: true,
+  });
   marker.addEventListener("click", handleMarkerClick);
   container.addEventListener("mouseenter", handleMarkerEnter);
   container.addEventListener("mouseleave", handleMarkerLeave);
@@ -144,6 +155,8 @@ export const createStoreMarkerOverlay = ({
   return {
     cleanup: () => {
       closeClusterList();
+      container.removeEventListener("mousedown", handleMarkerPressStart);
+      container.removeEventListener("touchstart", handleMarkerPressStart);
       marker.removeEventListener("click", handleMarkerClick);
       container.removeEventListener("mouseenter", handleMarkerEnter);
       container.removeEventListener("mouseleave", handleMarkerLeave);

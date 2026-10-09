@@ -23,6 +23,13 @@ export type StoreRoutePoint = {
 
 export type StoreRouteMode = "walk" | "car" | "bicycle" | "transit";
 
+export type StoreMapInitialAction = {
+  action: "select" | "route";
+  activeServices?: string[];
+  routeMode?: StoreRouteMode;
+  storeId: string;
+};
+
 export type StoreRouteSegmentKind =
   "walk" | "car" | "bicycle" | "bus" | "subway" | "transit";
 

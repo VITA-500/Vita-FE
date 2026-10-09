@@ -1,43 +1,27 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Edit2, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { type FieldErrors, useForm, useWatch } from "react-hook-form";
-import { AdminControlledField } from "@/features/admin/components/AdminControlledField";
 import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
+import { AdminErrorBanner } from "@/features/admin/components/AdminErrorBanner";
 import { AdminPagination } from "@/features/admin/components/AdminPagination";
+import { AdminResultSummary } from "@/features/admin/components/AdminResultSummary";
 import { FilterDropdown } from "@/features/admin/components/FilterDropdown";
+import { StoreDeleteModal } from "@/features/admin/components/StoreDeleteModal";
+import {
+  StoreFormModal,
+  type StoreInput,
+} from "@/features/admin/components/StoreFormModal";
 import { useActionStatus } from "@/features/admin/context/ActionStatusContext";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
 import { adminStoreService } from "@/features/admin/lib/adminStoreService";
-import {
-  storeFormSchema,
-  type StoreFormValues,
-} from "@/features/admin/lib/adminFormSchemas";
-import type {
-  AdminBenefit,
-  AdminStoreDetail,
-  AdminStoreType,
-} from "@/features/admin/types";
+import type { AdminBenefit, AdminStoreType } from "@/features/admin/types";
 import { cn } from "@/shared/lib/cn";
 import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
-import { Modal } from "@/shared/ui/Modal";
 import { SearchInput } from "@/shared/ui/SearchInput";
 import { showToast } from "@/shared/ui/ToastProvider";
-
-type StoreInput = Omit<
-  AdminStoreDetail,
-  | "brand"
-  | "category"
-  | "benefitName"
-  | "createdAt"
-  | "storeId"
-  | "storeType"
-  | "updatedAt"
->;
 
 const pageSizeOptions = [20, 50, 100] as const;
 const MIN_TABLE_ROWS = 8;
@@ -291,15 +275,9 @@ export const StoreManagement = ({
         </div>
       </div>
 
-      {storeError && (
-        <div className="mb-7 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
-          {storeError}
-        </div>
-      )}
+      {storeError && <AdminErrorBanner message={storeError} />}
       {isPartnerStore && benefitError && (
-        <div className="mb-7 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
-          {benefitError}
-        </div>
+        <AdminErrorBanner message={benefitError} />
       )}
 
       <div className="space-y-3 md:hidden">
@@ -468,11 +446,12 @@ export const StoreManagement = ({
         </div>
       </Card>
 
-      <p className="text-text-secondary mt-4 text-sm font-bold">
-        {hasSearchKeyword && `"${storeKeyword.trim()}" 검색 결과 `}
-        {rangeStart.toLocaleString("ko-KR")}-{rangeEnd.toLocaleString("ko-KR")}{" "}
-        / 총 {storeTotalCount.toLocaleString("ko-KR")}개
-      </p>
+      <AdminResultSummary
+        keyword={hasSearchKeyword ? storeKeyword : ""}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+        totalCount={storeTotalCount}
+      />
 
       <StoreFormModal
         key={isAddModalOpen ? "create-open" : "create-closed"}
@@ -497,50 +476,13 @@ export const StoreManagement = ({
         onSave={handleUpdate}
       />
 
-      <Modal
-        isOpen={deletingStore !== undefined}
+      <StoreDeleteModal
+        store={deletingStore}
+        storeLabel={labels.name}
+        isSubmitting={isDeleteSubmitting}
         onClose={() => setDeletingStoreId(null)}
-        title={`${labels.name}을 삭제할까요?`}
-        description={
-          deletingStore
-            ? `#${deletingStore.storeId} ${deletingStore.name} ${labels.name}이 관리자 목록에서 삭제됩니다.`
-            : `선택한 ${labels.name}이 삭제됩니다.`
-        }
-        actions={
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setDeletingStoreId(null)}
-              disabled={isDeleteSubmitting}
-            >
-              취소
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              isLoading={isDeleteSubmitting}
-              onClick={() => void handleDelete()}
-            >
-              삭제
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-3">
-          {deletingStore && (
-            <div className="bg-surface-muted rounded-2xl px-4 py-3 text-sm font-bold text-gray-700 dark:bg-white/5 dark:text-gray-200">
-              <p>{deletingStore.name}</p>
-              <p className="text-text-secondary mt-1 text-xs">
-                {deletingStore.address}
-              </p>
-            </div>
-          )}
-          <p className="text-text-secondary text-sm leading-6 font-semibold">
-            삭제 후에는 목록에서 바로 사라집니다.
-          </p>
-        </div>
-      </Modal>
+        onDelete={() => void handleDelete()}
+      />
     </div>
   );
 };
@@ -629,302 +571,3 @@ const StoreSkeletonCard = () => (
     </div>
   </Card>
 );
-
-type StoreFormModalProps = {
-  benefits: AdminBenefit[];
-  isOpen: boolean;
-  mode: "create" | "edit";
-  onClose: () => void;
-  onSave: (input: StoreInput) => Promise<void>;
-  storeLabel: string;
-  storeType: AdminStoreType;
-  store?: AdminStoreDetail;
-};
-
-const StoreFormModal = ({
-  benefits,
-  isOpen,
-  mode,
-  onClose,
-  onSave,
-  store,
-  storeLabel,
-  storeType,
-}: StoreFormModalProps) => {
-  const formId = mode === "create" ? "store-create-form" : "store-edit-form";
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const isPartnerStore = storeType === "PARTNER";
-  const benefitOptions = benefits.map((benefit) => ({
-    label: `${benefit.brand} · ${benefit.name}`,
-    value: String(benefit.benefitId),
-  }));
-  const placeholders = isPartnerStore
-    ? {
-        businessHours: "예: 09:00~18:00",
-        consultServices: "입장권 문의, 예약 변경",
-        name: "예: 어진월드 어드벤처",
-        phone: "예: 02-9876-5432",
-        providedServices: "제휴 할인, 현장 결제",
-        address: "예: 서울 송파구 올림픽로 240",
-      }
-    : {
-        businessHours: "예: 10:00~20:00",
-        consultServices: "휴대폰상담, 요금제변경",
-        name: "예: VITA 강남점",
-        phone: "예: 02-1234-5678",
-        providedServices: "유심발급, 기기변경",
-        address: "예: 서울 강남구 테헤란로 111",
-      };
-  const fieldLabels = isPartnerStore
-    ? {
-        consultServices: "이용 안내",
-        providedServices: "제휴 제공 내용",
-      }
-    : {
-        consultServices: "상담 가능 업무",
-        providedServices: "제공 가능 서비스",
-      };
-  const {
-    control,
-    handleSubmit,
-    reset,
-    setError,
-    clearErrors,
-    formState: { errors, isValid },
-  } = useForm<StoreFormValues>({
-    defaultValues: {
-      address: store?.address ?? "",
-      benefitId: store?.benefitId ? String(store.benefitId) : "",
-      businessHours: store?.businessHours ?? "",
-      consultServices: store?.consultServices.join(", ") ?? "",
-      lat: store ? String(store.lat) : "",
-      lng: store ? String(store.lng) : "",
-      name: store?.name ?? "",
-      phone: store?.phone ?? "",
-      providedServices: store?.providedServices.join(", ") ?? "",
-    },
-    mode: "onChange",
-    resolver: zodResolver(storeFormSchema),
-  });
-  const selectedBenefitId = useWatch({ control, name: "benefitId" });
-  const canSubmit = isValid && (!isPartnerStore || Boolean(selectedBenefitId));
-  const validationMessage =
-    errorMessage ??
-    errors.benefitId?.message ??
-    errors.businessHours?.message ??
-    errors.phone?.message;
-
-  useEffect(() => {
-    reset({
-      address: store?.address ?? "",
-      benefitId: store?.benefitId ? String(store.benefitId) : "",
-      businessHours: store?.businessHours ?? "",
-      consultServices: store?.consultServices.join(", ") ?? "",
-      lat: store ? String(store.lat) : "",
-      lng: store ? String(store.lng) : "",
-      name: store?.name ?? "",
-      phone: store?.phone ?? "",
-      providedServices: store?.providedServices.join(", ") ?? "",
-    });
-  }, [reset, store]);
-
-  const submitStore = async (values: StoreFormValues) => {
-    setErrorMessage(null);
-
-    if (isPartnerStore && !values.benefitId?.trim()) {
-      const message = "제휴 브랜드를 선택해 주세요.";
-      setError("benefitId", { message, type: "manual" });
-      showToast(message);
-      return;
-    }
-
-    clearErrors("benefitId");
-    setIsSubmitting(true);
-
-    try {
-      await onSave({
-        address: values.address.trim(),
-        benefitId: parseOptionalNumber(values.benefitId),
-        businessHours: values.businessHours?.trim() ?? "",
-        consultServices: toServiceArray(values.consultServices),
-        lat: Number(values.lat.trim()),
-        lng: Number(values.lng.trim()),
-        name: values.name.trim(),
-        phone: values.phone?.trim() ?? "",
-        providedServices: toServiceArray(values.providedServices),
-      });
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : `${storeLabel} 정보를 저장하지 못했습니다.`,
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-  const handleInvalidSubmit = (formErrors: FieldErrors<StoreFormValues>) => {
-    const firstMessage = Object.values(formErrors)[0]?.message;
-
-    showToast(
-      typeof firstMessage === "string"
-        ? firstMessage
-        : `${storeLabel} 정보를 다시 확인해 주세요.`,
-    );
-  };
-
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={
-        mode === "create"
-          ? `${storeLabel} 추가`
-          : `${store?.name ?? storeLabel} 수정`
-      }
-      description={`백엔드 관리자 API에 저장할 ${storeLabel} 정보를 입력해 주세요.`}
-      size="lg"
-      className="max-h-[calc(100svh-48px)] overflow-y-auto"
-    >
-      {mode === "edit" && store && (
-        <div className="mb-5 flex flex-wrap gap-x-4 gap-y-1 rounded-2xl bg-gray-50 px-4 py-3 text-xs font-bold text-gray-400 dark:bg-white/5">
-          <span>등록일 {formatKoreanDate(store.createdAt)}</span>
-          <span>
-            수정일{" "}
-            {store.updatedAt
-              ? formatKoreanDate(store.updatedAt)
-              : "수정 이력 없음"}
-          </span>
-        </div>
-      )}
-
-      <form
-        id={formId}
-        className="grid gap-5 sm:grid-cols-2"
-        onSubmit={handleSubmit(submitStore, handleInvalidSubmit)}
-      >
-        <AdminControlledField
-          control={control}
-          name="name"
-          label={`${storeLabel}명`}
-          placeholder={placeholders.name}
-          className="sm:col-span-2"
-          required
-        />
-        <AdminControlledField
-          control={control}
-          name="address"
-          label="주소"
-          placeholder={placeholders.address}
-          className="sm:col-span-2"
-          required
-        />
-        <AdminControlledField
-          control={control}
-          name="lat"
-          label="위도"
-          inputMode="decimal"
-          placeholder="37.2660"
-          required
-          step="any"
-          type="number"
-        />
-        <AdminControlledField
-          control={control}
-          name="lng"
-          label="경도"
-          inputMode="decimal"
-          placeholder="127.0000"
-          required
-          step="any"
-          type="number"
-        />
-        <AdminControlledField
-          control={control}
-          name="businessHours"
-          label="운영시간"
-          placeholder={placeholders.businessHours}
-        />
-        <AdminControlledField
-          control={control}
-          name="phone"
-          label="전화번호"
-          placeholder={placeholders.phone}
-        />
-        {isPartnerStore && (
-          <AdminControlledField
-            control={control}
-            name="benefitId"
-            label="제휴 브랜드"
-            options={benefitOptions}
-            placeholder="제휴 브랜드 선택"
-            required
-            className="sm:col-span-2"
-            description="백엔드 제휴 혜택 API의 benefitId로 연결됩니다."
-          />
-        )}
-        <AdminControlledField
-          control={control}
-          name="consultServices"
-          label={fieldLabels.consultServices}
-          placeholder={placeholders.consultServices}
-          className="sm:col-span-2"
-        />
-        <AdminControlledField
-          control={control}
-          name="providedServices"
-          label={fieldLabels.providedServices}
-          placeholder={placeholders.providedServices}
-          className="sm:col-span-2"
-        />
-      </form>
-
-      {validationMessage && (
-        <p className="mt-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
-          {validationMessage}
-        </p>
-      )}
-
-      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          disabled={isSubmitting}
-        >
-          취소
-        </Button>
-        <Button
-          size="sm"
-          form={formId}
-          type="submit"
-          disabled={!canSubmit}
-          isLoading={isSubmitting}
-        >
-          {mode === "create" ? "추가" : "저장"}
-        </Button>
-      </div>
-    </Modal>
-  );
-};
-
-const parseOptionalNumber = (value?: string) => {
-  const text = String(value ?? "").trim();
-
-  if (!text) return undefined;
-
-  const numberValue = Number(text);
-
-  if (!Number.isFinite(numberValue)) {
-    throw new Error("제휴 브랜드를 다시 선택해 주세요.");
-  }
-
-  return numberValue;
-};
-
-const toServiceArray = (value?: string) =>
-  String(value ?? "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
