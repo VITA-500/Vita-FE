@@ -15,6 +15,17 @@ import { Button } from "@/shared/ui/Button";
 
 const serviceBadgeClassName =
   "bg-surface-muted text-text-secondary rounded-full px-2.5 py-1 text-[11px] font-bold dark:bg-white/10 dark:text-gray-300";
+const bubblePanelClassName = cn(
+  "border-border after:border-border relative w-full rounded-sm border bg-white/95 p-4 text-sm shadow-lg backdrop-blur",
+  "after:absolute after:bottom-[-7px] after:left-1/2 after:h-3.5 after:w-3.5 after:-translate-x-1/2 after:rotate-45 after:border-r after:border-b after:bg-white/95",
+  "dark:border-white/10 dark:bg-zinc-950/92 dark:after:border-white/10 dark:after:bg-zinc-950/92",
+);
+const compactActionButtonClassName =
+  "rounded-sm shadow-sm transition-shadow hover:shadow-md";
+const routeModeButtonClassName =
+  "group relative flex h-8 w-8 items-center justify-center rounded-sm transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none";
+const routeModeTooltipClassName =
+  "pointer-events-none absolute top-[calc(100%+8px)] left-1/2 z-50 flex -translate-x-1/2 -translate-y-1 items-center rounded-full bg-gray-900 px-3 py-1.5 text-xs font-extrabold whitespace-nowrap text-white opacity-0 shadow-xl transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100";
 
 const routeModeOptions: {
   icon: typeof SportShoe | typeof Car | typeof Bike | typeof Bus;
@@ -157,7 +168,7 @@ export const StorePanelInfoBubble = ({
             disabled={isUnavailable}
             onClick={() => onRouteModeChange(option.value)}
             className={cn(
-              "group relative flex h-8 w-8 items-center justify-center rounded-sm transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none",
+              routeModeButtonClassName,
               isUnavailable
                 ? "cursor-not-allowed bg-gray-100 text-gray-300 opacity-70 shadow-none dark:bg-white/5 dark:text-gray-600"
                 : isSelected
@@ -168,9 +179,7 @@ export const StorePanelInfoBubble = ({
             aria-pressed={isSelected}
           >
             <Icon size={13} />
-            <span className="pointer-events-none absolute top-[calc(100%+8px)] left-1/2 z-50 flex -translate-x-1/2 -translate-y-1 items-center rounded-full bg-gray-900 px-3 py-1.5 text-xs font-extrabold whitespace-nowrap text-white opacity-0 shadow-xl transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
-              {option.label}
-            </span>
+            <span className={routeModeTooltipClassName}>{option.label}</span>
           </button>
         );
       })}
@@ -179,7 +188,7 @@ export const StorePanelInfoBubble = ({
 
   if (isLoading) {
     return (
-      <div className="border-border after:border-border relative w-full rounded-sm border bg-white/95 p-4 text-sm shadow-lg backdrop-blur after:absolute after:bottom-[-7px] after:left-1/2 after:h-3.5 after:w-3.5 after:-translate-x-1/2 after:rotate-45 after:border-r after:border-b after:bg-white/95 dark:border-white/10 dark:bg-zinc-950/92 dark:after:border-white/10 dark:after:bg-zinc-950/92">
+      <div className={bubblePanelClassName}>
         {header}
         <div className="mt-3 flex items-center gap-3">
           <span
@@ -201,7 +210,7 @@ export const StorePanelInfoBubble = ({
 
   if (isWaitingForPinSelection || !store) {
     return (
-      <div className="border-border after:border-border relative w-full rounded-sm border bg-white/95 p-4 text-sm shadow-lg backdrop-blur after:absolute after:bottom-[-7px] after:left-1/2 after:h-3.5 after:w-3.5 after:-translate-x-1/2 after:rotate-45 after:border-r after:border-b after:bg-white/95 dark:border-white/10 dark:bg-zinc-950/92 dark:after:border-white/10 dark:after:bg-zinc-950/92">
+      <div className={bubblePanelClassName}>
         {header}
         <div className="mt-3">
           <p className="font-extrabold text-gray-950 dark:text-white">
@@ -216,7 +225,7 @@ export const StorePanelInfoBubble = ({
   }
 
   return (
-    <div className="border-border after:border-border relative w-full rounded-sm border bg-white/95 p-4 text-left text-sm shadow-lg backdrop-blur after:absolute after:bottom-[-7px] after:left-1/2 after:h-3.5 after:w-3.5 after:-translate-x-1/2 after:rotate-45 after:border-r after:border-b after:bg-white/95 dark:border-white/10 dark:bg-zinc-950/92 dark:after:border-white/10 dark:after:bg-zinc-950/92">
+    <div className={cn(bubblePanelClassName, "text-left")}>
       <div className="flex items-start justify-between gap-2">
         {header}
         {routeModeControl}
@@ -278,12 +287,14 @@ export const StorePanelInfoBubble = ({
             </div>
             {/* 가까운 매장인데 차량·자전거 경로가 크게 돌아가면 도보 길찾기를 권한다. */}
             {!routeSummary.isLoading && routeSummary.isWalkRecommended && (
-              <div className="text-text-secondary mt-2 flex items-center justify-between gap-2 rounded-sm bg-gray-100 py-1.5 pr-1.5 pl-3 text-[11px] font-bold dark:bg-white/10 dark:text-gray-300">
-                <span>가까운 거리라 도보 이동을 추천해요</span>
+              <div className="text-text-secondary mt-2 flex flex-col items-stretch gap-2 rounded-sm bg-gray-100 px-3 py-2 text-[11px] leading-4 font-bold break-keep sm:flex-row sm:items-center sm:justify-between sm:pr-1.5 dark:bg-white/10 dark:text-gray-300">
+                <span className="min-w-0">
+                  가까운 거리라 도보 이동을 추천해요
+                </span>
                 <button
                   type="button"
                   onClick={() => onRouteModeChange("walk")}
-                  className="text-brand-hover dark:text-brand flex shrink-0 items-center gap-1 rounded-sm bg-white px-2 py-1 font-extrabold shadow-sm transition hover:shadow-md dark:bg-zinc-950"
+                  className="text-brand-hover dark:text-brand flex h-7 shrink-0 items-center justify-center gap-1 rounded-sm bg-white px-2 font-extrabold whitespace-nowrap shadow-sm transition hover:shadow-md dark:bg-zinc-950"
                 >
                   <SportShoe size={12} />
                   도보로 보기
@@ -306,7 +317,7 @@ export const StorePanelInfoBubble = ({
               variant="primary"
               size="sm"
               className={cn(
-                "rounded-sm shadow-sm transition-shadow hover:shadow-md",
+                compactActionButtonClassName,
                 isRouteMode && "h-9! px-3! text-[13px]!",
               )}
               onClick={onShowNearbyStores}
@@ -319,7 +330,7 @@ export const StorePanelInfoBubble = ({
               variant="primary"
               size="sm"
               className={cn(
-                "rounded-sm shadow-sm transition-shadow hover:shadow-md",
+                compactActionButtonClassName,
                 isRouteMode && "h-9! px-3! text-[13px]!",
               )}
               onClick={() => onStartRoute(store)}
@@ -332,7 +343,7 @@ export const StorePanelInfoBubble = ({
             variant="outline"
             size="sm"
             className={cn(
-              "rounded-sm shadow-sm transition-shadow hover:shadow-md",
+              compactActionButtonClassName,
               isRouteMode && "h-9! px-3! text-[13px]!",
             )}
             onClick={() => onReserve(store)}

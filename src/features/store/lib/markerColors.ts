@@ -55,6 +55,26 @@ export const buildServiceFilterColorByValue = (
     ]),
   );
 
+const sortServicesKo = (services: readonly string[]) =>
+  Array.from(new Set(services)).sort((first, second) =>
+    first.localeCompare(second, "ko"),
+  );
+
+/**
+ * 매장 지도 필터 뱃지와 같은 규칙으로 서비스별 색을 정한다.
+ * 상담 서비스 가나다순 → 제공 서비스 가나다순으로 줄 세워 팔레트 색을 차례로 붙인다(useServiceFilters와 동일).
+ */
+export const buildStoreServiceColorByValue = (
+  consultServices: readonly string[],
+  providedServices: readonly string[],
+) =>
+  buildServiceFilterColorByValue(
+    [
+      ...sortServicesKo(consultServices),
+      ...sortServicesKo(providedServices),
+    ].map((service) => ({ label: service, value: service })),
+  );
+
 export const buildMarkerColorInfoById = ({
   activeServiceFilters,
   colorByValue,

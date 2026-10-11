@@ -6,6 +6,8 @@ import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
 
 type StoreMapControlsProps = {
   hasUserLocation: boolean;
+  /** 낮은 지도(채팅 답변 안)에서는 모서리에 붙이고 버튼을 조금 작게 한다. */
+  isCompact?: boolean;
   isOtherStoresVisible: boolean;
   isUserLocationLoading: boolean;
   onFocusUserLocation?: () => void;
@@ -18,6 +20,7 @@ type StoreMapControlsProps = {
 /** 지도 오른쪽 아래 컨트롤: 나머지 매장 보기, 내 위치, 확대/축소 */
 export const StoreMapControls = ({
   hasUserLocation,
+  isCompact = false,
   isOtherStoresVisible,
   isUserLocationLoading,
   onFocusUserLocation,
@@ -48,7 +51,14 @@ export const StoreMapControls = ({
     : null;
 
   return (
-    <div className="pointer-events-none absolute right-4 bottom-6 z-30 flex flex-col items-end gap-1 md:right-6 md:bottom-8">
+    <div
+      className={cn(
+        "pointer-events-none absolute z-30 flex flex-col items-end gap-1",
+        isCompact
+          ? "right-3 bottom-3 [&_button]:h-8 [&_button]:w-8"
+          : "right-4 bottom-6 md:right-6 md:bottom-8",
+      )}
+    >
       {/* 나머지 매장 보기: 내 위치 버튼 묶음 바로 위(4px 간격) */}
       {onToggleOtherStores && otherStoreCount > 0 && (
         <div className="pointer-events-auto rounded-sm border border-gray-200 bg-white p-1 shadow-md shadow-gray-950/10 dark:border-white/10 dark:bg-zinc-950 dark:shadow-black/30">

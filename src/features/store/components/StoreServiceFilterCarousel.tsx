@@ -10,76 +10,35 @@ import {
 } from "@/features/store/lib/serviceFilterItems";
 import { cn } from "@/shared/lib/cn";
 
-/** 필터 바에 최대로 노출하는 뱃지 개수. 폭이 좁으면 한 줄에 들어가는 만큼만 보여주고 나머지는 더보기(…) 드롭다운으로 보낸다. */
+/** 데스크톱 필터 바에 최대로 노출하는 뱃지 개수. 폭이 좁으면 한 줄에 들어가는 만큼만 보여주고 나머지는 더보기(…) 드롭다운으로 보낸다. */
 const VISIBLE_SERVICE_FILTER_COUNT = 6;
 const SERVICE_FILTER_GAP_PX = 6;
 const SERVICE_FILTER_MORE_BUTTON_PX = 32;
 const serviceFilterBadgeClassName =
   "flex h-8 shrink-0 items-center gap-1 rounded-full px-3.5 text-xs font-extrabold whitespace-nowrap transition";
 
-/**
- * 모바일 필터 뱃지: 검색창 바로 아래에서 좌우로 밀어 넘기는 슬라이드(캐러셀) 형태.
- * 폭 계산/"…" 드롭다운 없이 모든 뱃지를 한 줄에 두고 가로 스크롤 + 스냅으로 넘긴다.
- */
-export const MobileServiceFilterCarousel = ({
-  "aria-label": ariaLabel,
-  ...props
-}: ServiceFilterCarouselProps) => {
-  const filterItems = buildServiceFilterItems(props);
-
-  if (filterItems.length === 0) {
-    return null;
-  }
-
-  return (
-    <div
-      // 양 끝을 흐리게 가리던 mask를 없애고, 좌우 여백을 스크롤 영역 안쪽에 둬서
-      // 첫/마지막 뱃지가 잘리지 않고 화면 끝에서 자연스럽게 넘어가게 한다.
-      // 위아래 여백은 뱃지 테두리·그림자가 스크롤 영역에 잘리지 않도록 확보한다.
-      className="flex snap-x snap-proximity scroll-px-[max(24px,calc((100vw-420px)/2))] scrollbar-none gap-1.5 overflow-x-auto overscroll-x-contain px-[max(24px,calc((100vw-420px)/2))] py-1.5 after:block after:w-px after:shrink-0 sm:scroll-px-1 sm:px-1"
-      role="group"
-      aria-label={ariaLabel}
-    >
-      {filterItems.map((item) => {
-        const isSelected = item.value.includes(item.optionValue);
-
-        return (
-          <button
-            key={item.key}
-            type="button"
-            onClick={() => toggleServiceFilterItem(item)}
-            className={cn(
-              serviceFilterBadgeClassName,
-              "snap-start",
-              "border bg-white shadow-sm hover:brightness-95 dark:bg-white",
-            )}
-            style={getServiceFilterBadgeStyle(item.pointColor, isSelected)}
-            aria-pressed={isSelected}
-          >
-            <item.icon size={13} aria-hidden="true" />
-            {item.label}
-          </button>
-        );
-      })}
-    </div>
-  );
+type ServiceFilterBarProps = ServiceFilterCarouselProps & {
+  /** 한 줄에 보여줄 뱃지 최대 개수. 폭이 모자라면 더 적게 보여주고 나머지는 더보기(…)로 보낸다. */
+  maxVisibleCount?: number;
+  /** 더보기 드롭다운을 버튼의 왼쪽 끝(left)·오른쪽 끝(right)에 맞춰 연다. 좁은 화면은 오른쪽이 넘치지 않게 right. */
+  moreMenuAlign?: "left" | "right";
 };
 
 export const ServiceFilterCarousel = ({
   "aria-label": ariaLabel,
   consultOptions,
   consultValue,
+  maxVisibleCount = VISIBLE_SERVICE_FILTER_COUNT,
+  moreMenuAlign = "left",
   onConsultChange,
   onProvidedChange,
   providedOptions,
   providedValue,
-}: ServiceFilterCarouselProps) => {
+}: ServiceFilterBarProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const measureRef = useRef<HTMLDivElement | null>(null);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(
-    VISIBLE_SERVICE_FILTER_COUNT,
-  );
+  const [visibleCount, setVisibleCount] = useState(maxVisibleCount);
   const filterItems = buildServiceFilterItems({
     consultOptions,
     consultValue,
@@ -88,7 +47,7 @@ export const ServiceFilterCarousel = ({
     providedOptions,
     providedValue,
   });
-  const measureItems = filterItems.slice(0, VISIBLE_SERVICE_FILTER_COUNT);
+  const measureItems = filterItems.slice(0, maxVisibleCount);
   const visibleItems = filterItems.slice(0, visibleCount);
   const hiddenItems = filterItems.slice(visibleCount);
   const hiddenSelectedCount = hiddenItems.filter((item) =>
@@ -96,7 +55,7 @@ export const ServiceFilterCarousel = ({
   ).length;
   const toggleItem = toggleServiceFilterItem;
 
-  // 컨테이너 폭에 맞춰 한 줄에 들어가는 뱃지 개수를 계산한다(최대 6개, 넘치면 … 버튼 자리 확보).
+  // 컨테이너 폭에 맞춰 한 줄에 들어가는 뱃지 개수를 계산한다(최대 maxVisibleCount개, 넘치면 … 버튼 자리 확보).
   useEffect(() => {
     const container = containerRef.current;
     const measure = measureRef.current;
@@ -148,7 +107,7 @@ export const ServiceFilterCarousel = ({
     return () => {
       resizeObserver.disconnect();
     };
-  }, [filterItems.length]);
+  }, [filterItems.length, maxVisibleCount]);
 
   useEffect(() => {
     if (!isMoreOpen) {
@@ -246,7 +205,13 @@ export const ServiceFilterCarousel = ({
             )}
           </button>
           {isMoreOpen && (
-            <div className="absolute top-[calc(100%+8px)] left-0 z-40 w-56 overflow-hidden rounded-sm bg-white shadow-lg ring-1 ring-gray-950/5 dark:bg-zinc-950 dark:ring-white/10">
+            <div
+              className={cn(
+                "absolute top-[calc(100%+8px)] z-40 w-56",
+                moreMenuAlign === "right" ? "right-0" : "left-0",
+                "overflow-hidden rounded-sm bg-white shadow-lg ring-1 ring-gray-950/5 dark:bg-zinc-950 dark:ring-white/10",
+              )}
+            >
               <ul className="max-h-60 overflow-y-auto py-1">
                 {hiddenItems.map((item) => {
                   const isSelected = item.value.includes(item.optionValue);

@@ -1,7 +1,4 @@
-import {
-  MobileServiceFilterCarousel,
-  ServiceFilterCarousel,
-} from "@/features/store/components/StoreServiceFilterCarousel";
+import { ServiceFilterCarousel } from "@/features/store/components/StoreServiceFilterCarousel";
 import type { ServiceFilterOption } from "@/features/store/lib/markerColors";
 
 type StorePanelServiceFiltersProps = {
@@ -12,7 +9,10 @@ type StorePanelServiceFiltersProps = {
   providedValue: string[];
 };
 
-/** 상담·서비스 필터 뱃지 줄. 모바일은 검색창 아래 가로 슬라이드, 데스크톱은 검색창 오른쪽 */
+/**
+ * 상담·서비스 필터 뱃지 줄. 모바일·태블릿(768px 미만)은 검색창 아래, 데스크톱은 검색창 오른쪽.
+ * 두 화면 모두 한 줄에 들어가는 만큼만 보여주고 나머지는 더보기(…)로 보낸다(모바일 최대 3개, 데스크톱 최대 6개).
+ */
 export const StorePanelServiceFilters = ({
   consultOptions,
   consultValue,
@@ -21,10 +21,12 @@ export const StorePanelServiceFilters = ({
   providedValue,
 }: StorePanelServiceFiltersProps) => (
   <>
-    {/* 모바일: 검색창 바로 아래 가로 슬라이드 필터 */}
-    <div className="-mx-3 w-[calc(100%+24px)] max-w-none min-w-0 self-stretch sm:mx-0 sm:w-[min(420px,calc(100vw-48px))] sm:max-w-full sm:self-start md:hidden">
-      <MobileServiceFilterCarousel
+    {/* 모바일·태블릿: 검색창 바로 아래. 가로 슬라이드는 끝 뱃지가 잘려 보여 최대 3개 + 더보기(…)로 보여준다. */}
+    <div className="w-full min-w-0 self-stretch sm:w-[min(420px,calc(100vw-48px))] sm:max-w-full sm:self-start md:hidden">
+      <ServiceFilterCarousel
         aria-label="상담 및 서비스 카테고리 필터"
+        maxVisibleCount={3}
+        moreMenuAlign="right"
         consultOptions={consultOptions}
         consultValue={consultValue}
         onConsultChange={(value) => onChange("consult", value)}

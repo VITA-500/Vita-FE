@@ -61,9 +61,21 @@ export const useStoreSearchState = ({
   // 지금 보이는 지도 영역(지도 이동·확대/축소가 끝날 때마다 갱신)
   const [mapViewport, setMapViewport] = useState<MapViewport | null>(null);
   // 텍스트 검색 정렬 중심 좌표의 출처: 내 위치 버튼·위치 허용 → "user", 사용자가 지도를 직접 옮김 → "map"
-  const [searchAnchorSource, setSearchAnchorSource] = useState<"user" | "map">(
-    "user",
-  );
+  const [searchAnchorSource, setSearchAnchorSourceState] = useState<
+    "user" | "map"
+  >("user");
+  /**
+   * 뱃지(태그) 검색의 기준 영역.
+   * 뱃지 검색 결과에 맞춰 지도가 자동으로 옮겨지고 확대돼도 기준은 그대로 둬서,
+   * 같은 뱃지 조합이면 누른 순서와 상관없이 같은 영역에서 찾은 같은 결과가 나오게 한다.
+   * 사용자가 지도를 직접 옮기거나 내 위치로 이동했을 때만 지우고, 다음 뱃지 검색은 그때 보이는 화면을 기준으로 삼는다.
+   */
+  const tagSearchAreaRef = useRef<MapViewport | null>(null);
+  /** 사용자가 지도를 직접 옮김("map")·내 위치로 이동("user"): 정렬 중심 출처를 바꾸고 뱃지 검색 기준 영역을 지운다. */
+  const setSearchAnchorSource = useCallback((source: "user" | "map") => {
+    tagSearchAreaRef.current = null;
+    setSearchAnchorSourceState(source);
+  }, []);
   // 텍스트 검색 결과에서 골라 stores에 새로 추가된 매장 id (검색을 지우면 stores에서 뺀다)
   const searchAddedStoreIdsRef = useRef<Set<string>>(new Set());
   // 지도 영역 검색(searchVisibleArea) 요청 번호. 가장 최근 요청의 응답만 화면에 반영한다.
@@ -110,7 +122,8 @@ export const useStoreSearchState = ({
   /**
    * 보이는 지도 영역 기준 검색.
    * - text: 검색어에 맞는 매장을 영역 안에서 찾고, 중심 좌표(내 위치 또는 지도 중심)에서 가까운 순
-   * - tag : 영역 안 매장을 모두 가져오고(뱃지 조건은 렌더 시 적용), 보이는 화면 중심에서 가까운 순
+   * - tag : 영역 안 매장을 모두 가져오고(뱃지 조건은 렌더 시 적용), 보이는 화면 중심에서 가까운 순.
+   *         영역을 넘기지 않으면 뱃지 검색 기준 영역(tagSearchAreaRef) → 지금 보이는 화면 순으로 쓰고, 쓴 영역을 기준으로 기억한다.
    * 결과는 검색 결과(submittedSearchStores)로만 보여주고, 원래 매장 목록(stores)은 건드리지 않는다.
    */
   const searchVisibleArea = async (
@@ -118,13 +131,23 @@ export const useStoreSearchState = ({
     {
       anchorSource = searchAnchorSource,
       query = searchQuery,
-      viewport = mapViewport,
+      viewport: requestedViewport,
     }: {
       anchorSource?: "user" | "map";
       query?: string;
       viewport?: MapViewport | null;
     } = {},
   ) => {
+    const viewport =
+      requestedViewport ??
+      (mode === "tag"
+        ? (tagSearchAreaRef.current ?? mapViewport)
+        : mapViewport);
+
+    if (mode === "tag") {
+      tagSearchAreaRef.current = viewport;
+    }
+
     const { center, radiusKm } = getVisibleAreaQuery(viewport);
     const requestId = ++areaSearchRequestIdRef.current;
 

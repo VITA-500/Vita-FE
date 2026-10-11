@@ -12,6 +12,10 @@ import { ProfilePanel } from "@/features/auth/components/ProfilePanel";
 import { StoreMapPanel } from "@/features/store/components/StoreMapPanel";
 import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
 import type { ChatMode } from "@/features/chat/types";
+import type {
+  StoreMapInitialAction,
+  StoreRouteMode,
+} from "@/features/store/types";
 import { useChatConversationController } from "@/features/chat/hooks/useChatConversationController";
 import { useChatTour } from "@/features/chat/hooks/useChatTour";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
@@ -39,6 +43,7 @@ const ChatPageContent = () => {
   const routeMode: ChatMode =
     modeParam === "store" || modeParam === "profile" ? modeParam : "chat";
   const activeMode: ChatMode = routeMode;
+  const storeMapInitialAction = getStoreMapInitialAction(searchParams);
   // 채팅 등 다른 화면에서 매장 지도로 전환될 때도 지도를 넓게 보도록 사이드바를 닫는다.
   const [sidebarModeSnapshot, setSidebarModeSnapshot] = useState(activeMode);
 
@@ -55,19 +60,26 @@ const ChatPageContent = () => {
     chatInputRef,
     chatSessions,
     chatStatus,
+    editAndResubmitPrompt,
+    editHintMessageId,
     currentChatTitle,
     currentSessionId,
+    deleteChatSession,
     handleSelectChat,
     hasChatStarted,
     hasLoadedRecentChats,
     loadingSessionId,
     messages,
+    pinnedSessionIds,
     scrollContainerRef,
     sessionTitles,
     setChatInput,
     startNewChat,
     streamingReply,
+    retryAnswer,
+    stopChatAnswer,
     submitChatPrompt,
+    togglePinChatSession,
   } = useChatConversationController({
     activeMode,
     currentUserId: user?.userId,
@@ -129,7 +141,9 @@ const ChatPageContent = () => {
         isOpen={isSidebarOpen}
         onOpen={() => setIsSidebarOpen(true)}
         onClose={() => setIsSidebarOpen(false)}
+        onOpenHome={() => router.push(routes.home)}
         onNewChat={handleNewChat}
+        onOpenLogin={() => router.push(routes.login)}
         onOpenSearch={() => {
           setRailTooltip(null);
           setIsSearchOpen(true);
@@ -164,6 +178,9 @@ const ChatPageContent = () => {
         onSelectChat={(targetSessionId) => {
           void handleSelectChat(targetSessionId);
         }}
+        pinnedSessionIds={pinnedSessionIds}
+        onTogglePinChat={togglePinChatSession}
+        onDeleteChat={deleteChatSession}
       />
 
       {/* Main */}
@@ -188,7 +205,10 @@ const ChatPageContent = () => {
 
           {activeMode === "store" ? (
             <div className="min-h-0 flex-1 overflow-hidden">
-              <StoreMapPanel onOpenSidebar={() => setIsSidebarOpen(true)} />
+              <StoreMapPanel
+                initialAction={storeMapInitialAction}
+                onOpenSidebar={() => setIsSidebarOpen(true)}
+              />
             </div>
           ) : activeMode === "profile" ? (
             <div className="min-h-0 flex-1 overflow-hidden">
@@ -199,11 +219,15 @@ const ChatPageContent = () => {
               chatInput={chatInput}
               chatInputRef={chatInputRef}
               chatStatus={chatStatus}
+              editHintMessageId={editHintMessageId}
               hasChatStarted={hasChatStarted}
               loadingSessionId={loadingSessionId}
               messages={messages}
               onChatInputChange={setChatInput}
-              onSubmitPrompt={submitChatPrompt}
+              onEditPrompt={editAndResubmitPrompt}
+              onRetryAnswer={retryAnswer}
+              onStopAnswer={stopChatAnswer}
+              onSubmitPrompt={(prompt) => void submitChatPrompt(prompt)}
               scrollContainerRef={scrollContainerRef}
               streamingReply={streamingReply}
             />
@@ -228,6 +252,36 @@ const ChatPageContent = () => {
       )}
     </main>
   );
+};
+
+const storeRouteModes = new Set<StoreRouteMode>([
+  "walk",
+  "car",
+  "bicycle",
+  "transit",
+]);
+
+const getStoreMapInitialAction = (
+  searchParams: ReturnType<typeof useSearchParams>,
+): StoreMapInitialAction | null => {
+  const storeId = searchParams.get("storeId");
+  const actionParam = searchParams.get("action");
+
+  if (!storeId || (actionParam !== "select" && actionParam !== "route")) {
+    return null;
+  }
+
+  const routeModeParam = searchParams.get("routeMode");
+  const routeMode = storeRouteModes.has(routeModeParam as StoreRouteMode)
+    ? (routeModeParam as StoreRouteMode)
+    : undefined;
+
+  return {
+    action: actionParam,
+    activeServices: searchParams.getAll("service"),
+    routeMode,
+    storeId,
+  };
 };
 
 const ChatPage = () => (

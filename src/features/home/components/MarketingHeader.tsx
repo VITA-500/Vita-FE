@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Menu, X } from "lucide-react";
-import HeaderControls from "@/shared/layout/HeaderControls";
+import HeaderControls from "@/features/auth/components/HeaderControls";
 import { routes } from "@/shared/constants/routes";
 import { Logo } from "@/shared/ui/Logo";
 

@@ -42,6 +42,8 @@ declare global {
             eventName: string,
             callback: () => void,
           ) => void;
+          /** mousedown/touchstart 핸들러 안에서 부르면 지도가 그 입력으로 드래그·클릭을 시작하지 않는다. */
+          preventMap?: () => void;
         };
       };
     };

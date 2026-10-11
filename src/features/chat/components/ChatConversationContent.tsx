@@ -11,10 +11,14 @@ type ChatConversationContentProps = {
   chatInput: string;
   chatInputRef: RefObject<HTMLInputElement | null>;
   chatStatus: "idle" | "loading";
+  editHintMessageId?: string | null;
   hasChatStarted: boolean;
   loadingSessionId: number | null;
   messages: ChatMessage[];
   onChatInputChange: (value: string) => void;
+  onEditPrompt: (userMessageId: string, prompt: string) => void;
+  onRetryAnswer: (assistantMessageId: string) => void;
+  onStopAnswer: () => void;
   onSubmitPrompt: (prompt?: string) => void;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
   streamingReply?: ChatStreamingReply | null;
@@ -24,10 +28,14 @@ export const ChatConversationContent = ({
   chatInput,
   chatInputRef,
   chatStatus,
+  editHintMessageId,
   hasChatStarted,
   loadingSessionId,
   messages,
   onChatInputChange,
+  onEditPrompt,
+  onRetryAnswer,
+  onStopAnswer,
   onSubmitPrompt,
   scrollContainerRef,
   streamingReply,
@@ -45,8 +53,11 @@ export const ChatConversationContent = ({
               )}
             >
               <ChatMessageList
+                editHintMessageId={editHintMessageId}
                 isLoading={chatStatus === "loading"}
                 messages={messages}
+                onEditPrompt={onEditPrompt}
+                onRetryAnswer={onRetryAnswer}
                 streamingReply={streamingReply}
               />
             </div>
@@ -60,6 +71,7 @@ export const ChatConversationContent = ({
               isLoading={chatStatus === "loading"}
               value={chatInput}
               onChange={onChatInputChange}
+              onStop={onStopAnswer}
               onSubmit={() => onSubmitPrompt()}
             />
           </div>
@@ -83,11 +95,14 @@ export const ChatConversationContent = ({
             isLoading={chatStatus === "loading"}
             value={chatInput}
             onChange={onChatInputChange}
+            onStop={onStopAnswer}
             onSubmit={() => onSubmitPrompt()}
           />
         </div>
 
-        <PromptSuggestions onSelectPrompt={onSubmitPrompt} />
+        <PromptSuggestions
+          onSelectPrompt={(prompt) => onSubmitPrompt(prompt)}
+        />
       </div>
     )}
   </div>

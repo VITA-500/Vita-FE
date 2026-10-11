@@ -1,10 +1,12 @@
-import { ArrowUp, Mic, Plus } from "lucide-react";
+import { ArrowUp, Mic, Plus, Square } from "lucide-react";
 import type { RefObject } from "react";
 
 type ChatComposerProps = {
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
+  /** 답변을 받는 중일 때 보내기 버튼 대신 중단 버튼을 보여준다. */
+  onStop?: () => void;
   isLoading?: boolean;
   inputRef?: RefObject<HTMLInputElement | null>;
 };
@@ -13,6 +15,7 @@ export const ChatComposer = ({
   inputRef,
   isLoading = false,
   onChange,
+  onStop,
   onSubmit,
   value,
 }: ChatComposerProps) => (
@@ -49,13 +52,28 @@ export const ChatComposer = ({
       <Mic size={18} />
     </button>
 
-    <button
-      type="submit"
-      aria-label="메시지 보내기"
-      disabled={isLoading || !value.trim()}
-      className="bg-brand hover:bg-brand-hover flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      <ArrowUp size={18} strokeWidth={2.5} />
-    </button>
+    {isLoading && onStop ? (
+      <button
+        type="button"
+        aria-label="답변 중단"
+        title="답변 중단"
+        onClick={onStop}
+        className="text-text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-900 transition hover:bg-gray-700 active:scale-95 dark:bg-white dark:hover:bg-gray-200"
+      >
+        <Square
+          size={13}
+          className="fill-white text-white dark:fill-gray-900 dark:text-gray-900"
+        />
+      </button>
+    ) : (
+      <button
+        type="submit"
+        aria-label="메시지 보내기"
+        disabled={isLoading || !value.trim()}
+        className="bg-brand hover:bg-brand-hover flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <ArrowUp size={18} strokeWidth={2.5} />
+      </button>
+    )}
   </form>
 );

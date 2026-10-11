@@ -1,4 +1,15 @@
+"use client";
+
 import Image from "next/image";
+import {
+  ArrowUp,
+  CircleAlert,
+  CircleStop,
+  Clock3,
+  Pencil,
+  RotateCw,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { ChatMarkdown } from "@/features/chat/components/ChatMarkdown";
 import { ChatProgressSteps } from "@/features/chat/components/ChatProgressSteps";
 import { ChatStoreMap } from "@/features/chat/components/ChatStoreMap";
@@ -9,8 +20,14 @@ import { cn } from "@/shared/lib/cn";
 const ASSISTANT_PROFILE_IMAGE = "/images/chatbot/profile-robot.png";
 
 type ChatMessageListProps = {
+  /** 답변을 중단한 직후 "질문 수정" 툴팁을 자동으로 띄울 질문 메시지 id */
+  editHintMessageId?: string | null;
   isLoading: boolean;
   messages: ChatMessage[];
+  /** 중단된 질문을 고쳐서 다시 답변을 요청한다. */
+  onEditPrompt?: (userMessageId: string, prompt: string) => void;
+  /** 실패한 답변을 같은 질문으로 다시 요청한다. */
+  onRetryAnswer?: (assistantMessageId: string) => void;
   /** SSE로 받고 있는 답변. 글자가 오기 시작하면 진행 단계 대신 답변 말풍선을 바로 보여준다. */
   streamingReply?: ChatStreamingReply | null;
 };
@@ -69,23 +86,282 @@ const StreamingAnswer = ({ reply }: { reply: ChatStreamingReply }) => (
   </>
 );
 
+/** 답변 실패: 붉은 톤 블록 + (마지막 답변이면) 다시 시도 버튼 */
+const ErrorAnswer = ({
+  content,
+  onRetry,
+}: {
+  content: string;
+  onRetry?: () => void;
+}) => (
+  <article
+    role="alert"
+    className="rounded-3xl border border-red-200 bg-red-50 px-4 py-4 text-sm leading-6 shadow-sm md:px-5 dark:border-red-500/25 dark:bg-red-500/10"
+  >
+    <div className="flex gap-2.5">
+      <CircleAlert
+        size={18}
+        className="mt-0.5 shrink-0 text-red-500 dark:text-red-300"
+      />
+      <div className="min-w-0">
+        <p className="font-extrabold text-red-700 dark:text-red-200">
+          답변을 받지 못했어요
+        </p>
+        <p className="text-red-600/90 dark:text-red-200/80">{content}</p>
+      </div>
+    </div>
+
+    {onRetry && (
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-3 ml-[26px] inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-100 dark:border-red-500/30 dark:bg-transparent dark:text-red-200 dark:hover:bg-red-500/15"
+      >
+        <RotateCw size={13} />
+        다시 시도
+      </button>
+    )}
+  </article>
+);
+
+/** 사용자가 중단한 답변: 받은 데까지의 글 + 중단 표시 */
+const StoppedAnswer = ({ content }: { content: string }) => (
+  <article className="border-border text-text-primary rounded-3xl border border-dashed bg-white/70 px-4 py-4 text-sm leading-6 md:px-5 dark:border-white/15 dark:bg-zinc-950/70 dark:text-white">
+    {content && (
+      <div className="opacity-70">
+        <ChatMarkdown content={closeOpenInlineMarks(content)} />
+      </div>
+    )}
+    <p
+      className={cn(
+        "text-text-secondary flex items-center gap-1.5 text-xs font-bold dark:text-gray-400",
+        content && "border-border mt-3 border-t pt-3 dark:border-white/10",
+      )}
+    >
+      <CircleStop size={14} />
+      답변 생성을 중단했어요. 질문을 수정해서 다시 물어볼 수 있어요.
+    </p>
+  </article>
+);
+
+/** 기록을 열었는데 BE가 아직 답변을 만드는 중 */
+const PendingAnswer = ({ content }: { content: string }) => (
+  <article
+    role="status"
+    className="border-brand/30 bg-brand-soft/60 text-text-primary flex gap-2.5 rounded-3xl border px-4 py-4 text-sm leading-6 md:px-5 dark:border-white/10 dark:bg-white/5 dark:text-white"
+  >
+    <Clock3 size={18} className="text-brand mt-0.5 shrink-0" />
+    <p>{content}</p>
+  </article>
+);
+
+type UserMessageBubbleProps = {
+  canEdit: boolean;
+  content: string;
+  showEditHint: boolean;
+  onSubmitEdit: (prompt: string) => void;
+};
+
+/** 질문 말풍선. 중단된 질문이면 왼쪽에 펜 버튼이 붙고, 누르면 그 자리에서 고쳐 다시 보낼 수 있다. */
+const UserMessageBubble = ({
+  canEdit,
+  content,
+  onSubmitEdit,
+  showEditHint,
+}: UserMessageBubbleProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(content);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    if (!isEditing) return;
+
+    const textarea = textareaRef.current;
+
+    textarea?.focus();
+    textarea?.setSelectionRange(textarea.value.length, textarea.value.length);
+  }, [isEditing]);
+
+  // 다른 답변이 시작되는 등으로 수정할 수 없게 되면 편집을 닫는다.
+  const isEditOpen = isEditing && canEdit;
+
+  const startEdit = () => {
+    setDraft(content);
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => setIsEditing(false);
+
+  const submitEdit = () => {
+    const nextPrompt = draft.trim();
+
+    if (!nextPrompt) return;
+
+    setIsEditing(false);
+    onSubmitEdit(nextPrompt);
+  };
+
+  if (isEditOpen) {
+    return (
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          submitEdit();
+        }}
+        className="border-brand ml-auto w-full max-w-[72%] rounded-2xl border-2 bg-white p-3 shadow-sm dark:bg-zinc-950"
+      >
+        <label className="sr-only" htmlFor="chat-edit-prompt">
+          질문 수정
+        </label>
+        <textarea
+          id="chat-edit-prompt"
+          ref={textareaRef}
+          value={draft}
+          rows={Math.min(Math.max(draft.split("\n").length, 2), 6)}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              cancelEdit();
+            }
+
+            if (
+              event.key === "Enter" &&
+              !event.shiftKey &&
+              !event.nativeEvent.isComposing
+            ) {
+              event.preventDefault();
+              submitEdit();
+            }
+          }}
+          className="text-text-primary w-full resize-none bg-transparent px-1 text-sm leading-6 outline-none dark:text-white"
+        />
+        <div className="mt-2 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={cancelEdit}
+            className="text-text-secondary hover:bg-surface-muted rounded-full px-3 py-1.5 text-xs font-bold transition dark:text-gray-300 dark:hover:bg-white/10"
+          >
+            취소
+          </button>
+          <button
+            type="submit"
+            aria-label="다시 보내기"
+            title="다시 보내기"
+            disabled={!draft.trim()}
+            className="bg-brand hover:bg-brand-hover flex h-8 w-8 items-center justify-center rounded-full text-white transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <ArrowUp size={16} strokeWidth={2.5} />
+          </button>
+        </div>
+      </form>
+    );
+  }
+
+  return (
+    <div className="ml-auto flex max-w-[72%] flex-col items-end gap-1.5">
+      <article className="border-brand/40 bg-brand min-w-0 rounded-2xl border px-5 py-3 text-sm leading-6 text-white shadow-sm">
+        <p className="whitespace-pre-line">{content}</p>
+      </article>
+
+      {/* 중단된 질문: 말풍선 우측 하단에 펜 버튼, 툴팁은 펜 왼쪽에 뜬다. */}
+      {canEdit && (
+        <div className="group relative">
+          <button
+            type="button"
+            aria-label="질문 수정"
+            onClick={startEdit}
+            className="text-text-secondary hover:bg-surface-muted hover:text-text-primary focus-visible:ring-brand flex h-8 w-8 items-center justify-center rounded-full transition outline-none focus-visible:ring-2 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
+          >
+            <Pencil size={15} />
+          </button>
+          <span
+            role="tooltip"
+            className={cn(
+              "pointer-events-none absolute top-1/2 right-full z-10 mr-2 -translate-y-1/2 rounded-full bg-gray-900 px-3 py-1.5 text-xs font-extrabold whitespace-nowrap text-white shadow-lg transition-opacity duration-200",
+              "after:absolute after:top-1/2 after:left-full after:-translate-y-1/2 after:border-4 after:border-transparent after:border-l-gray-900",
+              showEditHint
+                ? "opacity-100"
+                : "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100",
+            )}
+          >
+            질문 수정
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const ChatMessageList = ({
+  editHintMessageId,
   isLoading,
   messages,
+  onEditPrompt,
+  onRetryAnswer,
   streamingReply,
 }: ChatMessageListProps) => (
   <div className="mx-auto flex w-full flex-col gap-5">
-    {messages.map((message) => {
+    {messages.map((message, index) => {
       const isUser = message.role === "user";
+      const isLastMessage = index === messages.length - 1;
 
       if (isUser) {
+        // 마지막 답변이 중단된 질문만 고쳐서 다시 물을 수 있다(앞쪽 대화가 지워지지 않도록).
+        const nextMessage = messages[index + 1];
+        const canEdit =
+          !isLoading &&
+          Boolean(onEditPrompt) &&
+          index === messages.length - 2 &&
+          nextMessage?.status === "stopped";
+
         return (
-          <article
+          <UserMessageBubble
             key={message.id}
-            className="border-brand/40 bg-brand ml-auto max-w-[72%] rounded-2xl border px-5 py-3 text-sm leading-6 text-white shadow-sm"
+            canEdit={canEdit}
+            content={message.content}
+            showEditHint={editHintMessageId === message.id}
+            onSubmitEdit={(prompt) => onEditPrompt?.(message.id, prompt)}
+          />
+        );
+      }
+
+      if (message.status === "error") {
+        return (
+          <div
+            key={message.id}
+            className="mr-auto flex max-w-full items-start gap-2 md:max-w-[76%] md:gap-3"
           >
-            <p className="whitespace-pre-line">{message.content}</p>
-          </article>
+            <AssistantProfile />
+            <div className="min-w-0 flex-1">
+              <ErrorAnswer
+                content={message.content}
+                onRetry={
+                  isLastMessage && !isLoading && onRetryAnswer
+                    ? () => onRetryAnswer(message.id)
+                    : undefined
+                }
+              />
+            </div>
+          </div>
+        );
+      }
+
+      if (message.status === "stopped" || message.status === "pending") {
+        return (
+          <div
+            key={message.id}
+            className="mr-auto flex max-w-full items-start gap-2 md:max-w-[76%] md:gap-3"
+          >
+            <AssistantProfile />
+            <div className="min-w-0 flex-1">
+              {message.status === "stopped" ? (
+                <StoppedAnswer content={message.content} />
+              ) : (
+                <PendingAnswer content={message.content} />
+              )}
+            </div>
+          </div>
         );
       }
 

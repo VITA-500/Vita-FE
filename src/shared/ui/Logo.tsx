@@ -32,7 +32,17 @@ export const Logo = ({
   );
 
   if (!href) {
-    return image;
+    return onClick ? (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn("inline-flex items-center", className)}
+      >
+        {image}
+      </button>
+    ) : (
+      image
+    );
   }
 
   return (

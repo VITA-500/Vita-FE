@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { AdminDataProvider, useAdminData } from "./AdminDataContext";
@@ -51,22 +50,20 @@ const FaqProbe = () => {
 };
 
 describe("AdminDataProvider", () => {
-  it("keeps FAQ answers when creating and editing FAQ rows", async () => {
-    const user = userEvent.setup();
-
+  it("keeps FAQ answers when creating and editing FAQ rows", () => {
     renderWithQueryClient(
       <AdminDataProvider>
         <FaqProbe />
       </AdminDataProvider>,
     );
 
-    await user.click(screen.getByRole("button", { name: "FAQ 추가" }));
+    fireEvent.click(screen.getByRole("button", { name: "FAQ 추가" }));
 
     expect(screen.getByTestId("latest-answer")).toHaveTextContent(
       "신규 FAQ 답변",
     );
 
-    await user.click(screen.getByRole("button", { name: "FAQ 수정" }));
+    fireEvent.click(screen.getByRole("button", { name: "FAQ 수정" }));
 
     expect(screen.getByTestId("latest-answer")).toHaveTextContent(
       "수정된 FAQ 답변",

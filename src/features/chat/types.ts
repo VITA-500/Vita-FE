@@ -1,10 +1,21 @@
 export type ChatMessageRole = "user" | "assistant";
 
+/**
+ * 답변 메시지의 결과 상태. 응답 중(loading)은 메시지가 아니라 streamingReply로 보여준다.
+ * - success: 정상 답변 (없으면 success로 본다. 예전에 저장된 메시지 호환)
+ * - error: 답변 생성 실패 · 네트워크 오류
+ * - stopped: 사용자가 답변 생성을 중단함
+ * - pending: 기록을 열었을 때 아직 BE가 답변을 만들고 있음
+ */
+export type ChatAnswerStatus = "success" | "error" | "stopped" | "pending";
+
 export type ChatMessage = {
   id: string;
   role: ChatMessageRole;
   content: string;
   createdAt: string;
+  /** assistant 메시지에서만 쓴다. */
+  status?: ChatAnswerStatus;
   sources?: readonly ChatAnswerSource[];
   actions?: readonly ChatAction[];
   storeMap?: ChatStoreMap;
@@ -36,12 +47,17 @@ export type ChatStoreSummary = {
   distanceText?: string;
 };
 
+/** 매장을 찾은 기준 위치가 어디서 왔는지. current: 브라우저 현재 위치, default: 위치를 못 받아 쓴 기본 위치. */
+export type ChatStoreOriginSource = "current" | "default";
+
 export type ChatStoreMap = {
   activeServices?: string[];
   origin?: {
     lat: number;
     lng: number;
   };
+  /** 없으면(예전에 저장된 메시지·BE 응답) 실제 위치로 본다. */
+  originSource?: ChatStoreOriginSource;
   stores: ChatStoreSummary[];
 };
 
