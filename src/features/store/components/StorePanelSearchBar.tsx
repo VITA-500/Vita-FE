@@ -1,7 +1,6 @@
 import type { RefObject } from "react";
 import { CircleX, List, Menu, Search } from "lucide-react";
-import { StoreOpenFilterMenu } from "@/features/store/components/StoreOpenFilterMenu";
-import type { MapCategory, StoreOpenFilter } from "@/features/store/types";
+import type { MapCategory } from "@/features/store/types";
 
 type StorePanelSearchBarProps = {
   activeMapCategory: MapCategory;
@@ -14,11 +13,8 @@ type StorePanelSearchBarProps = {
   onInputMouseDown: () => void;
   onOpenSidebar?: () => void;
   onQueryChange: (nextQuery: string) => void;
-  onOpenFilterChange: (nextFilter: StoreOpenFilter) => void;
   onSubmit: () => void;
   onToggleStoreList: () => void;
-  /** 영업 시간 필터(전체 / 지금 영업 중 / 선택한 시각에 영업 중) */
-  openFilter: StoreOpenFilter;
   /** 지금 핀으로 보이는(현재 페이지) 매장 수 */
   pagedStoreCount: number;
   searchInputRef: RefObject<HTMLInputElement | null>;
@@ -39,10 +35,8 @@ export const StorePanelSearchBar = ({
   onInputMouseDown,
   onOpenSidebar,
   onQueryChange,
-  onOpenFilterChange,
   onSubmit,
   onToggleStoreList,
-  openFilter,
   pagedStoreCount,
   searchInputRef,
   searchQuery,
@@ -109,10 +103,6 @@ export const StorePanelSearchBar = ({
       >
         <Search size={22} />
       </button>
-      <StoreOpenFilterMenu
-        onChange={onOpenFilterChange}
-        openFilter={openFilter}
-      />
     </label>
     <button
       type="button"

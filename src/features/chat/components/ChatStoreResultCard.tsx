@@ -109,7 +109,10 @@ const StoreCardMeta = ({ store }: { store: StoreLocation }) => {
 
   return (
     <div className="mt-2.5 mb-3 flex flex-wrap items-center gap-1.5">
-      <StoreOpenStatusBadge openNow={openNow} />
+      <StoreOpenStatusBadge
+        businessHours={store.businessHours}
+        openNow={openNow}
+      />
       {store.distanceText && (
         <span className="text-[11px] font-bold text-gray-400">
           {store.distanceText}

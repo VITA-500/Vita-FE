@@ -29,6 +29,10 @@ type ChatCardRailProps<T> = {
   className?: string;
   /** 데스크톱(lg) 1줄 배치에서 카드 한 칸의 최소 폭 클래스. cn은 클래스 충돌을 합치지 않으므로 통째로 바꾼다. */
   itemMinWidthClassName?: string;
+  /** 지도 핀·카드 선택처럼 외부에서 특정 카드를 보이게 맞춰야 할 때 쓴다. */
+  focusedItemKey?: string;
+  /** 같은 카드를 다시 눌러도 위치를 다시 맞출 수 있게 외부에서 증가시키는 값. */
+  focusSignal?: number;
 };
 
 /**
@@ -46,6 +50,8 @@ export const ChatCardRail = <T,>({
   itemLabel,
   itemMinWidthClassName = "lg:min-w-[240px]",
   items,
+  focusedItemKey,
+  focusSignal = 0,
   renderItem,
 }: ChatCardRailProps<T>) => {
   const trackRef = useRef<HTMLUListElement>(null);
@@ -130,31 +136,39 @@ export const ChatCardRail = <T,>({
    * index번째 카드가 맨 앞에 오도록 옮긴다(끝 쪽 카드는 스크롤 끝에서 멈춘다).
    * scrollTo의 smooth는 OS 애니메이션 설정·overflow-hidden 트랙에서 즉시 이동하는 경우가 있어 직접 애니메이션한다.
    */
-  const scrollToCard = (index: number) => {
-    const track = trackRef.current;
-    const step = getStep();
+  const scrollToCard = useCallback(
+    (index: number, align: "start" | "center" = "start") => {
+      const track = trackRef.current;
+      const step = getStep();
+      const targetCard = track?.children[index] as HTMLElement | undefined;
 
-    if (!track || step <= 0) return;
+      if (!track || !targetCard || step <= 0) return;
 
-    if (scrollFrameRef.current !== null) {
-      cancelAnimationFrame(scrollFrameRef.current);
-    }
+      if (scrollFrameRef.current !== null) {
+        cancelAnimationFrame(scrollFrameRef.current);
+      }
 
-    const maxScroll = track.scrollWidth - track.clientWidth;
-    const from = track.scrollLeft;
-    const to = Math.min(Math.max(index * step, 0), maxScroll);
-    const startedAt = performance.now();
+      const maxScroll = track.scrollWidth - track.clientWidth;
+      const from = track.scrollLeft;
+      const centeredLeft =
+        targetCard.offsetLeft -
+        (track.clientWidth - targetCard.offsetWidth) / 2;
+      const targetLeft = align === "center" ? centeredLeft : index * step;
+      const to = Math.min(Math.max(targetLeft, 0), maxScroll);
+      const startedAt = performance.now();
 
-    const animate = (time: number) => {
-      const progress = Math.min((time - startedAt) / SCROLL_DURATION_MS, 1);
+      const animate = (time: number) => {
+        const progress = Math.min((time - startedAt) / SCROLL_DURATION_MS, 1);
 
-      track.scrollLeft = from + (to - from) * easeOutCubic(progress);
-      scrollFrameRef.current =
-        progress < 1 ? requestAnimationFrame(animate) : null;
-    };
+        track.scrollLeft = from + (to - from) * easeOutCubic(progress);
+        scrollFrameRef.current =
+          progress < 1 ? requestAnimationFrame(animate) : null;
+      };
 
-    scrollFrameRef.current = requestAnimationFrame(animate);
-  };
+      scrollFrameRef.current = requestAnimationFrame(animate);
+    },
+    [getStep],
+  );
 
   /** 카드 한 장(카드 폭 + 간격)만큼 옮긴다. */
   const move = (direction: -1 | 1) => {
@@ -167,6 +181,18 @@ export const ChatCardRail = <T,>({
   };
 
   const hasOverflow = canPrev || canNext;
+
+  useEffect(() => {
+    if (!focusedItemKey) return;
+
+    const focusedIndex = items.findIndex(
+      (item, index) => getKey(item, index) === focusedItemKey,
+    );
+
+    if (focusedIndex >= 0) {
+      scrollToCard(focusedIndex, "center");
+    }
+  }, [focusedItemKey, focusSignal, getKey, items, scrollToCard]);
 
   return (
     <div className={cn("min-w-0", className)}>

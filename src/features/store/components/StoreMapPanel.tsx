@@ -10,7 +10,10 @@ import { StorePanelSearchDropdown } from "@/features/store/components/StorePanel
 import { StorePanelServiceFilters } from "@/features/store/components/StorePanelServiceFilters";
 import { StorePanelStoreList } from "@/features/store/components/StorePanelStoreList";
 import { useStoreMapPanel } from "@/features/store/hooks/useStoreMapPanel";
-import type { StoreMapInitialAction } from "@/features/store/types";
+import type {
+  StoreMapInitialAction,
+  StoreOpenFilter,
+} from "@/features/store/types";
 
 type StoreMapPanelProps = {
   initialAction?: StoreMapInitialAction | null;
@@ -139,6 +142,10 @@ export const StoreMapPanel = ({
     visibleMapStores,
   } = useStoreMapPanel(initialAction);
   const isBenefitCategory = activeMapCategory === "benefit";
+  const handleOpenFilterChange = (nextFilter: StoreOpenFilter) => {
+    closeSelectedStoreInfo();
+    setOpenFilter(nextFilter);
+  };
 
   return (
     <div
@@ -272,14 +279,9 @@ export const StoreMapPanel = ({
                 onSubmit={() => {
                   void submitStoreSearch();
                 }}
-                onOpenFilterChange={(nextFilter) => {
-                  closeSelectedStoreInfo();
-                  setOpenFilter(nextFilter);
-                }}
                 onToggleStoreList={() =>
                   setIsStoreListCollapsed((isCollapsed) => !isCollapsed)
                 }
-                openFilter={openFilter}
                 pagedStoreCount={pagedMapStores.length}
                 searchInputRef={searchInputRef}
                 searchQuery={searchQuery}
@@ -326,6 +328,7 @@ export const StoreMapPanel = ({
                   }}
                   onCategoryChange={changeMapCategory}
                   onClose={() => setIsStoreListCollapsed(true)}
+                  onOpenFilterChange={handleOpenFilterChange}
                   onPageChange={goToStorePage}
                   onSelectStore={(storeId) =>
                     handleStoreSelect(storeId, {
@@ -336,16 +339,15 @@ export const StoreMapPanel = ({
                   onShowPagination={showStorePagination}
                   pagedMapStores={pagedMapStores}
                   panelRef={storeListPanelRef}
+                  openFilter={openFilter}
                   storeCount={mapStores.length}
                   storePageCount={storePageCount}
                   selectedBenefitCategory={selectedBenefitCategory}
                 />
               )}
             </div>
-            {/* 탭마다 필터 대상·로직이 달라 뱃지 줄을 바꿔 보여준다(매장: 상담·서비스, 제휴: 혜택/서비스). */}
             {isBenefitCategory ? (
               <StorePanelBenefitFilters
-                // 혜택 뱃지를 바꿔도 고른 매장이 결과에서 빠질 수 있어 정보 카드를 닫는다.
                 onChange={(nextValue) => {
                   closeSelectedStoreInfo();
                   setBenefitServiceFilters(nextValue);

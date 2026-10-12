@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { StoreLocation } from "@/features/store/types";
 import {
   filterStoresByOpenFilter,
+  getCurrentOpenState,
   getCurrentOpenStatus,
   getNextOpenFilterTime,
   isOpenAtTime,
@@ -87,5 +88,34 @@ describe("getCurrentOpenStatus", () => {
     ).toBe(false);
     expect(getCurrentOpenStatus({ openNow: true }, at15)).toBe(true);
     expect(getCurrentOpenStatus({}, at15)).toBeUndefined();
+  });
+});
+
+describe("getCurrentOpenState", () => {
+  it("splits closed stores into before opening and after closing", () => {
+    expect(
+      getCurrentOpenState(
+        { businessHours: "10:00-20:00", openNow: false },
+        new Date(2026, 9, 8, 9, 30),
+      ),
+    ).toBe("before");
+    expect(
+      getCurrentOpenState(
+        { businessHours: "10:00-20:00", openNow: false },
+        new Date(2026, 9, 8, 20, 30),
+      ),
+    ).toBe("closed");
+    expect(
+      getCurrentOpenState(
+        { businessHours: "10:00-20:00", openNow: false },
+        new Date(2026, 9, 8, 12, 0),
+      ),
+    ).toBe("open");
+  });
+
+  it("keeps fallback behavior when business hours cannot be parsed", () => {
+    expect(getCurrentOpenState({ openNow: true })).toBe("open");
+    expect(getCurrentOpenState({ openNow: false })).toBe("closed");
+    expect(getCurrentOpenState({})).toBeUndefined();
   });
 });

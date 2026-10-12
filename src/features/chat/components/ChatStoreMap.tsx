@@ -83,6 +83,8 @@ export const ChatStoreMap = ({
     count: number;
     point: MapPoint;
   } | null>(null);
+  /** 같은 카드를 다시 눌러도 카드 레일 위치를 다시 맞추기 위한 요청 횟수. */
+  const [cardFocusSignal, setCardFocusSignal] = useState(0);
   const [currentLocation, setCurrentLocation] = useState<MapPoint | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const reservation = useStoreReservation();
@@ -112,10 +114,15 @@ export const ChatStoreMap = ({
     }));
   };
 
+  const focusStoreCard = () => {
+    setCardFocusSignal((signal) => signal + 1);
+  };
+
   const handleSelectCard = (storeId: string) => {
     const store = stores.find((item) => item.id === storeId);
 
     setSelectedStoreId(storeId);
+    focusStoreCard();
     if (store) focusMapOn(store);
   };
 
@@ -186,10 +193,8 @@ export const ChatStoreMap = ({
     setSelectedStoreId(storeId);
     // 카드를 눌렀을 때처럼 지도도 그 매장으로 옮긴다.
     if (store) focusMapOn(store);
-    // 핀을 누르면 해당 카드가 보이도록 스크롤한다(카드 위치는 선택 여부와 무관해 바로 옮겨도 된다).
-    cardRefs.current
-      .get(storeId)
-      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    // 핀을 누르면 해당 카드가 레일 중앙 쪽으로 자연스럽게 이동한다.
+    focusStoreCard();
   };
   const markerLabelById = useMemo(() => buildMarkerLabelById(stores), [stores]);
   // 서비스별 색은 매장 지도와 같은 규칙(상담 가나다순 → 제공 가나다순)·같은 서비스 목록으로 정한다.
@@ -276,6 +281,8 @@ export const ChatStoreMap = ({
           // 매장명·영업 상태·거리가 한 카드에 들어가도록 요금제 카드보다 조금 넓힌다.
           itemMinWidthClassName="lg:min-w-[264px]"
           getKey={(store) => store.id}
+          focusedItemKey={selectedStore?.id}
+          focusSignal={cardFocusSignal}
           renderItem={(store, index) => (
             <ChatStoreResultCard
               activeServices={activeServices}

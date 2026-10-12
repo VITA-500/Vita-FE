@@ -84,6 +84,55 @@ export const isOpenAtTime = (
   return fromOpen < openDuration;
 };
 
+export type StoreOpenStatus = "before" | "open" | "closed";
+
+const parseBusinessHourRange = (businessHours: string | undefined) => {
+  const match = businessHours?.match(
+    /(\d{1,2}:\d{2})\s*(?:-|~)\s*(\d{1,2}:\d{2})/,
+  );
+
+  if (!match) return null;
+
+  const open = toMinutes(match[1]);
+  const close = toMinutes(match[2]);
+
+  if (open === null || close === null || open === close) return null;
+
+  return { close, open };
+};
+
+export const getCurrentOpenState = (
+  store: Pick<StoreLocation, "businessHours" | "openNow">,
+  now = new Date(),
+): StoreOpenStatus | undefined => {
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const range = parseBusinessHourRange(store.businessHours);
+
+  if (!range) {
+    return store.openNow === undefined
+      ? undefined
+      : store.openNow
+        ? "open"
+        : "closed";
+  }
+
+  const isOpen = isOpenAtTime(store.businessHours, formatTimeValue(nowMinutes));
+
+  if (isOpen) return "open";
+
+  const isOvernight = range.close < range.open;
+
+  if (!isOvernight && nowMinutes < range.open) {
+    return "before";
+  }
+
+  if (isOvernight && nowMinutes > range.close && nowMinutes < range.open) {
+    return "before";
+  }
+
+  return "closed";
+};
+
 /**
  * 지금(브라우저 시각) 영업 중인지. 저장해 둔 채팅 답변처럼 BE openNow가 조회 시점 값으로 굳어 있을 때,
  * 영업시간으로 다시 계산하고 읽을 수 없으면 저장된 openNow를 쓴다.
@@ -92,10 +141,11 @@ export const getCurrentOpenStatus = (
   store: Pick<StoreLocation, "businessHours" | "openNow">,
   now = new Date(),
 ) =>
-  isOpenAtTime(
-    store.businessHours,
-    formatTimeValue(now.getHours() * 60 + now.getMinutes()),
-  ) ?? store.openNow;
+  getCurrentOpenState(store, now) === "open"
+    ? true
+    : getCurrentOpenState(store, now) === undefined
+      ? undefined
+      : false;
 
 /** 주변 매장 조회 쿼리(openNow / openAt). BE는 둘을 함께 받지 않는다. */
 export const toOpenFilterParams = (

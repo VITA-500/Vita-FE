@@ -57,7 +57,7 @@ export const StoreOpenFilterMenu = ({
   return (
     <div
       ref={rootRef}
-      className="relative shrink-0"
+      className="group/open-filter item shrink-0 self-center"
       onClick={(event) => {
         // 검색창 label 안에 있어, 메뉴 빈 곳을 눌러도 입력창 포커스(검색 기록 열림)로 번지지 않게 한다.
         // 시각 선택(select)은 기본 동작이 있어야 열리므로 막지 않는다.
@@ -71,25 +71,27 @@ export const StoreOpenFilterMenu = ({
         type="button"
         onClick={() => setIsOpen((wasOpen) => !wasOpen)}
         className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-full transition",
+          "flex h-7 w-7 items-center justify-center rounded-sm transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none",
           isActive
             ? "bg-brand text-white"
-            : "hover:text-brand text-gray-300/90 hover:bg-gray-100 dark:hover:bg-white/10",
+            : "text-text-secondary hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand",
         )}
         aria-label={`영업 시간 필터: ${getOpenFilterLabel(openFilter)}`}
         aria-expanded={isOpen}
         aria-controls={isOpen ? "store-open-filter-menu" : undefined}
-        title={getOpenFilterLabel(openFilter)}
       >
-        <Clock3 size={17} />
+        <Clock3 size={14} />
       </button>
+      <span className="pointer-events-none absolute top-[calc(100%+8px)] left-0 z-50 flex translate-y-1 items-center rounded-full bg-gray-900 px-3 py-1.5 text-xs font-extrabold whitespace-nowrap text-white opacity-0 shadow-xl transition duration-150 group-focus-within/open-filter:translate-y-0 group-focus-within/open-filter:opacity-100 group-hover/open-filter:translate-y-0 group-hover/open-filter:opacity-100">
+        {getOpenFilterLabel(openFilter)}
+      </span>
 
       {isOpen && (
         <div
           id="store-open-filter-menu"
           role="group"
           aria-label="영업 시간 필터"
-          className="border-border absolute top-[calc(100%+10px)] right-0 z-50 w-48 rounded-sm border bg-white p-1.5 text-gray-700 shadow-xl dark:border-white/10 dark:bg-zinc-950 dark:text-gray-200"
+          className="border-border absolute top-[calc(100%+10px)] left-0 z-50 w-48 rounded-sm border bg-white p-1.5 text-gray-700 shadow-xl dark:border-white/10 dark:bg-zinc-950 dark:text-gray-200"
         >
           <button
             type="button"

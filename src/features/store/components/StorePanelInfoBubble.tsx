@@ -236,7 +236,10 @@ export const StorePanelInfoBubble = ({
           <p className="truncate text-base font-extrabold text-gray-950 dark:text-white">
             {store.name}
           </p>
-          <StoreOpenStatusBadge openNow={store.openNow} />
+          <StoreOpenStatusBadge
+            businessHours={store.businessHours}
+            openNow={store.openNow}
+          />
         </div>
 
         <p className="text-text-secondary mt-1 text-xs leading-5 font-semibold">
