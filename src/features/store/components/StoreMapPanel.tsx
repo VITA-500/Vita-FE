@@ -10,15 +10,16 @@ import { StorePanelSearchDropdown } from "@/features/store/components/StorePanel
 import { StorePanelServiceFilters } from "@/features/store/components/StorePanelServiceFilters";
 import { StorePanelStoreList } from "@/features/store/components/StorePanelStoreList";
 import { useStoreMapPanel } from "@/features/store/hooks/useStoreMapPanel";
-import type { StoreMapInitialAction } from "@/features/store/types";
+import type {
+  StoreMapInitialAction,
+  StoreOpenFilter,
+} from "@/features/store/types";
 
 type StoreMapPanelProps = {
   initialAction?: StoreMapInitialAction | null;
   onOpenSidebar?: () => void;
 };
 
-// 상태와 동작은 useStoreMapPanel(useStoreMapPanelState + useStoreMapPanelActions)에 있고,
-// 이 컴포넌트는 지도·검색창·목록·모달 화면 배치만 맡는다.
 export const StoreMapPanel = ({
   initialAction,
   onOpenSidebar,
@@ -87,6 +88,7 @@ export const StoreMapPanel = ({
     markerColorInfoById,
     markerLabelById,
     minReservationDate,
+    openFilter,
     openSearchHistory,
     otherMapStores,
     pagedMapStores,
@@ -118,6 +120,7 @@ export const StoreMapPanel = ({
     selectedBenefitCategory,
     setBenefitServiceFilters,
     setIsOtherStoresVisible,
+    setOpenFilter,
     setIsStoreListCollapsed,
     setReservationDate,
     setReservationTime,
@@ -139,6 +142,10 @@ export const StoreMapPanel = ({
     visibleMapStores,
   } = useStoreMapPanel(initialAction);
   const isBenefitCategory = activeMapCategory === "benefit";
+  const handleOpenFilterChange = (nextFilter: StoreOpenFilter) => {
+    closeSelectedStoreInfo();
+    setOpenFilter(nextFilter);
+  };
 
   return (
     <div
@@ -151,8 +158,7 @@ export const StoreMapPanel = ({
         fitTarget={searchFitTarget}
         markerEnterKey={`${currentStorePage}:${mapStoresKey}`}
         getPinFitPadding={getMapPinFitPadding}
-        // 새 핀 묶음이 꽂히거나 목록을 펼치고 접을 때 가장 바깥 핀이 가리지 않는지 확인한다.
-        // (페이지 이동은 goToStorePage의 fitTarget이 같은 여백으로 맞춘다)
+        // 새 핀 묶음·목록 토글 시 가장 바깥 핀이 가리지 않는지 확인한다.
         pinAutoFitKey={`${mapStoresKey}|${isStoreListCollapsed ? "collapsed" : "expanded"}`}
         isPinAutoFitPaused={Boolean(
           routeDestinationStoreId || soloStore || hasSelectedStoreInfo,
@@ -322,6 +328,7 @@ export const StoreMapPanel = ({
                   }}
                   onCategoryChange={changeMapCategory}
                   onClose={() => setIsStoreListCollapsed(true)}
+                  onOpenFilterChange={handleOpenFilterChange}
                   onPageChange={goToStorePage}
                   onSelectStore={(storeId) =>
                     handleStoreSelect(storeId, {
@@ -332,16 +339,15 @@ export const StoreMapPanel = ({
                   onShowPagination={showStorePagination}
                   pagedMapStores={pagedMapStores}
                   panelRef={storeListPanelRef}
+                  openFilter={openFilter}
                   storeCount={mapStores.length}
                   storePageCount={storePageCount}
                   selectedBenefitCategory={selectedBenefitCategory}
                 />
               )}
             </div>
-            {/* 탭마다 필터 대상·로직이 달라 뱃지 줄을 바꿔 보여준다(매장: 상담·서비스, 제휴: 혜택/서비스). */}
             {isBenefitCategory ? (
               <StorePanelBenefitFilters
-                // 혜택 뱃지를 바꿔도 고른 매장이 결과에서 빠질 수 있어 정보 카드를 닫는다.
                 onChange={(nextValue) => {
                   closeSelectedStoreInfo();
                   setBenefitServiceFilters(nextValue);

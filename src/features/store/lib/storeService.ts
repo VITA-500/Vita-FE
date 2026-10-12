@@ -5,8 +5,10 @@ import {
   getRouteSegments,
   type RouteResponse,
 } from "@/features/store/lib/storeRouteResponse";
+import { toOpenFilterParams } from "@/features/store/lib/storeOpenHours";
 import type {
   StoreLocation,
+  StoreOpenFilter,
   StoreRoute,
   StoreRouteMode,
 } from "@/features/store/types";
@@ -15,6 +17,7 @@ import { requestJson } from "@/shared/api/http";
 type StoreNearbyItemResponse = {
   storeId: number;
   name: string;
+  storeType?: StoreLocation["storeType"] | null;
   /** 2026-10-06 BE 반영. 예전 응답에는 없을 수 있다. */
   address?: string | null;
   phone?: string | null;
@@ -23,8 +26,14 @@ type StoreNearbyItemResponse = {
   distanceKm: number;
   /** 2026-10-07 BE 반영(통신·제휴 모두). 예전 응답에는 없을 수 있다. */
   businessHours?: string | null;
+  openNow?: boolean | null;
   consultServices?: string[];
   providedServices?: string[];
+  benefitId?: number | null;
+  brand?: string | null;
+  category?: string | null;
+  benefitName?: string | null;
+  benefitDescription?: string | null;
 };
 
 type NearbyStoresResponse = {
@@ -38,9 +47,16 @@ type StoreDetailResponse = {
   lat: number;
   lng: number;
   businessHours?: string;
+  openNow?: boolean;
   phone?: string;
   consultServices?: string[];
   providedServices?: string[];
+  storeType?: StoreLocation["storeType"] | null;
+  /** 제휴 매장이면 연결된 혜택. 상세에는 benefitDescription이 없어 주변 조회 값을 유지한다. */
+  benefitId?: number | null;
+  brand?: string | null;
+  category?: string | null;
+  benefitName?: string | null;
 };
 
 export type ReservationResponse = {
@@ -62,13 +78,19 @@ const toNearbyStoreLocation = (
   // 주소가 없으면(예전 응답) 빈 값으로 두고 UI에서 안내 문구를 보여준다.
   address: store.address ?? "",
   businessHours: store.businessHours ?? undefined,
+  benefitBrand: store.brand ?? undefined,
+  benefitCategory: store.category ?? undefined,
+  benefitDescription: store.benefitDescription ?? undefined,
+  benefitId: store.benefitId ?? undefined,
+  benefitName: store.benefitName ?? undefined,
   consultServices: store.consultServices,
   phone: store.phone ?? "",
   providedServices: store.providedServices,
+  openNow: store.openNow ?? undefined,
   lat: Number(store.lat),
   lng: Number(store.lng),
   distanceText: formatDistance(store.distanceKm * 1000),
-  storeType: "PHONE",
+  storeType: store.storeType ?? "PHONE",
 });
 
 const toStoreLocation = (
@@ -80,22 +102,33 @@ const toStoreLocation = (
   // 상세에 값이 비어 있으면 주변 조회에서 받은 값을 유지한다.
   address: store.address || fallback?.address || "",
   businessHours: store.businessHours || fallback?.businessHours,
-  benefitBrand: fallback?.benefitBrand,
-  benefitCategory: fallback?.benefitCategory,
-  benefitId: fallback?.benefitId,
-  benefitName: fallback?.benefitName,
+  benefitBrand: store.brand ?? fallback?.benefitBrand,
+  benefitCategory: store.category ?? fallback?.benefitCategory,
+  benefitDescription: fallback?.benefitDescription,
+  benefitId: store.benefitId ?? fallback?.benefitId,
+  benefitName: store.benefitName ?? fallback?.benefitName,
   consultServices: store.consultServices ?? fallback?.consultServices,
   phone: store.phone || fallback?.phone || "",
   providedServices: store.providedServices ?? fallback?.providedServices,
+  openNow: store.openNow ?? fallback?.openNow,
   lat: Number(store.lat),
   lng: Number(store.lng),
   distanceText: fallback?.distanceText,
-  storeType: fallback?.storeType ?? "PHONE",
+  storeType: store.storeType ?? fallback?.storeType ?? "PHONE",
 });
 
+type FetchNearbyStoresOptions = {
+  /** 영업 시간 필터(BE openNow / openAt). 없으면 조건 없이 조회한다. */
+  openFilter?: StoreOpenFilter;
+};
+
 export const storeService = {
-  /** 기준 좌표에서 반경(km, 기본 1.5km) 안의 매장을 가까운 순으로 모두 가져온다. */
-  fetchNearbyStores: async (location?: UserLocation, radiusKm = 1.5) => {
+  /** 기준 좌표에서 반경(km, 기본 1.5km) 안의 매장을 가까운 순으로 모두 가져온다. storeType은 BE 값을 쓴다. */
+  fetchNearbyStores: async (
+    location?: UserLocation,
+    radiusKm = 1.5,
+    options: FetchNearbyStoresOptions = {},
+  ) => {
     if (!location) {
       return [];
     }
@@ -104,6 +137,7 @@ export const storeService = {
       lat: String(location.lat),
       lng: String(location.lng),
       radius: String(radiusKm),
+      ...toOpenFilterParams(options.openFilter),
     });
 
     const response = await requestJson<NearbyStoresResponse>(

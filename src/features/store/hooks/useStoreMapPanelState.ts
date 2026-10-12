@@ -12,6 +12,7 @@ import { useStoreSearchHistory } from "@/features/store/hooks/useStoreSearchHist
 import { useStoreSearchResults } from "@/features/store/hooks/useStoreSearchResults";
 import { useStoreSearchState } from "@/features/store/hooks/useStoreSearchState";
 import { buildMarkerColorInfoById } from "@/features/store/lib/markerColors";
+import { ALL_STORE_OPEN_FILTER } from "@/features/store/lib/storeOpenHours";
 import {
   buildRoutePreview,
   buildRouteSummary,
@@ -23,7 +24,11 @@ import {
   getSameLocationStores,
   type MapSearchPoint,
 } from "@/features/store/lib/storePanelStores";
-import type { MapCategory, StoreLocation } from "@/features/store/types";
+import type {
+  MapCategory,
+  StoreLocation,
+  StoreOpenFilter,
+} from "@/features/store/types";
 
 // 지도 화면은 검색, 필터, 위치, 길찾기 상태가 강하게 맞물린다.
 // 새 상태를 추가할 때는 useStoreMapState로 먼저 분리할 수 있는지 확인한다.
@@ -63,6 +68,9 @@ export const useStoreMapPanelState = () => {
   const [hasSelectedStoreInfo, setHasSelectedStoreInfo] = useState(false);
   const [activeMapCategory, setActiveMapCategory] =
     useState<MapCategory>("store");
+  const [openFilter, setOpenFilter] = useState<StoreOpenFilter>(
+    ALL_STORE_OPEN_FILTER,
+  );
   const [routeReturnServices, setRouteReturnServices] = useState<string[]>([]);
   const shouldFocusUserLocationRef = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -90,6 +98,7 @@ export const useStoreMapPanelState = () => {
   const route = useStoreRoute(userLocation);
   const benefit = useBenefitStores({
     activeMapCategory,
+    openFilter,
     userLocation,
   });
   const {
@@ -121,6 +130,7 @@ export const useStoreMapPanelState = () => {
     getTextSearchSortCenter,
     hasActiveServiceFilter,
     isInVisibleArea,
+    openFilter,
     providedServiceFilterOptions,
     searchQuery,
     selectedStore,
@@ -269,6 +279,7 @@ export const useStoreMapPanelState = () => {
     searchFitTarget,
     searchHistory,
     searchInputRef,
+    openFilter,
     searchPoint,
     setActiveMapCategory,
     setFocusPoint,
@@ -276,6 +287,7 @@ export const useStoreMapPanelState = () => {
     setIsMapSearchLoading,
     setIsOtherStoresVisible,
     setIsWaitingForPinSelection,
+    setOpenFilter,
     setRouteReturnServices,
     setSearchFitTarget,
     setSearchPoint,
