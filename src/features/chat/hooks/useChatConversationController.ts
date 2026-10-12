@@ -22,7 +22,10 @@ import {
   findUserMessageBeforeAssistant,
   getLastUserMessage,
 } from "@/features/chat/lib/chatConversationFlow";
-import { createChatStoreMap } from "@/features/chat/lib/chatStoreMap";
+import {
+  createChatStoreMap,
+  getCurrentChatLocation,
+} from "@/features/chat/lib/chatStoreMap";
 import {
   chatStoreMapCache,
   restoreCachedStoreMaps,
@@ -426,9 +429,15 @@ export const useChatConversationController = ({
 
       if (signal.aborted) return;
 
+      const isStorePrompt = isStoreRelatedPrompt(trimmedPrompt);
+      const location = isStorePrompt ? await getCurrentChatLocation() : null;
+
+      if (signal.aborted) return;
+
       const assistantMessage = await chatService.sendMessage({
         content: trimmedPrompt,
         guestId: nextGuestId,
+        location,
         sessionId: nextSessionId,
         signal,
         onStage: (stage) => {
@@ -441,7 +450,7 @@ export const useChatConversationController = ({
         },
       });
       const storeMapPromise =
-        isStoreRelatedPrompt(trimmedPrompt) && !assistantMessage.storeMap
+        isStorePrompt && !assistantMessage.storeMap
           ? createChatStoreMap(trimmedPrompt).catch(() => undefined)
           : Promise.resolve(undefined);
 

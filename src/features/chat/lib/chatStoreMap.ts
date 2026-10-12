@@ -15,7 +15,7 @@ type ChatStorePoint = { lat: number; lng: number };
 
 const getCurrentPosition = () =>
   new Promise<GeolocationPosition>((resolve, reject) => {
-    if (!navigator.geolocation) {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
       reject(new Error("GEOLOCATION_UNSUPPORTED"));
       return;
     }
@@ -26,6 +26,14 @@ const getCurrentPosition = () =>
       timeout: 5000,
     });
   });
+
+export const getCurrentChatLocation = () =>
+  getCurrentPosition()
+    .then((position): ChatStorePoint => ({
+      lat: position.coords.latitude,
+      lng: position.coords.longitude,
+    }))
+    .catch(() => null);
 
 export const isStoreRelatedPrompt = (prompt: string) =>
   /매장|대리점|지점|방문|길찾기|가까운\s*곳|근처|오프라인/.test(prompt);
@@ -119,12 +127,7 @@ export const findChatStoreMap = async ({
 export const createChatStoreMap = async (
   prompt: string,
 ): Promise<ChatStoreMap | undefined> => {
-  const currentOrigin = await getCurrentPosition()
-    .then((position) => ({
-      lat: position.coords.latitude,
-      lng: position.coords.longitude,
-    }))
-    .catch(() => null);
+  const currentOrigin = await getCurrentChatLocation();
 
   return findChatStoreMap({
     origin: currentOrigin ?? defaultMapLocation,
