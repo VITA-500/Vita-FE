@@ -71,6 +71,45 @@ const getRouteSegmentPath = (
   );
 };
 
+const getNumber = (value: number | string | undefined) => {
+  const numberValue = Number(value);
+
+  return Number.isFinite(numberValue) ? numberValue : undefined;
+};
+
+const getPointName = (point: RoutePointResponse | undefined) =>
+  point?.name ?? point?.stationName ?? point?.stopName;
+
+const getSegmentStartName = (segment: RouteSegmentResponse) =>
+  segment.startName ??
+  segment.startStationName ??
+  segment.startStation ??
+  segment.stops?.[0] ??
+  getPointName(segment.passStopList?.stations?.[0]) ??
+  getPointName(segment.path?.[0]) ??
+  getPointName(segment.points?.[0]);
+
+const getSegmentEndName = (segment: RouteSegmentResponse) => {
+  const stationPoints = segment.passStopList?.stations;
+  const pathPoints = segment.path ?? segment.points;
+
+  return (
+    segment.endName ??
+    segment.endStationName ??
+    segment.endStation ??
+    segment.stops?.[segment.stops.length - 1] ??
+    getPointName(stationPoints?.[stationPoints.length - 1]) ??
+    getPointName(pathPoints?.[pathPoints.length - 1])
+  );
+};
+
+const getSegmentDurationSeconds = (segment: RouteSegmentResponse) => {
+  const seconds = getNumber(segment.durationSeconds);
+  const minutes = getNumber(segment.durationMinutes ?? segment.sectionTime);
+
+  return seconds ?? (minutes !== undefined ? minutes * 60 : undefined);
+};
+
 const isRoutePointLike = (
   segment: RoutePointResponse | RouteSegmentResponse,
 ): segment is RoutePointResponse =>
@@ -131,7 +170,14 @@ export const getRouteSegments = (
       kind: normalizeSegmentKind(segment),
       lineName: getSegmentLineName(segment),
       color: getSegmentColor(segment),
+      distanceMeters: getNumber(segment.distanceMeters ?? segment.distance),
+      durationSeconds: getSegmentDurationSeconds(segment),
+      endName: getSegmentEndName(segment),
+      guidance: segment.guidance || undefined,
       path: getRouteSegmentPath(segment),
+      startName: getSegmentStartName(segment),
+      stops: segment.stops,
+      vehicleType: segment.vehicleType || undefined,
     }))
     .filter((segment) => segment.path.length > 0);
 };
