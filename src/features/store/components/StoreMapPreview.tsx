@@ -13,6 +13,7 @@ import { StoreMapSearchAreaButton } from "@/features/store/components/StoreMapSe
 import { StoreMapSelectedCard } from "@/features/store/components/StoreMapSelectedCard";
 import { useElementResizeKey } from "@/features/store/hooks/useElementResizeKey";
 import { useKakaoMapReady } from "@/features/store/hooks/useKakaoMapReady";
+import { useKeepSelectedCardInView } from "@/features/store/hooks/useKeepSelectedCardInView";
 import { useMapFitTarget } from "@/features/store/hooks/useMapFitTarget";
 import { useMapLoadingVisible } from "@/features/store/hooks/useMapLoadingVisible";
 import { useMapZoom } from "@/features/store/hooks/useMapZoom";
@@ -29,6 +30,9 @@ import type { StoreMapPreviewProps } from "@/features/store/lib/storeMapPreviewT
 import { cn } from "@/shared/lib/cn";
 
 export type { MapFitPadding } from "@/features/store/lib/mapFit";
+
+/** 카드 크기 변화가 이 시간(ms) 동안 멈춘 뒤에 위치를 다시 계산한다. */
+const CARD_RESIZE_SETTLE_MS = 80;
 
 type SearchPointRef = MapPoint | null | undefined;
 type FocusPointRef = MapPoint | null | undefined;
@@ -119,9 +123,12 @@ export const StoreMapPreview = ({
   const routePreviewRef = useRef<RoutePreviewRef>(undefined);
 
   // 카드 크기가 바뀌면(내용 변경 등) 카드 위치를 다시 계산하도록 key를 올린다.
+  // 경로 상세 펼치기 애니메이션 중에는 매 프레임 지도를 다시 그리지 않도록, 크기가 멈춘 뒤 한 번만 올린다.
+  // (카드는 핀 기준 위로 자라도록 배치돼 있어, 애니메이션 중 위치를 다시 계산하지 않아도 핀에 붙어 있다)
   const selectedStoreCardLayoutKey = useElementResizeKey(
     selectedStoreCardRef,
     selectedStoreCard,
+    CARD_RESIZE_SETTLE_MS,
   );
 
   const { adjustZoomLevel, isMapAnimating } = useMapZoom({
@@ -227,6 +234,21 @@ export const StoreMapPreview = ({
     routePreview,
     selectedStoreCard,
     selectedStoreCardLeftInset,
+    selectedStoreCardRef,
+  });
+
+  // 경로 상세를 펼치거나 창을 줄여도 카드 위쪽이 지도 밖으로 나가지 않게 한다.
+  useKeepSelectedCardInView({
+    isCardVisible: Boolean(
+      selectedStore &&
+      selectedStoreCard &&
+      revealedCardStoreId === selectedStore.id &&
+      !isRouteCardHeld,
+    ),
+    mapContainerRef,
+    mapRef,
+    resizeKey: selectedStoreCardLayoutKey,
+    selectedStore,
     selectedStoreCardRef,
   });
 

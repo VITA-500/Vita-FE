@@ -147,6 +147,11 @@ export const StoreMapPanel = ({
     setOpenFilter(nextFilter);
   };
 
+  // 지도에서 선택한 매장이 길찾기 도착 매장인지
+  const isSelectedStoreRouteTarget = Boolean(
+    routeDestinationStoreId && routeDestinationStoreId === mapSelectedStore?.id,
+  );
+
   return (
     <div
       ref={panelRootRef}
@@ -168,29 +173,17 @@ export const StoreMapPanel = ({
         isSearchFromMapPointLoading={isMapSearchLoading}
         routePreview={routePreview}
         onRouteMapReady={setRouteMapReadyKey}
-        isRouteCardDocked={Boolean(
-          routeDestinationStoreId &&
-          routeDestinationStoreId === mapSelectedStore?.id,
-        )}
+        isRouteCardDocked={isSelectedStoreRouteTarget}
         selectedStore={showStoreInfoCard ? mapSelectedStore : undefined}
         selectedStoreCard={
           showStoreInfoCard ? (
             <StorePanelInfoBubble
               isLoading={isMapSearchLoading}
               isWaitingForPinSelection={isWaitingForPinSelection}
-              isRouteDestination={Boolean(
-                routeDestinationStoreId &&
-                routeDestinationStoreId === mapSelectedStore?.id,
-              )}
-              routeSummary={
-                routeDestinationStoreId === mapSelectedStore?.id
-                  ? routeSummary
-                  : null
-              }
+              isRouteDestination={isSelectedStoreRouteTarget}
+              routeSummary={isSelectedStoreRouteTarget ? routeSummary : null}
               routeResultMessage={
-                routeDestinationStoreId === mapSelectedStore?.id
-                  ? routeResultMessage
-                  : null
+                isSelectedStoreRouteTarget ? routeResultMessage : null
               }
               selectedRouteMode={routeMode}
               sameLocationStores={sameLocationStores}

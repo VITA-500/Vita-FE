@@ -18,6 +18,9 @@ export type RoutePointResponse = {
   lng?: number | string;
   latitude?: number | string;
   longitude?: number | string;
+  name?: string;
+  stationName?: string;
+  stopName?: string;
   y?: number | string;
   x?: number | string;
 };
@@ -30,6 +33,15 @@ export type RouteLaneResponse = {
 
 export type RouteSegmentResponse = {
   bus?: RouteTransitInfoResponse;
+  distance?: number | string;
+  distanceMeters?: number | string;
+  durationMinutes?: number | string;
+  durationSeconds?: number | string;
+  endName?: string;
+  endStation?: string;
+  endStationName?: string;
+  /** 안내 문구(BE guidance) */
+  guidance?: string;
   /** ODsay 형식: 노선 정보 배열 */
   lane?: RouteLaneResponse[];
   /** TMAP 형식: "127.1,37.5 127.2,37.6" 좌표 문자열 */
@@ -37,6 +49,9 @@ export type RouteSegmentResponse = {
   passShape?: { linestring?: string };
   /** ODsay 형식: 정류장 좌표 목록 */
   passStopList?: { stations?: RoutePointResponse[] };
+  sectionTime?: number | string;
+  /** BE 형식: 대중교통 구간의 정차역 이름 목록(승차역 → 하차역 순) */
+  stops?: string[];
   mode?: string;
   type?: string;
   kind?: string;
@@ -58,6 +73,9 @@ export type RouteSegmentResponse = {
   routeColor?: string;
   lineColor?: string;
   route?: RouteTransitInfoResponse | string;
+  startName?: string;
+  startStation?: string;
+  startStationName?: string;
   path?: RoutePointResponse[];
   points?: RoutePointResponse[];
   coordinates?: RoutePointResponse[];

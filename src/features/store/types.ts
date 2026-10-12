@@ -39,7 +39,17 @@ export type StoreRouteSegment = {
   kind: StoreRouteSegmentKind;
   lineName?: string;
   color?: string;
+  distanceMeters?: number;
+  durationSeconds?: number;
+  endName?: string;
+  /** 안내 문구(BE guidance) */
+  guidance?: string;
   path: StoreRoutePoint[];
+  startName?: string;
+  /** 대중교통 구간의 정차역 이름 목록 */
+  stops?: string[];
+  /** 버스 종류(간선·지선 등) / 지하철 종류(일반·급행) */
+  vehicleType?: string;
 };
 
 export type StoreRoute = {
