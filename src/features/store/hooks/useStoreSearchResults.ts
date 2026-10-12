@@ -8,13 +8,18 @@ import {
   type UserLocation,
 } from "@/features/store/lib/geo";
 import { findServicesInText } from "@/features/store/lib/serviceKeywords";
+import { filterStoresByOpenFilter } from "@/features/store/lib/storeOpenHours";
 import {
   buildSearchableStores,
   defaultMapLocation,
   sortStoresByDistance,
   type MapSearchPoint,
 } from "@/features/store/lib/storePanelStores";
-import type { MapCategory, StoreLocation } from "@/features/store/types";
+import type {
+  MapCategory,
+  StoreLocation,
+  StoreOpenFilter,
+} from "@/features/store/types";
 
 type SearchState = ReturnType<typeof useStoreSearchState>;
 type ServiceFilters = ReturnType<typeof useServiceFilters>;
@@ -40,6 +45,8 @@ type UseStoreSearchResultsParams = Pick<
     benefitStoresOrigin: MapSearchPoint | null;
     /** 지금 지도에 불러온 매장(기본 정렬·필터 적용 전 목록은 displayStores) */
     displayStores: StoreLocation[];
+    /** 영업 시간 필터. 검색 풀처럼 조건 없이 받은 매장에도 같은 조건을 적용한다. */
+    openFilter: StoreOpenFilter;
     searchQuery: string;
     selectedStore?: StoreLocation;
     stores: StoreLocation[];
@@ -61,6 +68,7 @@ export const useStoreSearchResults = ({
   getTextSearchSortCenter,
   hasActiveServiceFilter,
   isInVisibleArea,
+  openFilter,
   providedServiceFilterOptions,
   searchQuery,
   selectedStore,
@@ -70,14 +78,16 @@ export const useStoreSearchResults = ({
   submittedSearchStores,
   userLocation,
 }: UseStoreSearchResultsParams) => {
+  const filterOpenStores = (items: StoreLocation[]) =>
+    filterStoresByOpenFilter(items, openFilter);
   const categoryStores =
     activeMapCategory === "store"
-      ? filterStoresByServices(stores)
-      : benefitStores;
+      ? filterOpenStores(filterStoresByServices(stores))
+      : filterOpenStores(benefitStores);
   const categoryDisplayStores =
     activeMapCategory === "store"
-      ? filterStoresByServices(displayStores)
-      : benefitStores;
+      ? filterOpenStores(filterStoresByServices(displayStores))
+      : filterOpenStores(benefitStores);
   const categorySelectedStore =
     activeMapCategory === "store" || activeMapCategory === "benefit"
       ? (categoryDisplayStores.find(

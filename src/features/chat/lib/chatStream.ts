@@ -9,8 +9,10 @@ import {
 } from "@/features/chat/lib/chatApiClient";
 import type {
   ChatApiMessageStatus,
+  ChatAction,
   ChatMessage,
   ChatProgressStage,
+  ChatStoreMap,
   SessionMessagesResponse,
 } from "@/features/chat/types";
 import { ApiError } from "@/shared/api/http";
@@ -19,6 +21,10 @@ import { readSseStream, type SseEvent } from "@/shared/api/sse";
 export type SendChatMessageOptions = {
   content: string;
   guestId?: string;
+  location?: {
+    lat: number;
+    lng: number;
+  } | null;
   sessionId: number;
   /** 새 대화 시작 등으로 기다리던 답변을 버릴 때 */
   signal?: AbortSignal;
@@ -58,6 +64,8 @@ type ChatStreamPayload = {
   status?: string;
   delta?: string;
   content?: string;
+  storeMap?: ChatStoreMap | null;
+  actions?: readonly ChatAction[] | null;
   code?: string;
   message?: string;
 };
@@ -65,7 +73,12 @@ type ChatStreamPayload = {
 type ChatStreamEvent = { name: string; payload: ChatStreamPayload };
 
 type StreamOutcome =
-  | { type: "done"; content: string }
+  | {
+      type: "done";
+      content: string;
+      storeMap?: ChatStoreMap | null;
+      actions?: readonly ChatAction[] | null;
+    }
   | { type: "error" }
   /** 연결이 끊겼거나 시간이 지나 결과를 모름 → DB 재조회 */
   | { type: "lost" };
@@ -215,6 +228,7 @@ const pollAssistantAnswer = async ({
 export const sendMessageWithStream = async ({
   content,
   guestId,
+  location,
   onDelta,
   onStage,
   sessionId,
@@ -260,6 +274,8 @@ export const sendMessageWithStream = async ({
         settle({
           type: "done",
           content: event.payload.content ?? streamedContent,
+          storeMap: event.payload.storeMap,
+          actions: event.payload.actions,
         });
         break;
       case "assistant_error":
@@ -287,7 +303,15 @@ export const sendMessageWithStream = async ({
       guestId,
       {
         method: "POST",
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({
+          content,
+          ...(location
+            ? {
+                lat: location.lat,
+                lng: location.lng,
+              }
+            : {}),
+        }),
         timeoutMs: SEND_TIMEOUT_MS,
       },
     );
@@ -319,6 +343,8 @@ export const sendMessageWithStream = async ({
         ...response,
         status: "COMPLETED",
         answer: result.content,
+        storeMap: result.storeMap ?? response.storeMap,
+        actions: result.actions ?? response.actions,
       });
     }
 
@@ -341,6 +367,8 @@ export const sendMessageWithStream = async ({
       status: saved.status ?? "FAILED",
       answer: saved.content,
       createAt: saved.createdAt,
+      storeMap: saved.storeMap,
+      actions: saved.actions,
     });
   } finally {
     globalThis.clearTimeout(answerTimeoutId);

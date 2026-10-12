@@ -58,6 +58,11 @@ describe("chatService.sendMessage (SSE)", () => {
       }
 
       expect(init?.method).toBe("POST");
+      expect(JSON.parse(String(init?.body))).toEqual({
+        content: "근처 매장 찾아줘",
+        lat: 37.5,
+        lng: 127.03,
+      });
       // POST 응답보다 이벤트가 먼저 와도 놓치지 않아야 한다.
       sse.send("assistant_status", {
         sessionId: 3,
@@ -85,6 +90,12 @@ describe("chatService.sendMessage (SSE)", () => {
           sessionId: 3,
           messageId: 7,
           content: "요금제는 변경할 수 있어요.",
+          storeMap: {
+            type: "PHONE",
+            activeServices: ["휴대폰상담"],
+            stores: [],
+          },
+          actions: [{ label: "가까운 매장 보기", href: "/chat?mode=store" }],
         });
       }, 0);
 
@@ -95,8 +106,9 @@ describe("chatService.sendMessage (SSE)", () => {
     const onStage = vi.fn();
     const onDelta = vi.fn();
     const message = await chatService.sendMessage({
-      content: "요금제 변경",
+      content: "근처 매장 찾아줘",
       guestId: "guest-1",
+      location: { lat: 37.5, lng: 127.03 },
       sessionId: 3,
       onDelta,
       onStage,
@@ -112,6 +124,8 @@ describe("chatService.sendMessage (SSE)", () => {
       id: "assistant-7",
       role: "assistant",
       content: "요금제는 변경할 수 있어요.",
+      storeMap: { type: "PHONE" },
+      actions: [{ label: "가까운 매장 보기", href: "/chat?mode=store" }],
     });
   });
 

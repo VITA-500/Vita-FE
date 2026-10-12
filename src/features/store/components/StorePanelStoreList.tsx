@@ -1,11 +1,17 @@
 import type { RefObject } from "react";
 import { ChevronDown, X } from "lucide-react";
+import { StoreOpenFilterMenu } from "@/features/store/components/StoreOpenFilterMenu";
+import { StoreOpenStatusBadge } from "@/features/store/components/StoreOpenStatusBadge";
 import { StorePanelPagination } from "@/features/store/components/StorePanelPagination";
 import { mapCategoryOptions } from "@/features/store/constants";
 import { renderBenefitCategoryIcon } from "@/features/store/lib/benefitCategoryIcons";
 import { getStoreMarkerLabel } from "@/features/store/lib/storeMarkerOverlays";
 import type { BenefitCategoryOption } from "@/features/store/lib/benefitService";
-import type { MapCategory, StoreLocation } from "@/features/store/types";
+import type {
+  MapCategory,
+  StoreLocation,
+  StoreOpenFilter,
+} from "@/features/store/types";
 import { cn } from "@/shared/lib/cn";
 
 type StorePanelStoreListProps = {
@@ -21,12 +27,15 @@ type StorePanelStoreListProps = {
   mapSelectedStoreId: string;
   onCategoryChange: (category: MapCategory) => void;
   onClose: () => void;
+  onOpenFilterChange: (nextFilter: StoreOpenFilter) => void;
   onPageChange: (page: number) => void;
   onBenefitCategoryChange: (category: string) => void;
   onSelectStore: (storeId: string) => void;
   onShowPagination: () => void;
   pagedMapStores: StoreLocation[];
   panelRef: RefObject<HTMLDivElement | null>;
+  /** 영업 시간 필터(전체 / 지금 영업 중 / 선택한 시각에 영업 중) */
+  openFilter: StoreOpenFilter;
   /** 목록 전체 매장 수 */
   storeCount: number;
   storePageCount: number;
@@ -59,24 +68,30 @@ export const StorePanelStoreList = ({
   onCategoryChange,
   onBenefitCategoryChange,
   onClose,
+  onOpenFilterChange,
   onPageChange,
   onSelectStore,
   onShowPagination,
   pagedMapStores,
   panelRef,
+  openFilter,
   storeCount,
   storePageCount,
   selectedBenefitCategory,
 }: StorePanelStoreListProps) => (
   <div
     ref={panelRef}
-    className="absolute top-12 left-0 z-10 w-full overflow-hidden rounded-b-sm bg-white/95 shadow-sm backdrop-blur dark:bg-zinc-950/95"
+    className="absolute top-12 left-0 z-10 w-full overflow-visible rounded-b-sm bg-white/95 shadow-sm backdrop-blur dark:bg-zinc-950/95"
   >
     <div className="border-border flex h-12 items-center justify-between gap-3 border-b px-3 dark:border-white/10">
       <span className="min-w-0 truncate text-sm font-extrabold text-gray-950 dark:text-white">
         {activeMapCategory === "store" ? "매장 목록" : "제휴 혜택/서비스 목록"}
       </span>
       <div className="flex shrink-0 items-center gap-2">
+        <StoreOpenFilterMenu
+          onChange={onOpenFilterChange}
+          openFilter={openFilter}
+        />
         <div className="flex items-center gap-1 rounded-sm border border-gray-200 bg-white p-0.5 text-[11px] font-extrabold dark:border-white/10 dark:bg-zinc-950">
           {mapCategoryOptions.map((item) => {
             const Icon = item.icon;
@@ -152,11 +167,17 @@ export const StorePanelStoreList = ({
                   <span className="truncate text-sm font-extrabold text-gray-800 dark:text-white">
                     {store.name}
                   </span>
-                  {store.distanceText && (
-                    <span className="shrink-0 text-[11px] font-bold text-gray-400">
-                      {store.distanceText}
-                    </span>
-                  )}
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    <StoreOpenStatusBadge
+                      businessHours={store.businessHours}
+                      openNow={store.openNow}
+                    />
+                    {store.distanceText && (
+                      <span className="text-[11px] font-bold text-gray-400">
+                        {store.distanceText}
+                      </span>
+                    )}
+                  </span>
                 </span>
                 <span className="mt-1 block truncate text-xs font-medium text-gray-400">
                   {store.address || "상세 주소 확인 중"}
@@ -251,11 +272,17 @@ export const StorePanelStoreList = ({
                   <span className="truncate text-sm font-extrabold text-gray-800 dark:text-white">
                     {store.name}
                   </span>
-                  {store.distanceText && (
-                    <span className="shrink-0 text-[11px] font-bold text-gray-400">
-                      {store.distanceText}
-                    </span>
-                  )}
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    <StoreOpenStatusBadge
+                      businessHours={store.businessHours}
+                      openNow={store.openNow}
+                    />
+                    {store.distanceText && (
+                      <span className="text-[11px] font-bold text-gray-400">
+                        {store.distanceText}
+                      </span>
+                    )}
+                  </span>
                 </span>
                 <span className="mt-1 flex min-w-0 items-center gap-1.5">
                   <BenefitCategoryIconBadge category={store.benefitCategory} />
@@ -263,6 +290,11 @@ export const StorePanelStoreList = ({
                     {store.benefitName || store.benefitBrand}
                   </span>
                 </span>
+                {store.benefitDescription && (
+                  <span className="mt-1 block truncate text-xs font-medium text-gray-400">
+                    {store.benefitDescription}
+                  </span>
+                )}
               </span>
             </button>
           ))}

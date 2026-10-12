@@ -38,8 +38,8 @@ export const StoreMapSelectedCard = ({
           ? "pointer-events-none opacity-0"
           : isMapAnimating && "opacity-40",
       isRouteCardDocked
-        ? // 길찾기 카드: 도착 매장 핀 바로 위에 붙이고, 브랜드 테두리로 눈에 띄게 한다.
-          "ring-brand w-[min(300px,calc(100%-24px))] rounded-sm shadow-[0_12px_32px_rgba(253,182,29,0.28)] ring-2"
+        ? // 길찾기 카드: 도착 매장 핀 바로 위에 붙인다.
+          "w-[min(300px,calc(100%-24px))] rounded-sm"
         : "w-[min(320px,calc(100%-24px))]",
     )}
     onClick={(event) => event.stopPropagation()}

@@ -25,6 +25,132 @@ type RouteSummaryParams = {
   walkingRoute: StoreRoute | null;
 };
 
+export type TransitRouteStep = {
+  /** 하차역(정류장) 이름 */
+  alightName?: string;
+  /** 승차역(정류장) 이름 */
+  boardName?: string;
+  color?: string;
+  description: string;
+  /** 상세 타임라인용 이동 정보: "약 4분, 220m 이동" */
+  detailMeta: string;
+  /** BE 안내 문구 */
+  guidance?: string;
+  id: string;
+  kind: "walk" | "bus" | "subway" | "transit";
+  lineName: string;
+  meta: string;
+  /** 버스 종류(간선·지선 등) / 지하철 종류(일반·급행) */
+  vehicleType?: string;
+};
+
+type RouteSegment = NonNullable<StoreRoute["segments"]>[number];
+
+const getSegmentDistanceMeters = (segment: RouteSegment) => {
+  if (segment.distanceMeters !== undefined) {
+    return segment.distanceMeters;
+  }
+
+  return segment.path.slice(1).reduce((sum, point, index) => {
+    const previousPoint = segment.path[index];
+
+    return previousPoint ? sum + getDistanceMeters(previousPoint, point) : sum;
+  }, 0);
+};
+
+const getSegmentMoveText = (segment: RouteSegment) => {
+  if (segment.durationSeconds !== undefined) {
+    return formatDurationSeconds(segment.durationSeconds);
+  }
+
+  return formatRemainingDistance(getSegmentDistanceMeters(segment));
+};
+
+const getSegmentDetailMeta = (segment: RouteSegment) => {
+  const parts: string[] = [];
+
+  if (segment.durationSeconds !== undefined) {
+    parts.push(formatDurationSeconds(segment.durationSeconds));
+  }
+
+  // 도보는 시간과 거리를 함께, 대중교통은 시간만 보여준다. 시간이 없으면 거리로 대신한다.
+  if (segment.kind === "walk" || segment.durationSeconds === undefined) {
+    parts.push(formatRemainingDistance(getSegmentDistanceMeters(segment)));
+  }
+
+  return `${parts.join(", ")} 이동`;
+};
+
+const getTransitStepDescription = (segment: RouteSegment) => {
+  const moveText = getSegmentMoveText(segment);
+  const start = segment.startName;
+  const end = segment.endName;
+
+  if (segment.kind === "walk") {
+    return end ? `${end}까지 도보 이동` : "도보 이동";
+  }
+
+  if (start && end) {
+    return `${start}에서 타고 ${end}에서 내려 이동`;
+  }
+
+  if (end) {
+    return `${end}에서 내려 이동`;
+  }
+
+  return `${moveText} 이동`;
+};
+
+const getTransitSteps = (route: StoreRoute | null): TransitRouteStep[] =>
+  route?.segments
+    ?.filter((segment) =>
+      ["walk", "bus", "subway", "transit"].includes(segment.kind),
+    )
+    .map((segment, index) => ({
+      alightName: segment.endName,
+      boardName: segment.startName,
+      color: segment.color,
+      description: getTransitStepDescription(segment),
+      detailMeta: getSegmentDetailMeta(segment),
+      guidance: segment.guidance,
+      id: `${index}:${segment.kind}:${segment.lineName ?? ""}`,
+      kind:
+        segment.kind === "bus" || segment.kind === "subway"
+          ? segment.kind
+          : segment.kind === "walk"
+            ? "walk"
+            : "transit",
+      lineName:
+        segment.kind === "walk" ? "도보" : (segment.lineName ?? "대중교통"),
+      meta: getSegmentMoveText(segment),
+      vehicleType: segment.vehicleType,
+    })) ?? [];
+
+const getTransitWalkText = (route: StoreRoute | null) => {
+  const walkSegments =
+    route?.segments?.filter((segment) => segment.kind === "walk") ?? [];
+
+  if (walkSegments.length === 0) {
+    return undefined;
+  }
+
+  const walkSeconds = walkSegments.reduce(
+    (sum, segment) => sum + (segment.durationSeconds ?? 0),
+    0,
+  );
+
+  if (walkSeconds > 0) {
+    return formatDurationSeconds(walkSeconds);
+  }
+
+  const walkDistance = walkSegments.reduce(
+    (sum, segment) => sum + getSegmentDistanceMeters(segment),
+    0,
+  );
+
+  return formatWalkingTime(walkDistance);
+};
+
 /** 매장 카드에 보여줄 길찾기 요약(남은 거리·예상 시간·도보 추천). 길찾기 중이 아니면 null */
 export const buildRouteSummary = ({
   isRouteLoading,
@@ -59,6 +185,14 @@ export const buildRouteSummary = ({
     travelTimeText: walkingRoute
       ? formatDurationSeconds(walkingRoute.durationSeconds)
       : formatWalkingTime(remainingDistanceMeters),
+    transitWalkTimeText:
+      routeMode === "transit" && walkingRoute
+        ? getTransitWalkText(walkingRoute)
+        : undefined,
+    transitSteps:
+      routeMode === "transit" && walkingRoute
+        ? getTransitSteps(walkingRoute)
+        : [],
   };
 };
 

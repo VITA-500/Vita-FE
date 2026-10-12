@@ -10,6 +10,7 @@ import {
 import {
   createChatStoreMap,
   isStoreRelatedPrompt,
+  shouldUseLocalStoreFallback,
 } from "@/features/chat/lib/chatStoreMap";
 import { routes } from "@/shared/constants/routes";
 
@@ -46,6 +47,8 @@ export const toChatMessage = (message: SessionMessage): ChatMessage => {
             : isAnswerFailed
               ? ("error" as const)
               : ("success" as const),
+          ...(message.storeMap ? { storeMap: message.storeMap } : {}),
+          ...(message.actions ? { actions: message.actions } : {}),
         }),
   };
 };
@@ -73,7 +76,7 @@ export const createStoreGuideMessage = (
 export const createFallbackAssistantMessage = async (
   prompt: string,
 ): Promise<ChatMessage> => {
-  if (isStoreRelatedPrompt(prompt)) {
+  if (shouldUseLocalStoreFallback(prompt)) {
     const storeMap = await createChatStoreMap(prompt).catch(() => undefined);
 
     return createStoreGuideMessage(storeMap);

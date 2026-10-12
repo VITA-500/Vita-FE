@@ -1,6 +1,7 @@
 import { formatDistance } from "@/features/store/lib/geo";
 import type { UserLocation } from "@/features/store/lib/geo";
-import type { StoreLocation } from "@/features/store/types";
+import { toOpenFilterParams } from "@/features/store/lib/storeOpenHours";
+import type { StoreLocation, StoreOpenFilter } from "@/features/store/types";
 import { requestJson } from "@/shared/api/http";
 
 type BenefitResponse = {
@@ -23,10 +24,13 @@ type BenefitStoreItemResponse = {
   lat: number;
   lng: number;
   distanceKm: number;
+  businessHours?: string | null;
+  openNow?: boolean | null;
   benefitId: number;
   brand: string;
   category: string;
   benefitName: string;
+  benefitDescription?: string | null;
 };
 
 type BenefitStoresResponse = {
@@ -48,9 +52,12 @@ const toBenefitStoreLocation = (
   address: store.address,
   benefitBrand: store.brand,
   benefitCategory: store.category,
+  benefitDescription: store.benefitDescription ?? undefined,
   benefitId: store.benefitId,
   benefitName: store.benefitName,
+  businessHours: store.businessHours ?? undefined,
   consultServices: [],
+  openNow: store.openNow ?? undefined,
   phone: "",
   providedServices: [store.benefitName],
   lat: Number(store.lat),
@@ -90,6 +97,7 @@ export const benefitService = {
     location?: UserLocation,
     radiusKm = 1.5,
     limit = 100,
+    options: { openFilter?: StoreOpenFilter } = {},
   ) => {
     if (!location || !category) {
       return [];
@@ -100,6 +108,7 @@ export const benefitService = {
       lng: String(location.lng),
       radius: String(radiusKm),
       limit: String(limit),
+      ...toOpenFilterParams(options.openFilter),
     });
 
     const response = await requestJson<BenefitStoresResponse>(

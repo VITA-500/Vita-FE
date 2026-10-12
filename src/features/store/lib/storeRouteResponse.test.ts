@@ -63,8 +63,12 @@ describe("getRouteSegments", () => {
             },
             {
               lane: [{ name: "수도권 2호선" }],
+              sectionTime: 8,
               passStopList: {
-                stations: [station(127.0, 37.501), station(127.01, 37.51)],
+                stations: [
+                  { ...station(127.0, 37.501), stationName: "강남역" },
+                  { ...station(127.01, 37.51), stationName: "선릉역" },
+                ],
               },
               trafficType: 1,
             },
@@ -91,6 +95,11 @@ describe("getRouteSegments", () => {
       { lat: 37.501, lng: 127.0 },
       { lat: 37.51, lng: 127.01 },
     ]);
+    expect(segments[1]).toMatchObject({
+      durationSeconds: 480,
+      endName: "선릉역",
+      startName: "강남역",
+    });
   });
 
   it("prefers the response color and adds a missing #", () => {
@@ -130,5 +139,50 @@ describe("getRouteSegments", () => {
         segments: [{ trafficType: 3 }],
       }),
     ).toEqual([]);
+  });
+});
+
+describe("getRouteSegments (Vita BE RouteSegment)", () => {
+  it("reads board/alight names, guidance and vehicle type from BE fields", () => {
+    const [walk, subway] = getRouteSegments({
+      ...baseResponse,
+      segments: [
+        {
+          distanceMeters: 220,
+          durationSeconds: 240,
+          guidance: "6번 출구로 나와서 이동",
+          path: [
+            { lat: 37.5, lng: 127.0 },
+            { lat: 37.501, lng: 127.0 },
+          ],
+          type: "WALKING",
+        },
+        {
+          color: "#f5a200",
+          distanceMeters: 2000,
+          durationSeconds: 120,
+          lineName: "수인분당선",
+          path: [
+            { lat: 37.501, lng: 127.0 },
+            { lat: 37.51, lng: 127.01 },
+          ],
+          stops: ["선릉", "선정릉"],
+          type: "SUBWAY",
+          vehicleType: "급행",
+        },
+      ],
+    });
+
+    expect(walk).toMatchObject({
+      guidance: "6번 출구로 나와서 이동",
+      kind: "walk",
+    });
+    expect(subway).toMatchObject({
+      endName: "선정릉",
+      kind: "subway",
+      startName: "선릉",
+      stops: ["선릉", "선정릉"],
+      vehicleType: "급행",
+    });
   });
 });
