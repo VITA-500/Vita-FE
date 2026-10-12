@@ -81,7 +81,7 @@ export const StorePanelStoreList = ({
 }: StorePanelStoreListProps) => (
   <div
     ref={panelRef}
-    className="absolute top-12 left-0 z-10 w-full overflow-hidden rounded-b-sm bg-white/95 shadow-sm backdrop-blur dark:bg-zinc-950/95"
+    className="absolute top-12 left-0 z-10 w-full overflow-visible rounded-b-sm bg-white/95 shadow-sm backdrop-blur dark:bg-zinc-950/95"
   >
     <div className="border-border flex h-12 items-center justify-between gap-3 border-b px-3 dark:border-white/10">
       <span className="min-w-0 truncate text-sm font-extrabold text-gray-950 dark:text-white">

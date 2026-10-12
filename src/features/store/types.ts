@@ -28,6 +28,8 @@ export type StoreRouteMode = "walk" | "car" | "bicycle" | "transit";
 export type StoreMapInitialAction = {
   action: "select" | "route";
   activeServices?: string[];
+  category?: MapCategory;
+  benefitCategory?: string;
   routeMode?: StoreRouteMode;
   storeId: string;
 };

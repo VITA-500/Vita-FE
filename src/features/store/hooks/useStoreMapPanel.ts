@@ -17,6 +17,8 @@ export const useStoreMapPanel = (
 
     return [
       initialAction.action,
+      initialAction.category ?? "",
+      initialAction.benefitCategory ?? "",
       initialAction.storeId,
       initialAction.routeMode ?? "",
     ].join(":");

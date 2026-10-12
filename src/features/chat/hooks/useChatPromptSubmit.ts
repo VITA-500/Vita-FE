@@ -14,10 +14,17 @@ import {
   toChatTitle,
 } from "@/features/chat/lib/chatMessages";
 import {
+  findPartnerChatStoreMap,
   findChatStoreMap,
   getCurrentChatLocation,
+  shouldUsePartnerStoreFallback,
+  shouldUseLocalStoreFallback,
 } from "@/features/chat/lib/chatStoreMap";
 import { chatStoreMapCache } from "@/features/chat/lib/chatStoreMapCache";
+import {
+  normalizeStoreMapMessageForPrompt,
+  shouldCacheStoreMapForPrompt,
+} from "@/features/chat/lib/chatStoreMapMessage";
 import { createTextReveal } from "@/features/chat/lib/chatTextReveal";
 import type { ChatMessage, ChatStreamingReply } from "@/features/chat/types";
 
@@ -158,21 +165,35 @@ export const useChatPromptSubmit = ({
           },
           onDelta: (content) => {
             if (signal.aborted) return;
+            if (isStorePrompt) {
+              return;
+            }
             textReveal.push(content);
           },
         });
-        const storeMapPromise =
-          isStorePrompt && !assistantMessage.storeMap && location
+        const shouldFindPartnerStores =
+          location &&
+          shouldUsePartnerStoreFallback(
+            trimmedPrompt,
+            assistantMessage.storeMap,
+          );
+        const shouldFindPhoneStores =
+          location &&
+          shouldUseLocalStoreFallback(trimmedPrompt) &&
+          !assistantMessage.storeMap;
+        const storeMapPromise = shouldFindPartnerStores
+          ? findPartnerChatStoreMap({
+              origin: location,
+              originSource: "current",
+              prompt: trimmedPrompt,
+            }).catch(() => undefined)
+          : shouldFindPhoneStores
             ? findChatStoreMap({
                 origin: location,
                 originSource: "current",
                 prompt: trimmedPrompt,
               }).catch(() => undefined)
             : Promise.resolve(undefined);
-
-        await textReveal.finish(assistantMessage.content);
-
-        if (!signal.aborted) focusChatInput();
 
         const storeMap = await storeMapPromise;
 
@@ -181,12 +202,23 @@ export const useChatPromptSubmit = ({
         const answerStoreMap = storeMap ?? assistantMessage.storeMap;
 
         if (answerStoreMap) {
-          chatStoreMapCache.save(assistantMessage.id, answerStoreMap);
+          if (shouldCacheStoreMapForPrompt(trimmedPrompt, answerStoreMap)) {
+            chatStoreMapCache.save(assistantMessage.id, answerStoreMap);
+          }
         }
+
+        const nextAssistantMessage = normalizeStoreMapMessageForPrompt(
+          storeMap ? { ...assistantMessage, storeMap } : assistantMessage,
+          trimmedPrompt,
+        );
+
+        await textReveal.finish(nextAssistantMessage.content);
+
+        if (!signal.aborted) focusChatInput();
 
         setMessages((currentMessages) => [
           ...currentMessages,
-          storeMap ? { ...assistantMessage, storeMap } : assistantMessage,
+          nextAssistantMessage,
         ]);
 
         if (isAuthenticated) void refreshChatSessions();

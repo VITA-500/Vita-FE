@@ -1,5 +1,6 @@
 import type {
   ChatApiMessageStatus,
+  ChatAction,
   ChatMessage,
   ChatStoreMap,
 } from "@/features/chat/types";
@@ -18,6 +19,7 @@ export type ChatMessageResponse = {
   createAt: string;
   latencyMs: number;
   storeMap?: ChatStoreMap | null;
+  actions?: readonly ChatAction[] | null;
   stores?: ChatStoreMap["stores"] | null;
   nearbyStores?: ChatStoreMap["stores"] | null;
 };
@@ -44,5 +46,6 @@ export const toAssistantMessage = (
         : response.nearbyStores?.length
           ? { stores: response.nearbyStores }
           : undefined),
+    actions: response.actions ?? undefined,
   };
 };

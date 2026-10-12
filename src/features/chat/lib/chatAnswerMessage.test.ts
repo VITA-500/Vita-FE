@@ -54,4 +54,23 @@ describe("chatAnswerMessage", () => {
       ).storeMap?.stores,
     ).toHaveLength(1);
   });
+
+  it("keeps BE storeMap and actions on the assistant message", () => {
+    expect(
+      toAssistantMessage(
+        response({
+          storeMap: {
+            type: "PARTNER",
+            category: "CAFE",
+            benefitId: 12,
+            stores: [],
+          },
+          actions: [{ label: "가까운 매장 보기", href: "/chat?mode=store" }],
+        }),
+      ),
+    ).toMatchObject({
+      storeMap: { type: "PARTNER", category: "CAFE", benefitId: 12 },
+      actions: [{ label: "가까운 매장 보기", href: "/chat?mode=store" }],
+    });
+  });
 });

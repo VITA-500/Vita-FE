@@ -90,6 +90,12 @@ describe("chatService.sendMessage (SSE)", () => {
           sessionId: 3,
           messageId: 7,
           content: "요금제는 변경할 수 있어요.",
+          storeMap: {
+            type: "PHONE",
+            activeServices: ["휴대폰상담"],
+            stores: [],
+          },
+          actions: [{ label: "가까운 매장 보기", href: "/chat?mode=store" }],
         });
       }, 0);
 
@@ -118,6 +124,8 @@ describe("chatService.sendMessage (SSE)", () => {
       id: "assistant-7",
       role: "assistant",
       content: "요금제는 변경할 수 있어요.",
+      storeMap: { type: "PHONE" },
+      actions: [{ label: "가까운 매장 보기", href: "/chat?mode=store" }],
     });
   });
 

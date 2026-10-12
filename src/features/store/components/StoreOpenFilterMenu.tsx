@@ -23,6 +23,9 @@ export const StoreOpenFilterMenu = ({
   openFilter,
 }: StoreOpenFilterMenuProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isTimeListOpen, setIsTimeListOpen] = useState(
+    openFilter.mode === "at",
+  );
   const rootRef = useRef<HTMLDivElement>(null);
   const isActive = openFilter.mode !== "all";
   const selectedTime =
@@ -52,19 +55,17 @@ export const StoreOpenFilterMenu = ({
   const select = (nextFilter: StoreOpenFilter) => {
     onChange(nextFilter);
     setIsOpen(false);
+    setIsTimeListOpen(nextFilter.mode === "at");
   };
 
   return (
     <div
       ref={rootRef}
-      className="group/open-filter item shrink-0 self-center"
+      className="group/open-filter relative shrink-0 self-center"
       onClick={(event) => {
         // 검색창 label 안에 있어, 메뉴 빈 곳을 눌러도 입력창 포커스(검색 기록 열림)로 번지지 않게 한다.
-        // 시각 선택(select)은 기본 동작이 있어야 열리므로 막지 않는다.
         event.stopPropagation();
-        if (!(event.target instanceof HTMLSelectElement)) {
-          event.preventDefault();
-        }
+        event.preventDefault();
       }}
     >
       <button
@@ -91,7 +92,7 @@ export const StoreOpenFilterMenu = ({
           id="store-open-filter-menu"
           role="group"
           aria-label="영업 시간 필터"
-          className="border-border absolute top-[calc(100%+10px)] left-0 z-50 w-48 rounded-sm border bg-white p-1.5 text-gray-700 shadow-xl dark:border-white/10 dark:bg-zinc-950 dark:text-gray-200"
+          className="border-border absolute top-[calc(100%+10px)] left-0 z-50 w-56 rounded-sm border bg-white p-1.5 text-gray-700 shadow-xl dark:border-white/10 dark:bg-zinc-950 dark:text-gray-200"
         >
           <button
             type="button"
@@ -113,37 +114,50 @@ export const StoreOpenFilterMenu = ({
               <Check size={14} className="text-brand" />
             )}
           </button>
-          <div
-            className={cn(
-              optionClassName,
-              "hover:bg-transparent dark:hover:bg-transparent",
-            )}
-          >
-            <span>이 시간에 영업 중</span>
-            <select
-              value={openFilter.mode === "at" ? openFilter.time : ""}
-              onChange={(event) =>
-                select({ mode: "at", time: event.target.value })
-              }
-              className={cn(
-                "h-7 rounded-sm border bg-white px-1 text-xs font-bold outline-none dark:bg-zinc-900",
-                openFilter.mode === "at"
-                  ? "border-brand text-brand"
-                  : "border-gray-200 dark:border-white/10",
-              )}
-              aria-label="영업 중인지 확인할 시각"
+          <div className="rounded-sm">
+            <button
+              type="button"
+              aria-expanded={isTimeListOpen}
+              className={optionClassName}
+              onClick={() => setIsTimeListOpen((wasOpen) => !wasOpen)}
             >
-              {openFilter.mode !== "at" && (
-                <option value="" disabled>
-                  {selectedTime}
-                </option>
-              )}
-              {OPEN_FILTER_TIME_OPTIONS.map((time) => (
-                <option key={time} value={time}>
-                  {time}
-                </option>
-              ))}
-            </select>
+              <span>이 시간에 영업 중</span>
+              <span
+                className={cn(
+                  "rounded-sm px-2 py-1 text-[11px]",
+                  openFilter.mode === "at"
+                    ? "bg-brand-soft text-brand"
+                    : "bg-gray-100 text-gray-500 dark:bg-white/10",
+                )}
+              >
+                {selectedTime}
+              </span>
+            </button>
+            {isTimeListOpen && (
+              <div className="mt-1 grid max-h-44 grid-cols-2 gap-1 overflow-y-auto rounded-sm bg-gray-50 p-1 dark:bg-white/[0.04]">
+                {OPEN_FILTER_TIME_OPTIONS.map((time) => {
+                  const isSelected =
+                    openFilter.mode === "at" && openFilter.time === time;
+
+                  return (
+                    <button
+                      key={time}
+                      type="button"
+                      aria-pressed={isSelected}
+                      className={cn(
+                        "h-8 rounded-sm text-xs font-extrabold transition hover:bg-white hover:text-gray-950 dark:hover:bg-white/10 dark:hover:text-white",
+                        isSelected
+                          ? "bg-brand text-white dark:text-zinc-950"
+                          : "text-gray-500 dark:text-gray-300",
+                      )}
+                      onClick={() => select({ mode: "at", time })}
+                    >
+                      {time}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -3,9 +3,9 @@ import type { ChatMessage, ChatStoreMap } from "@/features/chat/types";
 /**
  * 답변에 붙은 매장 지도(storeMap)를 메시지 id별로 브라우저에 보관한다.
  *
- * BE 기록 조회(GET /chat/sessions/{id}/messages)에는 storeMap이 없어서, 다른 상담을 열었다가
- * 돌아오면 지도 블록이 사라졌다. 기록을 불러올 때 같은 메시지 id의 지도를 다시 붙인다.
- * 이 브라우저에서 본 답변만 복원된다. BE가 기록 조회에 storeMap을 내려주면 이 캐시는 필요 없다.
+ * BE 기록 조회(GET /chat/sessions/{id}/messages)에 storeMap이 없는 예전 응답이나
+ * 로컬 fallback 메시지를 위해, 기록을 불러올 때 같은 메시지 id의 지도를 다시 붙인다.
+ * 새 BE 응답처럼 메시지에 storeMap이 이미 있으면 서버 값을 그대로 쓴다.
  */
 
 const STORAGE_KEY = "vita-chat-store-maps";

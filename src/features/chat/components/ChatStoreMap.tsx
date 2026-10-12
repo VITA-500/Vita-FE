@@ -33,10 +33,16 @@ type ChatStoreMapProps = {
   storeMap: ChatStoreMapData;
 };
 
-const toStoreLocation = (store: ChatStoreMapData["stores"][number]) => ({
+const toStoreLocation = (
+  store: ChatStoreMapData["stores"][number],
+  storeMap: ChatStoreMapData,
+) => ({
   ...store,
   address: store.address || "주소 정보 확인 중",
+  benefitCategory: store.benefitCategory ?? storeMap.category ?? undefined,
+  benefitId: store.benefitId ?? storeMap.benefitId ?? undefined,
   phone: store.phone || "",
+  storeType: storeMap.type ?? undefined,
 });
 
 export const ChatStoreMap = ({
@@ -58,8 +64,8 @@ export const ChatStoreMap = ({
     () =>
       rankStoresByServices(storeMap.stores, activeServices)
         .slice(0, MAX_CHAT_STORE_COUNT)
-        .map(toStoreLocation),
-    [activeServices, storeMap.stores],
+        .map((store) => toStoreLocation(store, storeMap)),
+    [activeServices, storeMap],
   );
   const matchedServicesById = useMemo(
     () =>
