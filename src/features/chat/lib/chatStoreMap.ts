@@ -1,6 +1,5 @@
 import type { ChatStoreMap } from "@/features/chat/types";
 import { storeService } from "@/features/store/lib/storeService";
-import { defaultMapLocation } from "@/features/store/lib/storePanelStores";
 import { findServicesInText } from "@/features/store/lib/serviceKeywords";
 
 /** 채팅 카드·핀은 4곳까지 보여준다(ChatStoreMap과 같은 값). */
@@ -21,9 +20,9 @@ const getCurrentPosition = () =>
     }
 
     navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      maximumAge: 60_000,
-      timeout: 5000,
+      enableHighAccuracy: false,
+      maximumAge: 300_000,
+      timeout: 10_000,
     });
   });
 
@@ -129,9 +128,13 @@ export const createChatStoreMap = async (
 ): Promise<ChatStoreMap | undefined> => {
   const currentOrigin = await getCurrentChatLocation();
 
+  if (!currentOrigin) {
+    return undefined;
+  }
+
   return findChatStoreMap({
-    origin: currentOrigin ?? defaultMapLocation,
-    originSource: currentOrigin ? "current" : "default",
+    origin: currentOrigin,
+    originSource: "current",
     prompt,
   });
 };
