@@ -1,40 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  chatConversationStorage,
-  createGuestId,
-  getChatConversationOwnerKey,
-  getGuestChatConversationOwnerKey,
-} from "@/features/chat/lib/chatConversationStorage";
-import {
-  chatService,
-  isPermanentClaimError,
-} from "@/features/chat/lib/chatService";
-import {
-  createFallbackAssistantMessage,
-  createStoppedAssistantMessage,
-  isStoreRelatedPrompt,
-  toChatMessage,
-  toChatTitle,
-} from "@/features/chat/lib/chatMessages";
+import { chatConversationStorage } from "@/features/chat/lib/chatConversationStorage";
+import { chatService } from "@/features/chat/lib/chatService";
+import { createStoppedAssistantMessage } from "@/features/chat/lib/chatMessages";
 import {
   findUserMessageBeforeAssistant,
   getLastUserMessage,
 } from "@/features/chat/lib/chatConversationFlow";
-import { createChatStoreMap } from "@/features/chat/lib/chatStoreMap";
-import {
-  chatStoreMapCache,
-  restoreCachedStoreMaps,
-} from "@/features/chat/lib/chatStoreMapCache";
-import { createTextReveal } from "@/features/chat/lib/chatTextReveal";
 import { useChatSessionList } from "@/features/chat/hooks/useChatSessionList";
 import { useChatSessionPreferences } from "@/features/chat/hooks/useChatSessionPreferences";
+import { useChatConversationHydration } from "@/features/chat/hooks/useChatConversationHydration";
+import { useChatPromptSubmit } from "@/features/chat/hooks/useChatPromptSubmit";
 import type {
   ChatMessage,
   ChatMode,
   ChatStreamingReply,
-  SessionMessagesResponse,
 } from "@/features/chat/types";
 import { showToast } from "@/shared/ui/ToastProvider";
 
@@ -103,163 +84,25 @@ export const useChatConversationController = ({
   const hasHydratedConversationRef = useRef(false);
   const hasChatStarted = messages.length > 0;
 
-  const applyChatSession = useCallback(
-    (response: SessionMessagesResponse) => {
-      // 기록 조회에는 매장 지도가 없어서, 이 브라우저에 보관해 둔 지도를 다시 붙인다.
-      const nextMessages = restoreCachedStoreMaps(
-        response.messages.map(toChatMessage),
-      );
-      const firstPrompt = response.messages.find(
-        (message) => message.role === "USER" && message.content,
-      )?.content;
-
-      shouldJumpToBottomRef.current = true;
-      setCurrentSessionId(response.sessionId);
-      setCurrentGuestId(undefined);
-      setMessages(nextMessages);
-      setCurrentChatTitle(firstPrompt ? toChatTitle(firstPrompt) : "");
-      if (firstPrompt) {
-        setSessionTitles((titles) => ({
-          ...titles,
-          [response.sessionId]: toChatTitle(firstPrompt),
-        }));
-      }
-      setChatStatus("idle");
-    },
-    [setSessionTitles],
-  );
-
-  useEffect(() => {
-    if (!isAuthReady) {
-      return;
-    }
-
-    let isCancelled = false;
-
-    const hydrateConversation = async () => {
-      const ownerKey = getChatConversationOwnerKey(
-        currentUserId === undefined ? null : { userId: currentUserId },
-      );
-      let nextConversation = chatConversationStorage.load(ownerKey);
-
-      if (currentUserId !== undefined) {
-        const guestConversation =
-          chatConversationStorage.load(getGuestChatConversationOwnerKey()) ??
-          chatConversationStorage.loadGuestBackup();
-
-        if (guestConversation?.messages.length) {
-          nextConversation = guestConversation;
-        }
-
-        if (guestConversation?.sessionId && guestConversation.guestId) {
-          await chatService
-            .claimGuestSession(
-              guestConversation.sessionId,
-              guestConversation.guestId,
-            )
-            .then((response) => {
-              console.info("Guest chat claim succeeded", {
-                guestId: guestConversation.guestId,
-                response,
-                sessionId: guestConversation.sessionId,
-              });
-              if (!isCancelled) {
-                showToast("로그인 전 상담 내역을 계정에 저장했어요.");
-              }
-              nextConversation = {
-                ...guestConversation,
-                guestId: undefined,
-                sessionId: response.sessionId,
-              };
-              chatConversationStorage.save(ownerKey, nextConversation);
-              chatConversationStorage.clear(getGuestChatConversationOwnerKey());
-            })
-            .catch((error) => {
-              console.error("Guest chat claim failed", {
-                error,
-                guestId: guestConversation.guestId,
-                sessionId: guestConversation.sessionId,
-              });
-
-              if (isPermanentClaimError(error)) {
-                chatConversationStorage.clear(
-                  getGuestChatConversationOwnerKey(),
-                );
-              }
-
-              if (isCancelled) {
-                return;
-              }
-
-              showToast(
-                "로그인 전 상담 화면은 유지했지만 저장 연동은 실패했어요.",
-              );
-              nextConversation = {
-                ...guestConversation,
-                guestId: undefined,
-                sessionId: undefined,
-              };
-              chatConversationStorage.save(ownerKey, nextConversation);
-            });
-        }
-
-        void refreshChatSessions();
-      } else {
-        clearChatSessions();
-      }
-
-      if (isCancelled) {
-        return;
-      }
-
-      activeConversationOwnerKeyRef.current = ownerKey;
-      hasHydratedConversationRef.current = true;
-
-      const frameId = window.requestAnimationFrame(() => {
-        setMessages(nextConversation?.messages ?? []);
-        setCurrentChatTitle(nextConversation?.title ?? "");
-        setCurrentGuestId(
-          currentUserId !== undefined ? undefined : nextConversation?.guestId,
-        );
-        setCurrentSessionId(nextConversation?.sessionId);
-        setChatStatus("idle");
-      });
-
-      return () => {
-        window.cancelAnimationFrame(frameId);
-      };
-    };
-
-    let cancelFrame: (() => void) | undefined;
-
-    void hydrateConversation().then((nextCancelFrame) => {
-      cancelFrame = nextCancelFrame;
-    });
-
-    return () => {
-      isCancelled = true;
-      cancelFrame?.();
-    };
-  }, [clearChatSessions, currentUserId, isAuthReady, refreshChatSessions]);
-
-  useEffect(() => {
-    if (!hasHydratedConversationRef.current) {
-      return;
-    }
-
-    const ownerKey = activeConversationOwnerKeyRef.current;
-
-    if (!ownerKey) {
-      return;
-    }
-
-    chatConversationStorage.save(ownerKey, {
-      guestId: currentGuestId,
-      messages,
-      sessionId: currentSessionId,
-      title: currentChatTitle,
-    });
-  }, [currentChatTitle, currentGuestId, currentSessionId, messages]);
+  const { applyChatSession } = useChatConversationHydration({
+    activeConversationOwnerKeyRef,
+    clearChatSessions,
+    currentChatTitle,
+    currentGuestId,
+    currentSessionId,
+    currentUserId,
+    hasHydratedConversationRef,
+    isAuthReady,
+    messages,
+    refreshChatSessions,
+    setChatStatus,
+    setCurrentChatTitle,
+    setCurrentGuestId,
+    setCurrentSessionId,
+    setMessages,
+    setSessionTitles,
+    shouldJumpToBottomRef,
+  });
 
   useEffect(() => {
     return () => {
@@ -349,148 +192,28 @@ export const useChatConversationController = ({
     });
   }, [activeMode, chatStatus, isStreamingAnswer, messages, streamingReply]);
 
-  type SubmitChatPromptOptions = {
-    /** 이 메시지부터 뒤를 지우고 새 질문으로 다시 묻는다(질문 수정 · 다시 시도). */
-    replaceFromMessageId?: string;
-  };
-
-  const submitChatPrompt = async (
-    prompt: string = chatInput,
-    { replaceFromMessageId }: SubmitChatPromptOptions = {},
-  ) => {
-    const trimmedPrompt = prompt.trim();
-
-    if (!trimmedPrompt || chatStatus === "loading") return;
-
-    clearEditHint();
-
-    const userMessage: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: trimmedPrompt,
-      createdAt: new Date().toISOString(),
-    };
-
-    if (!currentChatTitle) {
-      setCurrentChatTitle(toChatTitle(trimmedPrompt));
-    }
-
-    const answerController = new AbortController();
-    const { signal } = answerController;
-
-    answerAbortRef.current?.abort();
-    answerAbortRef.current = answerController;
-
-    setMessages((currentMessages) => {
-      const replaceIndex = replaceFromMessageId
-        ? currentMessages.findIndex(({ id }) => id === replaceFromMessageId)
-        : -1;
-      const baseMessages =
-        replaceIndex >= 0
-          ? currentMessages.slice(0, replaceIndex)
-          : currentMessages;
-
-      return [...baseMessages, userMessage];
-    });
-    // 질문 수정 · 다시 시도는 입력창에 쓰던 글을 건드리지 않는다.
-    if (!replaceFromMessageId) setChatInput("");
-    setChatStatus("loading");
-    setStreamingReply({ content: "" });
-
-    const textReveal = createTextReveal(({ content, isPreparingBlock }) => {
-      if (signal.aborted) return;
-      setStreamingReply((reply) => ({ ...reply, content, isPreparingBlock }));
-    });
-
-    signal.addEventListener("abort", () => textReveal.cancel(), {
-      once: true,
-    });
-    window.requestAnimationFrame(() => chatInputRef.current?.focus());
-
-    try {
-      const nextGuestId =
-        isAuthenticated || hasUser
-          ? undefined
-          : (currentGuestId ?? createGuestId());
-      const nextSessionId =
-        currentSessionId ??
-        (await chatService.createSession(nextGuestId)).sessionId;
-
-      setCurrentGuestId(nextGuestId);
-      setCurrentSessionId(nextSessionId);
-      setSessionTitles((titles) =>
-        titles[nextSessionId]
-          ? titles
-          : { ...titles, [nextSessionId]: toChatTitle(trimmedPrompt) },
-      );
-
-      if (signal.aborted) return;
-
-      const assistantMessage = await chatService.sendMessage({
-        content: trimmedPrompt,
-        guestId: nextGuestId,
-        sessionId: nextSessionId,
-        signal,
-        onStage: (stage) => {
-          if (signal.aborted) return;
-          setStreamingReply((reply) => ({ content: "", ...reply, stage }));
-        },
-        onDelta: (content) => {
-          if (signal.aborted) return;
-          textReveal.push(content);
-        },
-      });
-      const storeMapPromise =
-        isStoreRelatedPrompt(trimmedPrompt) && !assistantMessage.storeMap
-          ? createChatStoreMap(trimmedPrompt).catch(() => undefined)
-          : Promise.resolve(undefined);
-
-      // 화면에 덜 풀린 글이 남아 있으면 끝까지 보여준 뒤 최종 메시지로 바꾼다(마지막에 한 번에 붙는 현상 방지).
-      await textReveal.finish(assistantMessage.content);
-
-      // 답변 글이 다 나오면 바로 입력창으로. 매장 지도(위치 확인 + 매장 조회)는 몇 초 더 걸릴 수 있어 기다리지 않는다.
-      if (!signal.aborted) focusChatInput();
-
-      const storeMap = await storeMapPromise;
-
-      if (signal.aborted) return;
-
-      const answerStoreMap = storeMap ?? assistantMessage.storeMap;
-
-      // 상담 기록을 다시 열었을 때 지도 블록을 되살릴 수 있게 보관해 둔다.
-      if (answerStoreMap) {
-        chatStoreMapCache.save(assistantMessage.id, answerStoreMap);
-      }
-
-      setMessages((currentMessages) => [
-        ...currentMessages,
-        storeMap ? { ...assistantMessage, storeMap } : assistantMessage,
-      ]);
-
-      if (isAuthenticated) {
-        void refreshChatSessions();
-      }
-    } catch (error) {
-      textReveal.cancel();
-
-      if (signal.aborted) return;
-
-      console.error("Chat API request failed", error);
-      const fallbackMessage =
-        await createFallbackAssistantMessage(trimmedPrompt);
-
-      if (signal.aborted) return;
-
-      setMessages((currentMessages) => [...currentMessages, fallbackMessage]);
-    } finally {
-      // 새 대화 시작 등으로 끊긴 요청이면 이미 다음 상태로 넘어갔으니 건드리지 않는다.
-      if (answerAbortRef.current === answerController) {
-        answerAbortRef.current = null;
-        setStreamingReply(null);
-        setChatStatus("idle");
-      }
-    }
-  };
+  const submitChatPrompt = useChatPromptSubmit({
+    answerAbortRef,
+    chatInput,
+    chatInputRef,
+    chatStatus,
+    clearEditHint,
+    currentChatTitle,
+    currentGuestId,
+    currentSessionId,
+    focusChatInput,
+    hasUser,
+    isAuthenticated,
+    refreshChatSessions,
+    setChatInput,
+    setChatStatus,
+    setCurrentChatTitle,
+    setCurrentGuestId,
+    setCurrentSessionId,
+    setMessages,
+    setSessionTitles,
+    setStreamingReply,
+  });
 
   /**
    * 답변 생성을 중단한다. 그때까지 받은 글은 남기고, 질문에는 수정 버튼(펜)을 띄워

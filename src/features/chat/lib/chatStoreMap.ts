@@ -1,6 +1,5 @@
 import type { ChatStoreMap } from "@/features/chat/types";
 import { storeService } from "@/features/store/lib/storeService";
-import { defaultMapLocation } from "@/features/store/lib/storePanelStores";
 import { findServicesInText } from "@/features/store/lib/serviceKeywords";
 
 /** 채팅 카드·핀은 4곳까지 보여준다(ChatStoreMap과 같은 값). */
@@ -15,17 +14,25 @@ type ChatStorePoint = { lat: number; lng: number };
 
 const getCurrentPosition = () =>
   new Promise<GeolocationPosition>((resolve, reject) => {
-    if (!navigator.geolocation) {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
       reject(new Error("GEOLOCATION_UNSUPPORTED"));
       return;
     }
 
     navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      maximumAge: 60_000,
-      timeout: 5000,
+      enableHighAccuracy: false,
+      maximumAge: 300_000,
+      timeout: 10_000,
     });
   });
+
+export const getCurrentChatLocation = () =>
+  getCurrentPosition()
+    .then((position): ChatStorePoint => ({
+      lat: position.coords.latitude,
+      lng: position.coords.longitude,
+    }))
+    .catch(() => null);
 
 export const isStoreRelatedPrompt = (prompt: string) =>
   /매장|대리점|지점|방문|길찾기|가까운\s*곳|근처|오프라인/.test(prompt);
@@ -119,16 +126,15 @@ export const findChatStoreMap = async ({
 export const createChatStoreMap = async (
   prompt: string,
 ): Promise<ChatStoreMap | undefined> => {
-  const currentOrigin = await getCurrentPosition()
-    .then((position) => ({
-      lat: position.coords.latitude,
-      lng: position.coords.longitude,
-    }))
-    .catch(() => null);
+  const currentOrigin = await getCurrentChatLocation();
+
+  if (!currentOrigin) {
+    return undefined;
+  }
 
   return findChatStoreMap({
-    origin: currentOrigin ?? defaultMapLocation,
-    originSource: currentOrigin ? "current" : "default",
+    origin: currentOrigin,
+    originSource: "current",
     prompt,
   });
 };

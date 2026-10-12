@@ -19,6 +19,10 @@ import { readSseStream, type SseEvent } from "@/shared/api/sse";
 export type SendChatMessageOptions = {
   content: string;
   guestId?: string;
+  location?: {
+    lat: number;
+    lng: number;
+  } | null;
   sessionId: number;
   /** 새 대화 시작 등으로 기다리던 답변을 버릴 때 */
   signal?: AbortSignal;
@@ -215,6 +219,7 @@ const pollAssistantAnswer = async ({
 export const sendMessageWithStream = async ({
   content,
   guestId,
+  location,
   onDelta,
   onStage,
   sessionId,
@@ -287,7 +292,15 @@ export const sendMessageWithStream = async ({
       guestId,
       {
         method: "POST",
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({
+          content,
+          ...(location
+            ? {
+                lat: location.lat,
+                lng: location.lng,
+              }
+            : {}),
+        }),
         timeoutMs: SEND_TIMEOUT_MS,
       },
     );
