@@ -13,6 +13,7 @@ import { StoreMapPanel } from "@/features/store/components/StoreMapPanel";
 import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
 import type { ChatMode } from "@/features/chat/types";
 import type {
+  MapCategory,
   StoreMapInitialAction,
   StoreRouteMode,
 } from "@/features/store/types";
@@ -275,10 +276,17 @@ const getStoreMapInitialAction = (
   const routeMode = storeRouteModes.has(routeModeParam as StoreRouteMode)
     ? (routeModeParam as StoreRouteMode)
     : undefined;
+  const categoryParam = searchParams.get("category");
+  const category: MapCategory | undefined =
+    categoryParam === "benefit" || categoryParam === "store"
+      ? categoryParam
+      : undefined;
 
   return {
     action: actionParam,
     activeServices: searchParams.getAll("service"),
+    benefitCategory: searchParams.get("benefitCategory") ?? undefined,
+    category,
     routeMode,
     storeId,
   };

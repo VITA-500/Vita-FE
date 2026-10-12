@@ -60,4 +60,18 @@ describe("stripStoreTablesFromAnswer", () => {
       "가까운 매장 목록이에요.",
     );
   });
+
+  it("removes partner benefit tables when store cards will render", () => {
+    const content = [
+      "가까운 제휴 매장이에요.",
+      "",
+      "| 제휴처 | 브랜드 | 혜택 |",
+      "| --- | --- | --- |",
+      "| 비타 강남점 | 카페 | 음료 할인 |",
+    ].join("\n");
+
+    expect(stripStoreTablesFromAnswer(content, storeMap)).toBe(
+      "가까운 제휴 매장이에요.",
+    );
+  });
 });

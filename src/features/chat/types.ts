@@ -34,11 +34,18 @@ export type ChatAction = {
   href: string;
 };
 
+export type ChatStoreType = "PHONE" | "PARTNER";
+
 export type ChatStoreSummary = {
   id: string;
   name: string;
   address: string;
   businessHours?: string;
+  benefitBrand?: string;
+  benefitCategory?: string;
+  benefitDescription?: string;
+  benefitId?: number;
+  benefitName?: string;
   consultServices?: string[];
   /** BE openNow(조회 시점 기준). 예전에 저장된 답변에는 없을 수 있다. */
   openNow?: boolean;
@@ -53,6 +60,9 @@ export type ChatStoreSummary = {
 export type ChatStoreOriginSource = "current" | "default";
 
 export type ChatStoreMap = {
+  type?: ChatStoreType | null;
+  category?: string | null;
+  benefitId?: number | null;
   activeServices?: string[];
   origin?: {
     lat: number;
@@ -97,6 +107,8 @@ export type SessionMessage = {
   content: string | null;
   createdAt: string;
   status?: ChatApiMessageStatus;
+  storeMap?: ChatStoreMap | null;
+  actions?: readonly ChatAction[] | null;
 };
 
 export type SessionMessagesResponse = {

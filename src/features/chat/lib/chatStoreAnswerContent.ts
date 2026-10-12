@@ -2,7 +2,8 @@ import type { ChatStoreMap } from "@/features/chat/types";
 
 const TABLE_ROW = /^\s*\|.*\|\s*$/;
 const TABLE_DIVIDER = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
-const STORE_TABLE_HEADER = /매장|지점|주소|거리|영업|전화|서비스|상담|위치/;
+const STORE_TABLE_HEADER =
+  /매장|지점|주소|거리|영업|전화|서비스|상담|위치|제휴|브랜드|혜택/;
 
 const normalizeText = (value: string) =>
   value.toLowerCase().replace(/[\s|,./()[\]{}\-_:]+/g, "");

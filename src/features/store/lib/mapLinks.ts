@@ -19,6 +19,13 @@ export const getStoreMapRouteUrl = (
     storeId: store.id,
   });
 
+  if (store.storeType === "PARTNER") {
+    params.set("category", "benefit");
+    if (store.benefitCategory) {
+      params.set("benefitCategory", store.benefitCategory);
+    }
+  }
+
   activeServices.forEach((service) => params.append("service", service));
 
   return `${routes.chat}?${params.toString()}`;

@@ -6,28 +6,23 @@ import {
   type RefObject,
   type SetStateAction,
 } from "react";
+import { useInitialStoreAction } from "@/features/store/hooks/useInitialStoreAction";
 import type { useLocationPermission } from "@/features/store/hooks/useLocationPermission";
 import type { useNearbyStores } from "@/features/store/hooks/useNearbyStores";
 import type { useStoreMapState } from "@/features/store/hooks/useStoreMapState";
 import type { useStorePanelLayout } from "@/features/store/hooks/useStorePanelLayout";
 import type { useStoreRoute } from "@/features/store/hooks/useStoreRoute";
+import { useStoreRouteReturnActions } from "@/features/store/hooks/useStoreRouteReturnActions";
 import type { useStoreSearchResults } from "@/features/store/hooks/useStoreSearchResults";
 import type { useStoreSearchState } from "@/features/store/hooks/useStoreSearchState";
-import {
-  defaultMapLocation,
-  type MapSearchPoint,
-} from "@/features/store/lib/storePanelStores";
+import type { MapSearchPoint } from "@/features/store/lib/storePanelStores";
 import {
   getGeolocationPermissionState,
   LOCATION_CONSENT_STORAGE_KEY,
   readStorage,
 } from "@/features/store/lib/storePanelStorage";
 import { storeService } from "@/features/store/lib/storeService";
-import type {
-  MapCategory,
-  StoreLocation,
-  StoreMapInitialAction,
-} from "@/features/store/types";
+import type { MapCategory, StoreLocation } from "@/features/store/types";
 import { showToast } from "@/shared/ui/ToastProvider";
 
 type UseStoreSelectionActionsParams = Pick<
@@ -72,6 +67,7 @@ type UseStoreSelectionActionsParams = Pick<
     activeMapCategory: MapCategory;
     routeDestinationStore?: StoreLocation;
     setActiveMapCategory: Dispatch<SetStateAction<MapCategory>>;
+    setSelectedBenefitCategory: Dispatch<SetStateAction<string>>;
     setFocusPoint: Dispatch<SetStateAction<MapSearchPoint | null>>;
     setHasSelectedStoreInfo: Dispatch<SetStateAction<boolean>>;
     setIsWaitingForPinSelection: Dispatch<SetStateAction<boolean>>;
@@ -84,7 +80,6 @@ type UseStoreSelectionActionsParams = Pick<
     stores: StoreLocation[];
   };
 
-/** 매장 선택·길찾기 시작·내 위치로 이동·길찾기 후 주변 매장 보기 */
 export const useStoreSelectionActions = ({
   activeMapCategory,
   categoryDisplayStores,
@@ -110,6 +105,7 @@ export const useStoreSelectionActions = ({
   setSearchAnchorSource,
   setSearchPoint,
   setSearchQuery,
+  setSelectedBenefitCategory,
   setSelectedStoreId,
   setSoloStoreId,
   setStores,
@@ -121,8 +117,12 @@ export const useStoreSelectionActions = ({
   userLocation,
   watchLocation,
 }: UseStoreSelectionActionsParams) => {
-  const addStoreDetailToMap = (storeId: string, storeDetail: StoreLocation) => {
-    setActiveMapCategory("store");
+  const showStoreOnMap = (
+    storeId: string,
+    storeDetail: StoreLocation,
+    category: MapCategory = "store",
+  ) => {
+    setActiveMapCategory(category);
     setSoloStoreId(storeId);
     setHasSelectedStoreInfo(true);
     setIsWaitingForPinSelection(false);
@@ -148,7 +148,6 @@ export const useStoreSelectionActions = ({
   ) => {
     setSoloStoreId(options?.showOnlySelected ? storeId : "");
 
-    // 길찾기 중 다른 매장을 고르면 기존 경로를 지우고 새로 고른 매장 정보만 보여준다.
     if (routeDestinationStoreId && routeDestinationStoreId !== storeId) {
       resetRouteState();
     }
@@ -166,7 +165,6 @@ export const useStoreSelectionActions = ({
     if (nextStore && !stores.some((store) => store.id === nextStore.id)) {
       setStores((prevStores) => [...prevStores, nextStore]);
 
-      // 텍스트 검색 중에 골라 매장 묶음에 새로 들어간 매장은 기록해 두었다가 검색을 지울 때 뺀다.
       if (searchQuery.trim() && !isTagSearchQuery) {
         searchAddedStoreIdsRef.current.add(nextStore.id);
       }
@@ -183,7 +181,6 @@ export const useStoreSelectionActions = ({
           const hasStore = prevStores.some((store) => store.id === storeId);
 
           if (!hasStore) {
-            // 위에서 추가했던 매장이 그사이(검색 지우기 등) 빠졌다면 다시 넣지 않는다.
             return nextStore ? prevStores : [...prevStores, storeDetail];
           }
 
@@ -216,7 +213,6 @@ export const useStoreSelectionActions = ({
     startRoute(store.id);
     handleStoreSelect(store.id, { focusMap: true });
 
-    // 모바일은 화면이 좁아 카드·매장 목록이 경로를 가리므로 기본으로 닫아 둔다(도착 핀을 누르면 카드가 다시 열림).
     if (window.innerWidth < 768) {
       setHasSelectedStoreInfo(false);
       setIsStoreListCollapsed(true);
@@ -227,8 +223,6 @@ export const useStoreSelectionActions = ({
       return;
     }
 
-    // 위치가 아직 없을 때: 권한이 이미 있으면 바로 추적하고, 아직 묻지 않았으면 모달만 띄운다.
-    // (모달과 브라우저 권한 팝업이 동시에 뜨지 않도록 모달 동의 후에 추적을 시작한다.)
     void getGeolocationPermissionState().then((permissionState) => {
       if (permissionState === "denied") {
         resetRouteState();
@@ -252,51 +246,29 @@ export const useStoreSelectionActions = ({
     });
   };
 
-  const handleInitialStoreAction = async (action: StoreMapInitialAction) => {
-    setRouteReturnServices(action.activeServices ?? []);
-
-    const fallback =
-      categoryDisplayStores.find((store) => store.id === action.storeId) ??
-      categoryStores.find((store) => store.id === action.storeId) ??
-      searchableStores.find((store) => store.id === action.storeId) ??
-      stores.find((store) => store.id === action.storeId);
-    const storeDetail = await storeService
-      .fetchStoreDetail(action.storeId, fallback)
-      .catch(() => null);
-    const store = storeDetail ?? fallback;
-
-    if (!store) {
-      showToast("매장 정보를 불러오지 못했어요.");
-      return;
-    }
-
-    addStoreDetailToMap(action.storeId, store);
-
-    if (action.action === "route") {
-      if (action.routeMode) {
-        changeRouteMode(action.routeMode);
-      }
-
-      handleRouteStart(store);
-    }
-  };
+  const { handleInitialStoreAction } = useInitialStoreAction({
+    categoryDisplayStores,
+    categoryStores,
+    changeRouteMode,
+    handleRouteStart,
+    searchableStores,
+    setActiveMapCategory,
+    setRouteReturnServices,
+    setSelectedBenefitCategory,
+    showStoreOnMap,
+    stores,
+  });
 
   const closeSelectedStoreInfo = () => {
     setHasSelectedStoreInfo(false);
     setSoloStoreId("");
   };
-  /**
-   * 목록 토글(매장/제휴 혜택) 전환. 이전 탭에서 고른 매장의 정보 카드·길찾기는 새 탭 목록과 맞지 않으므로 닫는다.
-   */
-  // 매장 탭에서 쓰던 검색어(텍스트·"#뱃지")를 제휴 탭에 다녀오는 동안 보관한다.
   const storeTabSearchQueryRef = useRef("");
   const changeMapCategory = (category: MapCategory) => {
     if (category === activeMapCategory) {
       return;
     }
 
-    // 검색창은 두 탭이 함께 쓴다. 매장 탭의 검색어·뱃지 태그(#…)가 제휴 탭 검색창에 남지 않게 비우고,
-    // 매장 탭으로 돌아오면 원래 검색어를 되돌린다(매장 탭의 뱃지 선택·검색 결과는 그대로 유지돼 있다).
     if (category === "benefit") {
       storeTabSearchQueryRef.current = searchQuery;
       setSearchQuery("");
@@ -317,36 +289,23 @@ export const useStoreSelectionActions = ({
     setSoloStoreId("");
     setSelectedStoreId("");
   };
-  const showNearbyStoresAfterRoute = () => {
-    const currentPoint = routeDestinationStore
-      ? { lat: routeDestinationStore.lat, lng: routeDestinationStore.lng }
-      : userLocation
-        ? { lat: userLocation.lat, lng: userLocation.lng }
-        : defaultMapLocation;
-
-    resetRouteState();
-
-    // 제휴 혜택 탭에서 길찾기를 했다면 탭을 유지하고, 이미 불러온 제휴 매장 핀으로 돌아간다.
-    // (매장 탭으로 넘기거나 주변 일반 매장을 다시 조회하지 않는다)
-    if (activeMapCategory === "benefit") {
-      setIsSearchHistoryOpen(false);
-      setHasSelectedStoreInfo(false);
-      setSoloStoreId("");
-      setSelectedStoreId("");
-      setFocusPoint(currentPoint);
-      return;
-    }
-
-    setActiveMapCategory("store");
-    setSearchQuery("");
-    setIsSearchHistoryOpen(false);
-    setHasSelectedStoreInfo(false);
-    setIsWaitingForPinSelection(true);
-    setSelectedStoreId("");
-    setFocusPoint(currentPoint);
-    setSearchPoint(currentPoint);
-    updateStoresByLocation(currentPoint, { showLoadingCard: true });
-  };
+  const { showNearbyStoresAfterRoute } = useStoreRouteReturnActions({
+    activeMapCategory,
+    resetRouteState,
+    routeDestinationStore,
+    setActiveMapCategory,
+    setFocusPoint,
+    setHasSelectedStoreInfo,
+    setIsSearchHistoryOpen,
+    setIsWaitingForPinSelection,
+    setSearchPoint,
+    setSearchQuery,
+    setSelectedBenefitCategory,
+    setSelectedStoreId,
+    setSoloStoreId,
+    updateStoresByLocation,
+    userLocation,
+  });
   const focusUserLocation = () => {
     shouldFocusUserLocationRef.current = true;
     // 내 위치로 이동: 이후 텍스트 검색 정렬 중심은 내 위치
@@ -358,10 +317,7 @@ export const useStoreSelectionActions = ({
     }
 
     if (userLocation) {
-      setFocusPoint({
-        lat: userLocation.lat,
-        lng: userLocation.lng,
-      });
+      setFocusPoint({ lat: userLocation.lat, lng: userLocation.lng });
       setSearchPoint(null);
       hasFocusedInitialLocationRef.current = true;
       shouldFocusUserLocationRef.current = false;

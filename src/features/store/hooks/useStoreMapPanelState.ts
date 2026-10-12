@@ -232,9 +232,14 @@ export const useStoreMapPanelState = () => {
     locationStatus !== "denied" &&
     locationStatus !== "error" &&
     locationStatus !== "unsupported";
-  const mapSelectedStore = categorySelectedStore ?? routeDestinationStore;
+  const mapSelectedStore =
+    routeDestinationStoreId && routeDestinationStore
+      ? routeDestinationStore
+      : categorySelectedStore;
   const mapSelectedStoreId =
-    categorySelectedStore?.id ?? routeDestinationStore?.id ?? "";
+    routeDestinationStoreId && routeDestinationStore
+      ? routeDestinationStore.id
+      : (categorySelectedStore?.id ?? "");
   // 선택 매장과 같은 좌표(소수 5자리, 지도 묶음 핀과 같은 기준)에 있는 매장들
   const sameLocationStores = getSameLocationStores(
     mapSelectedStore,
