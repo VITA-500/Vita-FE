@@ -8,6 +8,7 @@ import {
   BarChart3,
   FileQuestion,
   Menu,
+  MessageSquareWarning,
   PanelLeftClose,
   PanelLeftOpen,
   Handshake,
@@ -20,6 +21,11 @@ import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
 
 const adminMenus = [
   { label: "대시보드", href: routes.admin, icon: BarChart3 },
+  {
+    label: "답변 피드백",
+    href: routes.adminUnresolved,
+    icon: MessageSquareWarning,
+  },
   { label: "FAQ 관리", href: routes.adminFaqs, icon: FileQuestion },
   { label: "대리점 관리", href: routes.adminStores, icon: Store },
   { label: "제휴점 관리", href: routes.adminPartners, icon: Handshake },
@@ -138,8 +144,9 @@ export const AdminShell = ({ children }: AdminShellProps) => {
                       <span
                         className={cn(
                           "flex h-10 w-10 items-center justify-center rounded-xl transition",
+                          // 접힌 상태의 활성 메뉴는 사용자 채팅 사이드바(ChatSidebarNav)와 같은 강조색을 쓴다.
                           !isOpen && isActive
-                            ? "bg-white text-gray-950 dark:bg-white/10 dark:text-white"
+                            ? "bg-brand shadow-brand/25 text-white shadow-sm"
                             : !isOpen
                               ? "group-hover:bg-gray-300/70 group-hover:text-gray-950 dark:group-hover:bg-white/10 dark:group-hover:text-white"
                               : "",
