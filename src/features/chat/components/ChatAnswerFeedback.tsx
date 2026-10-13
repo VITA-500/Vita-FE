@@ -5,7 +5,7 @@ import { ThumbsDown, ThumbsUp } from "lucide-react";
 import type { ChatFeedback, ChatMessage } from "@/features/chat/types";
 import { cn } from "@/shared/lib/cn";
 
-type ChatAnswerReportProps = {
+type ChatAnswerFeedbackProps = {
   isFeedbackSubmitting?: boolean;
   message: ChatMessage;
   onFeedback: (feedback: ChatFeedback) => void;
@@ -16,11 +16,11 @@ type ChatAnswerReportProps = {
  * 회원에게만 보인다. "아쉬워요"를 저장하면 BE가 피드백 API 안에서 관리자 답변 피드백 목록에 올리고,
  * "좋아요"로 바꾸거나 취소하면 내린다. FE는 피드백만 보낸다(useChatConversationController).
  */
-export const ChatAnswerReport = ({
+export const ChatAnswerFeedback = ({
   isFeedbackSubmitting = false,
   message,
   onFeedback,
-}: ChatAnswerReportProps) => (
+}: ChatAnswerFeedbackProps) => (
   <div className="mt-2 flex flex-wrap items-center gap-2 px-1">
     <span className="text-xs font-bold text-gray-400">도움이 되었나요?</span>
     <FeedbackButton

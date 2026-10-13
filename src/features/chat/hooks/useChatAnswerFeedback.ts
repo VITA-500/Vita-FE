@@ -6,7 +6,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import { canReportAnswer } from "@/features/chat/lib/chatAnswerReport";
+import { canSendAnswerFeedback } from "@/features/chat/lib/chatAnswerFeedback";
 import { chatService } from "@/features/chat/lib/chatService";
 import type { ChatFeedback, ChatMessage } from "@/features/chat/types";
 import { ApiError } from "@/shared/api/http";
@@ -44,7 +44,7 @@ export const useChatAnswerFeedback = ({
 
       if (
         !target ||
-        !canReportAnswer(target) ||
+        !canSendAnswerFeedback(target) ||
         !target.serverMessageId ||
         feedbackMessageIds.has(assistantMessageId)
       ) {

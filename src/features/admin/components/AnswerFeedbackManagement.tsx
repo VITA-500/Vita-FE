@@ -1,18 +1,18 @@
 "use client";
 
-import { AdminChatFeedbackContent } from "@/features/admin/components/AdminChatFeedbackContent";
-import { useAdminChatStats } from "@/features/admin/context/useAdminChatStats";
-import { getChatFeedbackStatItems } from "@/features/admin/lib/adminChatFeedbackStats";
-import { ADMIN_CHAT_STATS_MAX_LIMIT } from "@/features/admin/lib/adminChatStatsService";
+import { AnswerFeedbackContent } from "@/features/admin/components/AnswerFeedbackContent";
+import { useAdminAnswerFeedback } from "@/features/admin/context/useAdminAnswerFeedback";
+import { getAnswerFeedbackStatItems } from "@/features/admin/lib/answerFeedbackStats";
+import { ADMIN_ANSWER_FEEDBACK_MAX_LIMIT } from "@/features/admin/lib/adminAnswerFeedbackService";
 import { Card, CardContent, CardHeader } from "@/shared/ui/Card";
 import { StatCard } from "@/shared/ui/StatCard";
 
 /** 챗봇 답변 피드백 페이지. 많이 나온 순으로 최대 200개까지 보여준다. */
-export const AdminUnresolvedQueue = () => {
-  const { error, isLoading, stats } = useAdminChatStats(
-    ADMIN_CHAT_STATS_MAX_LIMIT,
+export const AnswerFeedbackManagement = () => {
+  const { error, isLoading, stats } = useAdminAnswerFeedback(
+    ADMIN_ANSWER_FEEDBACK_MAX_LIMIT,
   );
-  const statItems = getChatFeedbackStatItems(stats?.summary, isLoading);
+  const statItems = getAnswerFeedbackStatItems(stats?.summary, isLoading);
 
   return (
     <div>
@@ -44,7 +44,7 @@ export const AdminUnresolvedQueue = () => {
             description="같은 질문은 하나로 묶어 발생 횟수가 많은 순으로 보여줍니다."
           />
           <CardContent>
-            <AdminChatFeedbackContent
+            <AnswerFeedbackContent
               error={error}
               isLoading={isLoading}
               stats={stats}

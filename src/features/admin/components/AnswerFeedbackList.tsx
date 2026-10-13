@@ -4,15 +4,15 @@ import { ChevronDown, MessageSquareWarning } from "lucide-react";
 import { useState } from "react";
 import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
 import type {
-  AdminUnresolvedCandidate,
-  AdminUnresolvedReason,
+  AdminAnswerFeedback,
+  AdminAnswerFeedbackReason,
 } from "@/features/admin/types";
 import { cn } from "@/shared/lib/cn";
 import { formatKoreanMonthDay } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/Button";
 import { Modal } from "@/shared/ui/Modal";
 
-const failReasonLabels: Record<AdminUnresolvedReason, string> = {
+const failReasonLabels: Record<AdminAnswerFeedbackReason, string> = {
   ANSWER_FAILED: "답변 실패",
   LOW_SIMILARITY: "유사도 낮음",
   NO_MATCH: "검색 결과 없음",
@@ -20,10 +20,10 @@ const failReasonLabels: Record<AdminUnresolvedReason, string> = {
 };
 
 const getFailReasonLabel = (reason: string) =>
-  failReasonLabels[reason as AdminUnresolvedReason] ?? reason;
+  failReasonLabels[reason as AdminAnswerFeedbackReason] ?? reason;
 
 /** 피드백 유형별 배지 색. 사용자가 직접 남긴 아쉬워요와 자동 감지 사유를 눈으로 구분하게 한다. */
-const failReasonStyles: Record<AdminUnresolvedReason, string> = {
+const failReasonStyles: Record<AdminAnswerFeedbackReason, string> = {
   DISLIKED: "bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300",
   NO_MATCH:
     "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
@@ -33,7 +33,7 @@ const failReasonStyles: Record<AdminUnresolvedReason, string> = {
 };
 
 const getFailReasonStyle = (reason: string) =>
-  failReasonStyles[reason as AdminUnresolvedReason] ??
+  failReasonStyles[reason as AdminAnswerFeedbackReason] ??
   failReasonStyles.ANSWER_FAILED;
 
 /** 머리글과 각 행이 같은 칸 너비를 쓰도록 맞춘다(md 이상에서만 표 형태). */
@@ -45,8 +45,8 @@ export type DismissFeedback = (
   options?: { onSettled?: () => void },
 ) => void;
 
-type AdminUnresolvedQuestionListProps = {
-  candidates: readonly AdminUnresolvedCandidate[];
+type AnswerFeedbackListProps = {
+  candidates: readonly AdminAnswerFeedback[];
   /** 무시 처리 중인 항목 id */
   dismissingId?: number;
   /** 무시. 없으면 무시 버튼을 비활성으로 둔다. */
@@ -54,13 +54,12 @@ type AdminUnresolvedQuestionListProps = {
 };
 
 /** 챗봇 답변 피드백 목록. 대시보드와 답변 피드백 페이지가 함께 쓴다. */
-export const AdminUnresolvedQuestionList = ({
+export const AnswerFeedbackList = ({
   candidates,
   dismissingId,
   onDismiss,
-}: AdminUnresolvedQuestionListProps) => {
-  const [dismissTarget, setDismissTarget] =
-    useState<AdminUnresolvedCandidate>();
+}: AnswerFeedbackListProps) => {
+  const [dismissTarget, setDismissTarget] = useState<AdminAnswerFeedback>();
   const isDismissingTarget =
     dismissTarget !== undefined && dismissingId === dismissTarget.id;
 
@@ -157,9 +156,9 @@ const FeedbackRow = ({
   isDismissing,
   onRequestDismiss,
 }: {
-  candidate: AdminUnresolvedCandidate;
+  candidate: AdminAnswerFeedback;
   isDismissing: boolean;
-  onRequestDismiss?: (candidate: AdminUnresolvedCandidate) => void;
+  onRequestDismiss?: (candidate: AdminAnswerFeedback) => void;
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   // BE는 "아쉬워요"가 들어 있는 묶음만 무시할 수 있다(자동 감지만 있는 항목은 400).

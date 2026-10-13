@@ -104,7 +104,7 @@ export const chatService = {
   },
   /**
    * 답변 피드백(회원 전용, null이면 취소).
-   * BE는 DISLIKE면 관리자 미해결 질문 목록에 올리고, LIKE로 바꾸거나 취소하면 내린다.
+   * BE는 DISLIKE면 관리자 답변 피드백 목록에 올리고, LIKE로 바꾸거나 취소하면 내린다.
    */
   sendFeedback: (messageId: number, feedback: ChatFeedback | null) => {
     return requestJson<ChatFeedbackResponse>(

@@ -1,5 +1,5 @@
 import type {
-  AdminChatStats,
+  AdminAnswerFeedbackStats,
   AdminFaq,
   AdminStore,
   AdminStoreDetail,
@@ -74,8 +74,8 @@ export const storeDetails: AdminStoreDetail[] = storeRows.map(
   }),
 );
 
-/** API 주소가 없는 환경(Storybook·로컬 목업)용 미해결 질문 통계. */
-export const mockChatStats: AdminChatStats = {
+/** API 주소가 없는 환경(Storybook·로컬 목업)용 답변 피드백 통계. */
+export const mockAnswerFeedbackStats: AdminAnswerFeedbackStats = {
   summary: { unresolvedCount: 3, repeatCount: 36, todayCount: 1 },
   candidates: [
     {

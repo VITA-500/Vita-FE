@@ -92,7 +92,7 @@ export const useChatConversationController = ({
 
   /**
    * 답변 피드백(회원 전용). 관리자 전달은 BE가 피드백 API 안에서 처리한다:
-   * "아쉬워요"(DISLIKE)면 관리자 미해결 질문 목록에 올리고, "좋아요"로 바꾸거나 취소하면 내린다.
+   * "아쉬워요"(DISLIKE)면 관리자 답변 피드백 목록에 올리고, "좋아요"로 바꾸거나 취소하면 내린다.
    * 그래서 FE는 피드백만 보내고, "아쉬워요"를 새로 눌렀을 때만 감사 토스트를 띄운다.
    */
   const submitAnswerFeedback = async (

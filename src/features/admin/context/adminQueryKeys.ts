@@ -9,8 +9,9 @@ import type {
 import type { AdminStoreType } from "@/features/admin/types";
 
 export const adminQueryKeys = {
-  chatStatsAll: ["admin", "chatStats"] as const,
-  chatStats: (limit: number) => ["admin", "chatStats", { limit }] as const,
+  answerFeedbackAll: ["admin", "answerFeedback"] as const,
+  answerFeedback: (limit: number) =>
+    ["admin", "answerFeedback", { limit }] as const,
   faqs: ({
     category,
     keyword,
