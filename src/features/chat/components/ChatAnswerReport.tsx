@@ -13,7 +13,8 @@ type ChatAnswerReportProps = {
 
 /**
  * 답변 아래 "도움이 되었나요?" 피드백.
- * "아쉬워요"를 누르면 피드백 저장과 함께 관리자에게 바로 전달된다(useChatConversationController).
+ * 회원에게만 보인다. "아쉬워요"를 저장하면 BE가 피드백 API 안에서 관리자 답변 피드백 목록에 올리고,
+ * "좋아요"로 바꾸거나 취소하면 내린다. FE는 피드백만 보낸다(useChatConversationController).
  */
 export const ChatAnswerReport = ({
   isFeedbackSubmitting = false,

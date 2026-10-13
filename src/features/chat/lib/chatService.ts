@@ -18,7 +18,6 @@ type ChatSessionCreateResponse = {
 
 type ChatSessionClaimResponse = { sessionId: number; claimedAt: string };
 
-export type ChatReportResponse = { messageId: number; reportedAt: string };
 export type ChatFeedbackResponse = {
   messageId: number;
   feedback: ChatFeedback | null;
@@ -104,23 +103,12 @@ export const chatService = {
     return requestJson<ChatSessionListResponse>("/chat/sessions");
   },
   /**
-   * 답변을 미해결 질문으로 관리자에게 보낸다. 회원 전용(게스트는 401).
-   * 같은 답변을 다시 보내도 BE가 처음 신고를 그대로 돌려준다.
+   * 답변 피드백(회원 전용, null이면 취소).
+   * BE는 DISLIKE면 관리자 미해결 질문 목록에 올리고, LIKE로 바꾸거나 취소하면 내린다.
    */
-  reportToAdmin: (messageId: number) => {
-    return requestJson<ChatReportResponse>(
-      `/chat/messages/${messageId}/report-to-admin`,
-      { method: "POST" },
-    );
-  },
-  sendFeedback: (
-    messageId: number,
-    feedback: ChatFeedback | null,
-    guestId?: string,
-  ) => {
-    return requestChatJson<ChatFeedbackResponse>(
+  sendFeedback: (messageId: number, feedback: ChatFeedback | null) => {
+    return requestJson<ChatFeedbackResponse>(
       `/chat/messages/${messageId}/feedback`,
-      guestId,
       {
         method: "POST",
         body: JSON.stringify({ feedback }),

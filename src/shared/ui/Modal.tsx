@@ -48,6 +48,29 @@ export const Modal = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
+  // 모달이 열려 있는 동안 뒤 페이지가 스크롤되지 않게 막는다.
+  // 막지 않으면 모달 안 드롭다운(예: 매장 수정의 제휴 브랜드 선택)을 스크롤하거나 끝까지 내렸을 때
+  // 스크롤이 모달 바깥 페이지로 넘어가 뒤 화면이 움직였다.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const { body, documentElement } = document;
+    const previousOverflow = body.style.overflow;
+    const previousPaddingRight = body.style.paddingRight;
+    // 스크롤바가 사라지며 화면이 옆으로 밀리지 않게 그 폭만큼 오른쪽 여백을 둔다.
+    const scrollbarWidth = window.innerWidth - documentElement.clientWidth;
+
+    body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      body.style.overflow = previousOverflow;
+      body.style.paddingRight = previousPaddingRight;
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -67,7 +90,12 @@ export const Modal = ({
         aria-modal="true"
         padding="lg"
         style={{ boxShadow: "0 24px 80px rgba(25,31,40,0.18)" }}
-        className={cn("relative z-10 w-full", sizeStyles[size], className)}
+        // 모달 안을 끝까지 스크롤해도 바깥으로 스크롤이 이어지지 않게 한다.
+        className={cn(
+          "relative z-10 w-full overscroll-contain",
+          sizeStyles[size],
+          className,
+        )}
       >
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">

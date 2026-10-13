@@ -120,3 +120,43 @@ export type PageResponse<T> = {
   currentPage: number;
   content: T[];
 };
+
+/** 미해결 질문 사유. BE UnresolvedReason과 같다(DISLIKED는 사용자가 "아쉬워요"를 누른 답변). */
+export type AdminUnresolvedReason =
+  "NO_MATCH" | "LOW_SIMILARITY" | "ANSWER_FAILED" | "DISLIKED";
+
+/** GET /admin/stats/chat 의 미해결 질문(같은 질문끼리 묶음). */
+export type AdminUnresolvedCandidate = {
+  /** 가장 최근에 나온 답변 메시지 id */
+  id: number;
+  question: string;
+  /** 가장 최근에 나온 챗봇 답변 */
+  answer: string | null;
+  source: string;
+  /** 가장 최근 발생의 사유 */
+  failReason: AdminUnresolvedReason | string;
+  /** 같은 질문이 미해결로 나온 횟수 */
+  count: number;
+  lastOccurredAt: string;
+};
+
+export type AdminChatStats = {
+  summary: {
+    /** 미해결 질문 수(같은 질문은 하나로) */
+    unresolvedCount: number;
+    /** 미해결 질문이 나온 전체 횟수 */
+    repeatCount: number;
+    /** 오늘 마지막으로 나온 미해결 질문 수 */
+    todayCount: number;
+  };
+  /** 많이 나온 순 */
+  candidates: AdminUnresolvedCandidate[];
+};
+
+/** PATCH /admin/stats/chat/{id}/dismiss 응답 */
+export type AdminChatDismissResponse = {
+  /** 무시한 항목 id (candidates[].id) */
+  id: number;
+  /** 무시 처리된 "아쉬워요" 수 */
+  dismissedCount: number;
+};

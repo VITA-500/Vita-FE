@@ -183,7 +183,7 @@ export const StoreFormModal = ({
           ? `${storeLabel} 추가`
           : `${store?.name ?? storeLabel} 수정`
       }
-      description={`백엔드 관리자 API에 저장할 ${storeLabel} 정보를 입력해 주세요.`}
+      description={`저장할 ${storeLabel} 정보를 입력해 주세요.`}
       size="lg"
       className="max-h-[calc(100svh-48px)] overflow-y-auto"
     >

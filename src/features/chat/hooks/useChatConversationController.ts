@@ -9,7 +9,6 @@ import {
   getLastUserMessage,
 } from "@/features/chat/lib/chatConversationFlow";
 import { useChatAnswerFeedback } from "@/features/chat/hooks/useChatAnswerFeedback";
-import { useChatAnswerReport } from "@/features/chat/hooks/useChatAnswerReport";
 import { useChatAutoScroll } from "@/features/chat/hooks/useChatAutoScroll";
 import { useChatSessionList } from "@/features/chat/hooks/useChatSessionList";
 import { useChatSessionPreferences } from "@/features/chat/hooks/useChatSessionPreferences";
@@ -85,27 +84,16 @@ export const useChatConversationController = ({
   const activeConversationOwnerKeyRef = useRef("");
   const hasHydratedConversationRef = useRef(false);
   const hasChatStarted = messages.length > 0;
-  const { reportAnswerToAdmin, reportingMessageIds } = useChatAnswerReport({
+  const { feedbackMessageIds, sendAnswerFeedback } = useChatAnswerFeedback({
     isAuthenticated,
     messages,
     setMessages,
   });
-  const { feedbackMessageIds: savingFeedbackIds, sendAnswerFeedback } =
-    useChatAnswerFeedback({
-      isAuthenticated,
-      messages,
-      setMessages,
-    });
-  /** 피드백 저장이나 관리자 전달이 진행 중인 답변. 이 동안 피드백 버튼을 잠근다. */
-  const feedbackMessageIds = useMemo<ReadonlySet<string>>(
-    () => new Set([...savingFeedbackIds, ...reportingMessageIds]),
-    [reportingMessageIds, savingFeedbackIds],
-  );
 
   /**
-   * 답변 피드백. "아쉬워요"(DISLIKE)를 새로 누르면 피드백 저장과 함께 관리자에게 바로 보낸다.
-   * 피드백·관리자 전달 모두 회원 전용이라 비로그인이면 아무것도 보내지 않는다.
-   * 같은 답변을 다시 보내도 BE가 처음 신고를 돌려주고, FE도 reportedAt이 있으면 다시 보내지 않는다.
+   * 답변 피드백(회원 전용). 관리자 전달은 BE가 피드백 API 안에서 처리한다:
+   * "아쉬워요"(DISLIKE)면 관리자 미해결 질문 목록에 올리고, "좋아요"로 바꾸거나 취소하면 내린다.
+   * 그래서 FE는 피드백만 보내고, "아쉬워요"를 새로 눌렀을 때만 감사 토스트를 띄운다.
    */
   const submitAnswerFeedback = async (
     assistantMessageId: string,
@@ -124,13 +112,14 @@ export const useChatConversationController = ({
       return;
     }
 
-    const [savedFeedback, isReported] = await Promise.all([
-      sendAnswerFeedback(assistantMessageId, feedback, { silent: true }),
-      reportAnswerToAdmin(assistantMessageId, { silent: true }),
-    ]);
+    const savedFeedback = await sendAnswerFeedback(
+      assistantMessageId,
+      feedback,
+      { silent: true },
+    );
 
     showToast(
-      savedFeedback === "DISLIKE" || isReported
+      savedFeedback === "DISLIKE"
         ? "소중한 의견 감사합니다. 더 나은 답변을 만드는 데 참고할게요."
         : "의견을 전달하지 못했어요. 잠시 후 다시 시도해 주세요.",
     );
