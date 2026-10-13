@@ -9,11 +9,11 @@ import {
   StoppedAnswer,
   StreamingAnswer,
 } from "@/features/chat/components/ChatAssistantMessageParts";
-import { ChatAnswerReport } from "@/features/chat/components/ChatAnswerReport";
+import { ChatAnswerFeedback } from "@/features/chat/components/ChatAnswerFeedback";
 import { ChatMarkdown } from "@/features/chat/components/ChatMarkdown";
 import { ChatStoreMap } from "@/features/chat/components/ChatStoreMap";
 import { UserMessageBubble } from "@/features/chat/components/UserMessageBubble";
-import { canReportAnswer } from "@/features/chat/lib/chatAnswerReport";
+import { canSendAnswerFeedback } from "@/features/chat/lib/chatAnswerFeedback";
 import { resolveChatActionHref } from "@/features/chat/lib/chatStoreActions";
 import { stripStoreTablesFromAnswer } from "@/features/chat/lib/chatStoreAnswerContent";
 import type {
@@ -107,8 +107,8 @@ const AssistantSuccessMessage = ({
         )}
       </AssistantBubble>
 
-      {onFeedbackAnswer && canReportAnswer(message) && (
-        <ChatAnswerReport
+      {onFeedbackAnswer && canSendAnswerFeedback(message) && (
+        <ChatAnswerFeedback
           isFeedbackSubmitting={isFeedbackSubmitting}
           message={message}
           onFeedback={(feedback) => onFeedbackAnswer(message.id, feedback)}

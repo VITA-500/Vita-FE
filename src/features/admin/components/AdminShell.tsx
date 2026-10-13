@@ -23,7 +23,7 @@ const adminMenus = [
   { label: "대시보드", href: routes.admin, icon: BarChart3 },
   {
     label: "답변 피드백",
-    href: routes.adminUnresolved,
+    href: routes.adminFeedback,
     icon: MessageSquareWarning,
   },
   { label: "FAQ 관리", href: routes.adminFaqs, icon: FileQuestion },

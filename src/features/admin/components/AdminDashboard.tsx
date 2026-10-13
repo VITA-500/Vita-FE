@@ -1,25 +1,25 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
-import { AdminChatFeedbackContent } from "@/features/admin/components/AdminChatFeedbackContent";
+import { AnswerFeedbackContent } from "@/features/admin/components/AnswerFeedbackContent";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
-import { useAdminChatStats } from "@/features/admin/context/useAdminChatStats";
-import { getChatFeedbackStatItems } from "@/features/admin/lib/adminChatFeedbackStats";
+import { useAdminAnswerFeedback } from "@/features/admin/context/useAdminAnswerFeedback";
+import { getAnswerFeedbackStatItems } from "@/features/admin/lib/answerFeedbackStats";
 import { routes } from "@/shared/constants/routes";
 import { ButtonLink } from "@/shared/ui/Button";
 import { Card, CardContent, CardHeader } from "@/shared/ui/Card";
 import { StatCard } from "@/shared/ui/StatCard";
 
 /** 대시보드에는 많이 나온 답변 피드백 몇 개만 보여주고, 나머지는 답변 피드백 페이지에서 본다. */
-const DASHBOARD_UNRESOLVED_LIMIT = 5;
+const DASHBOARD_FEEDBACK_LIMIT = 5;
 
 export const AdminDashboard = () => {
   const { storeDetails } = useAdminData();
   const {
-    error: chatStatsError,
-    isLoading: isChatStatsLoading,
-    stats: chatStats,
-  } = useAdminChatStats(DASHBOARD_UNRESOLVED_LIMIT);
+    error: feedbackError,
+    isLoading: isFeedbackLoading,
+    stats: feedbackStats,
+  } = useAdminAnswerFeedback(DASHBOARD_FEEDBACK_LIMIT);
   const storesMissingPhone = storeDetails.filter(
     (store) => !store.phone?.trim(),
   );
@@ -36,7 +36,7 @@ export const AdminDashboard = () => {
     storesMissingServices.length;
 
   const adminStats = [
-    ...getChatFeedbackStatItems(chatStats?.summary, isChatStatsLoading),
+    ...getAnswerFeedbackStatItems(feedbackStats?.summary, isFeedbackLoading),
     {
       label: "데이터 점검",
       value: dataQualityIssueCount.toLocaleString("ko-KR"),
@@ -73,14 +73,14 @@ export const AdminDashboard = () => {
             description="챗봇이 답하지 못했거나 아쉬워요를 받은 답변을 확인하고 FAQ로 보완합니다."
           />
           <CardContent>
-            <AdminChatFeedbackContent
-              error={chatStatsError}
-              isLoading={isChatStatsLoading}
-              stats={chatStats}
+            <AnswerFeedbackContent
+              error={feedbackError}
+              isLoading={isFeedbackLoading}
+              stats={feedbackStats}
             />
             <div className="mt-4 flex justify-end">
               <ButtonLink
-                href={routes.adminUnresolved}
+                href={routes.adminFeedback}
                 variant="secondary"
                 size="xs"
               >

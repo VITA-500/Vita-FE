@@ -1,11 +1,11 @@
-import type { AdminChatStats } from "@/features/admin/types";
+import type { AdminAnswerFeedbackStats } from "@/features/admin/types";
 
 const formatCount = (value: number | undefined, isLoading: boolean) =>
   isLoading || value === undefined ? "-" : value.toLocaleString("ko-KR");
 
 /** 답변 피드백 통계 카드 3개. 대시보드와 답변 피드백 페이지가 같은 문구로 쓴다. */
-export const getChatFeedbackStatItems = (
-  summary: AdminChatStats["summary"] | undefined,
+export const getAnswerFeedbackStatItems = (
+  summary: AdminAnswerFeedbackStats["summary"] | undefined,
   isLoading: boolean,
 ) => [
   {

@@ -1,23 +1,23 @@
 "use client";
 
 import { AdminErrorBanner } from "@/features/admin/components/AdminErrorBanner";
-import { AdminUnresolvedQuestionList } from "@/features/admin/components/AdminUnresolvedQuestionList";
-import { useDismissUnresolvedQuestion } from "@/features/admin/context/useAdminChatStats";
-import type { AdminChatStats } from "@/features/admin/types";
+import { AnswerFeedbackList } from "@/features/admin/components/AnswerFeedbackList";
+import { useDismissAnswerFeedback } from "@/features/admin/context/useAdminAnswerFeedback";
+import type { AdminAnswerFeedbackStats } from "@/features/admin/types";
 
-type AdminChatFeedbackContentProps = {
+type AnswerFeedbackContentProps = {
   error: string | null;
   isLoading: boolean;
-  stats: AdminChatStats | null;
+  stats: AdminAnswerFeedbackStats | null;
 };
 
 /** 답변 피드백 카드 본문(오류·불러오는 중·목록). 대시보드와 답변 피드백 페이지가 함께 쓴다. */
-export const AdminChatFeedbackContent = ({
+export const AnswerFeedbackContent = ({
   error,
   isLoading,
   stats,
-}: AdminChatFeedbackContentProps) => {
-  const { dismiss, dismissingId } = useDismissUnresolvedQuestion();
+}: AnswerFeedbackContentProps) => {
+  const { dismiss, dismissingId } = useDismissAnswerFeedback();
 
   return (
     <>
@@ -28,7 +28,7 @@ export const AdminChatFeedbackContent = ({
         </p>
       ) : (
         stats && (
-          <AdminUnresolvedQuestionList
+          <AnswerFeedbackList
             candidates={stats.candidates}
             dismissingId={dismissingId}
             onDismiss={dismiss}

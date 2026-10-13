@@ -1,28 +1,28 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { mockChatStats } from "@/features/admin/constants/adminData";
+import { mockAnswerFeedbackStats } from "@/features/admin/constants/adminData";
 import { adminQueryKeys } from "@/features/admin/context/adminQueryKeys";
-import { adminChatStatsService } from "@/features/admin/lib/adminChatStatsService";
-import type { AdminChatStats } from "@/features/admin/types";
+import { adminAnswerFeedbackService } from "@/features/admin/lib/adminAnswerFeedbackService";
+import type { AdminAnswerFeedbackStats } from "@/features/admin/types";
 import { ApiError } from "@/shared/api/http";
 import { env } from "@/shared/config/env";
 import { showToast } from "@/shared/ui/ToastProvider";
 
-const toLimitedMock = (limit: number): AdminChatStats => ({
-  ...mockChatStats,
-  candidates: mockChatStats.candidates.slice(0, limit),
+const toLimitedMock = (limit: number): AdminAnswerFeedbackStats => ({
+  ...mockAnswerFeedbackStats,
+  candidates: mockAnswerFeedbackStats.candidates.slice(0, limit),
 });
 
 /**
- * 관리자 미해결 질문 통계(GET /admin/stats/chat).
+ * 관리자 답변 피드백 통계(GET /admin/stats/chat).
  * API 주소가 없는 환경(Storybook·로컬 목업)에서는 목데이터를 쓴다.
  */
-export const useAdminChatStats = (limit: number) => {
+export const useAdminAnswerFeedback = (limit: number) => {
   const query = useQuery({
     enabled: Boolean(env.apiBaseUrl),
-    queryFn: () => adminChatStatsService.fetchChatStats(limit),
-    queryKey: adminQueryKeys.chatStats(limit),
+    queryFn: () => adminAnswerFeedbackService.fetchStats(limit),
+    queryKey: adminQueryKeys.answerFeedback(limit),
   });
 
   if (!env.apiBaseUrl) {
@@ -48,14 +48,14 @@ export const useAdminChatStats = (limit: number) => {
  * 답변 피드백 무시(PATCH /admin/stats/chat/{id}/dismiss).
  * 성공하면 limit과 상관없이 답변 피드백 통계를 모두 다시 불러온다(대시보드·답변 피드백 페이지). 같은 묶음에 자동 감지 기록도 있으면 항목은 목록에 남는다.
  */
-export const useDismissUnresolvedQuestion = () => {
+export const useDismissAnswerFeedback = () => {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (id: number) => adminChatStatsService.dismiss(id),
+    mutationFn: (id: number) => adminAnswerFeedbackService.dismiss(id),
     onSuccess: async ({ dismissedCount }) => {
       showToast(`아쉬워요 ${dismissedCount}건을 무시 처리했어요.`);
       await queryClient.invalidateQueries({
-        queryKey: adminQueryKeys.chatStatsAll,
+        queryKey: adminQueryKeys.answerFeedbackAll,
       });
     },
     onError: (error) => {
