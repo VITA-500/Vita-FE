@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  canReportAnswer,
-  isUnresolvedAnswer,
-} from "@/features/chat/lib/chatAnswerReport";
+import { canReportAnswer } from "@/features/chat/lib/chatAnswerReport";
 import type { ChatMessage } from "@/features/chat/types";
 
 const answer = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
@@ -16,25 +13,6 @@ const answer = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
 });
 
 describe("chatAnswerReport", () => {
-  it("treats the no-context answer phrase as unresolved", () => {
-    expect(
-      isUnresolvedAnswer(
-        answer({
-          content: "해당 정보는 확인이 어렵습니다. 고객센터로 문의해주세요.",
-        }),
-      ),
-    ).toBe(true);
-    expect(isUnresolvedAnswer(answer())).toBe(false);
-  });
-
-  it("does not treat user messages as unresolved answers", () => {
-    expect(
-      isUnresolvedAnswer(
-        answer({ role: "user", content: "해당 정보는 확인이 어렵습니다" }),
-      ),
-    ).toBe(false);
-  });
-
   it("allows reporting only saved, successful answers", () => {
     expect(canReportAnswer(answer())).toBe(true);
     expect(canReportAnswer(answer({ status: undefined }))).toBe(true);
