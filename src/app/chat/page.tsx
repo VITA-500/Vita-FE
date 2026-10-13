@@ -179,6 +179,15 @@ const ChatPageContent = () => {
         onSelectChat={(targetSessionId) => {
           void handleSelectChat(targetSessionId);
         }}
+        onOpenCurrentChat={() => {
+          setRailTooltip(null);
+
+          // 길찾기 등 매장 지도에서 돌아올 때. 대화는 화면 상태·저장소에 그대로 있어 다시 불러오지 않는다.
+          if (activeMode !== "chat") {
+            router.replace(routes.chat);
+          }
+        }}
+        isCurrentChatAnswering={chatStatus === "loading"}
         pinnedSessionIds={pinnedSessionIds}
         onTogglePinChat={togglePinChatSession}
         onDeleteChat={deleteChatSession}

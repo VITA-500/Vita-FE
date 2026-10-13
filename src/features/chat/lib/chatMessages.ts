@@ -12,10 +12,14 @@ import {
   isStoreRelatedPrompt,
   shouldUseLocalStoreFallback,
 } from "@/features/chat/lib/chatStoreMap";
+import { toSafeTitleText } from "@/features/chat/lib/chatTitleMask";
 import { routes } from "@/shared/constants/routes";
 
-export const toChatTitle = (prompt: string) =>
-  prompt.length > 18 ? `${prompt.slice(0, 18)}...` : prompt;
+export const toChatTitle = (prompt: string) => {
+  const title = toSafeTitleText(prompt);
+
+  return title.length > 18 ? `${title.slice(0, 18)}...` : title;
+};
 
 export { isStoreRelatedPrompt };
 
