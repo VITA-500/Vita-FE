@@ -3,6 +3,7 @@
 import type { MouseEvent } from "react";
 import { useRef, useState } from "react";
 import { PanelLeftClose, PanelLeftOpen, Search, X } from "lucide-react";
+import { ChatCurrentSession } from "@/features/chat/components/ChatCurrentSession";
 import { ChatDeleteConfirmDialog } from "@/features/chat/components/ChatDeleteConfirmDialog";
 import { ChatSessionList } from "@/features/chat/components/ChatSessionList";
 import { ChatSessionMenu } from "@/features/chat/components/ChatSessionMenu";
@@ -55,6 +56,10 @@ type ChatSidebarProps = {
   /** 최근 상담 목록(제목)을 아직 불러오는 중. 그동안은 목록을 접어 두고, 다 불러오면 펼친다. */
   isRecentChatsLoading?: boolean;
   onSelectChat?: (sessionId: number) => void;
+  /** "현재 상담"을 눌렀을 때. 지도·프로필 화면이면 채팅 화면으로 돌아간다. */
+  onOpenCurrentChat?: () => void;
+  /** 현재 상담의 답변을 만드는 중. */
+  isCurrentChatAnswering?: boolean;
   /** 고정한 상담 id(고정한 순서). */
   pinnedSessionIds?: readonly number[];
   onTogglePinChat?: (sessionId: number) => void;
@@ -80,6 +85,8 @@ export const ChatSidebar = ({
   onOpenSearch,
   onDeleteChat,
   onSelectChat,
+  onOpenCurrentChat,
+  isCurrentChatAnswering = false,
   onTogglePinChat,
   pendingSessionId = null,
   pinnedSessionIds = [],
@@ -98,15 +105,20 @@ export const ChatSidebar = ({
   const chatMenuRef = useRef<HTMLDivElement>(null);
   const isGuest = isAuthReady && !isAuthenticated && !isAuthLoading;
 
-  const { isPinnedChat, pinnedChats, unpinnedRecentChats, visibleRecentChats } =
-    buildSidebarChatItems({
-      activeSessionId,
-      chatSessions,
-      currentChatTitle,
-      pendingSessionId,
-      pinnedSessionIds,
-      sessionTitles,
-    });
+  const {
+    currentChat,
+    isPinnedChat,
+    pinnedChats,
+    unpinnedRecentChats,
+    visibleRecentChats,
+  } = buildSidebarChatItems({
+    activeSessionId,
+    chatSessions,
+    currentChatTitle,
+    pendingSessionId,
+    pinnedSessionIds,
+    sessionTitles,
+  });
   const menuChat = chatMenu
     ? (visibleRecentChats.find((chat) => chat.key === chatMenu.chatKey) ?? null)
     : null;
@@ -284,6 +296,22 @@ export const ChatSidebar = ({
             onShowRailTooltip={onShowRailTooltip}
             pendingSessionId={pendingSessionId}
           />
+
+          {currentChat && (
+            <ChatCurrentSession
+              chat={currentChat}
+              isActive={activeMode === "chat" && currentChat.active}
+              isAnswering={isCurrentChatAnswering}
+              isGuest={isGuest}
+              isOpen={isOpen}
+              isPinned={isPinnedChat(currentChat)}
+              onHideTooltip={onHideTooltip}
+              onOpen={() => onOpenCurrentChat?.()}
+              onOpenMenu={openChatMenu}
+              onShowRailTooltip={onShowRailTooltip}
+              onTogglePin={handlePinChat}
+            />
+          )}
 
           {isAuthenticated && (
             <div

@@ -16,6 +16,7 @@ import {
   isPermanentClaimError,
 } from "@/features/chat/lib/chatService";
 import { toChatMessage, toChatTitle } from "@/features/chat/lib/chatMessages";
+import { toSafeTitleText } from "@/features/chat/lib/chatTitleMask";
 import { restoreCachedStoreMaps } from "@/features/chat/lib/chatStoreMapCache";
 import type {
   ChatMessage,
@@ -124,11 +125,6 @@ export const useChatConversationHydration = ({
               guestConversation.guestId,
             )
             .then((response) => {
-              console.info("Guest chat claim succeeded", {
-                guestId: guestConversation.guestId,
-                response,
-                sessionId: guestConversation.sessionId,
-              });
               if (!isCancelled) {
                 showToast("로그인 전 상담 내역을 계정에 저장했어요.");
               }
@@ -141,9 +137,9 @@ export const useChatConversationHydration = ({
               chatConversationStorage.clear(getGuestChatConversationOwnerKey());
             })
             .catch((error) => {
+              // guestId는 게스트 상담을 여는 열쇠라 로그에 남기지 않는다.
               console.error("Guest chat claim failed", {
                 error,
-                guestId: guestConversation.guestId,
                 sessionId: guestConversation.sessionId,
               });
 
@@ -179,7 +175,8 @@ export const useChatConversationHydration = ({
 
       const frameId = window.requestAnimationFrame(() => {
         setMessages(nextConversation?.messages ?? []);
-        setCurrentChatTitle(nextConversation?.title ?? "");
+        // 예전에 저장된 제목은 가리기 전 값일 수 있어 불러올 때 한 번 더 가린다.
+        setCurrentChatTitle(toSafeTitleText(nextConversation?.title ?? ""));
         setCurrentGuestId(
           currentUserId !== undefined ? undefined : nextConversation?.guestId,
         );

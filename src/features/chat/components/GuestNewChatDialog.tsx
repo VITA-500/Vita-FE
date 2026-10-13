@@ -37,7 +37,7 @@ export const GuestNewChatDialog = ({
       </h2>
 
       <p className="mt-3 text-sm leading-6 font-medium text-gray-500 dark:text-gray-400">
-        새 채팅을 시작하면 현재 대화가 삭제됩니다.
+        새 채팅을 시작하면 지금 대화는 다시 볼 수 없어요.
         <br />
         채팅을 저장하려면{" "}
         <span className="font-extrabold text-gray-800 dark:text-gray-100">

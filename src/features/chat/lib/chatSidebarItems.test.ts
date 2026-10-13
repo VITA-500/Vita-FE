@@ -55,4 +55,82 @@ describe("chatSidebarItems", () => {
       title: "방금 시작한 상담",
     });
   });
+
+  it("shows the opened chat as the current chat and removes it from recent and pinned lists", () => {
+    const { currentChat, pinnedChats, unpinnedRecentChats } =
+      buildSidebarChatItems({
+        activeSessionId: 2,
+        currentChatTitle: "둘째 상담",
+        chatSessions: [
+          { sessionId: 1, title: "첫 상담", updatedAt: "2026-10-07T09:00:00" },
+          {
+            sessionId: 2,
+            title: "둘째 상담",
+            updatedAt: "2026-10-07T10:00:00",
+          },
+          {
+            sessionId: 3,
+            title: "셋째 상담",
+            updatedAt: "2026-10-07T11:00:00",
+          },
+        ],
+        pinnedSessionIds: [2, 1],
+      });
+
+    expect(currentChat).toMatchObject({
+      active: true,
+      key: "session-2",
+      sessionId: 2,
+      title: "둘째 상담",
+    });
+    expect(pinnedChats.map((chat) => chat.sessionId)).toEqual([1]);
+    expect(unpinnedRecentChats.map((chat) => chat.sessionId)).toEqual([3]);
+  });
+
+  it("keeps the current chat while another chat is loading", () => {
+    const { currentChat, unpinnedRecentChats } = buildSidebarChatItems({
+      activeSessionId: 2,
+      currentChatTitle: "둘째 상담",
+      chatSessions: [
+        { sessionId: 1, title: "첫 상담", updatedAt: "2026-10-07T09:00:00" },
+        { sessionId: 2, title: "둘째 상담", updatedAt: "2026-10-07T10:00:00" },
+      ],
+      pendingSessionId: 1,
+    });
+
+    expect(currentChat).toMatchObject({ active: false, sessionId: 2 });
+    expect(unpinnedRecentChats).toEqual([
+      expect.objectContaining({ active: true, sessionId: 1 }),
+    ]);
+  });
+
+  it("builds a current chat for guests without a server list", () => {
+    const { currentChat, unpinnedRecentChats } = buildSidebarChatItems({
+      activeSessionId: 9,
+      currentChatTitle: "비회원 상담",
+    });
+
+    expect(currentChat).toMatchObject({ key: "session-9", sessionId: 9 });
+    expect(unpinnedRecentChats).toEqual([]);
+  });
+
+  it("has no current chat before the first question", () => {
+    expect(buildSidebarChatItems({ activeSessionId: null }).currentChat).toBe(
+      null,
+    );
+  });
+
+  it("masks personal information in sidebar titles", () => {
+    const { currentChat, unpinnedRecentChats } = buildSidebarChatItems({
+      activeSessionId: null,
+      currentChatTitle: "010-1234-5678 개통 문의",
+      chatSessions: [
+        { sessionId: 1, title: null, updatedAt: "2026-10-07T09:00:00" },
+      ],
+      sessionTitles: { 1: "a.user@example.com 영수증" },
+    });
+
+    expect(currentChat?.title).toBe("010-****-5678 개통 문의");
+    expect(unpinnedRecentChats[0]?.title).toBe("***@example.com 영수증");
+  });
 });
