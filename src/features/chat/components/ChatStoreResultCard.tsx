@@ -1,4 +1,12 @@
-import { CalendarCheck, MapPin, Navigation } from "lucide-react";
+import type { ReactNode } from "react";
+import {
+  CalendarCheck,
+  Clock,
+  MapPin,
+  Navigation,
+  Phone,
+  type LucideIcon,
+} from "lucide-react";
 import { StoreOpenStatusBadge } from "@/features/store/components/StoreOpenStatusBadge";
 import { getStoreMapRouteUrl } from "@/features/store/lib/mapLinks";
 import { getServiceFilterColor } from "@/features/store/lib/markerColors";
@@ -29,7 +37,8 @@ export const ChatStoreResultCard = ({
   serviceColorByValue,
   store,
 }: ChatStoreResultCardProps) => {
-  const canReserve = store.storeType !== "PARTNER";
+  const isPartner = store.storeType === "PARTNER";
+  const canReserve = !isPartner;
 
   return (
     <article
@@ -69,14 +78,20 @@ export const ChatStoreResultCard = ({
         </p>
         <MapPin className="text-brand h-4 w-4 shrink-0" />
       </div>
-      {/* 영업 상태·거리는 아래 서비스 뱃지와 같은 왼쪽 선에 맞춘다. */}
+      {/* 영업 상태·거리(왼쪽)와 업종(오른쪽 끝)을 한 줄에 둔다. */}
       <StoreCardMeta store={store} />
 
-      <ServiceBadges
-        matchedServices={matchedServices}
-        serviceColorByValue={serviceColorByValue}
-        store={store}
-      />
+      {/* 운영시간·주소·전화번호는 같은 글씨 크기·아이콘·간격의 줄로 맞춘다.
+          제휴 매장은 혜택명(예: 음료 사이즈 업)만으로는 방문 판단이 어려워 주소·전화번호를 보여준다. */}
+      <StoreInfoRows isPartner={isPartner} store={store} />
+
+      {!isPartner && (
+        <ServiceBadges
+          matchedServices={matchedServices}
+          serviceColorByValue={serviceColorByValue}
+          store={store}
+        />
+      )}
 
       <StoreCardActions
         activeServices={activeServices}
@@ -132,13 +147,16 @@ const StoreCardActions = ({
 const StoreCardMeta = ({ store }: { store: StoreLocation }) => {
   // 답변은 브라우저에 저장돼 나중에 다시 열리므로, 지금 시각 기준으로 다시 계산한다.
   const openNow = getCurrentOpenStatus(store);
+  // 제휴 매장은 업종(카페·아이스크림·영화·외식·자동차·쇼핑·여가)을 함께 보여 어떤 매장인지 바로 알 수 있게 한다.
+  const category =
+    store.storeType === "PARTNER" ? store.benefitCategory?.trim() : "";
 
-  if (openNow === undefined && !store.distanceText) {
-    return <div className="mb-3" />;
+  if (openNow === undefined && !store.distanceText && !category) {
+    return <div className="mb-2" />;
   }
 
   return (
-    <div className="mt-2.5 mb-3 flex flex-wrap items-center gap-1.5">
+    <div className="mt-2.5 mb-2 flex min-h-5 items-center gap-1.5">
       <StoreOpenStatusBadge
         businessHours={store.businessHours}
         openNow={openNow}
@@ -148,7 +166,92 @@ const StoreCardMeta = ({ store }: { store: StoreLocation }) => {
           {store.distanceText}
         </span>
       )}
+      {category && (
+        <span className="ml-auto shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-extrabold text-gray-500 dark:bg-white/10 dark:text-gray-300">
+          {category}
+        </span>
+      )}
     </div>
+  );
+};
+
+/** 주소가 없을 때 ChatStoreMap이 넣는 자리 문구. 실제 주소가 아니라 보여주지 않는다. */
+const ADDRESS_PLACEHOLDER = "주소 정보 확인 중";
+
+const InfoRow = ({
+  children,
+  icon: Icon,
+  label,
+  title,
+}: {
+  children: ReactNode;
+  icon: LucideIcon;
+  label: string;
+  title?: string;
+}) => (
+  <div className="flex items-start gap-1.5">
+    <dt className="sr-only">{label}</dt>
+    <Icon
+      aria-hidden="true"
+      className="mt-[3px] h-3.5 w-3.5 shrink-0 text-gray-400"
+    />
+    <dd className="line-clamp-2 min-w-0 break-keep" title={title}>
+      {children}
+    </dd>
+  </div>
+);
+
+const StoreInfoRows = ({
+  isPartner,
+  store,
+}: {
+  isPartner: boolean;
+  store: StoreLocation;
+}) => {
+  const businessHours = store.businessHours?.trim() ?? "";
+  const address =
+    isPartner && store.address && store.address !== ADDRESS_PLACEHOLDER
+      ? store.address
+      : "";
+  const phone = isPartner ? (store.phone?.trim() ?? "") : "";
+
+  if (!businessHours && !address && !phone) {
+    return isPartner ? (
+      <p className="text-text-secondary mb-3 text-xs font-medium dark:text-gray-400">
+        매장 정보 확인 중
+      </p>
+    ) : null;
+  }
+
+  return (
+    <dl
+      className={cn(
+        "text-text-secondary space-y-1 text-xs leading-5 font-medium dark:text-gray-300",
+        isPartner ? "mb-1" : "mb-2.5",
+      )}
+    >
+      {businessHours && (
+        <InfoRow icon={Clock} label="운영시간" title={businessHours}>
+          {businessHours}
+        </InfoRow>
+      )}
+      {address && (
+        <InfoRow icon={MapPin} label="주소" title={address}>
+          {address}
+        </InfoRow>
+      )}
+      {phone && (
+        <InfoRow icon={Phone} label="전화번호">
+          <a
+            href={`tel:${phone.replace(/[^\d+]/g, "")}`}
+            onClick={(event) => event.stopPropagation()}
+            className="hover:text-brand underline-offset-2 hover:underline"
+          >
+            {phone}
+          </a>
+        </InfoRow>
+      )}
+    </dl>
   );
 };
 

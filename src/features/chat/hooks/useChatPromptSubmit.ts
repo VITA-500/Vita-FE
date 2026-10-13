@@ -27,6 +27,7 @@ import {
 } from "@/features/chat/lib/chatStoreMapMessage";
 import { createTextReveal } from "@/features/chat/lib/chatTextReveal";
 import type { ChatMessage, ChatStreamingReply } from "@/features/chat/types";
+import { ApiError } from "@/shared/api/http";
 
 type SubmitChatPromptOptions = {
   /** 이 메시지부터 뒤를 지우고 새 질문으로 다시 묻는다(질문 수정 · 다시 시도). */
@@ -227,7 +228,10 @@ export const useChatPromptSubmit = ({
 
         if (signal.aborted) return;
 
-        console.error("Chat API request failed", error);
+        console.error("Chat API request failed", {
+          name: error instanceof Error ? error.name : "UnknownError",
+          status: error instanceof ApiError ? error.status : undefined,
+        });
         const fallbackMessage =
           await createFallbackAssistantMessage(trimmedPrompt);
 

@@ -87,7 +87,7 @@ export const ChatSidebarNav = ({
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-xl transition",
                 !isOpen && isActive
-                  ? "bg-white text-gray-950 dark:bg-white/10 dark:text-white"
+                  ? "bg-brand shadow-brand/25 text-white shadow-sm"
                   : !isOpen
                     ? menu.disabled
                       ? ""

@@ -1,4 +1,5 @@
 import type {
+  ChatFeedback,
   ChatSessionListResponse,
   SessionMessagesResponse,
 } from "@/features/chat/types";
@@ -16,6 +17,12 @@ type ChatSessionCreateResponse = {
 };
 
 type ChatSessionClaimResponse = { sessionId: number; claimedAt: string };
+
+export type ChatReportResponse = { messageId: number; reportedAt: string };
+export type ChatFeedbackResponse = {
+  messageId: number;
+  feedback: ChatFeedback | null;
+};
 
 /**
  * 진행 중인 claim 요청. 로그인 직후 채팅 화면의 effect가 여러 번 실행되면
@@ -95,6 +102,30 @@ export const chatService = {
   },
   getSessions: () => {
     return requestJson<ChatSessionListResponse>("/chat/sessions");
+  },
+  /**
+   * 답변을 미해결 질문으로 관리자에게 보낸다. 회원 전용(게스트는 401).
+   * 같은 답변을 다시 보내도 BE가 처음 신고를 그대로 돌려준다.
+   */
+  reportToAdmin: (messageId: number) => {
+    return requestJson<ChatReportResponse>(
+      `/chat/messages/${messageId}/report-to-admin`,
+      { method: "POST" },
+    );
+  },
+  sendFeedback: (
+    messageId: number,
+    feedback: ChatFeedback | null,
+    guestId?: string,
+  ) => {
+    return requestChatJson<ChatFeedbackResponse>(
+      `/chat/messages/${messageId}/feedback`,
+      guestId,
+      {
+        method: "POST",
+        body: JSON.stringify({ feedback }),
+      },
+    );
   },
   sendMessage: sendMessageWithStream,
 };

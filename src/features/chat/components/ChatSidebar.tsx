@@ -165,15 +165,15 @@ export const ChatSidebar = ({
   });
 
   return (
-    <aside
-      className={cn(
-        sidebarClassName,
-        isOpen ? "w-[296px]" : "w-0 border-r-0 md:w-[64px] md:border-r",
-      )}
-    >
+    <aside className={cn(sidebarClassName, isOpen ? "w-[296px]" : "w-[64px]")}>
       <div className="flex h-full w-[296px] shrink-0 flex-col">
         <div className="flex h-16 items-center justify-between">
-          <div className="flex h-10 w-[92px] shrink-0 items-center pl-5 md:hidden">
+          <div
+            className={cn(
+              "h-10 w-[92px] shrink-0 items-center pl-5 md:hidden",
+              isOpen ? "flex" : "hidden",
+            )}
+          >
             <Logo
               href=""
               onClick={onOpenHome}
@@ -184,7 +184,10 @@ export const ChatSidebar = ({
           </div>
 
           <div
-            className="group relative hidden shrink-0 justify-center md:flex md:w-[64px]"
+            className={cn(
+              "group relative shrink-0 justify-center",
+              isOpen ? "hidden md:flex md:w-[64px]" : "flex w-[64px]",
+            )}
             onMouseEnter={onShowRailTooltip(isOpen ? "홈" : "사이드바 열기")}
             onMouseLeave={onHideTooltip}
           >

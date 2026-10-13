@@ -100,7 +100,7 @@ export const ChatCurrentSession = ({
               className={cn(
                 "relative flex h-10 w-10 items-center justify-center rounded-xl transition",
                 !isOpen && isActive
-                  ? "bg-white text-gray-950 dark:bg-white/10 dark:text-white"
+                  ? "bg-brand shadow-brand/25 text-white shadow-sm"
                   : !isOpen
                     ? "group-hover:bg-gray-300/70 group-hover:text-gray-950 dark:group-hover:bg-white/10 dark:group-hover:text-white"
                     : "",

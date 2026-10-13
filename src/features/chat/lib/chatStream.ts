@@ -177,7 +177,10 @@ const openAnswerStream = (
   })()
     .catch((error: unknown) => {
       if (!signal.aborted) {
-        console.warn("Chat stream disconnected", error);
+        console.warn("Chat stream disconnected", {
+          name: error instanceof Error ? error.name : "UnknownError",
+          status: error instanceof ApiError ? error.status : undefined,
+        });
       }
     })
     .finally(() => {
@@ -367,6 +370,7 @@ export const sendMessageWithStream = async ({
       status: saved.status ?? "FAILED",
       answer: saved.content,
       createAt: saved.createdAt,
+      feedback: saved.feedback,
       storeMap: saved.storeMap,
       actions: saved.actions,
     });

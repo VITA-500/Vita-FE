@@ -8,11 +8,15 @@ import {
   findUserMessageBeforeAssistant,
   getLastUserMessage,
 } from "@/features/chat/lib/chatConversationFlow";
+import { useChatAnswerFeedback } from "@/features/chat/hooks/useChatAnswerFeedback";
+import { useChatAnswerReport } from "@/features/chat/hooks/useChatAnswerReport";
+import { useChatAutoScroll } from "@/features/chat/hooks/useChatAutoScroll";
 import { useChatSessionList } from "@/features/chat/hooks/useChatSessionList";
 import { useChatSessionPreferences } from "@/features/chat/hooks/useChatSessionPreferences";
 import { useChatConversationHydration } from "@/features/chat/hooks/useChatConversationHydration";
 import { useChatPromptSubmit } from "@/features/chat/hooks/useChatPromptSubmit";
 import type {
+  ChatFeedback,
   ChatMessage,
   ChatMode,
   ChatStreamingReply,
@@ -76,13 +80,67 @@ export const useChatConversationController = ({
       ),
     [deletedSessionIds, serverChatSessions],
   );
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const shouldJumpToBottomRef = useRef(false);
   const latestSelectRequestRef = useRef(0);
   const chatInputRef = useRef<HTMLInputElement | null>(null);
   const activeConversationOwnerKeyRef = useRef("");
   const hasHydratedConversationRef = useRef(false);
   const hasChatStarted = messages.length > 0;
+  const { reportAnswerToAdmin, reportingMessageIds } = useChatAnswerReport({
+    isAuthenticated,
+    messages,
+    setMessages,
+  });
+  const { feedbackMessageIds: savingFeedbackIds, sendAnswerFeedback } =
+    useChatAnswerFeedback({
+      isAuthenticated,
+      messages,
+      setMessages,
+    });
+  /** 피드백 저장이나 관리자 전달이 진행 중인 답변. 이 동안 피드백 버튼을 잠근다. */
+  const feedbackMessageIds = useMemo<ReadonlySet<string>>(
+    () => new Set([...savingFeedbackIds, ...reportingMessageIds]),
+    [reportingMessageIds, savingFeedbackIds],
+  );
+
+  /**
+   * 답변 피드백. "아쉬워요"(DISLIKE)를 새로 누르면 피드백 저장과 함께 관리자에게 바로 보낸다.
+   * 피드백·관리자 전달 모두 회원 전용이라 비로그인이면 아무것도 보내지 않는다.
+   * 같은 답변을 다시 보내도 BE가 처음 신고를 돌려주고, FE도 reportedAt이 있으면 다시 보내지 않는다.
+   */
+  const submitAnswerFeedback = async (
+    assistantMessageId: string,
+    feedback: ChatFeedback,
+  ) => {
+    if (!isAuthenticated) return;
+
+    const target = messages.find(
+      (message) => message.id === assistantMessageId,
+    );
+    const isNewDislike =
+      feedback === "DISLIKE" && target?.feedback !== "DISLIKE";
+
+    if (!isNewDislike) {
+      await sendAnswerFeedback(assistantMessageId, feedback);
+      return;
+    }
+
+    const [savedFeedback, isReported] = await Promise.all([
+      sendAnswerFeedback(assistantMessageId, feedback, { silent: true }),
+      reportAnswerToAdmin(assistantMessageId, { silent: true }),
+    ]);
+
+    showToast(
+      savedFeedback === "DISLIKE" || isReported
+        ? "소중한 의견 감사합니다. 더 나은 답변을 만드는 데 참고할게요."
+        : "의견을 전달하지 못했어요. 잠시 후 다시 시도해 주세요.",
+    );
+  };
+  const { scrollContainerRef, shouldJumpToBottomRef } = useChatAutoScroll({
+    activeMode,
+    chatStatus,
+    messages,
+    streamingReply,
+  });
 
   const { applyChatSession } = useChatConversationHydration({
     activeConversationOwnerKeyRef,
@@ -156,41 +214,6 @@ export const useChatConversationController = ({
 
     return () => window.cancelAnimationFrame(frameId);
   }, [activeMode, chatStatus, focusChatInput]);
-
-  const isStreamingAnswer = Boolean(streamingReply?.content);
-
-  useEffect(() => {
-    if (activeMode !== "chat" || messages.length === 0) return;
-
-    const container = scrollContainerRef.current;
-
-    // 답변이 글자 단위로 늘어나는 동안에는 사용자가 위로 스크롤해 읽고 있으면 끌어내리지 않는다.
-    if (
-      isStreamingAnswer &&
-      container &&
-      container.scrollHeight - container.scrollTop - container.clientHeight >
-        160
-    ) {
-      return;
-    }
-
-    const behavior: ScrollBehavior =
-      shouldJumpToBottomRef.current || isStreamingAnswer ? "auto" : "smooth";
-    shouldJumpToBottomRef.current = false;
-
-    window.requestAnimationFrame(() => {
-      scrollContainerRef.current?.scrollTo({
-        top: scrollContainerRef.current.scrollHeight,
-        behavior,
-      });
-      window.requestAnimationFrame(() => {
-        scrollContainerRef.current?.scrollTo({
-          top: scrollContainerRef.current.scrollHeight,
-          behavior,
-        });
-      });
-    });
-  }, [activeMode, chatStatus, isStreamingAnswer, messages, streamingReply]);
 
   const submitChatPrompt = useChatPromptSubmit({
     answerAbortRef,
@@ -354,6 +377,7 @@ export const useChatConversationController = ({
     deleteChatSession,
     editAndResubmitPrompt,
     editHintMessageId,
+    feedbackMessageIds,
     handleSelectChat,
     hasChatStarted,
     hasLoadedRecentChats,
@@ -363,6 +387,7 @@ export const useChatConversationController = ({
     retryAnswer,
     scrollContainerRef,
     sessionTitles,
+    sendAnswerFeedback: submitAnswerFeedback,
     setChatInput,
     startNewChat,
     stopChatAnswer,
