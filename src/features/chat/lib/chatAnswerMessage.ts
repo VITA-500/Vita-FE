@@ -1,6 +1,7 @@
 import type {
   ChatApiMessageStatus,
   ChatAction,
+  ChatFeedback,
   ChatMessage,
   ChatStoreMap,
 } from "@/features/chat/types";
@@ -18,6 +19,7 @@ export type ChatMessageResponse = {
   relatedFaqIds: number[];
   createAt: string;
   latencyMs: number;
+  feedback?: ChatFeedback | null;
   storeMap?: ChatStoreMap | null;
   actions?: readonly ChatAction[] | null;
   stores?: ChatStoreMap["stores"] | null;
@@ -35,10 +37,12 @@ export const toAssistantMessage = (
 
   return {
     id: `assistant-${response.messageId}`,
+    serverMessageId: response.messageId,
     role: "assistant",
     content: hasAnswer ? answer : FAILED_ANSWER_MESSAGE,
     status: hasAnswer ? "success" : "error",
     createdAt: response.createAt,
+    feedback: response.feedback ?? null,
     storeMap:
       response.storeMap ??
       (response.stores?.length

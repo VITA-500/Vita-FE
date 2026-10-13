@@ -22,6 +22,7 @@ import type {
   ChatMessage,
   SessionMessagesResponse,
 } from "@/features/chat/types";
+import { ApiError } from "@/shared/api/http";
 import { showToast } from "@/shared/ui/ToastProvider";
 
 type MutableRef<T> = { current: T };
@@ -139,8 +140,9 @@ export const useChatConversationHydration = ({
             .catch((error) => {
               // guestId는 게스트 상담을 여는 열쇠라 로그에 남기지 않는다.
               console.error("Guest chat claim failed", {
-                error,
+                name: error instanceof Error ? error.name : "UnknownError",
                 sessionId: guestConversation.sessionId,
+                status: error instanceof ApiError ? error.status : undefined,
               });
 
               if (isPermanentClaimError(error)) {

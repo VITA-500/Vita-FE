@@ -9,6 +9,8 @@ export type ChatMessageRole = "user" | "assistant";
  */
 export type ChatAnswerStatus = "success" | "error" | "stopped" | "pending";
 
+export type ChatFeedback = "LIKE" | "DISLIKE";
+
 export type ChatMessage = {
   id: string;
   role: ChatMessageRole;
@@ -19,6 +21,12 @@ export type ChatMessage = {
   sources?: readonly ChatAnswerSource[];
   actions?: readonly ChatAction[];
   storeMap?: ChatStoreMap;
+  /** BE 메시지 id. 서버에 저장된 답변에만 있고, 관리자 신고 같은 메시지 단위 API에 쓴다. */
+  serverMessageId?: number;
+  /** 답변 도움 여부. 같은 값을 다시 누르면 BE에 null을 보내 취소한다. */
+  feedback?: ChatFeedback | null;
+  /** 관리자에게 보낸 시각(report-to-admin 응답). 있으면 "보냈어요"로 표시한다. */
+  reportedAt?: string;
 };
 
 export type ChatStatus = "idle" | "loading" | "success" | "error";
@@ -107,6 +115,7 @@ export type SessionMessage = {
   content: string | null;
   createdAt: string;
   status?: ChatApiMessageStatus;
+  feedback?: ChatFeedback | null;
   storeMap?: ChatStoreMap | null;
   actions?: readonly ChatAction[] | null;
 };

@@ -69,6 +69,7 @@ const ChatPageContent = () => {
     handleSelectChat,
     hasChatStarted,
     hasLoadedRecentChats,
+    feedbackMessageIds,
     loadingSessionId,
     messages,
     pinnedSessionIds,
@@ -78,6 +79,7 @@ const ChatPageContent = () => {
     startNewChat,
     streamingReply,
     retryAnswer,
+    sendAnswerFeedback,
     stopChatAnswer,
     submitChatPrompt,
     togglePinChatSession,
@@ -235,7 +237,15 @@ const ChatPageContent = () => {
               messages={messages}
               onChatInputChange={setChatInput}
               onEditPrompt={editAndResubmitPrompt}
+              // 답변 피드백은 회원만 남길 수 있다. 비로그인이면 버튼 자체를 보여주지 않는다.
+              onFeedbackAnswer={
+                isAuthenticated
+                  ? (assistantMessageId, feedback) =>
+                      void sendAnswerFeedback(assistantMessageId, feedback)
+                  : undefined
+              }
               onRetryAnswer={retryAnswer}
+              feedbackMessageIds={feedbackMessageIds}
               onStopAnswer={stopChatAnswer}
               onSubmitPrompt={(prompt) => void submitChatPrompt(prompt)}
               scrollContainerRef={scrollContainerRef}

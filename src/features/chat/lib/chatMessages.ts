@@ -46,6 +46,8 @@ export const toChatMessage = (message: SessionMessage): ChatMessage => {
     ...(isUser
       ? {}
       : {
+          serverMessageId: message.messageId,
+          feedback: message.feedback ?? null,
           status: isAnswerPending
             ? ("pending" as const)
             : isAnswerFailed
