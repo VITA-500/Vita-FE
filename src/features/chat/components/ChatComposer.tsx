@@ -1,7 +1,11 @@
 import { ArrowUp, Mic, Plus, Square } from "lucide-react";
 import type { RefObject } from "react";
 import { useRef, useState } from "react";
-import { ChatQuickActionMenu } from "@/features/chat/components/ChatQuickActionMenu";
+import {
+  ChatQuickActionMenu,
+  getVisibleQuickActions,
+} from "@/features/chat/components/ChatQuickActionMenu";
+import { useChatClientSettings } from "@/features/chat/hooks/useChatClientSettings";
 import { usePointerDownOutside } from "@/features/chat/hooks/usePointerDownOutside";
 
 type ChatComposerProps = {
@@ -26,6 +30,8 @@ export const ChatComposer = ({
 }: ChatComposerProps) => {
   const [isQuickActionOpen, setIsQuickActionOpen] = useState(false);
   const quickActionRef = useRef<HTMLDivElement>(null);
+  const { settings } = useChatClientSettings();
+  const quickActions = getVisibleQuickActions(settings.quickActionIds);
 
   usePointerDownOutside({
     enabled: isQuickActionOpen,
@@ -45,6 +51,7 @@ export const ChatComposer = ({
       <div ref={quickActionRef} className="relative shrink-0">
         {isQuickActionOpen && onSelectQuickAction && (
           <ChatQuickActionMenu
+            actions={quickActions}
             onSelectAction={(prompt) => {
               setIsQuickActionOpen(false);
               onSelectQuickAction(prompt);

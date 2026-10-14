@@ -8,28 +8,31 @@ describe("chatPreferences", () => {
   it("keeps supported preference values", () => {
     expect(
       normalizeChatPreferences({
-        answerTone: "detailed",
-        interestedTopics: ["요금제", "매장"],
-        useLocationContext: false,
+        usePreviousConsultation: true,
+        historyPreference: "auto_apply",
       }),
     ).toEqual({
-      answerTone: "detailed",
-      interestedTopics: ["요금제", "매장"],
-      useLocationContext: false,
+      usePreviousConsultation: true,
+      historyPreference: "auto_apply",
     });
   });
 
   it("falls back when saved preferences are malformed", () => {
     expect(
       normalizeChatPreferences({
-        answerTone: "long" as never,
-        interestedTopics: ["요금제", "없는 분야"],
-        useLocationContext: "yes" as never,
+        usePreviousConsultation: "yes" as never,
+        historyPreference: "always" as never,
       }),
-    ).toEqual({
-      answerTone: defaultChatPreferences.answerTone,
-      interestedTopics: ["요금제"],
-      useLocationContext: defaultChatPreferences.useLocationContext,
-    });
+    ).toEqual(defaultChatPreferences);
+  });
+
+  it("falls back when old answer preference values are saved", () => {
+    expect(
+      normalizeChatPreferences({
+        answerFormat: "detailed",
+        enabled: true,
+        useThreeLineSummary: true,
+      } as never),
+    ).toEqual(defaultChatPreferences);
   });
 });

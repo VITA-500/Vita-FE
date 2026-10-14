@@ -50,7 +50,7 @@ export const ChatAccountMenu = ({
 
     <button type="button" onClick={onOpenPreferences} className={itemClassName}>
       <MessageCircle size={18} />
-      개인 맞춤 설정
+      상담 기록 활용
     </button>
 
     <button type="button" onClick={onOpenSettings} className={itemClassName}>
