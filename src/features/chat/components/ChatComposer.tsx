@@ -1,5 +1,8 @@
 import { ArrowUp, Mic, Plus, Square } from "lucide-react";
 import type { RefObject } from "react";
+import { useRef, useState } from "react";
+import { ChatQuickActionMenu } from "@/features/chat/components/ChatQuickActionMenu";
+import { usePointerDownOutside } from "@/features/chat/hooks/usePointerDownOutside";
 
 type ChatComposerProps = {
   value: string;
@@ -7,6 +10,7 @@ type ChatComposerProps = {
   onSubmit: () => void;
   /** 답변을 받는 중일 때 보내기 버튼 대신 중단 버튼을 보여준다. */
   onStop?: () => void;
+  onSelectQuickAction?: (prompt: string) => void;
   isLoading?: boolean;
   inputRef?: RefObject<HTMLInputElement | null>;
 };
@@ -15,65 +19,93 @@ export const ChatComposer = ({
   inputRef,
   isLoading = false,
   onChange,
+  onSelectQuickAction,
   onStop,
   onSubmit,
   value,
-}: ChatComposerProps) => (
-  <form
-    id="vita-chat-input-tour"
-    onSubmit={(event) => {
-      event.preventDefault();
-      onSubmit();
-    }}
-    className="border-border mx-auto flex h-14 w-full items-center gap-2.5 rounded-2xl border bg-white py-2 pr-3 pl-3 shadow-sm dark:border-white/10 dark:bg-zinc-950"
-  >
-    <button
-      type="button"
-      aria-label="첨부"
-      className="text-text-secondary hover:bg-surface-muted hover:text-text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
+}: ChatComposerProps) => {
+  const [isQuickActionOpen, setIsQuickActionOpen] = useState(false);
+  const quickActionRef = useRef<HTMLDivElement>(null);
+
+  usePointerDownOutside({
+    enabled: isQuickActionOpen,
+    onPointerDownOutside: () => setIsQuickActionOpen(false),
+    ref: quickActionRef,
+  });
+
+  return (
+    <form
+      id="vita-chat-input-tour"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+      className="border-border mx-auto flex h-14 w-full items-center gap-2.5 rounded-2xl border bg-white py-2 pr-3 pl-3 shadow-sm dark:border-white/10 dark:bg-zinc-950"
     >
-      <Plus size={20} />
-    </button>
+      <div ref={quickActionRef} className="relative shrink-0">
+        {isQuickActionOpen && onSelectQuickAction && (
+          <ChatQuickActionMenu
+            onSelectAction={(prompt) => {
+              setIsQuickActionOpen(false);
+              onSelectQuickAction(prompt);
+            }}
+          />
+        )}
 
-    <input
-      ref={inputRef}
-      type="text"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      placeholder="VITA에게 물어보세요"
-      className="text-text-primary min-w-0 flex-1 bg-transparent text-sm font-normal outline-none placeholder:font-normal placeholder:text-gray-400 dark:text-white"
-    />
+        <button
+          id="vita-quick-action-tour"
+          type="button"
+          aria-label="빠른 작업"
+          aria-expanded={isQuickActionOpen}
+          onClick={() => setIsQuickActionOpen((current) => !current)}
+          className="text-text-secondary hover:bg-surface-muted hover:text-text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
+        >
+          <Plus size={20} />
+        </button>
+      </div>
 
-    <button
-      type="button"
-      aria-label="음성 입력"
-      className="text-text-secondary hover:bg-surface-muted hover:text-text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
-    >
-      <Mic size={18} />
-    </button>
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="VITA에게 물어보세요"
+        className="text-text-primary min-w-0 flex-1 bg-transparent text-sm font-normal outline-none placeholder:font-normal placeholder:text-gray-400 dark:text-white"
+      />
 
-    {isLoading && onStop ? (
       <button
+        id="vita-voice-input-tour"
         type="button"
-        aria-label="답변 중단"
-        title="답변 중단"
-        onClick={onStop}
-        className="text-text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-900 transition hover:bg-gray-700 active:scale-95 dark:bg-white dark:hover:bg-gray-200"
+        aria-label="음성 입력"
+        title="음성 입력은 후속 작업에서 연결할 예정입니다."
+        className="text-text-secondary hover:bg-surface-muted hover:text-text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
       >
-        <Square
-          size={13}
-          className="fill-white text-white dark:fill-gray-900 dark:text-gray-900"
-        />
+        <Mic size={18} />
       </button>
-    ) : (
-      <button
-        type="submit"
-        aria-label="메시지 보내기"
-        disabled={isLoading || !value.trim()}
-        className="bg-brand hover:bg-brand-hover flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <ArrowUp size={18} strokeWidth={2.5} />
-      </button>
-    )}
-  </form>
-);
+
+      {isLoading && onStop ? (
+        <button
+          type="button"
+          aria-label="답변 중단"
+          title="답변 중단"
+          onClick={onStop}
+          className="text-text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-900 transition hover:bg-gray-700 active:scale-95 dark:bg-white dark:hover:bg-gray-200"
+        >
+          <Square
+            size={13}
+            className="fill-white text-white dark:fill-gray-900 dark:text-gray-900"
+          />
+        </button>
+      ) : (
+        <button
+          type="submit"
+          aria-label="메시지 보내기"
+          disabled={isLoading || !value.trim()}
+          className="bg-brand hover:bg-brand-hover flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <ArrowUp size={18} strokeWidth={2.5} />
+        </button>
+      )}
+    </form>
+  );
+};
