@@ -80,7 +80,14 @@ export const requestJson = async <T>(
       });
 
       if (!response.ok) {
-        const errorBody = (await response.json().catch(() => null)) as {
+        const errorBody = (await response
+          .clone()
+          .json()
+          .catch(async () => {
+            const message = await response.text().catch(() => "");
+
+            return message ? { message } : null;
+          })) as {
           message?: string;
         } | null;
 

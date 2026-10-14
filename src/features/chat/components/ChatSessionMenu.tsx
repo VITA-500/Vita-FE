@@ -1,16 +1,7 @@
 "use client";
 
 import type { RefObject } from "react";
-import {
-  Archive,
-  ChevronRight,
-  Folder,
-  Pencil,
-  Pin,
-  PinOff,
-  Share2,
-  Trash2,
-} from "lucide-react";
+import { Pencil, Pin, PinOff, Trash2 } from "lucide-react";
 import type { SidebarChatItem } from "@/features/chat/lib/chatSidebarItems";
 
 type ChatSessionMenuProps = {
@@ -43,11 +34,6 @@ export const ChatSessionMenu = ({
     style={{ left, top }}
   >
     <button type="button" className={itemClassName}>
-      <Share2 size={18} />
-      공유하기
-    </button>
-
-    <button type="button" className={itemClassName}>
       <Pencil size={18} />
       이름 바꾸기
     </button>
@@ -64,11 +50,6 @@ export const ChatSessionMenu = ({
       {isPinned ? "채팅 고정 해제" : "채팅 고정"}
     </button>
 
-    <button type="button" className={itemClassName}>
-      <Archive size={18} />
-      아카이브에 보관
-    </button>
-
     <button
       type="button"
       disabled={!canManage}
@@ -77,14 +58,6 @@ export const ChatSessionMenu = ({
     >
       <Trash2 size={18} />
       삭제
-    </button>
-
-    <div className="my-2 h-px bg-gray-200 dark:bg-white/10" />
-
-    <button type="button" className={itemClassName}>
-      <Folder size={18} />
-      프로젝트로 이동
-      <ChevronRight size={17} className="ml-auto text-gray-400" />
     </button>
   </div>
 );

@@ -114,9 +114,81 @@ export type AdminBenefit = {
   storeCount: number;
 };
 
+/** 제휴 혜택 카테고리. BE Benefit.CATEGORIES와 같다(다른 값은 BE가 400). */
+export const adminBenefitCategories = [
+  "카페",
+  "아이스크림",
+  "영화",
+  "외식",
+  "자동차",
+  "쇼핑",
+  "여가",
+] as const;
+
+export type AdminBenefitCategory = (typeof adminBenefitCategories)[number];
+
+/** GET /admin/benefits 항목 (BE AdminBenefitResponse) */
+export type AdminBenefitDetail = Omit<AdminBenefit, "description"> & {
+  description: string | null;
+  /** 이 혜택에 연결된 제휴 매장 수. 1개 이상이면 삭제할 수 없다(409). */
+  storeCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** POST /admin/benefits, PATCH /admin/benefits/{id} 요청 (BE BenefitRequest) */
+export type AdminBenefitRequest = {
+  /** 브랜드명(50자 이내, 중복 불가 409) */
+  brand: string;
+  /** 혜택 이름(100자 이내) */
+  name: string;
+  category: AdminBenefitCategory;
+  description?: string | null;
+};
+
 export type PageResponse<T> = {
   totalCount: number;
   totalPages: number;
   currentPage: number;
   content: T[];
+};
+
+/** 답변 피드백 유형. BE UnresolvedReason과 같다(DISLIKED는 사용자가 "아쉬워요"를 누른 답변). */
+export type AdminAnswerFeedbackReason =
+  "NO_MATCH" | "LOW_SIMILARITY" | "ANSWER_FAILED" | "DISLIKED";
+
+/** GET /admin/stats/chat 의 답변 피드백 항목(같은 질문끼리 묶음). BE 응답 필드 이름은 candidates. */
+export type AdminAnswerFeedback = {
+  /** 가장 최근에 나온 답변 메시지 id */
+  id: number;
+  question: string;
+  /** 가장 최근에 나온 챗봇 답변 */
+  answer: string | null;
+  source: string;
+  /** 가장 최근 발생의 사유 */
+  failReason: AdminAnswerFeedbackReason | string;
+  /** 같은 질문으로 들어온 피드백 횟수(답변 메시지 수) */
+  count: number;
+  lastOccurredAt: string;
+};
+
+export type AdminAnswerFeedbackStats = {
+  summary: {
+    /** 답변 피드백 항목 수(같은 질문은 하나로) */
+    unresolvedCount: number;
+    /** 답변 피드백이 나온 전체 횟수 */
+    repeatCount: number;
+    /** 오늘 마지막으로 나온 답변 피드백 항목 수 */
+    todayCount: number;
+  };
+  /** 많이 나온 순 */
+  candidates: AdminAnswerFeedback[];
+};
+
+/** PATCH /admin/stats/chat/{id}/dismiss 응답 */
+export type AdminAnswerFeedbackDismissResponse = {
+  /** 무시한 항목 id (candidates[].id) */
+  id: number;
+  /** 무시 처리된 "아쉬워요" 수 */
+  dismissedCount: number;
 };

@@ -87,13 +87,39 @@ export const useChatSessionList = (isAuthenticated: boolean) => {
   const clearChatSessions = useCallback(() => {
     setChatSessions([]);
   }, []);
+  const removeChatSession = useCallback((sessionId: number) => {
+    setChatSessions((sessions) =>
+      sessions.filter((session) => session.sessionId !== sessionId),
+    );
+    setSessionTitles((titles) => {
+      if (!(sessionId in titles)) return titles;
+
+      const nextTitles = { ...titles };
+
+      delete nextTitles[sessionId];
+      return nextTitles;
+    });
+    requestedTitleSessionIdsRef.current.delete(sessionId);
+  }, []);
+  const setChatSessionPinned = useCallback(
+    (sessionId: number, pinned: boolean) => {
+      setChatSessions((sessions) =>
+        sessions.map((session) =>
+          session.sessionId === sessionId ? { ...session, pinned } : session,
+        ),
+      );
+    },
+    [],
+  );
 
   return {
     chatSessions,
     clearChatSessions,
     hasLoadedRecentChats,
+    removeChatSession,
     refreshChatSessions,
     sessionTitles,
+    setChatSessionPinned,
     setSessionTitles,
   };
 };

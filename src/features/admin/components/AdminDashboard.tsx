@@ -1,57 +1,25 @@
 "use client";
 
-import { AlertTriangle, MessageSquareWarning } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { AnswerFeedbackContent } from "@/features/admin/components/AnswerFeedbackContent";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
+import { useAdminAnswerFeedback } from "@/features/admin/context/useAdminAnswerFeedback";
+import { getAnswerFeedbackStatItems } from "@/features/admin/lib/answerFeedbackStats";
 import { routes } from "@/shared/constants/routes";
-import { formatKoreanMonthDay } from "@/shared/lib/date";
 import { ButtonLink } from "@/shared/ui/Button";
 import { Card, CardContent, CardHeader } from "@/shared/ui/Card";
 import { StatCard } from "@/shared/ui/StatCard";
 
-type UnresolvedFaqCandidate = {
-  count: number;
-  failReason: "LOW_SIMILARITY" | "NO_MATCH" | "ANSWER_FAILED";
-  id: number;
-  lastOccurredAt: string;
-  question: string;
-  source: "CHAT" | "SEARCH";
-};
-
-const unresolvedFaqCandidates: UnresolvedFaqCandidate[] = [
-  {
-    id: 1,
-    question: "해외에서 데이터가 갑자기 안 터질 때 바로 확인할 설정이 있나요?",
-    source: "CHAT",
-    failReason: "LOW_SIMILARITY",
-    count: 18,
-    lastOccurredAt: "2026-10-06T08:45:00",
-  },
-  {
-    id: 2,
-    question: "가족 결합 중 한 명만 알뜰폰으로 이동하면 할인은 어떻게 되나요?",
-    source: "CHAT",
-    failReason: "NO_MATCH",
-    count: 11,
-    lastOccurredAt: "2026-10-05T21:10:00",
-  },
-  {
-    id: 3,
-    question: "분실 신고 후 유심 재발급까지 대리점 방문 없이 가능한가요?",
-    source: "SEARCH",
-    failReason: "ANSWER_FAILED",
-    count: 7,
-    lastOccurredAt: "2026-10-05T18:32:00",
-  },
-];
-
-const failReasonLabels: Record<UnresolvedFaqCandidate["failReason"], string> = {
-  ANSWER_FAILED: "답변 실패",
-  LOW_SIMILARITY: "유사도 낮음",
-  NO_MATCH: "검색 결과 없음",
-};
+/** 대시보드에는 많이 나온 답변 피드백 몇 개만 보여주고, 나머지는 답변 피드백 페이지에서 본다. */
+const DASHBOARD_FEEDBACK_LIMIT = 5;
 
 export const AdminDashboard = () => {
   const { storeDetails } = useAdminData();
+  const {
+    error: feedbackError,
+    isLoading: isFeedbackLoading,
+    stats: feedbackStats,
+  } = useAdminAnswerFeedback(DASHBOARD_FEEDBACK_LIMIT);
   const storesMissingPhone = storeDetails.filter(
     (store) => !store.phone?.trim(),
   );
@@ -67,30 +35,8 @@ export const AdminDashboard = () => {
     storesMissingBusinessHours.length +
     storesMissingServices.length;
 
-  const unresolvedRepeatCount = unresolvedFaqCandidates.reduce(
-    (sum, candidate) => sum + candidate.count,
-    0,
-  );
-  const todayUnresolvedCount = unresolvedFaqCandidates.filter((candidate) =>
-    candidate.lastOccurredAt.startsWith("2026-10-06"),
-  ).length;
-
   const adminStats = [
-    {
-      label: "미해결 질문",
-      value: unresolvedFaqCandidates.length.toLocaleString("ko-KR"),
-      helper: "FAQ 등록 후보",
-    },
-    {
-      label: "반복 문의",
-      value: unresolvedRepeatCount.toLocaleString("ko-KR"),
-      helper: "미해결 질문 누적 발생",
-    },
-    {
-      label: "오늘 발생",
-      value: todayUnresolvedCount.toLocaleString("ko-KR"),
-      helper: "최근 미해결 질문",
-    },
+    ...getAnswerFeedbackStatItems(feedbackStats?.summary, isFeedbackLoading),
     {
       label: "데이터 점검",
       value: dataQualityIssueCount.toLocaleString("ko-KR"),
@@ -123,17 +69,23 @@ export const AdminDashboard = () => {
       <section className="mt-8">
         <Card>
           <CardHeader
-            title="미해결 질문 큐"
-            description="반복되는 답변 실패 질문을 확인하고 FAQ로 전환합니다."
+            title="챗봇 답변 피드백"
+            description="챗봇이 답하지 못했거나 아쉬워요를 받은 답변을 확인하고 FAQ로 보완합니다."
           />
           <CardContent>
-            <div className="space-y-3">
-              {unresolvedFaqCandidates.map((candidate) => (
-                <UnresolvedQuestionRow
-                  key={candidate.id}
-                  candidate={candidate}
-                />
-              ))}
+            <AnswerFeedbackContent
+              error={feedbackError}
+              isLoading={isFeedbackLoading}
+              stats={feedbackStats}
+            />
+            <div className="mt-4 flex justify-end">
+              <ButtonLink
+                href={routes.adminFeedback}
+                variant="secondary"
+                size="xs"
+              >
+                답변 피드백 전체 보기
+              </ButtonLink>
             </div>
           </CardContent>
         </Card>
@@ -202,59 +154,5 @@ const QualityRow = ({ count, description, label }: QualityRowProps) => (
     <span className="text-brand shrink-0 text-xl font-black">
       {count.toLocaleString("ko-KR")}
     </span>
-  </div>
-);
-
-type UnresolvedQuestionRowProps = {
-  candidate: UnresolvedFaqCandidate;
-};
-
-const UnresolvedQuestionRow = ({ candidate }: UnresolvedQuestionRowProps) => (
-  <div className="border-border-soft grid gap-4 rounded-2xl border px-4 py-3 md:grid-cols-[1fr_92px_120px_92px_152px] md:items-center dark:border-white/10">
-    <div className="min-w-0">
-      <div className="mb-2 flex flex-wrap items-center gap-2 md:hidden">
-        <span className="bg-brand-soft text-brand rounded-full px-2.5 py-1 text-xs font-extrabold">
-          {failReasonLabels[candidate.failReason]}
-        </span>
-        <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-500 dark:bg-white/10 dark:text-gray-300">
-          {candidate.source}
-        </span>
-      </div>
-      <p className="line-clamp-2 text-sm font-extrabold text-gray-800 dark:text-gray-100">
-        {candidate.question}
-      </p>
-      <p className="mt-1 text-xs font-bold text-gray-400">
-        출처 {candidate.source}
-      </p>
-    </div>
-
-    <div className="text-brand flex items-center gap-1">
-      <MessageSquareWarning size={17} />
-      <span className="text-lg font-black">
-        {candidate.count.toLocaleString("ko-KR")}
-      </span>
-      <span className="text-xs font-bold text-gray-400">회</span>
-    </div>
-
-    <span className="bg-brand-soft text-brand hidden w-fit rounded-full px-2.5 py-1 text-xs font-extrabold md:inline-flex">
-      {failReasonLabels[candidate.failReason]}
-    </span>
-
-    <span className="text-xs font-bold text-gray-400">
-      {formatKoreanMonthDay(candidate.lastOccurredAt)}
-    </span>
-
-    <div className="flex flex-wrap justify-end gap-2 md:flex-nowrap">
-      <ButtonLink href={routes.adminFaqs} variant="secondary" size="xs">
-        FAQ 등록
-      </ButtonLink>
-      <button
-        type="button"
-        className="h-8 rounded-2xl px-3 text-xs font-bold text-gray-400"
-        disabled
-      >
-        무시
-      </button>
-    </div>
   </div>
 );

@@ -5,6 +5,9 @@ import { CHAT_TOUR_STORAGE_KEY } from "@/features/chat/constants";
 export const useChatTour = () => {
   const startChatTour = useCallback(async (markAsSeen = false) => {
     const inputElement = document.querySelector("#vita-chat-input-tour");
+    const quickActionElement = document.querySelector(
+      "#vita-quick-action-tour",
+    );
     const suggestionElement = document.querySelector("#vita-suggestion-tour");
     const storeElement = document.querySelector("#vita-store-map-tour");
 
@@ -23,6 +26,19 @@ export const useChatTour = () => {
         },
       },
     ];
+
+    if (quickActionElement) {
+      steps.push({
+        element: "#vita-quick-action-tour",
+        popover: {
+          title: "빠른 작업",
+          description:
+            "자주 쓰는 상담 주제를 바로 입력하거나 전송할 수 있어요.",
+          side: "top",
+          align: "start",
+        },
+      });
+    }
 
     if (suggestionElement) {
       steps.push({

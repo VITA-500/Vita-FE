@@ -1,4 +1,5 @@
 import type {
+  ChatFeedback,
   ChatSessionListResponse,
   SessionMessagesResponse,
 } from "@/features/chat/types";
@@ -16,6 +17,12 @@ type ChatSessionCreateResponse = {
 };
 
 type ChatSessionClaimResponse = { sessionId: number; claimedAt: string };
+type ChatSessionPinResponse = { pinned: boolean; sessionId: number };
+
+export type ChatFeedbackResponse = {
+  messageId: number;
+  feedback: ChatFeedback | null;
+};
 
 /**
  * 진행 중인 claim 요청. 로그인 직후 채팅 화면의 effect가 여러 번 실행되면
@@ -87,6 +94,12 @@ export const chatService = {
       headers: guestHeaders(guestId),
     });
   },
+  deleteSession: async (sessionId: number) => {
+    await requestJson<void>(`/chat/sessions/${sessionId}`, {
+      method: "DELETE",
+      timeoutMs: 8000,
+    });
+  },
   getMessages: (sessionId: number, guestId?: string) => {
     return requestChatJson<SessionMessagesResponse>(
       `/chat/sessions/${sessionId}/messages`,
@@ -96,5 +109,28 @@ export const chatService = {
   getSessions: () => {
     return requestJson<ChatSessionListResponse>("/chat/sessions");
   },
+  /**
+   * 답변 피드백(회원 전용, null이면 취소).
+   * BE는 DISLIKE면 관리자 답변 피드백 목록에 올리고, LIKE로 바꾸거나 취소하면 내린다.
+   */
+  sendFeedback: (messageId: number, feedback: ChatFeedback | null) => {
+    return requestJson<ChatFeedbackResponse>(
+      `/chat/messages/${messageId}/feedback`,
+      {
+        method: "POST",
+        body: JSON.stringify({ feedback }),
+      },
+    );
+  },
   sendMessage: sendMessageWithStream,
+  updateSessionPin: (sessionId: number, pinned: boolean) => {
+    return requestJson<ChatSessionPinResponse>(
+      `/chat/sessions/${sessionId}/pin`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ pinned }),
+        timeoutMs: 8000,
+      },
+    );
+  },
 };

@@ -2,7 +2,7 @@
 
 import type { MouseEvent } from "react";
 import { useCallback, useRef, useState } from "react";
-import { CircleHelp, Moon, Sun } from "lucide-react";
+import { CircleHelp, LogIn, Moon, Sun } from "lucide-react";
 import { ChatAccountMenu } from "@/features/chat/components/ChatAccountMenu";
 import { usePointerDownOutside } from "@/features/chat/hooks/usePointerDownOutside";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
@@ -20,7 +20,9 @@ type ChatSidebarFooterProps = {
   isOpen: boolean;
   onHideTooltip: () => void;
   onOpenLogin: () => void;
+  onOpenPreferences: () => void;
   onOpenProfile: () => void;
+  onOpenSettings: () => void;
   onShowRailTooltip: (
     label: string,
     shortcut?: string,
@@ -38,7 +40,9 @@ export const ChatSidebarFooter = ({
   isOpen,
   onHideTooltip,
   onOpenLogin,
+  onOpenPreferences,
   onOpenProfile,
+  onOpenSettings,
   onShowRailTooltip,
   onStartTour,
 }: ChatSidebarFooterProps) => {
@@ -93,6 +97,14 @@ export const ChatSidebarFooter = ({
             setIsLogoutConfirmOpen(true);
           }}
           onOpenProfile={handleOpenProfile}
+          onOpenPreferences={() => {
+            setIsAccountMenuOpen(false);
+            onOpenPreferences();
+          }}
+          onOpenSettings={() => {
+            setIsAccountMenuOpen(false);
+            onOpenSettings();
+          }}
           onStartTour={() => {
             setIsAccountMenuOpen(false);
             onStartTour();
@@ -155,14 +167,16 @@ export const ChatSidebarFooter = ({
         </div>
       ) : isGuest ? (
         <div className="flex h-12 w-[64px] items-center justify-center">
-          <ThemeToggleButton
-            className="h-9 w-9"
-            iconSize={18}
-            onMouseEnter={onShowRailTooltip(
-              isDarkMode ? "라이트 모드" : "다크 모드",
-            )}
+          <button
+            type="button"
+            className="bg-brand shadow-brand/25 hover:bg-brand-hover flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-sm transition"
+            aria-label="로그인"
+            onClick={onOpenLogin}
+            onMouseEnter={onShowRailTooltip("로그인")}
             onMouseLeave={onHideTooltip}
-          />
+          >
+            <LogIn size={19} strokeWidth={2.2} />
+          </button>
         </div>
       ) : isAuthenticated && isOpen ? (
         <div className="group relative flex h-12 w-[296px] items-center pr-3 text-left transition-colors">

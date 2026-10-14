@@ -8,11 +8,13 @@ import {
   findUserMessageBeforeAssistant,
   getLastUserMessage,
 } from "@/features/chat/lib/chatConversationFlow";
+import { useChatAnswerFeedback } from "@/features/chat/hooks/useChatAnswerFeedback";
+import { useChatAutoScroll } from "@/features/chat/hooks/useChatAutoScroll";
 import { useChatSessionList } from "@/features/chat/hooks/useChatSessionList";
-import { useChatSessionPreferences } from "@/features/chat/hooks/useChatSessionPreferences";
 import { useChatConversationHydration } from "@/features/chat/hooks/useChatConversationHydration";
 import { useChatPromptSubmit } from "@/features/chat/hooks/useChatPromptSubmit";
 import type {
+  ChatFeedback,
   ChatMessage,
   ChatMode,
   ChatStreamingReply,
@@ -58,31 +60,71 @@ export const useChatConversationController = ({
     chatSessions: serverChatSessions,
     clearChatSessions,
     hasLoadedRecentChats,
+    removeChatSession,
     refreshChatSessions,
     sessionTitles,
+    setChatSessionPinned,
     setSessionTitles,
   } = useChatSessionList(isAuthenticated);
-  const {
-    deletedSessionIds,
-    markDeleted: markSessionDeleted,
-    pinnedSessionIds,
-    togglePin: togglePinChatSession,
-  } = useChatSessionPreferences(isAuthenticated ? currentUserId : undefined);
-  // 삭제한 상담은 BE 기록이 남아 있어도 목록에서 뺀다.
-  const chatSessions = useMemo(
+  const pinnedSessionIds = useMemo(
     () =>
-      serverChatSessions.filter(
-        (session) => !deletedSessionIds.includes(session.sessionId),
-      ),
-    [deletedSessionIds, serverChatSessions],
+      serverChatSessions
+        .filter((session) => session.pinned)
+        .map((session) => session.sessionId),
+    [serverChatSessions],
   );
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const shouldJumpToBottomRef = useRef(false);
+  const chatSessions = serverChatSessions;
   const latestSelectRequestRef = useRef(0);
   const chatInputRef = useRef<HTMLInputElement | null>(null);
   const activeConversationOwnerKeyRef = useRef("");
   const hasHydratedConversationRef = useRef(false);
   const hasChatStarted = messages.length > 0;
+  const { feedbackMessageIds, sendAnswerFeedback } = useChatAnswerFeedback({
+    isAuthenticated,
+    messages,
+    setMessages,
+  });
+
+  /**
+   * 답변 피드백(회원 전용). 관리자 전달은 BE가 피드백 API 안에서 처리한다:
+   * "아쉬워요"(DISLIKE)면 관리자 답변 피드백 목록에 올리고, "좋아요"로 바꾸거나 취소하면 내린다.
+   * 그래서 FE는 피드백만 보내고, "아쉬워요"를 새로 눌렀을 때만 감사 토스트를 띄운다.
+   */
+  const submitAnswerFeedback = async (
+    assistantMessageId: string,
+    feedback: ChatFeedback,
+  ) => {
+    if (!isAuthenticated) return;
+
+    const target = messages.find(
+      (message) => message.id === assistantMessageId,
+    );
+    const isNewDislike =
+      feedback === "DISLIKE" && target?.feedback !== "DISLIKE";
+
+    if (!isNewDislike) {
+      await sendAnswerFeedback(assistantMessageId, feedback);
+      return;
+    }
+
+    const savedFeedback = await sendAnswerFeedback(
+      assistantMessageId,
+      feedback,
+      { silent: true },
+    );
+
+    showToast(
+      savedFeedback === "DISLIKE"
+        ? "소중한 의견 감사합니다. 더 나은 답변을 만드는 데 참고할게요."
+        : "의견을 전달하지 못했어요. 잠시 후 다시 시도해 주세요.",
+    );
+  };
+  const { scrollContainerRef, shouldJumpToBottomRef } = useChatAutoScroll({
+    activeMode,
+    chatStatus,
+    messages,
+    streamingReply,
+  });
 
   const { applyChatSession } = useChatConversationHydration({
     activeConversationOwnerKeyRef,
@@ -156,41 +198,6 @@ export const useChatConversationController = ({
 
     return () => window.cancelAnimationFrame(frameId);
   }, [activeMode, chatStatus, focusChatInput]);
-
-  const isStreamingAnswer = Boolean(streamingReply?.content);
-
-  useEffect(() => {
-    if (activeMode !== "chat" || messages.length === 0) return;
-
-    const container = scrollContainerRef.current;
-
-    // 답변이 글자 단위로 늘어나는 동안에는 사용자가 위로 스크롤해 읽고 있으면 끌어내리지 않는다.
-    if (
-      isStreamingAnswer &&
-      container &&
-      container.scrollHeight - container.scrollTop - container.clientHeight >
-        160
-    ) {
-      return;
-    }
-
-    const behavior: ScrollBehavior =
-      shouldJumpToBottomRef.current || isStreamingAnswer ? "auto" : "smooth";
-    shouldJumpToBottomRef.current = false;
-
-    window.requestAnimationFrame(() => {
-      scrollContainerRef.current?.scrollTo({
-        top: scrollContainerRef.current.scrollHeight,
-        behavior,
-      });
-      window.requestAnimationFrame(() => {
-        scrollContainerRef.current?.scrollTo({
-          top: scrollContainerRef.current.scrollHeight,
-          behavior,
-        });
-      });
-    });
-  }, [activeMode, chatStatus, isStreamingAnswer, messages, streamingReply]);
 
   const submitChatPrompt = useChatPromptSubmit({
     answerAbortRef,
@@ -292,18 +299,41 @@ export const useChatConversationController = ({
     }
   };
 
-  const deleteChatSession = (targetSessionId: number) => {
-    markSessionDeleted(targetSessionId);
+  const deleteChatSession = async (targetSessionId: number) => {
+    try {
+      await chatService.deleteSession(targetSessionId);
+      removeChatSession(targetSessionId);
 
-    // 보고 있거나 불러오는 중인 상담을 지우면 빈 새 상담으로 돌아간다.
-    if (
-      targetSessionId === currentSessionId ||
-      targetSessionId === loadingSessionId
-    ) {
-      resetChat();
+      // 보고 있거나 불러오는 중인 상담을 지우면 빈 새 상담으로 돌아간다.
+      if (
+        targetSessionId === currentSessionId ||
+        targetSessionId === loadingSessionId
+      ) {
+        resetChat();
+      }
+
+      showToast("상담을 삭제했어요.");
+    } catch {
+      showToast("상담을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.");
     }
+  };
 
-    showToast("상담을 삭제했어요.");
+  const togglePinChatSession = async (targetSessionId: number) => {
+    const nextPinned = !pinnedSessionIds.includes(targetSessionId);
+
+    setChatSessionPinned(targetSessionId, nextPinned);
+
+    try {
+      const response = await chatService.updateSessionPin(
+        targetSessionId,
+        nextPinned,
+      );
+
+      setChatSessionPinned(targetSessionId, response.pinned);
+    } catch {
+      setChatSessionPinned(targetSessionId, !nextPinned);
+      showToast("상담 고정 상태를 바꾸지 못했어요.");
+    }
   };
 
   const handleSelectChat = async (targetSessionId: number) => {
@@ -354,6 +384,7 @@ export const useChatConversationController = ({
     deleteChatSession,
     editAndResubmitPrompt,
     editHintMessageId,
+    feedbackMessageIds,
     handleSelectChat,
     hasChatStarted,
     hasLoadedRecentChats,
@@ -363,6 +394,7 @@ export const useChatConversationController = ({
     retryAnswer,
     scrollContainerRef,
     sessionTitles,
+    sendAnswerFeedback: submitAnswerFeedback,
     setChatInput,
     startNewChat,
     stopChatAnswer,

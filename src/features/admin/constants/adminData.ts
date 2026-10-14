@@ -1,4 +1,5 @@
 import type {
+  AdminAnswerFeedbackStats,
   AdminFaq,
   AdminStore,
   AdminStoreDetail,
@@ -72,3 +73,39 @@ export const storeDetails: AdminStoreDetail[] = storeRows.map(
     providedServices: index % 2 === 0 ? ["유심발급", "기기변경"] : ["유심발급"],
   }),
 );
+
+/** API 주소가 없는 환경(Storybook·로컬 목업)용 답변 피드백 통계. */
+export const mockAnswerFeedbackStats: AdminAnswerFeedbackStats = {
+  summary: { unresolvedCount: 3, repeatCount: 36, todayCount: 1 },
+  candidates: [
+    {
+      id: 1,
+      question:
+        "해외에서 데이터가 갑자기 안 터질 때 바로 확인할 설정이 있나요?",
+      answer: "해당 정보는 확인이 어렵습니다. 고객센터로 문의해주세요.",
+      source: "CHAT",
+      failReason: "LOW_SIMILARITY",
+      count: 18,
+      lastOccurredAt: "2026-10-06T08:45:00",
+    },
+    {
+      id: 2,
+      question:
+        "가족 결합 중 한 명만 알뜰폰으로 이동하면 할인은 어떻게 되나요?",
+      answer: "해당 정보는 확인이 어렵습니다. 고객센터로 문의해주세요.",
+      source: "CHAT",
+      failReason: "NO_MATCH",
+      count: 11,
+      lastOccurredAt: "2026-10-05T21:10:00",
+    },
+    {
+      id: 3,
+      question: "분실 신고 후 유심 재발급까지 대리점 방문 없이 가능한가요?",
+      answer: "분실 신고 후 유심 재발급은 가까운 매장 방문이 필요해요.",
+      source: "CHAT",
+      failReason: "DISLIKED",
+      count: 7,
+      lastOccurredAt: "2026-10-05T18:32:00",
+    },
+  ],
+};

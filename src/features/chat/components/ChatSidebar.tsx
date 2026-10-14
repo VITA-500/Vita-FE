@@ -3,6 +3,7 @@
 import type { MouseEvent } from "react";
 import { useRef, useState } from "react";
 import { PanelLeftClose, PanelLeftOpen, Search, X } from "lucide-react";
+import { ChatCurrentSession } from "@/features/chat/components/ChatCurrentSession";
 import { ChatDeleteConfirmDialog } from "@/features/chat/components/ChatDeleteConfirmDialog";
 import { ChatSessionList } from "@/features/chat/components/ChatSessionList";
 import { ChatSessionMenu } from "@/features/chat/components/ChatSessionMenu";
@@ -33,8 +34,10 @@ type ChatSidebarProps = {
   onOpenHome: () => void;
   onNewChat: () => void;
   onOpenLogin: () => void;
+  onOpenPreferences: () => void;
   onOpenSearch: () => void;
   onOpenProfile: () => void;
+  onOpenSettings: () => void;
   onStartTour: () => void;
   onShowRailTooltip: (
     label: string,
@@ -55,10 +58,14 @@ type ChatSidebarProps = {
   /** 최근 상담 목록(제목)을 아직 불러오는 중. 그동안은 목록을 접어 두고, 다 불러오면 펼친다. */
   isRecentChatsLoading?: boolean;
   onSelectChat?: (sessionId: number) => void;
+  /** "현재 상담"을 눌렀을 때. 지도·프로필 화면이면 채팅 화면으로 돌아간다. */
+  onOpenCurrentChat?: () => void;
+  /** 현재 상담의 답변을 만드는 중. */
+  isCurrentChatAnswering?: boolean;
   /** 고정한 상담 id(고정한 순서). */
   pinnedSessionIds?: readonly number[];
-  onTogglePinChat?: (sessionId: number) => void;
-  onDeleteChat?: (sessionId: number) => void;
+  onTogglePinChat?: (sessionId: number) => void | Promise<void>;
+  onDeleteChat?: (sessionId: number) => void | Promise<void>;
 };
 
 export const ChatSidebar = ({
@@ -76,10 +83,14 @@ export const ChatSidebar = ({
   onOpen,
   onOpenHome,
   onOpenLogin,
+  onOpenPreferences,
   onOpenProfile,
   onOpenSearch,
+  onOpenSettings,
   onDeleteChat,
   onSelectChat,
+  onOpenCurrentChat,
+  isCurrentChatAnswering = false,
   onTogglePinChat,
   pendingSessionId = null,
   pinnedSessionIds = [],
@@ -98,15 +109,20 @@ export const ChatSidebar = ({
   const chatMenuRef = useRef<HTMLDivElement>(null);
   const isGuest = isAuthReady && !isAuthenticated && !isAuthLoading;
 
-  const { isPinnedChat, pinnedChats, unpinnedRecentChats, visibleRecentChats } =
-    buildSidebarChatItems({
-      activeSessionId,
-      chatSessions,
-      currentChatTitle,
-      pendingSessionId,
-      pinnedSessionIds,
-      sessionTitles,
-    });
+  const {
+    currentChat,
+    isPinnedChat,
+    pinnedChats,
+    unpinnedRecentChats,
+    visibleRecentChats,
+  } = buildSidebarChatItems({
+    activeSessionId,
+    chatSessions,
+    currentChatTitle,
+    pendingSessionId,
+    pinnedSessionIds,
+    sessionTitles,
+  });
   const menuChat = chatMenu
     ? (visibleRecentChats.find((chat) => chat.key === chatMenu.chatKey) ?? null)
     : null;
@@ -125,7 +141,7 @@ export const ChatSidebar = ({
     // 아직 저장되지 않은 새 대화는 고정할 대상이 없다.
     if (chat.sessionId === null) return;
 
-    onTogglePinChat?.(chat.sessionId);
+    void onTogglePinChat?.(chat.sessionId);
   };
 
   const handleRequestDeleteChat = (chat: SidebarChatItem) => {
@@ -138,11 +154,13 @@ export const ChatSidebar = ({
   };
 
   const handleConfirmDeleteChat = () => {
-    if (deleteTargetChat?.sessionId != null) {
-      onDeleteChat?.(deleteTargetChat.sessionId);
-    }
+    const targetSessionId = deleteTargetChat?.sessionId;
 
     setDeleteTargetChat(null);
+
+    if (targetSessionId != null) {
+      void onDeleteChat?.(targetSessionId);
+    }
   };
 
   usePointerDownOutside({
@@ -153,15 +171,15 @@ export const ChatSidebar = ({
   });
 
   return (
-    <aside
-      className={cn(
-        sidebarClassName,
-        isOpen ? "w-[296px]" : "w-0 border-r-0 md:w-[64px] md:border-r",
-      )}
-    >
+    <aside className={cn(sidebarClassName, isOpen ? "w-[296px]" : "w-[64px]")}>
       <div className="flex h-full w-[296px] shrink-0 flex-col">
         <div className="flex h-16 items-center justify-between">
-          <div className="flex h-10 w-[92px] shrink-0 items-center pl-5 md:hidden">
+          <div
+            className={cn(
+              "h-10 w-[92px] shrink-0 items-center pl-5 md:hidden",
+              isOpen ? "flex" : "hidden",
+            )}
+          >
             <Logo
               href=""
               onClick={onOpenHome}
@@ -172,7 +190,10 @@ export const ChatSidebar = ({
           </div>
 
           <div
-            className="group relative hidden shrink-0 justify-center md:flex md:w-[64px]"
+            className={cn(
+              "group relative shrink-0 justify-center",
+              isOpen ? "hidden md:flex md:w-[64px]" : "flex w-[64px]",
+            )}
             onMouseEnter={onShowRailTooltip(isOpen ? "홈" : "사이드바 열기")}
             onMouseLeave={onHideTooltip}
           >
@@ -285,6 +306,22 @@ export const ChatSidebar = ({
             pendingSessionId={pendingSessionId}
           />
 
+          {currentChat && (
+            <ChatCurrentSession
+              chat={currentChat}
+              isActive={activeMode === "chat" && currentChat.active}
+              isAnswering={isCurrentChatAnswering}
+              isGuest={isGuest}
+              isOpen={isOpen}
+              isPinned={isPinnedChat(currentChat)}
+              onHideTooltip={onHideTooltip}
+              onOpen={() => onOpenCurrentChat?.()}
+              onOpenMenu={openChatMenu}
+              onShowRailTooltip={onShowRailTooltip}
+              onTogglePin={handlePinChat}
+            />
+          )}
+
           {isAuthenticated && (
             <div
               className={cn(
@@ -327,7 +364,9 @@ export const ChatSidebar = ({
           isOpen={isOpen}
           onHideTooltip={onHideTooltip}
           onOpenLogin={onOpenLogin}
+          onOpenPreferences={onOpenPreferences}
           onOpenProfile={onOpenProfile}
+          onOpenSettings={onOpenSettings}
           onShowRailTooltip={onShowRailTooltip}
           onStartTour={onStartTour}
         />

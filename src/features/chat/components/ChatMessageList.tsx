@@ -9,11 +9,18 @@ import {
   StoppedAnswer,
   StreamingAnswer,
 } from "@/features/chat/components/ChatAssistantMessageParts";
+import { ChatAnswerFeedback } from "@/features/chat/components/ChatAnswerFeedback";
 import { ChatMarkdown } from "@/features/chat/components/ChatMarkdown";
 import { ChatStoreMap } from "@/features/chat/components/ChatStoreMap";
 import { UserMessageBubble } from "@/features/chat/components/UserMessageBubble";
+import { canSendAnswerFeedback } from "@/features/chat/lib/chatAnswerFeedback";
+import { resolveChatActionHref } from "@/features/chat/lib/chatStoreActions";
 import { stripStoreTablesFromAnswer } from "@/features/chat/lib/chatStoreAnswerContent";
-import type { ChatMessage, ChatStreamingReply } from "@/features/chat/types";
+import type {
+  ChatFeedback,
+  ChatMessage,
+  ChatStreamingReply,
+} from "@/features/chat/types";
 import { ButtonLink } from "@/shared/ui/Button";
 import { cn } from "@/shared/lib/cn";
 
@@ -24,8 +31,15 @@ type ChatMessageListProps = {
   messages: ChatMessage[];
   /** 중단된 질문을 고쳐서 다시 답변을 요청한다. */
   onEditPrompt?: (userMessageId: string, prompt: string) => void;
+  /** 답변 도움 여부를 남긴다. 같은 값을 다시 누르면 취소된다. "아쉬워요"는 관리자에게도 전달된다. */
+  onFeedbackAnswer?: (
+    assistantMessageId: string,
+    feedback: ChatFeedback,
+  ) => void;
   /** 실패한 답변을 같은 질문으로 다시 요청한다. */
   onRetryAnswer?: (assistantMessageId: string) => void;
+  /** 피드백 저장·관리자 전달 중인 답변 메시지 id. */
+  feedbackMessageIds?: ReadonlySet<string>;
   /** SSE로 받고 있는 답변. 글자가 오기 시작하면 진행 단계 대신 답변 말풍선을 바로 보여준다. */
   streamingReply?: ChatStreamingReply | null;
 };
@@ -54,7 +68,18 @@ const AssistantBubble = ({ children }: { children: ReactNode }) => (
   </article>
 );
 
-const AssistantSuccessMessage = ({ message }: { message: ChatMessage }) => {
+const AssistantSuccessMessage = ({
+  isFeedbackSubmitting,
+  message,
+  onFeedbackAnswer,
+}: {
+  isFeedbackSubmitting: boolean;
+  message: ChatMessage;
+  onFeedbackAnswer?: (
+    assistantMessageId: string,
+    feedback: ChatFeedback,
+  ) => void;
+}) => {
   const answerContent = stripStoreTablesFromAnswer(
     message.content ?? "",
     message.storeMap,
@@ -71,7 +96,7 @@ const AssistantSuccessMessage = ({ message }: { message: ChatMessage }) => {
             {message.actions.map((action) => (
               <ButtonLink
                 key={action.href}
-                href={action.href}
+                href={resolveChatActionHref(action, message.storeMap)}
                 size="sm"
                 className="rounded-full"
               >
@@ -81,6 +106,14 @@ const AssistantSuccessMessage = ({ message }: { message: ChatMessage }) => {
           </div>
         )}
       </AssistantBubble>
+
+      {onFeedbackAnswer && canSendAnswerFeedback(message) && (
+        <ChatAnswerFeedback
+          isFeedbackSubmitting={isFeedbackSubmitting}
+          message={message}
+          onFeedback={(feedback) => onFeedbackAnswer(message.id, feedback)}
+        />
+      )}
     </AssistantRow>
   );
 };
@@ -93,8 +126,11 @@ const ChatMessageItem = ({
   message,
   messages,
   onEditPrompt,
+  onFeedbackAnswer,
   onRetryAnswer,
+  feedbackMessageIds,
 }: {
+  feedbackMessageIds?: ReadonlySet<string>;
   editHintMessageId?: string | null;
   index: number;
   isLastMessage: boolean;
@@ -102,6 +138,10 @@ const ChatMessageItem = ({
   message: ChatMessage;
   messages: ChatMessage[];
   onEditPrompt?: (userMessageId: string, prompt: string) => void;
+  onFeedbackAnswer?: (
+    assistantMessageId: string,
+    feedback: ChatFeedback,
+  ) => void;
   onRetryAnswer?: (assistantMessageId: string) => void;
 }) => {
   if (message.role === "user") {
@@ -149,7 +189,13 @@ const ChatMessageItem = ({
     );
   }
 
-  return <AssistantSuccessMessage message={message} />;
+  return (
+    <AssistantSuccessMessage
+      isFeedbackSubmitting={feedbackMessageIds?.has(message.id) ?? false}
+      message={message}
+      onFeedbackAnswer={onFeedbackAnswer}
+    />
+  );
 };
 
 export const ChatMessageList = ({
@@ -157,7 +203,9 @@ export const ChatMessageList = ({
   isLoading,
   messages,
   onEditPrompt,
+  onFeedbackAnswer,
   onRetryAnswer,
+  feedbackMessageIds,
   streamingReply,
 }: ChatMessageListProps) => (
   <div className="mx-auto flex w-full flex-col gap-5">
@@ -171,7 +219,9 @@ export const ChatMessageList = ({
         message={message}
         messages={messages}
         onEditPrompt={onEditPrompt}
+        onFeedbackAnswer={onFeedbackAnswer}
         onRetryAnswer={onRetryAnswer}
+        feedbackMessageIds={feedbackMessageIds}
       />
     ))}
 

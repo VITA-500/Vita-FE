@@ -4,7 +4,11 @@ import type { RefObject } from "react";
 import { ChatComposer } from "@/features/chat/components/ChatComposer";
 import { ChatMessageList } from "@/features/chat/components/ChatMessageList";
 import { PromptSuggestions } from "@/features/chat/components/PromptSuggestions";
-import type { ChatMessage, ChatStreamingReply } from "@/features/chat/types";
+import type {
+  ChatFeedback,
+  ChatMessage,
+  ChatStreamingReply,
+} from "@/features/chat/types";
 import { cn } from "@/shared/lib/cn";
 
 type ChatConversationContentProps = {
@@ -17,9 +21,16 @@ type ChatConversationContentProps = {
   messages: ChatMessage[];
   onChatInputChange: (value: string) => void;
   onEditPrompt: (userMessageId: string, prompt: string) => void;
+  onFeedbackAnswer?: (
+    assistantMessageId: string,
+    feedback: ChatFeedback,
+  ) => void;
   onRetryAnswer: (assistantMessageId: string) => void;
+  /** 피드백 저장·관리자 전달 중인 답변 메시지 id. */
+  feedbackMessageIds?: ReadonlySet<string>;
   onStopAnswer: () => void;
   onSubmitPrompt: (prompt?: string) => void;
+  onSelectQuickAction: (prompt: string) => void;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
   streamingReply?: ChatStreamingReply | null;
 };
@@ -34,7 +45,10 @@ export const ChatConversationContent = ({
   messages,
   onChatInputChange,
   onEditPrompt,
+  onFeedbackAnswer,
   onRetryAnswer,
+  onSelectQuickAction,
+  feedbackMessageIds,
   onStopAnswer,
   onSubmitPrompt,
   scrollContainerRef,
@@ -57,7 +71,9 @@ export const ChatConversationContent = ({
                 isLoading={chatStatus === "loading"}
                 messages={messages}
                 onEditPrompt={onEditPrompt}
+                onFeedbackAnswer={onFeedbackAnswer}
                 onRetryAnswer={onRetryAnswer}
+                feedbackMessageIds={feedbackMessageIds}
                 streamingReply={streamingReply}
               />
             </div>
@@ -72,6 +88,7 @@ export const ChatConversationContent = ({
               value={chatInput}
               onChange={onChatInputChange}
               onStop={onStopAnswer}
+              onSelectQuickAction={onSelectQuickAction}
               onSubmit={() => onSubmitPrompt()}
             />
           </div>
@@ -96,6 +113,7 @@ export const ChatConversationContent = ({
             value={chatInput}
             onChange={onChatInputChange}
             onStop={onStopAnswer}
+            onSelectQuickAction={onSelectQuickAction}
             onSubmit={() => onSubmitPrompt()}
           />
         </div>
