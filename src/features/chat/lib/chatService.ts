@@ -17,6 +17,7 @@ type ChatSessionCreateResponse = {
 };
 
 type ChatSessionClaimResponse = { sessionId: number; claimedAt: string };
+type ChatSessionPinResponse = { pinned: boolean; sessionId: number };
 
 export type ChatFeedbackResponse = {
   messageId: number;
@@ -93,6 +94,12 @@ export const chatService = {
       headers: guestHeaders(guestId),
     });
   },
+  deleteSession: async (sessionId: number) => {
+    await requestJson<void>(`/chat/sessions/${sessionId}`, {
+      method: "DELETE",
+      timeoutMs: 8000,
+    });
+  },
   getMessages: (sessionId: number, guestId?: string) => {
     return requestChatJson<SessionMessagesResponse>(
       `/chat/sessions/${sessionId}/messages`,
@@ -116,4 +123,14 @@ export const chatService = {
     );
   },
   sendMessage: sendMessageWithStream,
+  updateSessionPin: (sessionId: number, pinned: boolean) => {
+    return requestJson<ChatSessionPinResponse>(
+      `/chat/sessions/${sessionId}/pin`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ pinned }),
+        timeoutMs: 8000,
+      },
+    );
+  },
 };

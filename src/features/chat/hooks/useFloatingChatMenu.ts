@@ -39,13 +39,14 @@ export const useFloatingChatMenu = () => {
   const openChatMenu = useCallback(
     (event: MouseEvent<HTMLButtonElement>, chatKey: string) => {
       event.stopPropagation();
+      const position = getChatMenuPosition(event.currentTarget);
 
       setChatMenu((currentMenu) =>
         currentMenu?.chatKey === chatKey
           ? null
           : {
               chatKey,
-              ...getChatMenuPosition(event.currentTarget),
+              ...position,
             },
       );
     },

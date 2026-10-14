@@ -98,6 +98,8 @@ export type ChatStreamingReply = {
 };
 
 export type ChatSessionSummary = {
+  /** 서버가 상담 고정 상태를 내려주면 사이드바 고정 영역에 반영한다. */
+  pinned?: boolean;
   sessionId: number;
   title: string | null;
   updatedAt: string;

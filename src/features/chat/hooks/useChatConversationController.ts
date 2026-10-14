@@ -11,7 +11,6 @@ import {
 import { useChatAnswerFeedback } from "@/features/chat/hooks/useChatAnswerFeedback";
 import { useChatAutoScroll } from "@/features/chat/hooks/useChatAutoScroll";
 import { useChatSessionList } from "@/features/chat/hooks/useChatSessionList";
-import { useChatSessionPreferences } from "@/features/chat/hooks/useChatSessionPreferences";
 import { useChatConversationHydration } from "@/features/chat/hooks/useChatConversationHydration";
 import { useChatPromptSubmit } from "@/features/chat/hooks/useChatPromptSubmit";
 import type {
@@ -61,24 +60,20 @@ export const useChatConversationController = ({
     chatSessions: serverChatSessions,
     clearChatSessions,
     hasLoadedRecentChats,
+    removeChatSession,
     refreshChatSessions,
     sessionTitles,
+    setChatSessionPinned,
     setSessionTitles,
   } = useChatSessionList(isAuthenticated);
-  const {
-    deletedSessionIds,
-    markDeleted: markSessionDeleted,
-    pinnedSessionIds,
-    togglePin: togglePinChatSession,
-  } = useChatSessionPreferences(isAuthenticated ? currentUserId : undefined);
-  // 삭제한 상담은 BE 기록이 남아 있어도 목록에서 뺀다.
-  const chatSessions = useMemo(
+  const pinnedSessionIds = useMemo(
     () =>
-      serverChatSessions.filter(
-        (session) => !deletedSessionIds.includes(session.sessionId),
-      ),
-    [deletedSessionIds, serverChatSessions],
+      serverChatSessions
+        .filter((session) => session.pinned)
+        .map((session) => session.sessionId),
+    [serverChatSessions],
   );
+  const chatSessions = serverChatSessions;
   const latestSelectRequestRef = useRef(0);
   const chatInputRef = useRef<HTMLInputElement | null>(null);
   const activeConversationOwnerKeyRef = useRef("");
@@ -304,18 +299,41 @@ export const useChatConversationController = ({
     }
   };
 
-  const deleteChatSession = (targetSessionId: number) => {
-    markSessionDeleted(targetSessionId);
+  const deleteChatSession = async (targetSessionId: number) => {
+    try {
+      await chatService.deleteSession(targetSessionId);
+      removeChatSession(targetSessionId);
 
-    // 보고 있거나 불러오는 중인 상담을 지우면 빈 새 상담으로 돌아간다.
-    if (
-      targetSessionId === currentSessionId ||
-      targetSessionId === loadingSessionId
-    ) {
-      resetChat();
+      // 보고 있거나 불러오는 중인 상담을 지우면 빈 새 상담으로 돌아간다.
+      if (
+        targetSessionId === currentSessionId ||
+        targetSessionId === loadingSessionId
+      ) {
+        resetChat();
+      }
+
+      showToast("상담을 삭제했어요.");
+    } catch {
+      showToast("상담을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.");
     }
+  };
 
-    showToast("상담을 삭제했어요.");
+  const togglePinChatSession = async (targetSessionId: number) => {
+    const nextPinned = !pinnedSessionIds.includes(targetSessionId);
+
+    setChatSessionPinned(targetSessionId, nextPinned);
+
+    try {
+      const response = await chatService.updateSessionPin(
+        targetSessionId,
+        nextPinned,
+      );
+
+      setChatSessionPinned(targetSessionId, response.pinned);
+    } catch {
+      setChatSessionPinned(targetSessionId, !nextPinned);
+      showToast("상담 고정 상태를 바꾸지 못했어요.");
+    }
   };
 
   const handleSelectChat = async (targetSessionId: number) => {
