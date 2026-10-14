@@ -1,6 +1,7 @@
 "use client";
 
 import { RotateCcw } from "lucide-react";
+import { QuickActionSection } from "@/features/chat/components/ChatSettingsSections";
 import { CHAT_TOUR_STORAGE_KEY } from "@/features/chat/constants";
 import { Button } from "@/shared/ui/Button";
 import { Modal } from "@/shared/ui/Modal";
@@ -21,8 +22,10 @@ export const ChatSettingsPanel = ({
   <Modal
     isOpen={isOpen}
     onClose={onClose}
+    size="lg"
     title="설정"
-    description="채팅 화면에서 바로 적용되는 기본 설정입니다."
+    description="바꾸면 바로 적용되고, 이 브라우저에 저장됩니다."
+    className="max-h-[calc(100dvh-3rem)] overflow-y-auto"
     actions={
       <Button variant="secondary" onClick={onClose}>
         닫기
@@ -39,6 +42,8 @@ export const ChatSettingsPanel = ({
         </div>
         <ThemeToggleButton />
       </div>
+
+      <QuickActionSection />
 
       <button
         type="button"
