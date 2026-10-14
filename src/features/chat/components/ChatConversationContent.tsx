@@ -30,6 +30,7 @@ type ChatConversationContentProps = {
   feedbackMessageIds?: ReadonlySet<string>;
   onStopAnswer: () => void;
   onSubmitPrompt: (prompt?: string) => void;
+  onSelectQuickAction: (prompt: string) => void;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
   streamingReply?: ChatStreamingReply | null;
 };
@@ -46,6 +47,7 @@ export const ChatConversationContent = ({
   onEditPrompt,
   onFeedbackAnswer,
   onRetryAnswer,
+  onSelectQuickAction,
   feedbackMessageIds,
   onStopAnswer,
   onSubmitPrompt,
@@ -86,6 +88,7 @@ export const ChatConversationContent = ({
               value={chatInput}
               onChange={onChatInputChange}
               onStop={onStopAnswer}
+              onSelectQuickAction={onSelectQuickAction}
               onSubmit={() => onSubmitPrompt()}
             />
           </div>
@@ -110,6 +113,7 @@ export const ChatConversationContent = ({
             value={chatInput}
             onChange={onChatInputChange}
             onStop={onStopAnswer}
+            onSelectQuickAction={onSelectQuickAction}
             onSubmit={() => onSubmitPrompt()}
           />
         </div>

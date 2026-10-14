@@ -20,7 +20,9 @@ type ChatSidebarFooterProps = {
   isOpen: boolean;
   onHideTooltip: () => void;
   onOpenLogin: () => void;
+  onOpenPreferences: () => void;
   onOpenProfile: () => void;
+  onOpenSettings: () => void;
   onShowRailTooltip: (
     label: string,
     shortcut?: string,
@@ -38,7 +40,9 @@ export const ChatSidebarFooter = ({
   isOpen,
   onHideTooltip,
   onOpenLogin,
+  onOpenPreferences,
   onOpenProfile,
+  onOpenSettings,
   onShowRailTooltip,
   onStartTour,
 }: ChatSidebarFooterProps) => {
@@ -93,6 +97,14 @@ export const ChatSidebarFooter = ({
             setIsLogoutConfirmOpen(true);
           }}
           onOpenProfile={handleOpenProfile}
+          onOpenPreferences={() => {
+            setIsAccountMenuOpen(false);
+            onOpenPreferences();
+          }}
+          onOpenSettings={() => {
+            setIsAccountMenuOpen(false);
+            onOpenSettings();
+          }}
           onStartTour={() => {
             setIsAccountMenuOpen(false);
             onStartTour();

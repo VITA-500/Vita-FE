@@ -34,8 +34,10 @@ type ChatSidebarProps = {
   onOpenHome: () => void;
   onNewChat: () => void;
   onOpenLogin: () => void;
+  onOpenPreferences: () => void;
   onOpenSearch: () => void;
   onOpenProfile: () => void;
+  onOpenSettings: () => void;
   onStartTour: () => void;
   onShowRailTooltip: (
     label: string,
@@ -62,8 +64,8 @@ type ChatSidebarProps = {
   isCurrentChatAnswering?: boolean;
   /** 고정한 상담 id(고정한 순서). */
   pinnedSessionIds?: readonly number[];
-  onTogglePinChat?: (sessionId: number) => void;
-  onDeleteChat?: (sessionId: number) => void;
+  onTogglePinChat?: (sessionId: number) => void | Promise<void>;
+  onDeleteChat?: (sessionId: number) => void | Promise<void>;
 };
 
 export const ChatSidebar = ({
@@ -81,8 +83,10 @@ export const ChatSidebar = ({
   onOpen,
   onOpenHome,
   onOpenLogin,
+  onOpenPreferences,
   onOpenProfile,
   onOpenSearch,
+  onOpenSettings,
   onDeleteChat,
   onSelectChat,
   onOpenCurrentChat,
@@ -137,7 +141,7 @@ export const ChatSidebar = ({
     // 아직 저장되지 않은 새 대화는 고정할 대상이 없다.
     if (chat.sessionId === null) return;
 
-    onTogglePinChat?.(chat.sessionId);
+    void onTogglePinChat?.(chat.sessionId);
   };
 
   const handleRequestDeleteChat = (chat: SidebarChatItem) => {
@@ -150,11 +154,13 @@ export const ChatSidebar = ({
   };
 
   const handleConfirmDeleteChat = () => {
-    if (deleteTargetChat?.sessionId != null) {
-      onDeleteChat?.(deleteTargetChat.sessionId);
-    }
+    const targetSessionId = deleteTargetChat?.sessionId;
 
     setDeleteTargetChat(null);
+
+    if (targetSessionId != null) {
+      void onDeleteChat?.(targetSessionId);
+    }
   };
 
   usePointerDownOutside({
@@ -358,7 +364,9 @@ export const ChatSidebar = ({
           isOpen={isOpen}
           onHideTooltip={onHideTooltip}
           onOpenLogin={onOpenLogin}
+          onOpenPreferences={onOpenPreferences}
           onOpenProfile={onOpenProfile}
+          onOpenSettings={onOpenSettings}
           onShowRailTooltip={onShowRailTooltip}
           onStartTour={onStartTour}
         />

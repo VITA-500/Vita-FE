@@ -12,7 +12,9 @@ import { UserAvatar } from "@/shared/ui/UserAvatar";
 type ChatAccountMenuProps = {
   displayName: string;
   onLogout: () => void;
+  onOpenPreferences: () => void;
   onOpenProfile: () => void;
+  onOpenSettings: () => void;
   onStartTour: () => void;
 };
 
@@ -22,7 +24,9 @@ const itemClassName =
 export const ChatAccountMenu = ({
   displayName,
   onLogout,
+  onOpenPreferences,
   onOpenProfile,
+  onOpenSettings,
   onStartTour,
 }: ChatAccountMenuProps) => (
   <div className="fixed bottom-[64px] left-2 z-[120] w-[280px] rounded-3xl border border-gray-200 bg-white p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-zinc-900">
@@ -44,12 +48,12 @@ export const ChatAccountMenu = ({
 
     <div className="my-2 h-px bg-gray-200 dark:bg-white/10" />
 
-    <button type="button" className={itemClassName}>
+    <button type="button" onClick={onOpenPreferences} className={itemClassName}>
       <MessageCircle size={18} />
       개인 맞춤 설정
     </button>
 
-    <button type="button" className={itemClassName}>
+    <button type="button" onClick={onOpenSettings} className={itemClassName}>
       <Settings size={18} />
       설정
     </button>
