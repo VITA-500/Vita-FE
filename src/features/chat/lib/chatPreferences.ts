@@ -1,47 +1,47 @@
-export type ChatAnswerTone = "brief" | "normal" | "detailed";
+export type HistoryPreference = "ask_before_use" | "auto_apply";
 
 export type ChatPreferences = {
-  answerTone: ChatAnswerTone;
-  interestedTopics: string[];
-  useLocationContext: boolean;
+  usePreviousConsultation: boolean;
+  historyPreference: HistoryPreference;
 };
 
 export const CHAT_PREFERENCES_STORAGE_KEY = "vita-chat-preferences";
 
-export const chatPreferenceTopics = [
-  "요금제",
-  "제휴 혜택",
-  "매장",
-  "로밍",
-  "분실/보호",
-  "결합 할인",
+export const historyPreferenceOptions: {
+  description: string;
+  label: string;
+  value: HistoryPreference;
+}[] = [
+  {
+    value: "ask_before_use",
+    label: "활용 여부 먼저 확인",
+    description: "이전 상담 기록을 쓰기 전에 먼저 물어봅니다.",
+  },
+  {
+    value: "auto_apply",
+    label: "자동 적용",
+    description: "이전 상담 기록을 새 상담에 바로 참고합니다.",
+  },
 ] as const;
 
 export const defaultChatPreferences: ChatPreferences = {
-  answerTone: "normal",
-  interestedTopics: ["요금제", "제휴 혜택"],
-  useLocationContext: true,
+  usePreviousConsultation: false,
+  historyPreference: "ask_before_use",
 };
 
-const isChatAnswerTone = (value: unknown): value is ChatAnswerTone =>
-  value === "brief" || value === "normal" || value === "detailed";
-
-const isKnownTopic = (topic: string) =>
-  chatPreferenceTopics.includes(topic as (typeof chatPreferenceTopics)[number]);
+const isHistoryPreference = (value: unknown): value is HistoryPreference =>
+  historyPreferenceOptions.some((option) => option.value === value);
 
 export const normalizeChatPreferences = (
   preferences: Partial<ChatPreferences> | null | undefined,
 ): ChatPreferences => ({
-  answerTone: isChatAnswerTone(preferences?.answerTone)
-    ? preferences.answerTone
-    : defaultChatPreferences.answerTone,
-  interestedTopics: Array.isArray(preferences?.interestedTopics)
-    ? preferences.interestedTopics.filter(isKnownTopic)
-    : defaultChatPreferences.interestedTopics,
-  useLocationContext:
-    typeof preferences?.useLocationContext === "boolean"
-      ? preferences.useLocationContext
-      : defaultChatPreferences.useLocationContext,
+  usePreviousConsultation:
+    typeof preferences?.usePreviousConsultation === "boolean"
+      ? preferences.usePreviousConsultation
+      : defaultChatPreferences.usePreviousConsultation,
+  historyPreference: isHistoryPreference(preferences?.historyPreference)
+    ? preferences.historyPreference
+    : defaultChatPreferences.historyPreference,
 });
 
 export const loadChatPreferences = (): ChatPreferences => {
