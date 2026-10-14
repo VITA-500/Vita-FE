@@ -9,6 +9,14 @@ import type {
 import type { AdminStoreType } from "@/features/admin/types";
 
 export const adminQueryKeys = {
+  benefitsAll: ["admin", "benefits"] as const,
+  benefits: (params: {
+    category: string;
+    keyword: string;
+    page: number;
+    pageSize: number;
+    sortBy: string;
+  }) => ["admin", "benefits", params] as const,
   answerFeedbackAll: ["admin", "answerFeedback"] as const,
   answerFeedback: (limit: number) =>
     ["admin", "answerFeedback", { limit }] as const,

@@ -5,6 +5,7 @@ export const routes = {
   myPage: "/chat?mode=profile",
   admin: "/admin",
   adminFaqs: "/admin/faqs",
+  adminBenefits: "/admin/benefits",
   adminPartners: "/admin/partners",
   adminStores: "/admin/stores",
   adminFeedback: "/admin/feedback",

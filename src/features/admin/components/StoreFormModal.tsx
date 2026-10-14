@@ -61,7 +61,7 @@ export const StoreFormModal = ({
   const placeholders = isPartnerStore
     ? {
         address: "예: 서울 송파구 올림픽로 240",
-        businessHours: "예: 09:00~18:00",
+        businessHours: "예: 09:00-18:00",
         consultServices: "입장권 문의, 예약 변경",
         name: "예: 어진월드 어드벤처",
         phone: "예: 02-9876-5432",

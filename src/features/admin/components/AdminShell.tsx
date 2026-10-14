@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { MouseEvent, ReactNode } from "react";
 import { useState } from "react";
 import {
+  BadgePercent,
   BarChart3,
   FileQuestion,
   Menu,
@@ -29,6 +30,7 @@ const adminMenus = [
   { label: "FAQ 관리", href: routes.adminFaqs, icon: FileQuestion },
   { label: "대리점 관리", href: routes.adminStores, icon: Store },
   { label: "제휴점 관리", href: routes.adminPartners, icon: Handshake },
+  { label: "제휴 혜택 관리", href: routes.adminBenefits, icon: BadgePercent },
 ] as const;
 
 type AdminShellProps = {

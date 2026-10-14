@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { adminFaqCategories } from "@/features/admin/types";
+import {
+  adminBenefitCategories,
+  adminFaqCategories,
+} from "@/features/admin/types";
 
 export const faqFormSchema = z.object({
   answer: z.string().trim().min(1, "답변을 입력해 주세요."),
@@ -47,3 +50,22 @@ export const storeFormSchema = z.object({
 });
 
 export type StoreFormValues = z.infer<typeof storeFormSchema>;
+
+export const benefitFormSchema = z.object({
+  brand: z
+    .string()
+    .trim()
+    .min(1, "브랜드명을 입력해 주세요.")
+    .max(50, "브랜드명은 50자 이내로 입력해 주세요."),
+  category: z.enum(adminBenefitCategories, {
+    error: "카테고리를 선택해 주세요.",
+  }),
+  description: z.string().optional(),
+  name: z
+    .string()
+    .trim()
+    .min(1, "혜택 이름을 입력해 주세요.")
+    .max(100, "혜택 이름은 100자 이내로 입력해 주세요."),
+});
+
+export type BenefitFormValues = z.infer<typeof benefitFormSchema>;
