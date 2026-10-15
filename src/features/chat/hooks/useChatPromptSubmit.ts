@@ -209,7 +209,9 @@ export const useChatPromptSubmit = ({
         }
 
         const nextAssistantMessage = normalizeStoreMapMessageForPrompt(
-          storeMap ? { ...assistantMessage, storeMap } : assistantMessage,
+          answerStoreMap
+            ? { ...assistantMessage, storeMap: answerStoreMap }
+            : assistantMessage,
           trimmedPrompt,
         );
 

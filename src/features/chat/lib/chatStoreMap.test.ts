@@ -62,6 +62,25 @@ describe("chatStoreMap", () => {
     ).toBe(false);
   });
 
+  it("keeps BE phone-store maps when they include requested services", () => {
+    expect(
+      shouldUsePartnerStoreFallback("근처 제휴 서비스 매장 찾아줘", {
+        type: "PHONE",
+        activeServices: ["휴대폰상담"],
+        stores: [
+          {
+            id: "1",
+            name: "비타 강남점",
+            address: "서울 강남구",
+            phone: "02-1234-5678",
+            lat: 37.5,
+            lng: 127,
+          },
+        ],
+      }),
+    ).toBe(false);
+  });
+
   it("allows local fallback for ordinary nearby store prompts", () => {
     expect(shouldUseLocalStoreFallback("근처 휴대폰 상담 매장 찾아줘")).toBe(
       true,
