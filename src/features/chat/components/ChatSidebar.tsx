@@ -310,6 +310,7 @@ export const ChatSidebar = ({
             isOpen={isOpen}
             onHideTooltip={onHideTooltip}
             onNewChat={onNewChat}
+            onOpenSidebar={onOpen}
             onOpenSearch={onOpenSearch}
             onShowRailTooltip={onShowRailTooltip}
             pendingSessionId={pendingSessionId}
