@@ -20,7 +20,6 @@ import {
   CHAT_STORE_RADIUS_KM,
   findChatStoreMap,
   getMatchedServices,
-  rankStoresByServices,
 } from "@/features/chat/lib/chatStoreMap";
 import { ChatCardRail } from "@/features/chat/components/ChatCardRail";
 import type { ChatStoreMap as ChatStoreMapData } from "@/features/chat/types";
@@ -60,13 +59,13 @@ export const ChatStoreMap = ({
     () => storeMap.activeServices?.slice(0, 4) ?? [],
     [storeMap.activeServices],
   );
-  // 요청 서비스가 되는 매장을 앞으로(예전에 저장된 답변·BE storeMap에도 같은 순서 적용).
+  // BE 또는 조회 유틸이 정한 추천 순서를 그대로 유지한다.
   const stores = useMemo(
     () =>
-      rankStoresByServices(storeMap.stores, activeServices)
+      storeMap.stores
         .slice(0, MAX_CHAT_STORE_COUNT)
         .map((store) => toStoreLocation(store, storeMap)),
-    [activeServices, storeMap],
+    [storeMap],
   );
   const matchedServicesById = useMemo(
     () =>
