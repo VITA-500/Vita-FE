@@ -1,6 +1,6 @@
 import { ArrowUp, Mic, Plus, Square } from "lucide-react";
 import type { RefObject } from "react";
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import {
   ChatQuickActionMenu,
   getVisibleQuickActions,
@@ -16,7 +16,7 @@ type ChatComposerProps = {
   onStop?: () => void;
   onSelectQuickAction?: (prompt: string) => void;
   isLoading?: boolean;
-  inputRef?: RefObject<HTMLInputElement | null>;
+  inputRef?: RefObject<HTMLTextAreaElement | null>;
 };
 
 export const ChatComposer = ({
@@ -29,9 +29,17 @@ export const ChatComposer = ({
   value,
 }: ChatComposerProps) => {
   const [isQuickActionOpen, setIsQuickActionOpen] = useState(false);
+  const composerRef = useRef<HTMLFormElement>(null);
   const quickActionRef = useRef<HTMLDivElement>(null);
   const { settings } = useChatClientSettings();
   const quickActions = getVisibleQuickActions(settings.quickActionIds);
+
+  useLayoutEffect(() => {
+    const input = composerRef.current?.querySelector("textarea");
+    if (!input) return;
+    input.style.height = "0px";
+    input.style.height = `${Math.min(input.scrollHeight, 128)}px`;
+  }, [inputRef, value]);
 
   usePointerDownOutside({
     enabled: isQuickActionOpen,
@@ -41,12 +49,13 @@ export const ChatComposer = ({
 
   return (
     <form
+      ref={composerRef}
       id="vita-chat-input-tour"
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();
       }}
-      className="border-border mx-auto flex h-14 w-full items-center gap-2.5 rounded-2xl border bg-white py-2 pr-3 pl-3 shadow-sm dark:border-white/10 dark:bg-zinc-950"
+      className="border-border mx-auto flex min-h-14 w-full items-end gap-2.5 rounded-2xl border bg-white py-2 pr-3 pl-3 shadow-sm dark:border-white/10 dark:bg-zinc-950"
     >
       <div ref={quickActionRef} className="relative shrink-0">
         {isQuickActionOpen && onSelectQuickAction && (
@@ -71,13 +80,19 @@ export const ChatComposer = ({
         </button>
       </div>
 
-      <input
+      <textarea
         ref={inputRef}
-        type="text"
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            onSubmit();
+          }
+        }}
+        rows={1}
         placeholder="VITA에게 물어보세요"
-        className="text-text-primary min-w-0 flex-1 bg-transparent text-sm font-normal outline-none placeholder:font-normal placeholder:text-gray-400 dark:text-white"
+        className="text-text-primary max-h-32 min-h-9 flex-1 resize-none overflow-y-auto bg-transparent py-2 text-sm leading-5 font-normal outline-none placeholder:font-normal placeholder:text-gray-400 dark:text-white"
       />
 
       <button
