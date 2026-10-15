@@ -26,6 +26,8 @@ const sidebarIconButtonClassName =
 
 type ChatSidebarProps = {
   isAuthenticated: boolean;
+  /** 토큰은 남아 있지만 사용자 조회가 실패한 세션 만료 상태. */
+  isAuthExpired?: boolean;
   isAuthLoading: boolean;
   isAuthReady: boolean;
   isOpen: boolean;
@@ -76,6 +78,7 @@ export const ChatSidebar = ({
   isAuthLoading,
   isAuthReady,
   isAuthenticated,
+  isAuthExpired = false,
   isOpen,
   onClose,
   onNewChat,
@@ -326,6 +329,24 @@ export const ChatSidebar = ({
               onShowRailTooltip={onShowRailTooltip}
               onTogglePin={handlePinChat}
             />
+          )}
+
+          {isAuthExpired && isOpen && (
+            <div className="mx-4 mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
+              <p className="font-bold">로그인이 만료되었어요.</p>
+              <p className="mt-1 text-xs leading-5 opacity-80">
+                저장된 상담을 계속 보려면
+                <br />
+                다시 로그인해 주세요.
+              </p>
+              <button
+                type="button"
+                onClick={onOpenLogin}
+                className="mt-3 flex h-9 w-full items-center justify-center rounded-xl bg-amber-200/70 text-xs font-extrabold text-amber-950 transition hover:bg-amber-200 dark:bg-amber-900/60 dark:text-amber-50 dark:hover:bg-amber-900"
+              >
+                다시 로그인
+              </button>
+            </div>
           )}
 
           {isAuthenticated && (
