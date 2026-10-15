@@ -11,11 +11,13 @@ import {
 } from "@/features/chat/components/ChatAssistantMessageParts";
 import { ChatAnswerFeedback } from "@/features/chat/components/ChatAnswerFeedback";
 import { ChatMarkdown } from "@/features/chat/components/ChatMarkdown";
+import { ChatPlanCardList } from "@/features/chat/components/ChatPlanCardList";
 import { ChatStoreMap } from "@/features/chat/components/ChatStoreMap";
 import { UserMessageBubble } from "@/features/chat/components/UserMessageBubble";
 import { canSendAnswerFeedback } from "@/features/chat/lib/chatAnswerFeedback";
 import { resolveChatActionHref } from "@/features/chat/lib/chatStoreActions";
 import { stripStoreTablesFromAnswer } from "@/features/chat/lib/chatStoreAnswerContent";
+import { toChatPlanCards } from "@/features/chat/lib/chatPlanCards";
 import type {
   ChatFeedback,
   ChatMessage,
@@ -88,7 +90,18 @@ const AssistantSuccessMessage = ({
   return (
     <AssistantRow hasStoreMap={Boolean(message.storeMap)}>
       <AssistantBubble>
-        {answerContent && <ChatMarkdown content={answerContent} />}
+        {answerContent && (
+          <ChatMarkdown
+            content={answerContent}
+            renderPlanCards={!message.plans?.length}
+          />
+        )}
+        {message.plans && message.plans.length > 0 && (
+          <ChatPlanCardList
+            plans={toChatPlanCards(message.plans)}
+            className="py-1"
+          />
+        )}
         {message.storeMap && <ChatStoreMap storeMap={message.storeMap} />}
 
         {message.actions && message.actions.length > 0 && (

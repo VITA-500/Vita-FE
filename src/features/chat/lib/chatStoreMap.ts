@@ -5,8 +5,8 @@ import { storeService } from "@/features/store/lib/storeService";
 import { findServicesInText } from "@/features/store/lib/serviceKeywords";
 import type { StoreLocation } from "@/features/store/types";
 
-/** 채팅 카드·핀은 4곳까지 보여준다(ChatStoreMap과 같은 값). */
-const MAX_CHAT_STORE_COUNT = 4;
+/** 채팅 카드·핀은 답변 계약에 맞춰 최대 5곳까지 보여준다. */
+const MAX_CHAT_STORE_COUNT = 5;
 /** 채팅 답변에서 매장을 찾는 반경(km). */
 export const CHAT_STORE_RADIUS_KM = 3;
 
@@ -208,7 +208,7 @@ export const findChatStoreMap = async ({
     return undefined;
   }
 
-  // 질문에 나온 서비스는 반경 안 전체 매장 기준으로 찾는다(가까운 4곳에 없어도 강조 대상이 되도록).
+  // 질문에 나온 서비스는 반경 안 전체 매장 기준으로 찾는다(가까운 5곳에 없어도 강조 대상이 되도록).
   const availableServices = Array.from(
     new Set(
       nearbyStores.flatMap((store) => [
@@ -220,7 +220,7 @@ export const findChatStoreMap = async ({
   const resolvedActiveServices =
     activeServices ??
     (prompt ? findServicesInText(prompt, availableServices) : []);
-  // 주변 조회는 BE가 가까운 순으로 준다. 요청 서비스가 되는 매장을 앞으로 당긴 뒤 4곳을 고른다.
+  // 주변 조회는 BE가 가까운 순으로 준다. 요청 서비스가 되는 매장을 앞으로 당긴 뒤 5곳을 고른다.
   // 카드에는 이름·거리·서비스만 보여주므로 매장별 상세(/stores/{id}) 호출은 하지 않는다.
   const storeSummaries = rankStoresByServices(
     nearbyStores,
@@ -268,7 +268,7 @@ export const findPartnerChatStoreMap = async ({
         .flatMap((store) => store.providedServices ?? [])
         .filter((service) => service.trim().length > 0),
     ),
-  ).slice(0, 4);
+  ).slice(0, MAX_CHAT_STORE_COUNT);
 
   return {
     type: "PARTNER",

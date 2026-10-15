@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
+import { useState } from "react";
 import type { ChatFeedback, ChatMessage } from "@/features/chat/types";
 import { cn } from "@/shared/lib/cn";
 
@@ -20,27 +21,42 @@ export const ChatAnswerFeedback = ({
   isFeedbackSubmitting = false,
   message,
   onFeedback,
-}: ChatAnswerFeedbackProps) => (
-  <div className="mt-2 flex flex-wrap items-center gap-2 px-1">
-    <span className="text-xs font-bold text-gray-400">도움이 되었나요?</span>
-    <FeedbackButton
-      feedback="LIKE"
-      icon={<ThumbsUp size={13} aria-hidden="true" />}
-      isActive={message.feedback === "LIKE"}
-      isDisabled={isFeedbackSubmitting}
-      label="좋아요"
-      onClick={onFeedback}
-    />
-    <FeedbackButton
-      feedback="DISLIKE"
-      icon={<ThumbsDown size={13} aria-hidden="true" />}
-      isActive={message.feedback === "DISLIKE"}
-      isDisabled={isFeedbackSubmitting}
-      label="아쉬워요"
-      onClick={onFeedback}
-    />
-  </div>
-);
+}: ChatAnswerFeedbackProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="relative mt-3 inline-flex max-w-full flex-col items-start px-1">
+      <button
+        type="button"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((open) => !open)}
+        className="px-1 text-xs font-bold text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+      >
+        도움이 되었나요?
+      </button>
+      {isOpen && (
+        <div className="absolute top-full left-1 z-20 flex min-w-28 flex-col items-stretch gap-1 rounded-xl bg-white p-1 shadow-lg ring-1 ring-gray-200 dark:bg-zinc-900 dark:ring-white/10">
+          <FeedbackButton
+            feedback="LIKE"
+            icon={<ThumbsUp size={13} aria-hidden="true" />}
+            isActive={message.feedback === "LIKE"}
+            isDisabled={isFeedbackSubmitting}
+            label="좋아요"
+            onClick={onFeedback}
+          />
+          <FeedbackButton
+            feedback="DISLIKE"
+            icon={<ThumbsDown size={13} aria-hidden="true" />}
+            isActive={message.feedback === "DISLIKE"}
+            isDisabled={isFeedbackSubmitting}
+            label="아쉬워요"
+            onClick={onFeedback}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
 
 const FeedbackButton = ({
   feedback,

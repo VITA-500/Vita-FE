@@ -54,6 +54,7 @@ export const toChatMessage = (message: SessionMessage): ChatMessage => {
               ? ("error" as const)
               : ("success" as const),
           ...(message.storeMap ? { storeMap: message.storeMap } : {}),
+          ...(message.plans?.length ? { plans: message.plans } : {}),
           ...(message.actions ? { actions: message.actions } : {}),
         }),
   };

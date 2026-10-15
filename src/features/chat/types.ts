@@ -20,11 +20,32 @@ export type ChatMessage = {
   status?: ChatAnswerStatus;
   sources?: readonly ChatAnswerSource[];
   actions?: readonly ChatAction[];
+  plans?: readonly ChatPlan[];
   storeMap?: ChatStoreMap;
   /** BE 메시지 id. 서버에 저장된 답변에만 있고, 피드백 같은 메시지 단위 API에 쓴다. */
   serverMessageId?: number;
   /** 답변 도움 여부. 같은 값을 다시 누르면 BE에 null을 보내 취소한다. */
   feedback?: ChatFeedback | null;
+};
+
+export type ChatPlan = {
+  planId?: number;
+  planCode?: string;
+  name: string;
+  summary?: string;
+  monthlyFee: number;
+  description?: string;
+  networkType?: string;
+  targetGroup?: string;
+  minAge?: number | null;
+  maxAge?: number | null;
+  dataPolicy?: string;
+  baseDataMb?: number | null;
+  exhaustedSpeedKbps?: number | null;
+  voicePolicy?: string;
+  voiceMinutes?: number | null;
+  smsPolicy?: string;
+  smsCount?: number | null;
 };
 
 export type ChatStatus = "idle" | "loading" | "success" | "error";
@@ -120,6 +141,7 @@ export type SessionMessage = {
   feedback?: ChatFeedback | null;
   storeMap?: ChatStoreMap | null;
   actions?: readonly ChatAction[] | null;
+  plans?: readonly ChatPlan[] | null;
 };
 
 export type SessionMessagesResponse = {
