@@ -280,7 +280,9 @@ export const StoreInfoActions = ({
       isRouteMode || isPanel
         ? cn(
             "grid",
-            canReserve ? "grid-cols-2" : "grid-cols-1",
+            canReserve && store.storeType !== "PARTNER"
+              ? "grid-cols-2"
+              : "grid-cols-1",
             isPanel && !isRouteMode ? "mt-6" : "mt-3",
           )
         : "mt-4 flex flex-wrap justify-end",
@@ -315,7 +317,7 @@ export const StoreInfoActions = ({
         길찾기
       </Button>
     )}
-    {canReserve && (
+    {canReserve && store.storeType !== "PARTNER" && (
       <Button
         variant="outline"
         size="sm"
