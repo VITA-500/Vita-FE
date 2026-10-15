@@ -1,5 +1,6 @@
 import type { KakaoMapEventApi } from "@/features/store/lib/kakaoMapTypes";
 import {
+  fitMapToRoute,
   getRouteFitPadding,
   getStoreCardHeight,
   getStoreCardTopInset,
@@ -34,6 +35,7 @@ export const setupStoreMap = ({
   pendingRouteFitKeyRef,
   routeFitFallbackTimeoutRef,
   routeLeftInset,
+  routeBottomInset,
   routePreview,
   routePreviewRef,
   searchPoint,
@@ -97,26 +99,21 @@ export const setupStoreMap = ({
   routePreviewRef.current = routePreview;
 
   if (routePreview && (isNewMap || shouldFitRoute)) {
-    const bounds = new kakaoMaps.LatLngBounds();
     const padding = getRouteFitPadding({
       cardElement: selectedStoreCardRef.current,
       containerWidth:
         mapContainerRef.current?.getBoundingClientRect().width ?? 0,
       hasStoreCard: Boolean(selectedStoreCard),
       routeLeftInset,
+      routeBottomInset,
       selectedStoreCardLeftInset,
     });
 
-    routePreview.path.forEach((point) => {
-      bounds.extend(new kakaoMaps.LatLng(point.lat, point.lng));
+    // 너무 확대·축소되지 않게 확대 수준 한계 안에서 맞춘다.
+    fitMapToRoute(map, routePreview.path, padding, {
+      height: mapContainerRef.current?.getBoundingClientRect().height ?? 0,
+      width: mapContainerRef.current?.getBoundingClientRect().width ?? 0,
     });
-    map.setBounds(
-      bounds,
-      padding.top,
-      padding.right,
-      padding.bottom,
-      padding.left,
-    );
     fittedRouteKeyRef.current = routePreview.routeKey;
 
     // 범위 맞춤이 끝나면(idle) 경로를 그리기 시작한다. idle이 오지 않으면 잠시 뒤 시작한다.
