@@ -3,6 +3,7 @@ import type {
   ChatMarkdownListItem,
 } from "@/features/chat/components/ChatMarkdown";
 import type { PlanCardProps } from "@/shared/ui/PlanCard";
+import type { ChatPlan } from "@/features/chat/types";
 
 /**
  * 챗봇 답변의 요금제 표·목록을 요금제 카드(PlanCard) 데이터로 바꾼다.
@@ -21,6 +22,34 @@ export type ChatPlanCard = Pick<
   "badge" | "description" | "features" | "highlighted" | "planName" | "price"
 > & { planName: string; price: string };
 
+/** BE가 내려준 구조화 요금제 정보를 화면 카드 모델로 변환한다. */
+export const toChatPlanCards = (plans: readonly ChatPlan[]): ChatPlanCard[] =>
+  plans.map((plan) => {
+    const features = [
+      plan.networkType,
+      plan.dataPolicy,
+      plan.baseDataMb != null ? `기본 데이터 ${plan.baseDataMb}MB` : undefined,
+      plan.exhaustedSpeedKbps != null
+        ? `소진 후 ${plan.exhaustedSpeedKbps}Kbps`
+        : undefined,
+      plan.voicePolicy,
+      plan.voiceMinutes != null ? `음성 ${plan.voiceMinutes}분` : undefined,
+      plan.smsPolicy,
+      plan.smsCount != null ? `문자 ${plan.smsCount}건` : undefined,
+      plan.targetGroup,
+    ].filter((feature): feature is string => Boolean(feature));
+
+    return withRecommendation(
+      {
+        planName: plan.name,
+        price: Number(plan.monthlyFee).toLocaleString("ko-KR"),
+        description: plan.summary ?? plan.description,
+        features,
+      },
+      [plan.name, plan.summary, plan.description].filter(Boolean).join(" "),
+    );
+  });
+
 const PRICE = /(?:월\s*)?(\d{1,3}(?:,\d{3})+|\d{4,})\s*원/;
 const PLAN_NAME_PREFIX = /^비타\s/;
 const NAME_HEADER = /요금제|상품|이름|플랜/;
@@ -34,6 +63,7 @@ const stripMarkdown = (text: string) =>
     .replace(/__([^_]+)__/g, "$1")
     .replace(/`([^`]+)`/g, "$1")
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/^#+\s*\d+\s*[.)\-:]?\s*/i, "")
     .replace(/\s+/g, " ")
     .trim();
 

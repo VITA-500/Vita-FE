@@ -21,6 +21,7 @@ import { WarningNotice } from "@/shared/ui/WarningNotice";
 type ChatMarkdownProps = {
   content: string;
   className?: string;
+  renderPlanCards?: boolean;
 };
 
 import {
@@ -134,12 +135,13 @@ const renderLines = (lines: string[], keyPrefix: string) =>
 const renderBlock = (
   block: ChatMarkdownBlock,
   index: number | string,
+  renderPlanCards: boolean,
 ): ReactNode => {
   const key = `b-${index}`;
   const planCards = blockToPlanCards(block);
 
   // 요금제 표·목록은 프론트의 요금제 카드로 바꿔 보여준다.
-  if (planCards) {
+  if (renderPlanCards && planCards) {
     return <ChatPlanCardList key={key} plans={planCards} className="py-1" />;
   }
 
@@ -264,12 +266,16 @@ const renderBlock = (
 /* 안내 카드 (절차 · 준비물 · 주의사항)                                    */
 /* ------------------------------------------------------------------ */
 
-const renderUnit = (unit: ChatAnswerUnit, index: number): ReactNode => {
+const renderUnit = (
+  unit: ChatAnswerUnit,
+  index: number,
+  renderPlanCards: boolean,
+): ReactNode => {
   const key = `u-${index}`;
 
   switch (unit.type) {
     case "block":
-      return renderBlock(unit.block, index);
+      return renderBlock(unit.block, index, renderPlanCards);
     case "steps":
       return (
         <StepGuideCard
@@ -305,7 +311,7 @@ const renderUnit = (unit: ChatAnswerUnit, index: number): ReactNode => {
         >
           <div className="space-y-2">
             {unit.blocks.map((block, blockIndex) =>
-              renderBlock(block, `${key}-${blockIndex}`),
+              renderBlock(block, `${key}-${blockIndex}`, renderPlanCards),
             )}
           </div>
         </WarningNotice>
@@ -313,10 +319,16 @@ const renderUnit = (unit: ChatAnswerUnit, index: number): ReactNode => {
   }
 };
 
-export const ChatMarkdown = ({ className, content }: ChatMarkdownProps) => (
+export const ChatMarkdown = ({
+  className,
+  content,
+  renderPlanCards = true,
+}: ChatMarkdownProps) => (
   <div
     className={["space-y-3 break-words", className].filter(Boolean).join(" ")}
   >
-    {groupAnswerCards(parseChatMarkdown(content)).map(renderUnit)}
+    {groupAnswerCards(parseChatMarkdown(content)).map((unit, index) =>
+      renderUnit(unit, index, renderPlanCards),
+    )}
   </div>
 );

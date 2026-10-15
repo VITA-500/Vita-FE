@@ -13,6 +13,7 @@ import type {
   ChatMessage,
   ChatProgressStage,
   ChatStoreMap,
+  ChatPlan,
   SessionMessagesResponse,
 } from "@/features/chat/types";
 import { ApiError } from "@/shared/api/http";
@@ -66,6 +67,7 @@ type ChatStreamPayload = {
   content?: string;
   storeMap?: ChatStoreMap | null;
   actions?: readonly ChatAction[] | null;
+  plans?: readonly ChatPlan[] | null;
   code?: string;
   message?: string;
 };
@@ -78,6 +80,7 @@ type StreamOutcome =
       content: string;
       storeMap?: ChatStoreMap | null;
       actions?: readonly ChatAction[] | null;
+      plans?: readonly ChatPlan[] | null;
     }
   | { type: "error" }
   /** 연결이 끊겼거나 시간이 지나 결과를 모름 → DB 재조회 */
@@ -279,6 +282,7 @@ export const sendMessageWithStream = async ({
           content: event.payload.content ?? streamedContent,
           storeMap: event.payload.storeMap,
           actions: event.payload.actions,
+          plans: event.payload.plans,
         });
         break;
       case "assistant_error":
@@ -348,6 +352,7 @@ export const sendMessageWithStream = async ({
         answer: result.content,
         storeMap: result.storeMap ?? response.storeMap,
         actions: result.actions ?? response.actions,
+        plans: result.plans ?? response.plans,
       });
     }
 
@@ -373,6 +378,7 @@ export const sendMessageWithStream = async ({
       feedback: saved.feedback,
       storeMap: saved.storeMap,
       actions: saved.actions,
+      plans: saved.plans,
     });
   } finally {
     globalThis.clearTimeout(answerTimeoutId);

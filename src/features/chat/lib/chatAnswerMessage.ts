@@ -4,6 +4,7 @@ import type {
   ChatFeedback,
   ChatMessage,
   ChatStoreMap,
+  ChatPlan,
 } from "@/features/chat/types";
 
 export const FAILED_ANSWER_MESSAGE =
@@ -22,6 +23,7 @@ export type ChatMessageResponse = {
   feedback?: ChatFeedback | null;
   storeMap?: ChatStoreMap | null;
   actions?: readonly ChatAction[] | null;
+  plans?: readonly ChatPlan[] | null;
   stores?: ChatStoreMap["stores"] | null;
   nearbyStores?: ChatStoreMap["stores"] | null;
 };
@@ -51,5 +53,6 @@ export const toAssistantMessage = (
           ? { stores: response.nearbyStores }
           : undefined),
     actions: response.actions ?? undefined,
+    plans: response.plans ?? undefined,
   };
 };
