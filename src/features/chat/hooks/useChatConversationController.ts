@@ -75,7 +75,7 @@ export const useChatConversationController = ({
   );
   const chatSessions = serverChatSessions;
   const latestSelectRequestRef = useRef(0);
-  const chatInputRef = useRef<HTMLInputElement | null>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const activeConversationOwnerKeyRef = useRef("");
   const hasHydratedConversationRef = useRef(false);
   const hasChatStarted = messages.length > 0;

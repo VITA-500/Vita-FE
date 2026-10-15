@@ -74,4 +74,37 @@ describe("stripStoreTablesFromAnswer", () => {
       "가까운 제휴 매장이에요.",
     );
   });
+
+  it("removes store tables whose markdown rows omit the trailing pipe", () => {
+    const content = [
+      "당산역 주변 매장입니다.",
+      "",
+      "매장명 | 주소 | 거리",
+      "--- | --- | ---",
+      "VITA 당산역점 | 서울 영등포구 | 300m",
+      "",
+      "아래 카드에서 확인해 주세요.",
+    ].join("\n");
+
+    expect(stripStoreTablesFromAnswer(content, storeMap)).toBe(
+      ["당산역 주변 매장입니다.", "", "아래 카드에서 확인해 주세요."].join(
+        "\n",
+      ),
+    );
+  });
+
+  it("removes duplicated store list rows when store cards are rendered", () => {
+    const content = [
+      "당산역 주변 매장을 찾았어요.",
+      "- 비타 강남점 (서울 강남구 테헤란로 1, 320m)",
+      "카드에서 자세한 정보를 확인해 주세요.",
+    ].join("\n");
+
+    expect(stripStoreTablesFromAnswer(content, storeMap)).toBe(
+      [
+        "당산역 주변 매장을 찾았어요.",
+        "카드에서 자세한 정보를 확인해 주세요.",
+      ].join("\n"),
+    );
+  });
 });
