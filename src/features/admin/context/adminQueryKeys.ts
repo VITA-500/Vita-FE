@@ -20,6 +20,7 @@ export const adminQueryKeys = {
   answerFeedbackAll: ["admin", "answerFeedback"] as const,
   answerFeedback: (limit: number) =>
     ["admin", "answerFeedback", { limit }] as const,
+  userSummary: ["admin", "users", "summary"] as const,
   faqs: ({
     category,
     keyword,

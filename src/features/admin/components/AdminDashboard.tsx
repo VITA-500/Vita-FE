@@ -4,6 +4,7 @@ import { AlertTriangle } from "lucide-react";
 import { AnswerFeedbackContent } from "@/features/admin/components/AnswerFeedbackContent";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
 import { useAdminAnswerFeedback } from "@/features/admin/context/useAdminAnswerFeedback";
+import { useAdminUserSummary } from "@/features/admin/context/useAdminUserSummary";
 import { getAnswerFeedbackStatItems } from "@/features/admin/lib/answerFeedbackStats";
 import { routes } from "@/shared/constants/routes";
 import { ButtonLink } from "@/shared/ui/Button";
@@ -20,6 +21,11 @@ export const AdminDashboard = () => {
     isLoading: isFeedbackLoading,
     stats: feedbackStats,
   } = useAdminAnswerFeedback(DASHBOARD_FEEDBACK_LIMIT);
+  const {
+    error: userSummaryError,
+    isLoading: isUserSummaryLoading,
+    summary: userSummary,
+  } = useAdminUserSummary();
   const storesMissingPhone = storeDetails.filter(
     (store) => !store.phone?.trim(),
   );
@@ -42,6 +48,11 @@ export const AdminDashboard = () => {
       value: dataQualityIssueCount.toLocaleString("ko-KR"),
       helper: "전화번호/운영시간/서비스 누락",
     },
+    {
+      label: "전체 회원",
+      value: formatSummaryValue(userSummary?.total, isUserSummaryLoading),
+      helper: userSummaryError ?? "관리자 회원 관리에서 상세 확인",
+    },
   ];
 
   return (
@@ -55,7 +66,7 @@ export const AdminDashboard = () => {
         </p>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {adminStats.map((stat) => (
           <StatCard
             key={stat.label}
@@ -64,6 +75,27 @@ export const AdminDashboard = () => {
             helper={stat.helper}
           />
         ))}
+      </section>
+
+      <section className="mt-4 grid gap-4 sm:grid-cols-3">
+        <StatCard
+          label="활성 회원"
+          value={formatSummaryValue(userSummary?.active, isUserSummaryLoading)}
+          helper="현재 로그인 가능한 회원"
+        />
+        <StatCard
+          label="정지 회원"
+          value={formatSummaryValue(
+            userSummary?.suspended,
+            isUserSummaryLoading,
+          )}
+          helper="상태 변경이 필요한 회원"
+        />
+        <StatCard
+          label="관리자 회원"
+          value={formatSummaryValue(userSummary?.admins, isUserSummaryLoading)}
+          helper="관리자 권한 보유 회원"
+        />
       </section>
 
       <section className="mt-8">
@@ -131,6 +163,9 @@ export const AdminDashboard = () => {
     </div>
   );
 };
+
+const formatSummaryValue = (value: number | undefined, isLoading: boolean) =>
+  isLoading ? "…" : (value?.toLocaleString("ko-KR") ?? "-");
 
 type QualityRowProps = {
   count: number;
