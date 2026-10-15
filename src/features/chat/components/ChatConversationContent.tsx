@@ -13,7 +13,7 @@ import { cn } from "@/shared/lib/cn";
 
 type ChatConversationContentProps = {
   chatInput: string;
-  chatInputRef: RefObject<HTMLInputElement | null>;
+  chatInputRef: RefObject<HTMLTextAreaElement | null>;
   chatStatus: "idle" | "loading";
   editHintMessageId?: string | null;
   hasChatStarted: boolean;
