@@ -3,7 +3,7 @@
 import type { MouseEvent } from "react";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Menu } from "lucide-react";
+import { PanelLeft } from "lucide-react";
 import { ChatConversationContent } from "@/features/chat/components/ChatConversationContent";
 import { ChatPreferencesPanel } from "@/features/chat/components/ChatPreferencesPanel";
 import { ChatSidebar } from "@/features/chat/components/ChatSidebar";
@@ -12,6 +12,7 @@ import { ChatSettingsPanel } from "@/features/chat/components/ChatSettingsPanel"
 import { GuestNewChatDialog } from "@/features/chat/components/GuestNewChatDialog";
 import { ProfilePanel } from "@/features/auth/components/ProfilePanel";
 import { StoreMapPanel } from "@/features/store/components/StoreMapPanel";
+import { useIsDesktopViewport } from "@/features/store/hooks/useIsDesktopViewport";
 import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
 import type { ChatMode } from "@/features/chat/types";
 import type {
@@ -35,10 +36,23 @@ const ChatPageContent = () => {
     isReady: isAuthReady,
     user,
   } = useAuthUser();
-  // 매장 지도(?mode=store)로 바로 들어오면 사이드바를 닫은 상태로 시작한다.
-  const [isSidebarOpen, setIsSidebarOpen] = useState(
+  // 사이드바 열림 상태는 데스크톱·모바일을 따로 둔다.
+  // - 데스크톱: 매장 지도(?mode=store)로 바로 들어오면 닫은(접은) 상태, 그 외에는 펼친 상태로 시작한다.
+  // - 모바일: 사이드바가 화면을 덮는 서랍이라 항상 닫힌 상태로 시작하고, 좌측 상단 버튼으로 연다.
+  const isDesktop = useIsDesktopViewport();
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(
     () => searchParams.get("mode") !== "store",
   );
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const isSidebarOpen = isDesktop ? isDesktopSidebarOpen : isMobileSidebarOpen;
+  const setIsSidebarOpen = (nextIsOpen: boolean) => {
+    if (isDesktop) {
+      setIsDesktopSidebarOpen(nextIsOpen);
+      return;
+    }
+
+    setIsMobileSidebarOpen(nextIsOpen);
+  };
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -130,7 +144,10 @@ const ChatPageContent = () => {
   };
 
   return (
-    <main className="bg-surface-warm relative h-screen overflow-hidden text-gray-950 dark:text-white">
+    <main
+      // 모바일 브라우저는 100vh가 주소창·툴바 뒤까지 잡혀 아래쪽(채팅 입력창·지도 바텀 시트)이 가려지므로, 실제 보이는 높이(dvh)를 쓴다.
+      className="bg-surface-warm relative h-dvh overflow-hidden text-gray-950 dark:text-white"
+    >
       <button
         type="button"
         className={cn(
@@ -220,13 +237,13 @@ const ChatPageContent = () => {
           <button
             type="button"
             className={cn(
-              "absolute top-4 left-4 z-10 h-10 w-10 items-center justify-center rounded-xl text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 md:hidden dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white",
+              "absolute top-4 left-4 z-10 items-center justify-center rounded-xl text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 md:hidden dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white",
               activeMode === "store" ? "hidden" : "flex",
             )}
             aria-label="사이드바 열기"
             onClick={() => setIsSidebarOpen(true)}
           >
-            <Menu size={22} />
+            <PanelLeft size={22} />
           </button>
 
           {activeMode === "store" ? (
