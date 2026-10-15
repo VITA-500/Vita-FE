@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { SportShoe } from "lucide-react";
 import { TransitStepIcon } from "@/features/store/components/TransitStepIcon";
 import {
@@ -67,7 +68,56 @@ const TimelineMarker = ({ item }: { item: TransitTimelineItem }) => {
   );
 };
 
-const TimelineContent = ({ item }: { item: TransitTimelineItem }) => {
+/** 타임라인 항목에서 누를 수 있는 부분: 지점(타는 곳·내리는 곳·도보 구간) / 탄 채로 이동하는 구간 */
+export type TransitTimelinePart = "point" | "ride";
+
+/**
+ * 누르면 지도를 맞추는 영역. 안에 문단(p)·div가 있어 button 대신 버튼 역할의 div로 둔다
+ * (HTML 규칙상 button 안에는 글자 요소만 넣을 수 있다). onSelect가 없으면 그냥 내용만 그린다.
+ */
+const SelectableBlock = ({
+  children,
+  className,
+  label,
+  onSelect,
+}: {
+  children: ReactNode;
+  className?: string;
+  label: string;
+  onSelect?: () => void;
+}) =>
+  onSelect ? (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect();
+        }
+      }}
+      aria-label={label}
+      className={cn(
+        "-mx-1.5 cursor-pointer rounded-sm px-1.5 text-left transition hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none dark:hover:bg-white/10",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  ) : (
+    <div className={className}>{children}</div>
+  );
+
+const TimelineContent = ({
+  item,
+  onSelect,
+}: {
+  item: TransitTimelineItem;
+  onSelect?: (part: TransitTimelinePart) => void;
+}) => {
+  const selectPoint = onSelect ? () => onSelect("point") : undefined;
+
   if (item.type === "start") {
     return <p className={titleClassName}>내 위치</p>;
   }
@@ -78,7 +128,7 @@ const TimelineContent = ({ item }: { item: TransitTimelineItem }) => {
 
   if (item.type === "walk") {
     return (
-      <>
+      <SelectableBlock label="도보 구간 지도에서 보기" onSelect={selectPoint}>
         <p
           className={cn(
             "text-xs leading-6 font-bold text-gray-700 dark:text-gray-200",
@@ -88,49 +138,75 @@ const TimelineContent = ({ item }: { item: TransitTimelineItem }) => {
           {item.text}
         </p>
         <p className={metaClassName}>{item.meta}</p>
-      </>
+      </SelectableBlock>
     );
   }
 
   if (item.type === "alight") {
+    const stationName = item.stationName ?? item.lineName;
+
     return (
-      <p className={titleClassName}>{item.stationName ?? item.lineName} 하차</p>
+      <SelectableBlock
+        label={`${stationName} 하차 지점 지도에서 보기`}
+        onSelect={selectPoint}
+      >
+        <p className={titleClassName}>{stationName} 하차</p>
+      </SelectableBlock>
     );
   }
 
+  const stationName = item.stationName ?? item.lineName;
+
+  // 승차·환승: 위쪽(역 이름)은 타는 곳, 아래쪽(노선·시간)은 탄 채로 이동하는 구간 전체를 지도에 맞춘다.
   return (
     <>
-      <p className={titleClassName}>
-        {item.stationName ?? item.lineName} {item.action}
-      </p>
-      <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1">
-        <span
-          className={cn("text-[11px] font-extrabold", wrapTextClassName)}
-          style={{ color: item.color }}
-        >
-          {item.lineName}
-        </span>
-        {item.vehicleType && (
+      <SelectableBlock
+        label={`${stationName} ${item.action} 지점 지도에서 보기`}
+        onSelect={selectPoint}
+      >
+        <p className={titleClassName}>
+          {stationName} {item.action}
+        </p>
+      </SelectableBlock>
+      <SelectableBlock
+        className="mt-0.5"
+        label={`${item.lineName} 탑승 구간 지도에서 보기`}
+        onSelect={onSelect ? () => onSelect("ride") : undefined}
+      >
+        <div className="flex min-w-0 flex-wrap items-center gap-1">
           <span
-            className={cn(
-              "rounded-xs px-1 py-px text-[10px] leading-4 font-extrabold",
-              vehicleTypeBadgeClassName[item.vehicleType] ??
-                "bg-gray-400 text-white dark:bg-white/20",
-            )}
+            className={cn("text-[11px] font-extrabold", wrapTextClassName)}
+            style={{ color: item.color }}
           >
-            {item.vehicleType}
+            {item.lineName}
           </span>
-        )}
-      </div>
-      <p className={metaClassName}>{item.meta}</p>
+          {item.vehicleType && (
+            <span
+              className={cn(
+                "rounded-xs px-1 py-px text-[10px] leading-4 font-extrabold",
+                vehicleTypeBadgeClassName[item.vehicleType] ??
+                  "bg-gray-400 text-white dark:bg-white/20",
+              )}
+            >
+              {item.vehicleType}
+            </span>
+          )}
+        </div>
+        <p className={metaClassName}>{item.meta}</p>
+      </SelectableBlock>
     </>
   );
 };
 
 export const TransitRouteTimeline = ({
+  isItemSelectable,
   items,
+  onSelectItem,
 }: {
+  /** 항목을 눌러 지도를 그 구간에 맞출 수 있는지 */
+  isItemSelectable?: (item: TransitTimelineItem) => boolean;
   items: TransitTimelineItem[];
+  onSelectItem?: (item: TransitTimelineItem, part: TransitTimelinePart) => void;
 }) => (
   <ol aria-label="대중교통 경로 상세">
     {items.map((item, index) => {
@@ -162,7 +238,14 @@ export const TransitRouteTimeline = ({
               isLast && "pb-0",
             )}
           >
-            <TimelineContent item={item} />
+            <TimelineContent
+              item={item}
+              onSelect={
+                onSelectItem && isItemSelectable?.(item)
+                  ? (part) => onSelectItem(item, part)
+                  : undefined
+              }
+            />
           </div>
         </li>
       );

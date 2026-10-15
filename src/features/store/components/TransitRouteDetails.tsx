@@ -2,19 +2,35 @@ import { ChevronDown } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useMemo, useRef, useState } from "react";
 import { TransitStepIcon } from "@/features/store/components/TransitStepIcon";
-import { TransitRouteTimeline } from "@/features/store/components/TransitRouteTimeline";
+import {
+  TransitRouteTimeline,
+  type TransitTimelinePart,
+} from "@/features/store/components/TransitRouteTimeline";
 import { useElementHeight } from "@/features/store/hooks/useElementHeight";
 import type { TransitRouteStep } from "@/features/store/lib/storeRoutePreview";
 import {
   buildTransitTimeline,
   TRANSIT_DEFAULT_COLOR,
+  type TransitTimelineItem,
 } from "@/features/store/lib/transitTimeline";
 import { cn } from "@/shared/lib/cn";
 
 const expandTransition = { duration: 0.28, ease: [0.22, 1, 0.36, 1] } as const;
 
-/** 경로를 한눈에 보는 요약(구간별 노선·시간) */
-const TransitRouteSummaryList = ({ steps }: { steps: TransitRouteStep[] }) => (
+type RoutePoint = TransitRouteStep["path"][number];
+
+/** 구간을 눌러 지도를 그 구간에 맞출 수 있을 때, 누를 수 있는 줄의 hover 모양 */
+const focusableRowClassName =
+  "-mx-1.5 block w-[calc(100%+12px)] rounded-sm px-1.5 text-left transition hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none dark:hover:bg-white/10";
+
+/** 경로를 한눈에 보는 요약(구간별 노선·시간). 구간을 누르면 지도를 그 구간에 맞춘다. */
+const TransitRouteSummaryList = ({
+  onFocusPoints,
+  steps,
+}: {
+  onFocusPoints?: (points: RoutePoint[]) => void;
+  steps: TransitRouteStep[];
+}) => (
   <ol className="space-y-0">
     {steps.map((step, index) => {
       const isLast = index === steps.length - 1;
@@ -36,14 +52,18 @@ const TransitRouteSummaryList = ({ steps }: { steps: TransitRouteStep[] }) => (
             )}
           </div>
           <div className={cn("min-w-0 pb-2.5", isLast && "pb-0")}>
-            <div className="flex min-w-0 items-center gap-1.5">
-              <p className="truncate text-xs font-extrabold text-gray-900 dark:text-white">
-                {step.lineName}
-              </p>
-              <span className="shrink-0 text-[11px] font-bold text-gray-500 dark:text-gray-400">
-                {step.meta}
-              </span>
-            </div>
+            {onFocusPoints && step.path.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => onFocusPoints(step.path)}
+                className={cn(focusableRowClassName, "py-0.5")}
+                aria-label={`${step.lineName} 구간 지도에서 보기`}
+              >
+                <SummaryRowContent step={step} />
+              </button>
+            ) : (
+              <SummaryRowContent step={step} />
+            )}
           </div>
         </li>
       );
@@ -51,12 +71,28 @@ const TransitRouteSummaryList = ({ steps }: { steps: TransitRouteStep[] }) => (
   </ol>
 );
 
-/** 대중교통 경로 요약. 오른쪽 화살표 버튼을 누르면 요약 자리를 상세 타임라인으로 바꾼다. */
+const SummaryRowContent = ({ step }: { step: TransitRouteStep }) => (
+  <span className="flex min-w-0 items-center gap-1.5">
+    <span className="truncate text-xs font-extrabold text-gray-900 dark:text-white">
+      {step.lineName}
+    </span>
+    <span className="shrink-0 text-[11px] font-bold text-gray-500 dark:text-gray-400">
+      {step.meta}
+    </span>
+  </span>
+);
+
+/**
+ * 대중교통 경로 요약. 오른쪽 화살표 버튼을 누르면 요약 자리를 상세 타임라인으로 바꾼다.
+ * onFocusPoints가 있으면 구간(요약 줄·상세의 도보/승차/하차)을 눌러 지도를 그 구간에 맞춘다.
+ */
 export const TransitRouteDetails = ({
   destinationName,
+  onFocusPoints,
   steps,
 }: {
   destinationName: string;
+  onFocusPoints?: (points: RoutePoint[]) => void;
   steps: TransitRouteStep[];
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -67,6 +103,33 @@ export const TransitRouteDetails = ({
     () => buildTransitTimeline(steps, destinationName),
     [destinationName, steps],
   );
+  /**
+   * 상세 타임라인 항목 → 지도에 맞출 좌표.
+   * - 승차·환승의 역 이름: 타는 곳(구간 시작점) 한 곳
+   * - 승차·환승의 노선·시간(ride): 탄 채로 이동하는 구간 전체(타는 곳~내리는 곳)
+   * - 하차: 내리는 곳(구간 끝점) 한 곳
+   * - 도보: 걷는 구간 전체
+   */
+  const getTimelineItemPoints = (
+    item: TransitTimelineItem,
+    part: TransitTimelinePart = "point",
+  ) => {
+    if (item.type === "start" || item.type === "end") {
+      return null;
+    }
+
+    const path = steps.find((step) => step.id === item.stepId)?.path ?? [];
+
+    if (path.length === 0) {
+      return null;
+    }
+
+    if (item.type === "board") {
+      return part === "ride" ? path : [path[0]];
+    }
+
+    return item.type === "alight" ? [path[path.length - 1]] : path;
+  };
 
   if (steps.length === 0) {
     return null;
@@ -92,9 +155,26 @@ export const TransitRouteDetails = ({
             transition={{ duration: 0.18, ease: "easeOut" }}
           >
             {isExpanded ? (
-              <TransitRouteTimeline items={timelineItems} />
+              <TransitRouteTimeline
+                items={timelineItems}
+                onSelectItem={
+                  onFocusPoints
+                    ? (item, part) => {
+                        const points = getTimelineItemPoints(item, part);
+
+                        if (points) onFocusPoints(points);
+                      }
+                    : undefined
+                }
+                isItemSelectable={(item) =>
+                  Boolean(onFocusPoints && getTimelineItemPoints(item))
+                }
+              />
             ) : (
-              <TransitRouteSummaryList steps={steps} />
+              <TransitRouteSummaryList
+                onFocusPoints={onFocusPoints}
+                steps={steps}
+              />
             )}
           </motion.div>
         </div>

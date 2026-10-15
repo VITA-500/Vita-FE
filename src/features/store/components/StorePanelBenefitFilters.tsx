@@ -7,6 +7,8 @@ import {
 import { cn } from "@/shared/lib/cn";
 
 type StorePanelBenefitFiltersProps = {
+  /** bar: 지도 위 검색창 옆(모바일은 아래) 한 줄. panel: 매장 목록 사이드바·바텀 시트 안에서 줄바꿈. */
+  layout?: "bar" | "panel";
   onChange: (nextValue: string[]) => void;
   options: readonly ServiceFilterOption[];
   value: string[];
@@ -21,6 +23,7 @@ const benefitFilterBadgeClassName =
  * 모바일은 검색창 아래, 데스크톱은 검색창 오른쪽에서 가로로 밀어 넘긴다.
  */
 export const StorePanelBenefitFilters = ({
+  layout = "bar",
   onChange,
   options,
   value,
@@ -56,12 +59,25 @@ export const StorePanelBenefitFilters = ({
     );
   });
 
+  if (layout === "panel") {
+    return (
+      <div
+        className="flex flex-wrap gap-1.5"
+        role="group"
+        aria-label="제휴 혜택 및 서비스 필터"
+      >
+        {badges}
+      </div>
+    );
+  }
+
   return (
     <>
-      {/* 모바일: 검색창 바로 아래 가로 슬라이드 */}
-      <div className="-mx-3 w-[calc(100%+24px)] max-w-none min-w-0 self-stretch sm:mx-0 sm:w-[min(420px,calc(100vw-48px))] sm:max-w-full sm:self-start md:hidden">
+      {/* 모바일: 검색창 바로 아래 가로 슬라이드. 위 검색창 줄과 같은 폭으로 가운데에 두고,
+          뱃지가 한 줄에 다 들어가면 가운데 정렬한다(넘치면 왼쪽부터 밀어 넘긴다). */}
+      <div className="w-full max-w-[476px] min-w-0 self-center sm:self-start md:hidden">
         <div
-          className="flex snap-x snap-proximity scroll-px-[max(24px,calc((100vw-420px)/2))] scrollbar-none gap-1.5 overflow-x-auto overscroll-x-contain px-[max(24px,calc((100vw-420px)/2))] py-1.5 after:block after:w-px after:shrink-0 sm:scroll-px-1 sm:px-1"
+          className="flex snap-x snap-proximity scrollbar-none gap-1.5 overflow-x-auto overscroll-x-contain px-1 py-1.5 *:first:ml-auto *:last:mr-auto sm:*:first:ml-0"
           role="group"
           aria-label="제휴 혜택 및 서비스 필터"
         >

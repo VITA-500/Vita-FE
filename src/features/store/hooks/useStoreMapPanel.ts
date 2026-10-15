@@ -34,3 +34,5 @@ export const useStoreMapPanel = (
 
   return { ...state, ...actions };
 };
+
+export type StoreMapPanelModel = ReturnType<typeof useStoreMapPanel>;

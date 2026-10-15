@@ -14,6 +14,7 @@ import { StoreMapSelectedCard } from "@/features/store/components/StoreMapSelect
 import { useElementResizeKey } from "@/features/store/hooks/useElementResizeKey";
 import { useKakaoMapReady } from "@/features/store/hooks/useKakaoMapReady";
 import { useKeepSelectedCardInView } from "@/features/store/hooks/useKeepSelectedCardInView";
+import { useKeepSelectedPinVisible } from "@/features/store/hooks/useKeepSelectedPinVisible";
 import { useMapFitTarget } from "@/features/store/hooks/useMapFitTarget";
 import { useMapLoadingVisible } from "@/features/store/hooks/useMapLoadingVisible";
 import { useMapZoom } from "@/features/store/hooks/useMapZoom";
@@ -21,6 +22,7 @@ import { useOtherStoreOverlays } from "@/features/store/hooks/useOtherStoreOverl
 import { useRouteDrawing } from "@/features/store/hooks/useRouteDrawing";
 import { useRouteOverlays } from "@/features/store/hooks/useRouteOverlays";
 import { useRouteRefocus } from "@/features/store/hooks/useRouteRefocus";
+import { useRouteViewportEffects } from "@/features/store/hooks/useRouteViewportEffects";
 import { useStoreMapEffect } from "@/features/store/hooks/useStoreMapEffect";
 import type { MapOverlayHandle } from "@/features/store/lib/kakaoMapTypes";
 import type { MapPoint } from "@/features/store/lib/mapFit";
@@ -52,6 +54,9 @@ export const StoreMapPreview = ({
   selectedStore,
   selectedStoreCard,
   selectedStoreCardLeftInset = 0,
+  selectedPinSafeArea,
+  overlayInset,
+  routeFocusTarget,
   routeLeftInset = 0,
   selectedStoreId,
   searchPoint,
@@ -81,6 +86,8 @@ export const StoreMapPreview = ({
   onSearchFromMapPoint,
 }: StoreMapPreviewProps) => {
   const isKakaoMapReady = useKakaoMapReady();
+  // 길찾기 경로를 맞출 때 아래쪽(모바일 바텀 시트)도 비운다.
+  const routeBottomInset = overlayInset?.bottom ?? 0;
   // 지도가 처음 화면에 그려졌는지. 그 전(SDK 로딩, 내 위치·매장 기준점 대기, 타일 로딩)에는
   // 빈 화면 대신 로딩 화면을 보여준다.
   const [isMapFirstPainted, setIsMapFirstPainted] = useState(false);
@@ -189,6 +196,7 @@ export const StoreMapPreview = ({
     revealFallbackTimeoutRef,
     routeFitFallbackTimeoutRef,
     routeLeftInset,
+    routeBottomInset,
     routePreview,
     routePreviewRef,
     searchPoint,
@@ -231,6 +239,7 @@ export const StoreMapPreview = ({
     mapRef,
     routeDrawProgress,
     routeLeftInset,
+    routeBottomInset,
     routePreview,
     selectedStoreCard,
     selectedStoreCardLeftInset,
@@ -250,6 +259,27 @@ export const StoreMapPreview = ({
     resizeKey: selectedStoreCardLayoutKey,
     selectedStore,
     selectedStoreCardRef,
+  });
+
+  useRouteViewportEffects({
+    isKakaoMapReady,
+    mapContainerRef,
+    mapRef,
+    routeBottomInset,
+    routeFocusTarget,
+    routeLeftInset,
+    routePreview,
+    selectedStoreCardLeftInset,
+  });
+
+  // 매장 정보를 사이드바·바텀 시트에 보여줄 때: 선택 핀이 패널에 가리면 보이는 곳으로 옮긴다.
+  useKeepSelectedPinVisible({
+    isKakaoMapReady,
+    isPaused: Boolean(routePreview),
+    mapContainerRef,
+    mapRef,
+    safeArea: selectedPinSafeArea,
+    selectedStore,
   });
 
   useMapFitTarget({
@@ -284,7 +314,8 @@ export const StoreMapPreview = ({
       data-kakao-map-ready={isKakaoMapReady}
       aria-busy={isMapLoadingVisible || undefined}
       className={cn(
-        "relative overflow-hidden bg-white dark:bg-zinc-950",
+        // isolate: 지도 위 버튼(z-30)이 지도 밖 패널·바텀 시트보다 위로 올라오지 않게 지도 안에 가둔다.
+        "relative isolate overflow-hidden bg-white dark:bg-zinc-950",
         isFullBleed
           ? "h-full"
           : "border-border rounded-3xl border shadow-sm dark:border-white/10",
@@ -304,6 +335,12 @@ export const StoreMapPreview = ({
           "pointer-events-none relative h-full",
           isCompact ? "p-3" : "min-h-[420px] p-5 sm:p-7",
         )}
+        style={
+          {
+            "--map-overlay-bottom": `${overlayInset?.bottom ?? 0}px`,
+            "--map-overlay-left": `${overlayInset?.left ?? 0}px`,
+          } as CSSProperties
+        }
       >
         {!isKakaoMapReady && <StoreMapFallbackGlow />}
 

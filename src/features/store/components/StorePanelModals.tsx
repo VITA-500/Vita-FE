@@ -1,10 +1,13 @@
 import { routes } from "@/shared/constants/routes";
-import { buildReservationTimeSlots } from "@/features/store/lib/reservationTimeSlots";
+import { StoreReservationFields } from "@/features/store/components/StoreReservationFields";
+import { useReservationSlots } from "@/features/store/hooks/useReservationSlots";
 import type { StoreLocation } from "@/features/store/types";
 import { Button, ButtonLink } from "@/shared/ui/Button";
 import { Modal } from "@/shared/ui/Modal";
 
 type StorePanelModalsProps = {
+  /** false면 예약을 모달로 띄우지 않는다(모바일은 바텀 시트 안에서 예약한다). */
+  isReservationModalEnabled?: boolean;
   isLocationPermissionModalOpen: boolean;
   isLocationRequesting: boolean;
   isLoginRequiredModalOpen: boolean;
@@ -25,6 +28,7 @@ type StorePanelModalsProps = {
 
 /** 매장 지도 패널의 모달: 위치 허용, 예약 확인, 로그인 필요 */
 export const StorePanelModals = ({
+  isReservationModalEnabled = true,
   isLocationPermissionModalOpen,
   isLocationRequesting,
   isLoginRequiredModalOpen,
@@ -42,31 +46,17 @@ export const StorePanelModals = ({
   reservationStore,
   reservationTime,
 }: StorePanelModalsProps) => {
-  const reservationSlots = buildReservationTimeSlots({
-    businessHours: reservationStore?.businessHours,
-    date: reservationDate,
+  const {
+    handleReservationDateChange,
+    isReservationTimeAvailable,
+    reservationSlots,
+  } = useReservationSlots({
+    onReservationDateChange,
+    onReservationTimeChange,
+    reservationDate,
+    reservationStore,
+    reservationTime,
   });
-  const selectedReservationSlot = reservationSlots.find(
-    (slot) => slot.value === reservationTime,
-  );
-  const isReservationTimeAvailable = Boolean(
-    selectedReservationSlot && !selectedReservationSlot.isPast,
-  );
-  const handleReservationDateChange = (date: string) => {
-    const nextSlots = buildReservationTimeSlots({
-      businessHours: reservationStore?.businessHours,
-      date,
-    });
-    const nextSelectedSlot = nextSlots.find(
-      (slot) => slot.value === reservationTime,
-    );
-
-    onReservationDateChange(date);
-
-    if (reservationTime && (!nextSelectedSlot || nextSelectedSlot.isPast)) {
-      onReservationTimeChange("");
-    }
-  };
 
   return (
     <>
@@ -99,7 +89,7 @@ export const StorePanelModals = ({
       </Modal>
 
       <Modal
-        isOpen={reservationStore !== null}
+        isOpen={isReservationModalEnabled && reservationStore !== null}
         onClose={onReservationCancel}
         title="예약 확인"
         description={
@@ -132,49 +122,15 @@ export const StorePanelModals = ({
           </>
         }
       >
-        <div className="space-y-4">
-          <label className="block">
-            <span className="text-text-secondary text-xs font-extrabold">
-              방문 날짜
-            </span>
-            <input
-              type="date"
-              value={reservationDate}
-              min={minReservationDate}
-              max={maxReservationDate}
-              onChange={(event) =>
-                handleReservationDateChange(event.target.value)
-              }
-              className="border-border focus:border-brand/70 mt-2 h-10 w-full rounded-xl border bg-white px-3 text-sm font-bold text-gray-900 outline-none dark:border-white/10 dark:bg-zinc-950 dark:text-white"
-            />
-          </label>
-          <div>
-            <p className="text-text-secondary text-xs font-extrabold">
-              예약 가능 시간
-            </p>
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {reservationSlots.map((slot) => (
-                <button
-                  key={slot.value}
-                  type="button"
-                  disabled={slot.isPast}
-                  onClick={() => onReservationTimeChange(slot.value)}
-                  className={
-                    reservationTime === slot.value && !slot.isPast
-                      ? "bg-brand flex h-9 items-center justify-center rounded-xl text-xs font-extrabold text-white"
-                      : "border-border text-text-secondary hover:border-brand/50 hover:text-brand flex h-9 items-center justify-center rounded-xl border text-xs font-extrabold transition disabled:cursor-not-allowed disabled:opacity-35 dark:border-white/10 dark:text-gray-300"
-                  }
-                >
-                  {slot.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <p className="text-text-secondary text-xs leading-5 font-semibold">
-            운영시간 기준으로 30분 단위 시간대를 보여드려요. 최종 예약 가능
-            여부는 예약 요청 시 한 번 더 확인됩니다.
-          </p>
-        </div>
+        <StoreReservationFields
+          maxReservationDate={maxReservationDate}
+          minReservationDate={minReservationDate}
+          onReservationDateChange={handleReservationDateChange}
+          onReservationTimeChange={onReservationTimeChange}
+          reservationDate={reservationDate}
+          reservationSlots={reservationSlots}
+          reservationTime={reservationTime}
+        />
       </Modal>
 
       <Modal

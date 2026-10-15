@@ -16,6 +16,8 @@ export type TransitTimelineItem =
       id: string;
       line: TransitTimelineLine;
       meta: string;
+      /** 이 항목이 나타내는 경로 구간 id(TransitRouteStep.id). 누르면 지도를 그 구간에 맞춘다. */
+      stepId: string;
       text: string;
       type: "walk";
     }
@@ -28,6 +30,7 @@ export type TransitTimelineItem =
       lineName: string;
       meta: string;
       stationName?: string;
+      stepId: string;
       type: "board";
       vehicleType?: string;
     }
@@ -38,6 +41,7 @@ export type TransitTimelineItem =
       line: TransitTimelineLine;
       lineName: string;
       stationName?: string;
+      stepId: string;
       type: "alight";
     }
   | { id: string; name: string; type: "end" };
@@ -98,6 +102,7 @@ export const buildTransitTimeline = (
         id: step.id,
         line: walkLine,
         meta: step.detailMeta,
+        stepId: step.id,
         text:
           step.guidance ??
           (nextPlaceName ? `${nextPlaceName}까지 도보 이동` : "도보 이동"),
@@ -121,6 +126,7 @@ export const buildTransitTimeline = (
       lineName: step.lineName,
       meta: step.detailMeta,
       stationName: step.boardName,
+      stepId: step.id,
       type: "board",
       vehicleType: step.vehicleType,
     });
@@ -134,6 +140,7 @@ export const buildTransitTimeline = (
         line: getStepLine(next),
         lineName: step.lineName,
         stationName: step.alightName,
+        stepId: step.id,
         type: "alight",
       });
     }

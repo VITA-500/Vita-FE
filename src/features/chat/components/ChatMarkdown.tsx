@@ -25,7 +25,6 @@ type ChatMarkdownProps = {
 
 import {
   type ChatMarkdownBlock,
-  type ChatMarkdownListItem,
   parseChatMarkdown,
 } from "@/features/chat/lib/chatMarkdownParser";
 export {

@@ -8,7 +8,8 @@ import { useEffect, useRef, useState } from "react";
  */
 export const useStorePanelLayout = () => {
   const [isSearchHistoryOpen, setIsSearchHistoryOpen] = useState(false);
-  const [isStoreListCollapsed, setIsStoreListCollapsed] = useState(true);
+  // 지도 화면에 들어오면 매장 목록 사이드바(바텀 시트)를 펼친 상태로 시작한다.
+  const [isStoreListCollapsed, setIsStoreListCollapsed] = useState(false);
   const [routeLeftInset, setRouteLeftInset] = useState(0);
   const collapsedSearchRef = useRef<HTMLDivElement>(null);
   const panelRootRef = useRef<HTMLDivElement>(null);
