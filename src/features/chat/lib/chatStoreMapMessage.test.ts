@@ -79,4 +79,32 @@ describe("chatStoreMapMessage", () => {
       storeMap: { type: "PARTNER" },
     });
   });
+
+  it("keeps phone store cards when BE matched requested services", () => {
+    const serviceStoreMessage: ChatMessage = {
+      ...assistantMessage,
+      storeMap: {
+        ...assistantMessage.storeMap!,
+        activeServices: ["휴대폰상담"],
+      },
+    };
+
+    expect(
+      normalizeStoreMapMessageForPrompt(
+        serviceStoreMessage,
+        "근처 제휴 서비스 매장 찾아줘",
+      ),
+    ).toMatchObject({
+      storeMap: {
+        type: "PHONE",
+        activeServices: ["휴대폰상담"],
+      },
+    });
+    expect(
+      shouldCacheStoreMapForPrompt(
+        "근처 제휴 서비스 매장 찾아줘",
+        serviceStoreMessage.storeMap,
+      ),
+    ).toBe(true);
+  });
 });

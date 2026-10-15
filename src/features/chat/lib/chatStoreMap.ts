@@ -10,9 +10,6 @@ const MAX_CHAT_STORE_COUNT = 4;
 /** 채팅 답변에서 매장을 찾는 반경(km). */
 export const CHAT_STORE_RADIUS_KM = 3;
 
-/** 위치를 받지 못했을 때 기준으로 삼는 곳. 안내 문구에 함께 보여준다. */
-export const DEFAULT_CHAT_STORE_ORIGIN_LABEL = "선릉역 부근";
-
 type ChatStorePoint = { lat: number; lng: number };
 
 const CHAT_LOCATION_STORAGE_KEY = "vita-chat-last-location";
@@ -91,7 +88,13 @@ export const shouldUseLocalStoreFallback = (prompt: string) =>
 export const shouldUsePartnerStoreFallback = (
   prompt: string,
   storeMap?: ChatStoreMap,
-) => isPartnerStorePrompt(prompt) && storeMap?.type !== "PARTNER";
+) =>
+  isPartnerStorePrompt(prompt) &&
+  storeMap?.type !== "PARTNER" &&
+  !hasRequestedServiceStoreMap(storeMap);
+
+export const hasRequestedServiceStoreMap = (storeMap?: ChatStoreMap) =>
+  Boolean(storeMap?.stores.length && storeMap.activeServices?.length);
 
 type StoreServiceFields = {
   consultServices?: readonly string[];

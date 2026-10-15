@@ -62,8 +62,8 @@ export type ChatStoreSummary = {
   distanceText?: string;
 };
 
-/** 매장을 찾은 기준 위치가 어디서 왔는지. current: 브라우저 현재 위치, default: 위치를 못 받아 쓴 기본 위치. */
-export type ChatStoreOriginSource = "current" | "default";
+/** 매장을 찾은 기준 위치가 어디서 왔는지. current: 브라우저 현재 위치, place: 질문에 나온 장소 기준, default: 예전 기본 위치 결과 호환. */
+export type ChatStoreOriginSource = "current" | "place" | "default";
 
 export type ChatStoreMap = {
   type?: ChatStoreType | null;
@@ -76,6 +76,8 @@ export type ChatStoreMap = {
   };
   /** 없으면(예전에 저장된 메시지·BE 응답) 실제 위치로 본다. */
   originSource?: ChatStoreOriginSource;
+  /** place/default 기준일 때 사용자에게 보여줄 기준 이름. */
+  originLabel?: string | null;
   stores: ChatStoreSummary[];
 };
 

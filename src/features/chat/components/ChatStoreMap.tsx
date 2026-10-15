@@ -18,7 +18,6 @@ import {
 } from "@/features/store/lib/serviceKeywords";
 import {
   CHAT_STORE_RADIUS_KM,
-  DEFAULT_CHAT_STORE_ORIGIN_LABEL,
   findChatStoreMap,
   getMatchedServices,
   rankStoresByServices,
@@ -28,6 +27,7 @@ import type { ChatStoreMap as ChatStoreMapData } from "@/features/chat/types";
 import { showToast } from "@/shared/ui/ToastProvider";
 
 const MAX_CHAT_STORE_COUNT = 4;
+const LEGACY_DEFAULT_CHAT_STORE_ORIGIN_LABEL = "선릉역 부근";
 
 type ChatStoreMapProps = {
   storeMap: ChatStoreMapData;
@@ -239,7 +239,8 @@ export const ChatStoreMap = ({
         <div className="flex items-center gap-3 border-b border-amber-200/70 bg-amber-50 px-4 py-2.5 text-xs font-medium text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100">
           <p className="min-w-0 flex-1 leading-5">
             현재 위치를 확인하지 못해 기본 위치(
-            {DEFAULT_CHAT_STORE_ORIGIN_LABEL}) 기준으로 찾았어요.
+            {storeMap.originLabel ?? LEGACY_DEFAULT_CHAT_STORE_ORIGIN_LABEL})
+            기준으로 찾았어요.
           </p>
           <button
             type="button"
