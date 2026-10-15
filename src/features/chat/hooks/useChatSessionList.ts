@@ -2,6 +2,8 @@ import { useCallback, useRef, useState } from "react";
 import { chatService } from "@/features/chat/lib/chatService";
 import { toChatTitle } from "@/features/chat/lib/chatMessages";
 import type { ChatSessionSummary } from "@/features/chat/types";
+import { ApiError } from "@/shared/api/http";
+import { showToast } from "@/shared/ui/ToastProvider";
 
 /** 사이드바 제목을 채우려고 상담 메시지를 동시에 조회하는 최대 개수. */
 const TITLE_FETCH_CONCURRENCY = 4;
@@ -78,8 +80,17 @@ export const useChatSessionList = (isAuthenticated: boolean) => {
           window.setTimeout(resolve, TITLE_FETCH_WAIT_MS),
         ),
       ]);
-    } catch {
+    } catch (error) {
       setChatSessions([]);
+      if (
+        error instanceof ApiError &&
+        (error.status === 401 || error.status === 403)
+      ) {
+        window.dispatchEvent(new Event("vita-auth-changed"));
+        showToast(
+          "로그인이 만료되어 상담 목록을 불러오지 못했어요. 다시 로그인해 주세요.",
+        );
+      }
     } finally {
       setHasLoadedRecentChats(true);
     }

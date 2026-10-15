@@ -31,6 +31,7 @@ const ChatPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
+    hasAccessToken,
     isAuthenticated,
     isLoading: isAuthLoading,
     isReady: isAuthReady,
@@ -162,6 +163,7 @@ const ChatPageContent = () => {
 
       <ChatSidebar
         isAuthenticated={isAuthenticated}
+        isAuthExpired={hasAccessToken && !isAuthenticated && isAuthReady}
         isAuthLoading={isAuthLoading}
         isAuthReady={isAuthReady}
         isOpen={isSidebarOpen}

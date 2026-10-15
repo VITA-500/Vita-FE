@@ -27,10 +27,10 @@ export const ChatDeleteConfirmDialog = ({
       </h2>
 
       <p className="mt-2 text-sm leading-6 font-medium text-gray-500 dark:text-gray-400">
-        <span className="font-extrabold break-all text-gray-800 dark:text-gray-100">
+        <span className="block font-extrabold break-all text-gray-800 dark:text-gray-100">
           {title}
-        </span>{" "}
-        상담이 목록에서 삭제됩니다.
+        </span>
+        <span className="mt-1 block">상담이 목록에서 삭제됩니다.</span>
       </p>
 
       <div className="mt-5 grid grid-cols-2 gap-2">
