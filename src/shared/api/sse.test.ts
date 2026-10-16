@@ -21,6 +21,14 @@ const collect = async (chunks: string[]) => {
 };
 
 describe("readSseStream", () => {
+  it("ignores event IDs containing a null character", async () => {
+    await expect(
+      collect(["id: valid\ndata: a\n\nid: bad\0id\ndata: b\n\n"]),
+    ).resolves.toEqual([
+      { event: "message", data: "a", id: "valid" },
+      { event: "message", data: "b", id: "valid" },
+    ]);
+  });
   it("parses named events with ids and ignores comment lines", async () => {
     await expect(
       collect([

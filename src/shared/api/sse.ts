@@ -59,7 +59,7 @@ export const readSseStream = async (
       eventName = value;
     } else if (field === "data") {
       dataLines.push(value);
-    } else if (field === "id") {
+    } else if (field === "id" && !value.includes("\0")) {
       lastEventId = value;
     }
   };

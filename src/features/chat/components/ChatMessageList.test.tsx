@@ -24,6 +24,54 @@ const assistant = (
 });
 
 describe("ChatMessageList answer status", () => {
+  it("resends a stopped question without opening the editor", async () => {
+    const onRetryAnswer = vi.fn();
+    const onEditPrompt = vi.fn();
+    render(
+      <ChatMessageList
+        isLoading={false}
+        messages={[userMessage, assistant("stopped", "부분 답변")]}
+        onRetryAnswer={onRetryAnswer}
+        onEditPrompt={onEditPrompt}
+      />,
+    );
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "다시 보내기" }));
+    expect(onRetryAnswer).toHaveBeenCalledExactlyOnceWith("assistant-stopped");
+    expect(onEditPrompt).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("textbox", { name: "질문 수정" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not offer resend for an earlier stopped answer or while loading", () => {
+    const { rerender } = render(
+      <ChatMessageList
+        isLoading={false}
+        messages={[
+          userMessage,
+          assistant("stopped"),
+          { ...userMessage, id: "user-2" },
+        ]}
+        onRetryAnswer={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "다시 보내기" }),
+    ).not.toBeInTheDocument();
+    rerender(
+      <ChatMessageList
+        isLoading
+        messages={[userMessage, assistant("stopped")]}
+        onRetryAnswer={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "다시 보내기" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows an error block with a retry button on the last failed answer", () => {
     const onRetryAnswer = vi.fn();
 

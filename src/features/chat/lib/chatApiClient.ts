@@ -1,4 +1,4 @@
-import { requestJson } from "@/shared/api/http";
+import { ApiError, requestJson } from "@/shared/api/http";
 import { env } from "@/shared/config/env";
 
 export const guestHeaders = (guestId?: string) =>
@@ -30,10 +30,14 @@ export const requestGuestChatJson = async <T>(
   if (!response.ok) {
     const errorBody = (await response.json().catch(() => null)) as {
       message?: string;
+      code?: string;
+      fieldErrors?: { field: string; message: string }[] | null;
     } | null;
 
-    throw new Error(
+    throw new ApiError(
       errorBody?.message ?? `Chat API failed: ${response.status}`,
+      response.status,
+      errorBody ?? undefined,
     );
   }
 
@@ -60,9 +64,12 @@ export const requestChatJson = <T>(
 
     return requestGuestChatJson<T>(path, guestId, {
       ...requestOptions,
-      signal:
-        requestOptions.signal ??
-        (timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined),
+      signal: timeoutMs
+        ? AbortSignal.any([
+            AbortSignal.timeout(timeoutMs),
+            ...(requestOptions.signal ? [requestOptions.signal] : []),
+          ])
+        : requestOptions.signal,
     });
   }
 

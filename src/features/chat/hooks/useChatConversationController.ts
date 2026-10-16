@@ -15,6 +15,7 @@ import { useChatConversationHydration } from "@/features/chat/hooks/useChatConve
 import { useChatPromptSubmit } from "@/features/chat/hooks/useChatPromptSubmit";
 import { useChatInputFocus } from "@/features/chat/hooks/useChatInputFocus";
 import type {
+  ChatConversationStatus,
   ChatFeedback,
   ChatMessage,
   ChatMode,
@@ -39,6 +40,8 @@ export const useChatConversationController = ({
   isAuthReady,
   onRequireChatMode,
 }: UseChatConversationControllerParams) => {
+  const [conversationStatus, setConversationStatus] =
+    useState<ChatConversationStatus>("idle");
   const [chatInput, setChatInput] = useState("");
   const [chatStatus, setChatStatus] = useState<"idle" | "loading">("idle");
   const [loadingSessionId, setLoadingSessionId] = useState<number | null>(null);
@@ -127,6 +130,14 @@ export const useChatConversationController = ({
     streamingReply,
   });
 
+  const resetConversationStatus = useCallback(() => {
+    answerAbortRef.current?.abort();
+    answerAbortRef.current = null;
+    setStreamingReply(null);
+    setChatStatus("idle");
+    setConversationStatus("idle");
+  }, []);
+
   const { applyChatSession } = useChatConversationHydration({
     activeConversationOwnerKeyRef,
     clearChatSessions,
@@ -138,7 +149,7 @@ export const useChatConversationController = ({
     isAuthReady,
     messages,
     refreshChatSessions,
-    setChatStatus,
+    setChatStatus: resetConversationStatus,
     setCurrentChatTitle,
     setCurrentGuestId,
     setCurrentSessionId,
@@ -180,6 +191,7 @@ export const useChatConversationController = ({
     refreshChatSessions,
     setChatInput,
     setChatStatus,
+    setConversationStatus,
     setCurrentChatTitle,
     setCurrentGuestId,
     setCurrentSessionId,
@@ -206,6 +218,7 @@ export const useChatConversationController = ({
 
     setStreamingReply(null);
     setChatStatus("idle");
+    setConversationStatus("idle");
     setMessages((currentMessages) => [
       ...currentMessages,
       createStoppedAssistantMessage(partialContent),
@@ -226,7 +239,7 @@ export const useChatConversationController = ({
     void submitChatPrompt(prompt, { replaceFromMessageId: userMessageId });
   };
 
-  /** 실패한 답변을 같은 질문으로 다시 요청한다. */
+  /** 실패하거나 중단된 답변을 같은 질문으로 다시 요청한다. */
   const retryAnswer = (assistantMessageId: string) => {
     const userMessage = findUserMessageBeforeAssistant(
       messages,
@@ -253,6 +266,7 @@ export const useChatConversationController = ({
     setCurrentGuestId(undefined);
     setCurrentSessionId(undefined);
     setChatStatus("idle");
+    setConversationStatus("idle");
     chatConversationStorage.clear(activeConversationOwnerKeyRef.current);
     window.requestAnimationFrame(() => chatInputRef.current?.focus());
   };
@@ -345,6 +359,7 @@ export const useChatConversationController = ({
     chatInputRef,
     chatSessions,
     chatStatus,
+    conversationStatus,
     currentChatTitle,
     currentSessionId,
     deleteChatSession,

@@ -12,11 +12,22 @@ type CsrfTokenResponse = {
 
 export class ApiError extends Error {
   status: number;
+  code?: string;
+  fieldErrors?: { field: string; message: string }[] | null;
 
-  constructor(message: string, status: number) {
+  constructor(
+    message: string,
+    status: number,
+    details?: {
+      code?: string;
+      fieldErrors?: { field: string; message: string }[] | null;
+    },
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.code = details?.code;
+    this.fieldErrors = details?.fieldErrors;
   }
 }
 
@@ -69,7 +80,10 @@ export const requestJson = async <T>(
       const response = await fetch(createUrl(path, baseUrl), {
         credentials: "include",
         ...requestOptions,
-        signal: controller?.signal ?? requestOptions.signal,
+        signal:
+          controller && requestOptions.signal
+            ? AbortSignal.any([controller.signal, requestOptions.signal])
+            : (controller?.signal ?? requestOptions.signal),
         headers: {
           ...(shouldSetJsonContentType
             ? { "Content-Type": "application/json" }
@@ -89,11 +103,14 @@ export const requestJson = async <T>(
             return message ? { message } : null;
           })) as {
           message?: string;
+          code?: string;
+          fieldErrors?: { field: string; message: string }[] | null;
         } | null;
 
         throw new ApiError(
           errorBody?.message ?? `API request failed: ${response.status}`,
           response.status,
+          errorBody ?? undefined,
         );
       }
 

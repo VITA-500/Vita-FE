@@ -35,14 +35,21 @@ describe("requestJson", () => {
 
   it("throws ApiError with the server message for failed responses", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ message: "로그인이 필요합니다." }), {
-        status: 401,
-      }),
+      new Response(
+        JSON.stringify({
+          code: "UNAUTHORIZED",
+          message: "로그인이 필요합니다.",
+        }),
+        {
+          status: 401,
+        },
+      ),
     );
 
     await expect(requestJson("/users/me")).rejects.toMatchObject({
       message: "로그인이 필요합니다.",
       status: 401,
+      code: "UNAUTHORIZED",
     } satisfies Partial<ApiError>);
   });
 
