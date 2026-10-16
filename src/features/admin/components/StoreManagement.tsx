@@ -1,6 +1,5 @@
 "use client";
-
-import { Edit2, Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
 import { AdminErrorBanner } from "@/features/admin/components/AdminErrorBanner";
@@ -8,6 +7,11 @@ import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { AdminResultSummary } from "@/features/admin/components/AdminResultSummary";
 import { FilterDropdown } from "@/features/admin/components/FilterDropdown";
 import { StoreDeleteModal } from "@/features/admin/components/StoreDeleteModal";
+import {
+  StoreRowActions,
+  StoreSkeletonCard,
+  StoreSkeletonRow,
+} from "@/features/admin/components/StoreManagementParts";
 import {
   StoreFormModal,
   type StoreInput,
@@ -22,48 +26,16 @@ import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { SearchInput } from "@/shared/ui/SearchInput";
 import { showToast } from "@/shared/ui/ToastProvider";
-
-const pageSizeOptions = [20, 50, 100] as const;
-const MIN_TABLE_ROWS = 8;
-const sortOptions = [
-  {
-    direction: "desc",
-    field: "createdAt",
-    label: "최신 등록순",
-    value: "createdAt:desc",
-  },
-  {
-    direction: "desc",
-    field: "updatedAt",
-    label: "최근 수정순",
-    value: "updatedAt:desc",
-  },
-] as const;
-const pageSizeFilterOptions = pageSizeOptions.map((pageSize) => ({
-  label: `${pageSize}개`,
-  value: String(pageSize),
-}));
+import {
+  STORE_MIN_TABLE_ROWS,
+  storePageSizeFilterOptions,
+  storeSortOptions,
+  storeTypeLabels,
+} from "@/features/admin/lib/storeManagementConfig";
 
 type StoreManagementProps = {
   storeType?: AdminStoreType;
 };
-
-const storeTypeLabels: Record<
-  AdminStoreType,
-  { emptyName: string; name: string; title: string }
-> = {
-  PHONE: {
-    emptyName: "대리점",
-    name: "대리점",
-    title: "대리점 관리",
-  },
-  PARTNER: {
-    emptyName: "제휴점",
-    name: "제휴점",
-    title: "제휴점 관리",
-  },
-};
-
 export const StoreManagement = ({
   storeType = "PHONE",
 }: StoreManagementProps) => {
@@ -113,10 +85,10 @@ export const StoreManagement = ({
   const rangeEnd = Math.min(storeTotalCount, rangeStart + stores.length - 1);
   const shouldShowSkeletonRows = isStoreLoading || !isStoreTypeSynced;
   const visibleSkeletonRows = shouldShowSkeletonRows
-    ? Math.min(storePageSize, MIN_TABLE_ROWS)
+    ? Math.min(storePageSize, STORE_MIN_TABLE_ROWS)
     : 0;
   const fillerRowCount = !shouldShowSkeletonRows
-    ? Math.max(0, MIN_TABLE_ROWS - stores.length)
+    ? Math.max(0, STORE_MIN_TABLE_ROWS - stores.length)
     : 0;
   const sortValue = `${storeSortField}:${storeSortDirection}`;
 
@@ -254,10 +226,10 @@ export const StoreManagement = ({
           <FilterDropdown
             aria-label="매장 정렬"
             className="w-full sm:w-[160px]"
-            options={sortOptions}
+            options={storeSortOptions}
             value={sortValue}
             onChange={(nextValue) => {
-              const selected = sortOptions.find(
+              const selected = storeSortOptions.find(
                 (option) => option.value === nextValue,
               );
 
@@ -268,7 +240,7 @@ export const StoreManagement = ({
           <FilterDropdown
             aria-label="페이지당 매장 수"
             className="w-full sm:w-[120px]"
-            options={pageSizeFilterOptions}
+            options={storePageSizeFilterOptions}
             value={String(storePageSize)}
             onChange={(nextValue) => setStorePageSize(Number(nextValue))}
           />
@@ -486,88 +458,3 @@ export const StoreManagement = ({
     </div>
   );
 };
-
-type StoreRowActionsProps = {
-  compact?: boolean;
-  onDelete: () => void;
-  onEdit: () => void;
-};
-
-const StoreRowActions = ({
-  compact = false,
-  onDelete,
-  onEdit,
-}: StoreRowActionsProps) => (
-  <div
-    className={cn("inline-flex items-center", compact ? "gap-1" : "gap-2 pr-3")}
-  >
-    <Button
-      variant="ghost"
-      size={compact ? "xs" : "sm"}
-      className={cn(
-        "rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white",
-        compact ? "h-9 w-9" : "h-12 w-12",
-      )}
-      aria-label="매장 수정"
-      onClick={onEdit}
-    >
-      <Edit2 size={compact ? 18 : 30} />
-    </Button>
-    <Button
-      variant="dangerGhost"
-      size={compact ? "xs" : "sm"}
-      className={cn("rounded-lg p-0", compact ? "h-9 w-9" : "h-12 w-12")}
-      aria-label="매장 삭제"
-      onClick={onDelete}
-    >
-      <Trash2 size={compact ? 18 : 30} />
-    </Button>
-  </div>
-);
-
-const StoreSkeletonRow = ({
-  showPartnerColumn,
-}: {
-  showPartnerColumn: boolean;
-}) => (
-  <tr className="h-20" aria-hidden="true">
-    <td className="px-5 py-4">
-      <div className="bg-surface-muted h-4 w-12 animate-pulse rounded-full dark:bg-white/10" />
-    </td>
-    <td className="px-4 py-4">
-      <div className="bg-surface-muted h-4 w-32 animate-pulse rounded-full dark:bg-white/10" />
-    </td>
-    <td className="px-4 py-4">
-      <div className="bg-surface-muted h-4 w-[min(360px,80%)] animate-pulse rounded-full dark:bg-white/10" />
-    </td>
-    {showPartnerColumn && (
-      <td className="px-4 py-4">
-        <div className="bg-surface-muted h-4 w-32 animate-pulse rounded-full dark:bg-white/10" />
-      </td>
-    )}
-    <td className="px-4 py-4">
-      <div className="bg-surface-muted mx-auto h-4 w-20 animate-pulse rounded-full dark:bg-white/10" />
-    </td>
-    <td className="px-5 py-4">
-      <div className="mx-auto flex justify-center gap-3">
-        <div className="bg-surface-muted h-10 w-10 animate-pulse rounded-lg dark:bg-white/10" />
-        <div className="bg-surface-muted h-10 w-10 animate-pulse rounded-lg dark:bg-white/10" />
-      </div>
-    </td>
-  </tr>
-);
-
-const StoreSkeletonCard = () => (
-  <Card padding="sm" aria-hidden="true">
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0 flex-1 space-y-3">
-        <div className="bg-surface-muted h-4 w-28 animate-pulse rounded-full dark:bg-white/10" />
-        <div className="bg-surface-muted h-3 w-full animate-pulse rounded-full dark:bg-white/10" />
-      </div>
-      <div className="flex gap-1">
-        <div className="bg-surface-muted h-9 w-9 animate-pulse rounded-lg dark:bg-white/10" />
-        <div className="bg-surface-muted h-9 w-9 animate-pulse rounded-lg dark:bg-white/10" />
-      </div>
-    </div>
-  </Card>
-);
