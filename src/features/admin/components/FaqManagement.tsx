@@ -11,42 +11,20 @@ import { FilterDropdown } from "@/features/admin/components/FilterDropdown";
 import { FaqStatusModal } from "@/features/admin/components/FaqStatusModal";
 import { useActionStatus } from "@/features/admin/context/ActionStatusContext";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
+import type { AdminFaqCategory } from "@/features/admin/types";
 import {
-  adminFaqCategories,
-  type AdminFaqCategory,
-} from "@/features/admin/types";
+  FAQ_MIN_TABLE_ROWS,
+  faqCategoryFilterOptions,
+  faqPageSizeFilterOptions,
+  faqSortOptions,
+  faqStatusFilterOptions,
+} from "@/features/admin/lib/faqManagementConfig";
 import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { SearchInput } from "@/shared/ui/SearchInput";
-import type { SelectOption } from "@/shared/ui/Select";
-
-const faqCategoryOptions: readonly SelectOption[] = adminFaqCategories.map(
-  (category) => ({ label: category, value: category }),
-);
 type FaqCategoryFilter = "ALL" | AdminFaqCategory;
 type FaqStatusFilter = "ALL" | "ACTIVE" | "INACTIVE";
-
-const faqCategoryFilterOptions: readonly SelectOption[] = [
-  { label: "전체", value: "ALL" },
-  ...faqCategoryOptions,
-];
-
-const faqStatusFilterOptions = [
-  { label: "전체", value: "ALL" },
-  { label: "활성", value: "ACTIVE" },
-  { label: "비활성", value: "INACTIVE" },
-] as const;
-const faqSortOptions = [
-  { label: "최신 등록순", value: "createdAt:desc" },
-  { label: "최근 수정순", value: "updatedAt:desc" },
-] as const;
-const pageSizeOptions = [20, 50, 100] as const;
-const pageSizeFilterOptions = pageSizeOptions.map((pageSize) => ({
-  label: `${pageSize}개`,
-  value: String(pageSize),
-}));
-const MIN_TABLE_ROWS = 8;
 
 export const FaqManagement = () => {
   const {
@@ -82,10 +60,10 @@ export const FaqManagement = () => {
   const hasSearchKeyword = faqKeyword.trim().length > 0;
   const shouldShowSkeletonRows = isFaqLoading;
   const visibleSkeletonRows = shouldShowSkeletonRows
-    ? Math.min(faqPageSize, MIN_TABLE_ROWS)
+    ? Math.min(faqPageSize, FAQ_MIN_TABLE_ROWS)
     : 0;
   const fillerRowCount = !shouldShowSkeletonRows
-    ? Math.max(0, MIN_TABLE_ROWS - faqs.length)
+    ? Math.max(0, FAQ_MIN_TABLE_ROWS - faqs.length)
     : 0;
 
   const editingFaq = faqs.find((faq) => faq.faqId === editingFaqId);
@@ -188,7 +166,7 @@ export const FaqManagement = () => {
           <FilterDropdown
             aria-label="페이지당 FAQ 수"
             className="w-full sm:w-[120px]"
-            options={pageSizeFilterOptions}
+            options={faqPageSizeFilterOptions}
             value={String(faqPageSize)}
             onChange={(nextValue) => setFaqPageSize(Number(nextValue))}
           />
