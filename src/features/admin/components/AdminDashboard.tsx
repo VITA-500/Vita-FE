@@ -2,8 +2,9 @@
 
 import { AlertTriangle } from "lucide-react";
 import { AnswerFeedbackContent } from "@/features/admin/components/AnswerFeedbackContent";
-import { useAdminData } from "@/features/admin/context/AdminDataContext";
+import { useAdminStoreQuality } from "@/features/admin/context/useAdminStoreQuality";
 import { useAdminAnswerFeedback } from "@/features/admin/context/useAdminAnswerFeedback";
+import { useAdminUserSummary } from "@/features/admin/context/useAdminUserSummary";
 import { getAnswerFeedbackStatItems } from "@/features/admin/lib/answerFeedbackStats";
 import { routes } from "@/shared/constants/routes";
 import { ButtonLink } from "@/shared/ui/Button";
@@ -14,26 +15,22 @@ import { StatCard } from "@/shared/ui/StatCard";
 const DASHBOARD_FEEDBACK_LIMIT = 5;
 
 export const AdminDashboard = () => {
-  const { storeDetails } = useAdminData();
+  const {
+    missingPhone,
+    missingBusinessHours,
+    missingServices,
+    issueCount: dataQualityIssueCount,
+  } = useAdminStoreQuality();
   const {
     error: feedbackError,
     isLoading: isFeedbackLoading,
     stats: feedbackStats,
   } = useAdminAnswerFeedback(DASHBOARD_FEEDBACK_LIMIT);
-  const storesMissingPhone = storeDetails.filter(
-    (store) => !store.phone?.trim(),
-  );
-  const storesMissingBusinessHours = storeDetails.filter(
-    (store) => !store.businessHours?.trim(),
-  );
-  const storesMissingServices = storeDetails.filter(
-    (store) =>
-      store.consultServices.length === 0 && store.providedServices.length === 0,
-  );
-  const dataQualityIssueCount =
-    storesMissingPhone.length +
-    storesMissingBusinessHours.length +
-    storesMissingServices.length;
+  const {
+    error: userSummaryError,
+    isLoading: isUserSummaryLoading,
+    summary: userSummary,
+  } = useAdminUserSummary();
 
   const adminStats = [
     ...getAnswerFeedbackStatItems(feedbackStats?.summary, isFeedbackLoading),
@@ -41,6 +38,11 @@ export const AdminDashboard = () => {
       label: "데이터 점검",
       value: dataQualityIssueCount.toLocaleString("ko-KR"),
       helper: "전화번호/운영시간/서비스 누락",
+    },
+    {
+      label: "전체 회원",
+      value: formatSummaryValue(userSummary?.total, isUserSummaryLoading),
+      helper: userSummaryError ?? "관리자 회원 관리에서 상세 확인",
     },
   ];
 
@@ -55,7 +57,7 @@ export const AdminDashboard = () => {
         </p>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {adminStats.map((stat) => (
           <StatCard
             key={stat.label}
@@ -64,6 +66,27 @@ export const AdminDashboard = () => {
             helper={stat.helper}
           />
         ))}
+      </section>
+
+      <section className="mt-4 grid gap-4 sm:grid-cols-3">
+        <StatCard
+          label="활성 회원"
+          value={formatSummaryValue(userSummary?.active, isUserSummaryLoading)}
+          helper="현재 로그인 가능한 회원"
+        />
+        <StatCard
+          label="정지 회원"
+          value={formatSummaryValue(
+            userSummary?.suspended,
+            isUserSummaryLoading,
+          )}
+          helper="상태 변경이 필요한 회원"
+        />
+        <StatCard
+          label="관리자 회원"
+          value={formatSummaryValue(userSummary?.admins, isUserSummaryLoading)}
+          helper="관리자 권한 보유 회원"
+        />
       </section>
 
       <section className="mt-8">
@@ -110,17 +133,17 @@ export const AdminDashboard = () => {
               <div className="grid gap-3 md:grid-cols-3">
                 <QualityRow
                   label="전화번호 누락"
-                  count={storesMissingPhone.length}
+                  count={missingPhone}
                   description="전화 연결 버튼과 매장 상세 안내에 영향"
                 />
                 <QualityRow
                   label="운영시간 누락"
-                  count={storesMissingBusinessHours.length}
+                  count={missingBusinessHours}
                   description="방문 전 안내 정확도에 영향"
                 />
                 <QualityRow
                   label="서비스 정보 누락"
-                  count={storesMissingServices.length}
+                  count={missingServices}
                   description="상담 가능 업무와 제공 서비스 필터에 영향"
                 />
               </div>
@@ -131,6 +154,9 @@ export const AdminDashboard = () => {
     </div>
   );
 };
+
+const formatSummaryValue = (value: number | undefined, isLoading: boolean) =>
+  isLoading ? "…" : (value?.toLocaleString("ko-KR") ?? "-");
 
 type QualityRowProps = {
   count: number;

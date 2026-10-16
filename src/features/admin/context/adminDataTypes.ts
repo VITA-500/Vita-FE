@@ -5,6 +5,7 @@ import type {
   AdminStore,
   AdminStoreDetail,
   AdminStoreType,
+  AdminStoreFormInput,
 } from "@/features/admin/types";
 
 export type FaqSaveInput = Pick<AdminFaq, "category" | "question"> & {
@@ -12,16 +13,7 @@ export type FaqSaveInput = Pick<AdminFaq, "category" | "question"> & {
   subcategory?: string;
 };
 
-export type StoreSaveInput = Omit<
-  AdminStoreDetail,
-  | "brand"
-  | "category"
-  | "benefitName"
-  | "createdAt"
-  | "storeId"
-  | "storeType"
-  | "updatedAt"
->;
+export type StoreSaveInput = AdminStoreFormInput;
 
 export type StoreSortField = "createdAt" | "name" | "updatedAt";
 export type StoreSortDirection = "asc" | "desc";

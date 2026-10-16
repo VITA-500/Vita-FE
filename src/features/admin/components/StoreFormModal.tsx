@@ -11,6 +11,7 @@ import {
 import type {
   AdminBenefit,
   AdminStoreDetail,
+  AdminStoreFormInput,
   AdminStoreType,
 } from "@/features/admin/types";
 import { formatKoreanDate } from "@/shared/lib/date";
@@ -18,16 +19,7 @@ import { Button } from "@/shared/ui/Button";
 import { Modal } from "@/shared/ui/Modal";
 import { showToast } from "@/shared/ui/ToastProvider";
 
-export type StoreInput = Omit<
-  AdminStoreDetail,
-  | "brand"
-  | "category"
-  | "benefitName"
-  | "createdAt"
-  | "storeId"
-  | "storeType"
-  | "updatedAt"
->;
+export type StoreInput = AdminStoreFormInput;
 
 type StoreFormModalProps = {
   benefits: AdminBenefit[];

@@ -14,6 +14,7 @@ import {
   PanelLeftOpen,
   Handshake,
   Store,
+  Users,
 } from "lucide-react";
 import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
@@ -31,6 +32,7 @@ const adminMenus = [
   { label: "대리점 관리", href: routes.adminStores, icon: Store },
   { label: "제휴점 관리", href: routes.adminPartners, icon: Handshake },
   { label: "제휴 혜택 관리", href: routes.adminBenefits, icon: BadgePercent },
+  { label: "회원 관리", href: routes.adminUsers, icon: Users },
 ] as const;
 
 type AdminShellProps = {
