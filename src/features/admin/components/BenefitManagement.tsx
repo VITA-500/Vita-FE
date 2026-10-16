@@ -10,12 +10,17 @@ import { BenefitFormModal } from "@/features/admin/components/BenefitFormModal";
 import { FilterDropdown } from "@/features/admin/components/FilterDropdown";
 import { useActionStatus } from "@/features/admin/context/ActionStatusContext";
 import {
+  BENEFIT_MIN_TABLE_ROWS,
+  benefitCategoryFilterOptions,
+  benefitPageSizeOptions,
+  benefitSortOptions,
+} from "@/features/admin/lib/benefitManagementConfig";
+import {
   useAdminBenefits,
   type BenefitCategoryFilter,
   type BenefitSort,
 } from "@/features/admin/context/useAdminBenefits";
 import {
-  adminBenefitCategories,
   type AdminBenefitDetail,
   type AdminBenefitRequest,
 } from "@/features/admin/types";
@@ -27,24 +32,6 @@ import { Card } from "@/shared/ui/Card";
 import { Modal } from "@/shared/ui/Modal";
 import { SearchInput } from "@/shared/ui/SearchInput";
 import { showToast } from "@/shared/ui/ToastProvider";
-
-const categoryFilterOptions = [
-  { label: "전체", value: "ALL" },
-  ...adminBenefitCategories.map((category) => ({
-    label: category,
-    value: category,
-  })),
-];
-const sortOptions = [
-  { label: "최신 등록순", value: "createdAt,desc" },
-  { label: "최근 수정순", value: "updatedAt,desc" },
-  { label: "브랜드 이름순", value: "brand,asc" },
-] as const;
-const pageSizeOptions = [20, 50, 100].map((pageSize) => ({
-  label: `${pageSize}개`,
-  value: String(pageSize),
-}));
-const MIN_TABLE_ROWS = 8;
 
 /** BE 오류 문구(브랜드 중복·연결 매장 있음 등)를 그대로 보여주고, 없으면 기본 문구 */
 const toErrorMessage = (error: unknown, fallback: string) =>
@@ -93,7 +80,7 @@ export const BenefitManagement = () => {
       : Math.min(totalCount, rangeStart + benefits.length - 1);
   const fillerRowCount = isLoading
     ? 0
-    : Math.max(0, MIN_TABLE_ROWS - benefits.length);
+    : Math.max(0, BENEFIT_MIN_TABLE_ROWS - benefits.length);
 
   // 입력을 멈추고 잠시 뒤에 검색한다.
   useEffect(() => {
@@ -198,14 +185,14 @@ export const BenefitManagement = () => {
           <FilterDropdown
             aria-label="제휴 혜택 정렬"
             className="w-full sm:w-[160px]"
-            options={sortOptions}
+            options={benefitSortOptions}
             value={sort}
             onChange={(nextValue) => setSort(nextValue as BenefitSort)}
           />
           <FilterDropdown
             aria-label="카테고리 필터"
             className="w-full sm:w-[140px]"
-            options={categoryFilterOptions}
+            options={benefitCategoryFilterOptions}
             value={categoryFilter}
             onChange={(nextValue) =>
               setCategoryFilter(nextValue as BenefitCategoryFilter)
@@ -214,7 +201,7 @@ export const BenefitManagement = () => {
           <FilterDropdown
             aria-label="페이지당 제휴 혜택 수"
             className="w-full sm:w-[120px]"
-            options={pageSizeOptions}
+            options={benefitPageSizeOptions}
             value={String(pageSize)}
             onChange={(nextValue) => setPageSize(Number(nextValue))}
           />
