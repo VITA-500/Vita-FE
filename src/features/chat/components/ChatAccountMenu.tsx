@@ -1,18 +1,11 @@
 "use client";
 
-import {
-  ChevronRight,
-  CircleHelp,
-  LogOut,
-  MessageCircle,
-  Settings,
-} from "lucide-react";
+import { ChevronRight, CircleHelp, LogOut, Settings } from "lucide-react";
 import { UserAvatar } from "@/shared/ui/UserAvatar";
 
 type ChatAccountMenuProps = {
   displayName: string;
   onLogout: () => void;
-  onOpenPreferences: () => void;
   onOpenProfile: () => void;
   onOpenSettings: () => void;
   onStartTour: () => void;
@@ -24,7 +17,6 @@ const itemClassName =
 export const ChatAccountMenu = ({
   displayName,
   onLogout,
-  onOpenPreferences,
   onOpenProfile,
   onOpenSettings,
   onStartTour,
@@ -47,11 +39,6 @@ export const ChatAccountMenu = ({
     </button>
 
     <div className="my-2 h-px bg-gray-200 dark:bg-white/10" />
-
-    <button type="button" onClick={onOpenPreferences} className={itemClassName}>
-      <MessageCircle size={18} />
-      상담 기록 활용
-    </button>
 
     <button type="button" onClick={onOpenSettings} className={itemClassName}>
       <Settings size={18} />

@@ -5,7 +5,6 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PanelLeft } from "lucide-react";
 import { ChatConversationContent } from "@/features/chat/components/ChatConversationContent";
-import { ChatPreferencesPanel } from "@/features/chat/components/ChatPreferencesPanel";
 import { ChatSidebar } from "@/features/chat/components/ChatSidebar";
 import { ChatSearchDialog } from "@/features/chat/components/ChatSearchDialog";
 import { ChatSettingsPanel } from "@/features/chat/components/ChatSettingsPanel";
@@ -21,7 +20,6 @@ import type {
   StoreRouteMode,
 } from "@/features/store/types";
 import { useChatConversationController } from "@/features/chat/hooks/useChatConversationController";
-import { useChatPreferences } from "@/features/chat/hooks/useChatPreferences";
 import { useChatTour } from "@/features/chat/hooks/useChatTour";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
 import { routes } from "@/shared/constants/routes";
@@ -55,7 +53,6 @@ const ChatPageContent = () => {
     setIsMobileSidebarOpen(nextIsOpen);
   };
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isGuestNewChatDialogOpen, setIsGuestNewChatDialogOpen] =
     useState(false);
@@ -76,7 +73,6 @@ const ChatPageContent = () => {
     }
   }
   const startChatTour = useChatTour();
-  const { preferences, updatePreferences } = useChatPreferences();
   const {
     chatInput,
     chatInputRef,
@@ -94,6 +90,7 @@ const ChatPageContent = () => {
     loadingSessionId,
     messages,
     pinnedSessionIds,
+    renameChatSession,
     scrollContainerRef,
     sessionTitles,
     setChatInput,
@@ -180,10 +177,6 @@ const ChatPageContent = () => {
           setRailTooltip(null);
           router.push(routes.myPage);
         }}
-        onOpenPreferences={() => {
-          setRailTooltip(null);
-          setIsPreferencesOpen(true);
-        }}
         onOpenSettings={() => {
           setRailTooltip(null);
           setIsSettingsOpen(true);
@@ -225,6 +218,7 @@ const ChatPageContent = () => {
         isCurrentChatAnswering={chatStatus === "loading"}
         pinnedSessionIds={pinnedSessionIds}
         onTogglePinChat={togglePinChatSession}
+        onRenameChat={renameChatSession}
         onDeleteChat={deleteChatSession}
       />
 
@@ -301,12 +295,6 @@ const ChatPageContent = () => {
         onSelectChat={(targetSessionId) => {
           void handleSelectChat(targetSessionId);
         }}
-      />
-      <ChatPreferencesPanel
-        isOpen={isPreferencesOpen}
-        onClose={() => setIsPreferencesOpen(false)}
-        onSave={updatePreferences}
-        preferences={preferences}
       />
       <ChatSettingsPanel
         isOpen={isSettingsOpen}
