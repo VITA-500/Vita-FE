@@ -3,6 +3,7 @@ import type {
   AdminFaqCategory,
   AdminFaqStatus,
   AdminStore,
+  AdminStoreDetail,
   AdminStoreType,
   AdminStoreFormInput,
 } from "@/features/admin/types";
