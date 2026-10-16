@@ -54,4 +54,20 @@ describe("admin store category filter contract", () => {
     for (const [url] of vi.mocked(requestJson).mock.calls)
       expect(String(url)).not.toContain("category");
   });
+  it("filters partner stores by the exact connected benefit", async () => {
+    await adminStoreService.fetchStores({
+      storeType: "PARTNER",
+      benefitId: 17,
+      page: 0,
+      size: 20,
+      sortBy: "createdAt,desc",
+    });
+
+    const url = new URL(
+      String(vi.mocked(requestJson).mock.calls[0][0]),
+      "https://api.test",
+    );
+    expect(url.searchParams.get("benefitId")).toBe("17");
+    expect(url.searchParams.has("category")).toBe(false);
+  });
 });

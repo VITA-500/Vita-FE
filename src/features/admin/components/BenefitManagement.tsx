@@ -43,10 +43,10 @@ const toErrorMessage = (error: unknown, fallback: string) =>
 /** 관리자 제휴 혜택(브랜드) 관리: 검색·카테고리 필터, 등록·수정·삭제 */
 export const BenefitManagement = ({
   embedded = false,
-  onSelectCategory,
+  onSelectBenefit,
 }: {
   embedded?: boolean;
-  onSelectCategory?: (category: string) => void;
+  onSelectBenefit?: (benefitId: number) => void;
 }) => {
   const {
     benefits,
@@ -221,7 +221,7 @@ export const BenefitManagement = ({
             <Card key={benefit.benefitId} padding="sm">
               <BenefitSummary
                 benefit={benefit}
-                onSelectCategory={onSelectCategory}
+                onSelectBenefit={onSelectBenefit}
               />
               <div className="mt-4 flex justify-end gap-1.5">
                 <BenefitActions
@@ -299,7 +299,7 @@ export const BenefitManagement = ({
                     <td className="px-4 py-4 text-center font-bold text-gray-500">
                       <BenefitStoreCount
                         benefit={benefit}
-                        onSelectCategory={onSelectCategory}
+                        onSelectBenefit={onSelectBenefit}
                       />
                     </td>
                     <td className="px-4 py-4 text-center font-semibold text-gray-400">

@@ -61,6 +61,7 @@ export const adminQueryKeys = {
     sortField,
     storeType,
     category,
+    benefitId,
   }: {
     keyword: string;
     page: number;
@@ -69,6 +70,7 @@ export const adminQueryKeys = {
     sortField: StoreSortField;
     storeType: AdminStoreType;
     category?: string;
+    benefitId?: number;
   }) =>
     [
       "admin",
@@ -81,6 +83,7 @@ export const adminQueryKeys = {
         sortField,
         storeType,
         category,
+        benefitId,
       },
     ] as const,
 };

@@ -4,18 +4,28 @@ import { BenefitStoreCount } from "./BenefitManagementParts";
 import type { AdminBenefitDetail } from "../types";
 
 describe("benefit store count navigation", () => {
-  it("opens the category from the count with a keyboard accessible button", () => {
-    const onSelectCategory = vi.fn();
+  it("opens stores connected to the benefit from its count", () => {
+    const onSelectBenefit = vi.fn();
     render(
       <BenefitStoreCount
-        benefit={{ category: "여가", storeCount: 3 } as AdminBenefitDetail}
-        onSelectCategory={onSelectCategory}
+        benefit={
+          {
+            benefitId: 17,
+            brand: "VITA 제휴",
+            name: "주말 할인",
+            category: "여가",
+            storeCount: 3,
+          } as AdminBenefitDetail
+        }
+        onSelectBenefit={onSelectBenefit}
       />,
     );
-    const button = screen.getByRole("button", { name: "여가 제휴점 모아보기" });
+    const button = screen.getByRole("button", {
+      name: "VITA 제휴 주말 할인 연결 매장 보기",
+    });
     expect(button).toHaveTextContent("3곳");
     expect(button).not.toHaveClass("border", "underline");
     fireEvent.click(button);
-    expect(onSelectCategory).toHaveBeenCalledWith("여가");
+    expect(onSelectBenefit).toHaveBeenCalledWith(17);
   });
 });

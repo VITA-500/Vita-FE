@@ -21,10 +21,10 @@ export const BenefitCategoryBadge = ({ category }: { category: string }) => (
 
 export const BenefitSummary = ({
   benefit,
-  onSelectCategory,
+  onSelectBenefit,
 }: {
   benefit: AdminBenefitDetail;
-  onSelectCategory?: (category: string) => void;
+  onSelectBenefit?: (benefitId: number) => void;
 }) => (
   <div className="min-w-0">
     <div className="flex flex-wrap items-center gap-2">
@@ -42,10 +42,7 @@ export const BenefitSummary = ({
       </p>
     )}
     <div className="text-text-secondary mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold">
-      <BenefitStoreCount
-        benefit={benefit}
-        onSelectCategory={onSelectCategory}
-      />
+      <BenefitStoreCount benefit={benefit} onSelectBenefit={onSelectBenefit} />
       <span>수정 {formatKoreanDate(benefit.updatedAt)}</span>
     </div>
   </div>
@@ -53,16 +50,16 @@ export const BenefitSummary = ({
 
 export const BenefitStoreCount = ({
   benefit,
-  onSelectCategory,
+  onSelectBenefit,
 }: {
   benefit: AdminBenefitDetail;
-  onSelectCategory?: (category: string) => void;
+  onSelectBenefit?: (benefitId: number) => void;
 }) =>
-  onSelectCategory ? (
+  onSelectBenefit ? (
     <button
       type="button"
-      aria-label={`${benefit.category} 제휴점 모아보기`}
-      onClick={() => onSelectCategory(benefit.category)}
+      aria-label={`${benefit.brand} ${benefit.name} 연결 매장 보기`}
+      onClick={() => onSelectBenefit(benefit.benefitId)}
       className="group text-text-secondary hover:text-brand focus-visible:ring-brand/30 inline-flex min-h-8 cursor-pointer items-center gap-0.5 rounded-md px-1.5 font-bold tabular-nums transition-colors hover:bg-gray-100 focus-visible:ring-2 focus-visible:outline-none dark:hover:bg-white/10"
     >
       <span>{benefit.storeCount.toLocaleString("ko-KR")}곳</span>
