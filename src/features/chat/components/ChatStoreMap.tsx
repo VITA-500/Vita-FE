@@ -18,16 +18,15 @@ import {
 } from "@/features/store/lib/serviceKeywords";
 import {
   CHAT_STORE_RADIUS_KM,
-  DEFAULT_CHAT_STORE_ORIGIN_LABEL,
   findChatStoreMap,
   getMatchedServices,
-  rankStoresByServices,
 } from "@/features/chat/lib/chatStoreMap";
 import { ChatCardRail } from "@/features/chat/components/ChatCardRail";
 import type { ChatStoreMap as ChatStoreMapData } from "@/features/chat/types";
 import { showToast } from "@/shared/ui/ToastProvider";
 
-const MAX_CHAT_STORE_COUNT = 4;
+const MAX_CHAT_STORE_COUNT = 5;
+const LEGACY_DEFAULT_CHAT_STORE_ORIGIN_LABEL = "선릉역 부근";
 
 type ChatStoreMapProps = {
   storeMap: ChatStoreMapData;
@@ -54,18 +53,19 @@ export const ChatStoreMap = ({
   const storeMap = researchedStoreMap ?? initialStoreMap;
   // 위치를 못 받아 기본 위치로 찾은 결과. 기본 위치를 "내 위치"처럼 보여주지 않는다.
   const isDefaultOrigin = storeMap.originSource === "default";
+  const isPlaceOrigin = storeMap.originSource === "place";
   /** 질문에 나온 서비스(예: 휴대폰상담). 이 서비스가 되는 매장을 카드·핀에서 강조한다. */
   const activeServices = useMemo(
     () => storeMap.activeServices?.slice(0, 4) ?? [],
     [storeMap.activeServices],
   );
-  // 요청 서비스가 되는 매장을 앞으로(예전에 저장된 답변·BE storeMap에도 같은 순서 적용).
+  // BE 또는 조회 유틸이 정한 추천 순서를 그대로 유지한다.
   const stores = useMemo(
     () =>
-      rankStoresByServices(storeMap.stores, activeServices)
+      storeMap.stores
         .slice(0, MAX_CHAT_STORE_COUNT)
         .map((store) => toStoreLocation(store, storeMap)),
-    [activeServices, storeMap],
+    [storeMap],
   );
   const matchedServicesById = useMemo(
     () =>
@@ -239,7 +239,8 @@ export const ChatStoreMap = ({
         <div className="flex items-center gap-3 border-b border-amber-200/70 bg-amber-50 px-4 py-2.5 text-xs font-medium text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100">
           <p className="min-w-0 flex-1 leading-5">
             현재 위치를 확인하지 못해 기본 위치(
-            {DEFAULT_CHAT_STORE_ORIGIN_LABEL}) 기준으로 찾았어요.
+            {storeMap.originLabel ?? LEGACY_DEFAULT_CHAT_STORE_ORIGIN_LABEL})
+            기준으로 찾았어요.
           </p>
           <button
             type="button"
@@ -250,6 +251,11 @@ export const ChatStoreMap = ({
             <LocateFixed className="h-3.5 w-3.5" />
             {isLocating ? "찾는 중" : "내 위치로 다시 찾기"}
           </button>
+        </div>
+      )}
+      {isPlaceOrigin && storeMap.originLabel && (
+        <div className="border-b border-gray-200 bg-white px-4 py-2.5 text-xs font-medium text-gray-600 dark:border-white/10 dark:bg-zinc-950 dark:text-gray-300">
+          {storeMap.originLabel} 기준으로 가까운 매장을 찾았어요.
         </div>
       )}
       <div className="h-[300px] sm:h-[340px]">

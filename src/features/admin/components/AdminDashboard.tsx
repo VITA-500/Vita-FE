@@ -1,49 +1,23 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import type { ReactNode } from "react";
+import { CalendarDays, MessagesSquare } from "lucide-react";
 import { AnswerFeedbackContent } from "@/features/admin/components/AnswerFeedbackContent";
-import { useAdminData } from "@/features/admin/context/AdminDataContext";
 import { useAdminAnswerFeedback } from "@/features/admin/context/useAdminAnswerFeedback";
-import { getAnswerFeedbackStatItems } from "@/features/admin/lib/answerFeedbackStats";
 import { routes } from "@/shared/constants/routes";
 import { ButtonLink } from "@/shared/ui/Button";
 import { Card, CardContent, CardHeader } from "@/shared/ui/Card";
-import { StatCard } from "@/shared/ui/StatCard";
+import { cn } from "@/shared/lib/cn";
 
 /** 대시보드에는 많이 나온 답변 피드백 몇 개만 보여주고, 나머지는 답변 피드백 페이지에서 본다. */
 const DASHBOARD_FEEDBACK_LIMIT = 5;
 
 export const AdminDashboard = () => {
-  const { storeDetails } = useAdminData();
   const {
     error: feedbackError,
     isLoading: isFeedbackLoading,
     stats: feedbackStats,
   } = useAdminAnswerFeedback(DASHBOARD_FEEDBACK_LIMIT);
-  const storesMissingPhone = storeDetails.filter(
-    (store) => !store.phone?.trim(),
-  );
-  const storesMissingBusinessHours = storeDetails.filter(
-    (store) => !store.businessHours?.trim(),
-  );
-  const storesMissingServices = storeDetails.filter(
-    (store) =>
-      store.consultServices.length === 0 && store.providedServices.length === 0,
-  );
-  const dataQualityIssueCount =
-    storesMissingPhone.length +
-    storesMissingBusinessHours.length +
-    storesMissingServices.length;
-
-  const adminStats = [
-    ...getAnswerFeedbackStatItems(feedbackStats?.summary, isFeedbackLoading),
-    {
-      label: "데이터 점검",
-      value: dataQualityIssueCount.toLocaleString("ko-KR"),
-      helper: "전화번호/운영시간/서비스 누락",
-    },
-  ];
-
   return (
     <div>
       <div className="mb-8">
@@ -51,19 +25,44 @@ export const AdminDashboard = () => {
           대시보드
         </h1>
         <p className="text-text-secondary mt-2 text-sm font-medium">
-          운영자가 바로 확인해야 할 데이터 상태와 관리 작업을 모았습니다.
+          반복되는 문의와 오늘 발생한 답변 피드백을 우선 확인하세요.
         </p>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {adminStats.map((stat) => (
-          <StatCard
-            key={stat.label}
-            label={stat.label}
-            value={stat.value}
-            helper={stat.helper}
-          />
-        ))}
+      <section
+        aria-label="운영 주요 지표"
+        className="grid gap-4 sm:grid-cols-3"
+      >
+        <DashboardMetric
+          label="답변 피드백"
+          value={feedbackStats?.summary.unresolvedCount}
+          isLoading={isFeedbackLoading}
+          hasError={Boolean(feedbackError)}
+          tone="neutral"
+          icon={<MessagesSquare size={18} aria-hidden="true" />}
+          priority="전체 보완 대상"
+          description="같은 질문을 하나로 묶은 보완 대상 항목 수예요."
+        />
+        <DashboardMetric
+          label="반복 문의"
+          value={feedbackStats?.summary.repeatCount}
+          isLoading={isFeedbackLoading}
+          hasError={Boolean(feedbackError)}
+          tone="amber"
+          icon={<MessagesSquare size={18} aria-hidden="true" />}
+          priority="FAQ 보완 우선"
+          description="보완 대상 질문이 누적해서 발생한 횟수예요. 자주 나오는 질문부터 FAQ를 보완하세요."
+        />
+        <DashboardMetric
+          label="오늘 발생"
+          value={feedbackStats?.summary.todayCount}
+          isLoading={isFeedbackLoading}
+          hasError={Boolean(feedbackError)}
+          tone="blue"
+          icon={<CalendarDays size={18} aria-hidden="true" />}
+          priority="오늘 확인할 항목"
+          description="최근 발생일이 오늘인 보완 대상 질문이에요. 새로 들어온 피드백을 확인하세요."
+        />
       </section>
 
       <section className="mt-8">
@@ -90,69 +89,108 @@ export const AdminDashboard = () => {
           </CardContent>
         </Card>
       </section>
-
-      <section className="mt-8">
-        <Card>
-          <CardHeader
-            title="데이터 품질 점검"
-            description={
-              dataQualityIssueCount > 0
-                ? "고객 화면과 상담 품질에 바로 영향을 주는 누락 항목입니다."
-                : "현재 확인된 필수 데이터 누락은 없습니다."
-            }
-          />
-          <CardContent>
-            {dataQualityIssueCount === 0 ? (
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-extrabold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
-                점검할 누락 항목이 없습니다.
-              </div>
-            ) : (
-              <div className="grid gap-3 md:grid-cols-3">
-                <QualityRow
-                  label="전화번호 누락"
-                  count={storesMissingPhone.length}
-                  description="전화 연결 버튼과 매장 상세 안내에 영향"
-                />
-                <QualityRow
-                  label="운영시간 누락"
-                  count={storesMissingBusinessHours.length}
-                  description="방문 전 안내 정확도에 영향"
-                />
-                <QualityRow
-                  label="서비스 정보 누락"
-                  count={storesMissingServices.length}
-                  description="상담 가능 업무와 제공 서비스 필터에 영향"
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
     </div>
   );
 };
 
-type QualityRowProps = {
-  count: number;
-  description: string;
-  label: string;
-};
+const MetricValue = ({
+  value,
+  isLoading,
+  hasError = false,
+}: {
+  value?: number;
+  isLoading: boolean;
+  hasError?: boolean;
+}) =>
+  isLoading ? (
+    <span
+      role="status"
+      aria-label="통계 조회 중"
+      className="inline-block h-[1em] w-16 rounded-md bg-current/10 motion-safe:animate-pulse"
+    />
+  ) : hasError || value === undefined ? (
+    <span className="text-sm font-semibold">조회 실패</span>
+  ) : (
+    <>
+      {value.toLocaleString("ko-KR")}
+      <span className="ml-1 text-sm font-semibold">건</span>
+    </>
+  );
 
-const QualityRow = ({ count, description, label }: QualityRowProps) => (
-  <div className="border-border-soft flex items-center justify-between gap-4 rounded-xl border px-4 py-3 dark:border-white/10">
-    <div className="min-w-0">
-      <div className="flex items-center gap-2">
-        {count > 0 && <AlertTriangle className="text-brand" size={16} />}
-        <p className="font-extrabold text-gray-800 dark:text-gray-100">
-          {label}
+const DashboardMetric = ({
+  label,
+  value,
+  isLoading,
+  hasError,
+  tone,
+  icon,
+  priority,
+  description,
+}: {
+  label: string;
+  value?: number;
+  isLoading: boolean;
+  hasError: boolean;
+  tone: "amber" | "blue" | "neutral";
+  icon: ReactNode;
+  priority: string;
+  description: string;
+}) => (
+  <Card
+    className={cn(
+      "relative overflow-hidden",
+      tone === "neutral"
+        ? "border-gray-200 bg-white dark:border-white/10 dark:bg-zinc-900"
+        : tone === "amber"
+          ? "border-amber-200 bg-amber-50/70 dark:border-amber-500/25 dark:bg-amber-500/10"
+          : "border-blue-200 bg-blue-50/70 dark:border-blue-500/25 dark:bg-blue-500/10",
+    )}
+  >
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <p
+          className={cn(
+            "text-[11px] font-semibold",
+            tone === "neutral"
+              ? "text-gray-500 dark:text-gray-400"
+              : tone === "amber"
+                ? "text-amber-700 dark:text-amber-300"
+                : "text-blue-700 dark:text-blue-300",
+          )}
+        >
+          {priority}
         </p>
+        <h2 className="mt-1 text-sm font-bold text-gray-950 dark:text-white">
+          {label}
+        </h2>
       </div>
-      <p className="text-text-secondary mt-1 text-xs font-semibold">
-        {description}
-      </p>
+      <span
+        className={cn(
+          "shrink-0 rounded-xl p-2",
+          tone === "neutral"
+            ? "bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400"
+            : tone === "amber"
+              ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+              : "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+        )}
+      >
+        {icon}
+      </span>
     </div>
-    <span className="text-brand shrink-0 text-xl font-black">
-      {count.toLocaleString("ko-KR")}
-    </span>
-  </div>
+    <div
+      className={cn(
+        "mt-3 flex min-h-9 items-center text-3xl font-bold tracking-tight",
+        tone === "neutral"
+          ? "text-gray-700 dark:text-gray-200"
+          : tone === "amber"
+            ? "text-amber-800 dark:text-amber-200"
+            : "text-blue-800 dark:text-blue-200",
+      )}
+    >
+      <MetricValue value={value} isLoading={isLoading} hasError={hasError} />
+    </div>
+    <p className="mt-2 max-w-md text-xs leading-5 font-medium text-gray-600 dark:text-gray-300">
+      {description}
+    </p>
+  </Card>
 );

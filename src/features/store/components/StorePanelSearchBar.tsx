@@ -42,7 +42,8 @@ export const StorePanelSearchBar = ({
   searchQuery,
   storeCount,
 }: StorePanelSearchBarProps) => (
-  <div className="relative z-30 flex h-12 items-center rounded-sm bg-white text-left shadow-sm dark:bg-zinc-950">
+  // 모바일은 화면이 좁아 검색창 높이를 낮춘다.
+  <div className="relative z-30 flex h-10 items-center rounded-sm bg-white text-left shadow-sm md:h-12 dark:bg-zinc-950">
     {onOpenSidebar && (
       <button
         type="button"
@@ -56,7 +57,7 @@ export const StorePanelSearchBar = ({
         <Menu size={20} />
       </button>
     )}
-    <label className="flex h-full min-w-0 flex-1 items-center justify-between gap-3 rounded-l-sm bg-white px-3.5 text-sm font-semibold text-gray-400 dark:bg-zinc-950">
+    <label className="flex h-full min-w-0 flex-1 items-center justify-between gap-3 rounded-l-sm bg-white px-3.5 text-sm font-semibold text-gray-400 max-md:rounded-r-sm dark:bg-zinc-950">
       <input
         ref={searchInputRef}
         value={searchQuery}
@@ -98,16 +99,17 @@ export const StorePanelSearchBar = ({
           event.stopPropagation();
           onSubmit();
         }}
-        className="hover:text-brand flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-300/90 transition hover:bg-gray-100 dark:hover:bg-white/10"
+        className="hover:text-brand flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-300/90 transition hover:bg-gray-100 md:h-8 md:w-8 dark:hover:bg-white/10"
         aria-label="검색"
       >
-        <Search size={22} />
+        <Search size={22} className="size-[18px] md:size-[22px]" />
       </button>
     </label>
     <button
       type="button"
       onClick={onToggleStoreList}
-      className="border-border hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand group relative flex h-full w-12 shrink-0 items-center justify-center rounded-r-sm border-l bg-white text-xs font-extrabold text-gray-500 transition dark:border-white/10 dark:bg-zinc-950 dark:text-gray-300"
+      // 모바일은 매장 목록을 바텀 시트로 여닫으므로 목록 버튼을 두지 않는다.
+      className="border-border hover:bg-brand-soft hover:text-brand-hover dark:hover:bg-brand/10 dark:hover:text-brand group relative hidden h-full w-12 shrink-0 items-center justify-center rounded-r-sm border-l bg-white text-xs font-extrabold text-gray-500 transition md:flex dark:border-white/10 dark:bg-zinc-950 dark:text-gray-300"
       aria-expanded={!isStoreListCollapsed}
       aria-label={isStoreListCollapsed ? "지점 목록 펼치기" : "지점 목록 접기"}
     >

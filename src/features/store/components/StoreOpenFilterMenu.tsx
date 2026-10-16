@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Check, Clock3 } from "lucide-react";
 import {
   ALL_STORE_OPEN_FILTER,
@@ -14,6 +14,11 @@ type StoreOpenFilterMenuProps = {
   openFilter: StoreOpenFilter;
 };
 
+/** 메뉴를 펼칠 때 화면 가장자리와 띄워 둘 간격(px) */
+const MENU_VIEWPORT_GAP = 12;
+/** 시각 목록까지 펼친 메뉴의 대략적인 높이(px). 아래 공간이 이보다 적으면 위로 연다. */
+const MENU_ESTIMATED_HEIGHT = 320;
+
 const optionClassName =
   "flex h-9 w-full items-center justify-between gap-2 rounded-sm px-2.5 text-left text-xs font-bold transition hover:bg-gray-100 dark:hover:bg-white/10";
 
@@ -27,6 +32,12 @@ export const StoreOpenFilterMenu = ({
     openFilter.mode === "at",
   );
   const rootRef = useRef<HTMLDivElement>(null);
+  // 메뉴를 열 방향(아래/위)과 최대 높이. 모바일 바텀 시트처럼 아래 공간이 좁으면 위로 열고,
+  // 그래도 모자라면 메뉴 안에서 스크롤한다(화면 밖으로 잘리지 않게).
+  const [menuPlacement, setMenuPlacement] = useState<{
+    maxHeight: number;
+    side: "bottom" | "top";
+  }>({ maxHeight: MENU_ESTIMATED_HEIGHT, side: "bottom" });
   const isActive = openFilter.mode !== "all";
   const selectedTime =
     openFilter.mode === "at" ? openFilter.time : getNextOpenFilterTime();
@@ -70,7 +81,28 @@ export const StoreOpenFilterMenu = ({
     >
       <button
         type="button"
-        onClick={() => setIsOpen((wasOpen) => !wasOpen)}
+        onClick={() => {
+          if (!isOpen && rootRef.current) {
+            const rect = rootRef.current.getBoundingClientRect();
+            const spaceBelow =
+              window.innerHeight - rect.bottom - MENU_VIEWPORT_GAP - 10;
+            const spaceAbove = rect.top - MENU_VIEWPORT_GAP - 10;
+            const side =
+              spaceBelow >= MENU_ESTIMATED_HEIGHT || spaceBelow >= spaceAbove
+                ? "bottom"
+                : "top";
+
+            setMenuPlacement({
+              maxHeight: Math.max(
+                160,
+                side === "bottom" ? spaceBelow : spaceAbove,
+              ),
+              side,
+            });
+          }
+
+          setIsOpen((wasOpen) => !wasOpen);
+        }}
         className={cn(
           "flex h-7 w-7 items-center justify-center rounded-sm transition duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none",
           isActive
@@ -83,7 +115,7 @@ export const StoreOpenFilterMenu = ({
       >
         <Clock3 size={14} />
       </button>
-      <span className="pointer-events-none absolute top-[calc(100%+8px)] left-0 z-50 flex translate-y-1 items-center rounded-full bg-gray-900 px-3 py-1.5 text-xs font-extrabold whitespace-nowrap text-white opacity-0 shadow-xl transition duration-150 group-focus-within/open-filter:translate-y-0 group-focus-within/open-filter:opacity-100 group-hover/open-filter:translate-y-0 group-hover/open-filter:opacity-100">
+      <span className="pointer-events-none absolute top-[calc(100%+8px)] right-0 z-50 flex translate-y-1 items-center rounded-full bg-gray-900 px-3 py-1.5 text-xs font-extrabold whitespace-nowrap text-white opacity-0 shadow-xl transition duration-150 group-focus-within/open-filter:translate-y-0 group-focus-within/open-filter:opacity-100 group-hover/open-filter:translate-y-0 group-hover/open-filter:opacity-100">
         {getOpenFilterLabel(openFilter)}
       </span>
 
@@ -92,7 +124,14 @@ export const StoreOpenFilterMenu = ({
           id="store-open-filter-menu"
           role="group"
           aria-label="영업 시간 필터"
-          className="border-border absolute top-[calc(100%+10px)] left-0 z-50 w-56 rounded-sm border bg-white p-1.5 text-gray-700 shadow-xl dark:border-white/10 dark:bg-zinc-950 dark:text-gray-200"
+          // 버튼이 목록 상단 오른쪽에 있어, 메뉴는 버튼 오른쪽 끝에 맞춰 왼쪽으로 펼친다(화면 오른쪽 밖으로 잘리지 않게).
+          className={cn(
+            "border-border absolute right-0 z-50 w-56 overflow-y-auto overscroll-contain rounded-sm border bg-white p-1.5 text-gray-700 shadow-xl dark:border-white/10 dark:bg-zinc-950 dark:text-gray-200",
+            menuPlacement.side === "bottom"
+              ? "top-[calc(100%+10px)]"
+              : "bottom-[calc(100%+10px)]",
+          )}
+          style={{ maxHeight: menuPlacement.maxHeight } as CSSProperties}
         >
           <button
             type="button"

@@ -186,4 +186,118 @@ describe("chatService.sendMessage (SSE)", () => {
       chatService.sendMessage({ content: "질문", guestId: "g", sessionId: 1 }),
     ).resolves.toMatchObject({ id: "assistant-9", content: "저장된 답변" });
   });
+
+  it("uses final content and ignores events from a different session", async () => {
+    const sse = createSseResponse();
+    globalThis.fetch = vi.fn((url: string) => {
+      if (url.endsWith("/events")) {
+        queueMicrotask(() => sse.send("connected", "ok"));
+        return Promise.resolve(sse.response);
+      }
+      sse.send("assistant_delta", {
+        sessionId: 2,
+        messageId: 7,
+        delta: "다른 상담",
+      });
+      sse.send("assistant_delta", {
+        sessionId: 1,
+        messageId: 7,
+        delta: "초안",
+      });
+      sse.send("assistant_done", {
+        sessionId: 1,
+        messageId: 7,
+        content: "최종 답변",
+        storeMap: null,
+        actions: [],
+        plans: [],
+      });
+      return Promise.resolve(pendingResponse(7));
+    }) as typeof fetch;
+    const onDelta = vi.fn();
+    await expect(
+      chatService.sendMessage({
+        content: "질문",
+        guestId: "g",
+        sessionId: 1,
+        onDelta,
+      }),
+    ).resolves.toMatchObject({ content: "최종 답변" });
+    expect(onDelta).toHaveBeenCalledExactlyOnceWith("초안");
+  });
+
+  it("aborts promptly while waiting for an answer", async () => {
+    const sse = createSseResponse();
+    const controller = new AbortController();
+    globalThis.fetch = vi.fn((url: string) => {
+      if (url.endsWith("/events")) {
+        queueMicrotask(() => sse.send("connected", "ok"));
+        return Promise.resolve(sse.response);
+      }
+      setTimeout(() => controller.abort(), 0);
+      return Promise.resolve(pendingResponse(7));
+    }) as typeof fetch;
+    await expect(
+      chatService.sendMessage({
+        content: "질문",
+        guestId: "g",
+        sessionId: 1,
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("does not send a question after a stream authentication failure", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({ code: "UNAUTHORIZED", message: "인증 필요" }),
+          { status: 401 },
+        ),
+      );
+    globalThis.fetch = fetchMock;
+    await expect(
+      chatService.sendMessage({ content: "질문", guestId: "g", sessionId: 1 }),
+    ).rejects.toMatchObject({ status: 401 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("reserves time to recover a saved answer if the SSE stays silent", async () => {
+    vi.useFakeTimers();
+    const sse = createSseResponse();
+    globalThis.fetch = vi.fn((url: string, init?: RequestInit) => {
+      if (url.endsWith("/events")) {
+        sse.send("connected", "ok");
+        return Promise.resolve(sse.response);
+      }
+      if (init?.method === "POST") return Promise.resolve(pendingResponse(7));
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            sessionId: 1,
+            messages: [
+              {
+                messageId: 7,
+                status: "COMPLETED",
+                content: "복구된 답변",
+                createdAt: "2026-10-16T12:00:00",
+              },
+            ],
+          }),
+        ),
+      );
+    }) as typeof fetch;
+    try {
+      const answer = chatService.sendMessage({
+        content: "질문",
+        guestId: "g",
+        sessionId: 1,
+      });
+      await vi.advanceTimersByTimeAsync(30001);
+      await expect(answer).resolves.toMatchObject({ content: "복구된 답변" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

@@ -29,9 +29,11 @@ const optionalPattern = (pattern: RegExp, message: string) =>
     .optional()
     .refine((value) => !value || pattern.test(value), { message });
 const businessHoursSchema = optionalPattern(
-  /^([01]\d|2[0-3]):[0-5]\d\s*[~-]\s*([01]\d|2[0-3]):[0-5]\d$/,
-  "운영시간은 09:00~18:00 형식으로 입력해 주세요.",
-);
+  /^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$/,
+  "운영시간은 09:00-18:00 형식으로 입력해 주세요.",
+).refine((value) => !value || value.slice(0, 5) !== value.slice(6), {
+  message: "여는 시각과 닫는 시각은 다르게 입력해 주세요.",
+});
 const phoneSchema = optionalPattern(
   /^0\d{1,2}-\d{3,4}-\d{4}$/,
   "전화번호는 02-1234-5678 형식으로 입력해 주세요.",

@@ -2,12 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   FAILED_ANSWER_MESSAGE,
   toAssistantMessage,
-  type ChatMessageResponse,
 } from "@/features/chat/lib/chatAnswerMessage";
 
 const response = (
-  overrides: Partial<ChatMessageResponse> = {},
-): ChatMessageResponse => ({
+  overrides: Partial<Parameters<typeof toAssistantMessage>[0]> = {},
+): Parameters<typeof toAssistantMessage>[0] => ({
   answer: "응답",
   createAt: "2026-10-07T00:00:00.000Z",
   latencyMs: 10,
@@ -36,23 +35,20 @@ describe("chatAnswerMessage", () => {
     });
   });
 
-  it("normalizes nearby store payloads into storeMap", () => {
+  it("does not expose cards or actions on a failed answer", () => {
     expect(
       toAssistantMessage(
         response({
-          nearbyStores: [
-            {
-              id: "1",
-              name: "비타 강남점",
-              address: "서울 강남구",
-              phone: "02-1234-5678",
-              lat: 37.5,
-              lng: 127,
-            },
-          ],
+          status: "FAILED",
+          storeMap: { stores: [] },
+          actions: [{ label: "매장", href: "/chat?mode=store" }],
         }),
-      ).storeMap?.stores,
-    ).toHaveLength(1);
+      ),
+    ).toMatchObject({
+      status: "error",
+      storeMap: undefined,
+      actions: undefined,
+    });
   });
 
   it("keeps BE storeMap and actions on the assistant message", () => {

@@ -21,8 +21,14 @@ export const ChatAnswerFeedback = ({
   message,
   onFeedback,
 }: ChatAnswerFeedbackProps) => (
-  <div className="mt-2 flex flex-wrap items-center gap-2 px-1">
-    <span className="text-xs font-bold text-gray-400">도움이 되었나요?</span>
+  <div
+    role="group"
+    aria-label="답변 피드백"
+    className="mt-3 inline-flex max-w-full items-center gap-1 px-1 whitespace-nowrap"
+  >
+    <span className="mr-1 text-xs font-bold text-gray-500 dark:text-gray-400">
+      도움이 되었나요?
+    </span>
     <FeedbackButton
       feedback="LIKE"
       icon={<ThumbsUp size={13} aria-hidden="true" />}

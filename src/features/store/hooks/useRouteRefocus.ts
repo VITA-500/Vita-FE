@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 import {
+  fitMapToRoute,
   getCenterPlacingPointAt,
   getRouteFitPadding,
+  getRouteVisiblePadding,
   type KakaoMapWithProjection,
 } from "@/features/store/lib/mapFit";
 import type { RoutePreview } from "@/features/store/lib/mapRoute";
@@ -13,6 +15,8 @@ type UseRouteRefocusParams = {
   mapRef: RefObject<KakaoMap | null>;
   routeDrawProgress: number;
   routeLeftInset: number;
+  /** 모바일 바텀 시트가 덮는 아래쪽 높이(px) */
+  routeBottomInset: number;
   routePreview?: RoutePreview | null;
   selectedStoreCard?: ReactNode;
   selectedStoreCardLeftInset: number;
@@ -25,6 +29,7 @@ export const useRouteRefocus = ({
   mapRef,
   routeDrawProgress,
   routeLeftInset,
+  routeBottomInset,
   routePreview,
   selectedStoreCard,
   selectedStoreCardLeftInset,
@@ -70,6 +75,7 @@ export const useRouteRefocus = ({
         mapContainerRef.current?.getBoundingClientRect().width ?? 0,
       hasStoreCard: Boolean(selectedStoreCard),
       routeLeftInset,
+      routeBottomInset,
       selectedStoreCardLeftInset,
     });
     const routePoints = [
@@ -93,10 +99,13 @@ export const useRouteRefocus = ({
     const maxX = Math.max(...screenPoints.map((point) => point.x));
     const minY = Math.min(...screenPoints.map((point) => point.y));
     const maxY = Math.max(...screenPoints.map((point) => point.y));
-    const freeLeft = padding.left;
-    const freeRight = containerRect.width - padding.right;
-    const freeTop = padding.top;
-    const freeBottom = containerRect.height - padding.bottom;
+    // 가까운 경로는 범위 맞춤에서 더 확대해 둘 수 있으므로(fitMapToRoute), 보이는지 판단도 같은 좁은 여백으로 한다.
+    // 왼쪽은 펼친 사이드바를 피하는 여백을 그대로 쓴다.
+    const visiblePadding = getRouteVisiblePadding(padding, containerRect.width);
+    const freeLeft = visiblePadding.left;
+    const freeRight = containerRect.width - visiblePadding.right;
+    const freeTop = visiblePadding.top;
+    const freeBottom = containerRect.height - visiblePadding.bottom;
     const isFullyVisible =
       minX >= freeLeft &&
       maxX <= freeRight &&
@@ -131,18 +140,8 @@ export const useRouteRefocus = ({
       }
     }
 
-    const bounds = new kakaoMaps.LatLngBounds();
-
-    routePoints.forEach((point) => {
-      bounds.extend(new kakaoMaps.LatLng(point.lat, point.lng));
-    });
-    map.setBounds(
-      bounds,
-      padding.top,
-      padding.right,
-      padding.bottom,
-      padding.left,
-    );
+    // 너무 확대·축소되지 않게 확대 수준 한계 안에서 맞춘다.
+    fitMapToRoute(map, routePoints, padding, containerRect);
     // 경로 모양이 바뀔 때만 다시 맞춘다(지도를 직접 옮겨 보는 것은 막지 않도록 한 번만 실행)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRouteDrawn, drawnRouteKey]);

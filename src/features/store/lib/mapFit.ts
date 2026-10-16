@@ -91,6 +91,126 @@ export const getCenterPlacingPointAt = (
 };
 
 /**
+ * 길찾기 경로에 지도 범위를 맞출 때 최대로 확대하는 수준(카카오 지도 level: 숫자가 작을수록 확대).
+ * 아주 가까운 매장도 경로가 화면을 꽉 채울 만큼 확대되지 않게(주변 길이 보이도록) 한다.
+ * 축소 쪽은 한계를 두지 않는다(먼 매장도 경로 전체가 화면에 들어오게).
+ */
+export const ROUTE_FIT_MIN_LEVEL = 2;
+/** setBounds가 고른 수준에서 더 확대해도 경로가 여백 안에 들어가면 최대 이만큼 더 확대한다. */
+const ROUTE_FIT_MAX_EXTRA_ZOOM_IN = 3;
+/**
+ * 더 확대할지 판단할 때 쓰는 위·오른쪽·아래 여백(px). 가까운 거리는 화면을 넓게 쓰도록,
+ * 왼쪽(펼친 사이드바)만 그대로 피하고 나머지는 지도 컨트롤·가장자리 정도만 비운다.
+ */
+const ROUTE_TIGHT_FIT_PADDING = { bottom: 80, right: 96, top: 72 };
+
+/**
+ * 경로가 "보인다"고 볼 영역의 여백. 데스크톱은 왼쪽(펼친 사이드바)만 범위 맞춤 여백을 그대로 쓰고
+ * 나머지는 좁은 여백을 쓴다. 모바일은 위쪽 검색창·필터 줄이 높아 범위 맞춤 여백을 그대로 쓴다.
+ */
+export const getRouteVisiblePadding = (
+  padding: MapFitPadding,
+  containerWidth: number,
+): MapFitPadding =>
+  containerWidth >= 768
+    ? { ...ROUTE_TIGHT_FIT_PADDING, left: padding.left }
+    : padding;
+
+/**
+ * 경로 좌표가 여백을 뺀 영역에 들어오도록 지도 범위를 맞추고, 확대 수준을 위 한계 안으로 맞춘다.
+ * 카카오 setBounds는 한 단계씩(2배)만 고를 수 있어 경로가 화면에 작게 남는 경우가 많으므로,
+ * 한 단계 더 확대해도 경로가 여백 안에 들어가면 더 확대한다.
+ * 확대 수준을 바꿀 때는 경로 가운데를 기준점으로 삼아, 경로가 여백 안 가운데에 그대로 있게 한다.
+ */
+export const fitMapToRoute = (
+  map: KakaoMap,
+  points: MapPoint[],
+  padding: MapFitPadding,
+  container: { height: number; width: number },
+) => {
+  const kakaoMaps = window.kakao?.maps;
+
+  if (!kakaoMaps || points.length === 0) {
+    return;
+  }
+
+  // 바텀 시트를 위로 펼쳐 둔 것처럼 아래 여백이 지도 대부분을 덮으면, 경로가 들어갈 최소 높이(120px)는 남긴다.
+  const fitPadding = {
+    ...padding,
+    bottom: Math.min(
+      padding.bottom,
+      Math.max(0, container.height - padding.top - 120),
+    ),
+  };
+
+  const bounds = new kakaoMaps.LatLngBounds();
+
+  points.forEach((point) => {
+    bounds.extend(new kakaoMaps.LatLng(point.lat, point.lng));
+  });
+  map.setBounds(
+    bounds,
+    fitPadding.top,
+    fitPadding.right,
+    fitPadding.bottom,
+    fitPadding.left,
+  );
+
+  const fittedLevel = map.getLevel();
+  let nextLevel = fittedLevel;
+  const projection = (map as KakaoMapWithProjection).getProjection?.();
+  // 카카오 투영 메서드는 this가 필요할 수 있어 묶어서 꺼낸다.
+  const toScreenPoint = projection?.containerPointFromCoords?.bind(projection);
+
+  if (toScreenPoint) {
+    const screenPoints = points.map((point) =>
+      toScreenPoint(new kakaoMaps.LatLng(point.lat, point.lng)),
+    );
+    const routeWidth =
+      Math.max(...screenPoints.map((point) => point.x)) -
+      Math.min(...screenPoints.map((point) => point.x));
+    const routeHeight =
+      Math.max(...screenPoints.map((point) => point.y)) -
+      Math.min(...screenPoints.map((point) => point.y));
+    const visiblePadding = getRouteVisiblePadding(fitPadding, container.width);
+    const freeWidth =
+      container.width - visiblePadding.left - visiblePadding.right;
+    const freeHeight =
+      container.height - visiblePadding.top - visiblePadding.bottom;
+    let extraZoomIn = 0;
+
+    // 한 단계 확대하면 화면에서 경로 크기가 2배가 된다.
+    while (
+      extraZoomIn < ROUTE_FIT_MAX_EXTRA_ZOOM_IN &&
+      routeWidth * 2 ** (extraZoomIn + 1) <= freeWidth &&
+      routeHeight * 2 ** (extraZoomIn + 1) <= freeHeight
+    ) {
+      extraZoomIn += 1;
+    }
+
+    nextLevel -= extraZoomIn;
+  }
+
+  // 확대 쪽만 한계를 둔다. 축소 쪽에 한계를 두면 먼 매장의 경로가 화면 밖으로 잘리므로,
+  // 경로 전체가 들어가는 수준(setBounds가 고른 수준)보다 더 확대하지는 않는다.
+  const clampedLevel = Math.max(ROUTE_FIT_MIN_LEVEL, nextLevel);
+
+  if (clampedLevel === fittedLevel) {
+    return;
+  }
+
+  const latitudes = points.map((point) => point.lat);
+  const longitudes = points.map((point) => point.lng);
+
+  map.setLevel(clampedLevel, {
+    anchor: new kakaoMaps.LatLng(
+      (Math.min(...latitudes) + Math.max(...latitudes)) / 2,
+      (Math.min(...longitudes) + Math.max(...longitudes)) / 2,
+    ),
+  });
+};
+
+/**
  * 길찾기 경로를 화면에 맞출 때 비워 둘 여백(왼쪽 패널·위쪽 카드·오른쪽 컨트롤 영역).
  * 컴포넌트 밖 순수 함수로 두어, 렌더·effect 어디서 불러도 선언 순서·의존성 문제가 없게 한다.
  */
@@ -98,16 +218,19 @@ export const getRouteFitPadding = ({
   cardElement,
   containerWidth,
   hasStoreCard,
+  routeBottomInset = 0,
   routeLeftInset,
   selectedStoreCardLeftInset,
 }: {
   cardElement: HTMLElement | null;
   containerWidth: number;
   hasStoreCard: boolean;
+  /** 모바일 바텀 시트가 덮는 아래쪽 높이(px). 경로가 시트에 가리지 않게 그만큼 더 비운다. */
+  routeBottomInset?: number;
   routeLeftInset: number;
   selectedStoreCardLeftInset: number;
 }) => ({
-  bottom: 96,
+  bottom: Math.max(96, routeBottomInset ? routeBottomInset + 24 : 0),
   left:
     containerWidth >= 768
       ? Math.max(
@@ -123,7 +246,10 @@ export const getRouteFitPadding = ({
     ? getStoreCardTopInset(containerWidth) +
       getStoreCardHeight(cardElement, 240) +
       STORE_CARD_MARKER_GAP
-    : 160,
+    : // 카드가 없으면(매장 정보는 사이드바에) 위쪽은 검색창 줄만 피한다. 모바일은 검색창·필터 줄이 더 높다.
+      containerWidth >= 768
+      ? 72
+      : 160,
 });
 
 /** 핀이 들어갈 기본 여백: 위 검색창·핀 높이, 오른쪽 지도 컨트롤, 왼쪽 매장 목록 패널 */

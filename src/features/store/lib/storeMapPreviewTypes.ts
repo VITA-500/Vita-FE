@@ -12,6 +12,11 @@ import type { RoutePreview } from "@/features/store/lib/mapRoute";
 import type { MarkerColorInfo } from "@/features/store/lib/markerColors";
 import type { StoreLocation } from "@/features/store/types";
 
+export const STORE_MAP_CARD_RESIZE_SETTLE_MS = 80;
+export type SearchPointRef = MapPoint | null | undefined;
+export type FocusPointRef = MapPoint | null | undefined;
+export type RoutePreviewRef = RoutePreview | null | undefined;
+
 export type StoreMapPreviewProps = {
   className?: string;
   /** 채팅 답변 안처럼 낮은 지도. 최소 높이를 두지 않고 컨트롤을 모서리에 붙여 모두 보이게 한다. */
@@ -24,6 +29,18 @@ export type StoreMapPreviewProps = {
   selectedStore?: StoreLocation;
   selectedStoreCard?: ReactNode;
   selectedStoreCardLeftInset?: number;
+  /**
+   * 선택 매장 핀이 보여야 하는 영역(지도 기준 여백 px). 매장 정보를 지도 위 카드 대신
+   * 좌측 사이드바·바텀 시트에 보여줄 때, 핀이 그 패널에 가리면 이 영역 가운데로 지도를 옮긴다.
+   */
+  selectedPinSafeArea?: MapFitPadding | null;
+  /**
+   * 지도 위 버튼(재검색·지도 컨트롤)을 피해 둘 영역(px). 좌측 사이드바(left)·바텀 시트(bottom)가
+   * 열려 있으면 그만큼 버튼을 옮겨 패널에 가리지 않게 한다.
+   */
+  overlayInset?: { bottom: number; left: number };
+  /** key가 바뀔 때마다 지도를 points(길찾기 경로의 한 구간)에 맞춰 살짝 확대한다. */
+  routeFocusTarget?: { key: number; points: MapPoint[] } | null;
   /** 길찾기 경로를 맞출 때 비워 둘 왼쪽 폭(검색/매장 목록 패널 영역, px). */
   routeLeftInset?: number;
   selectedStoreId: string;
@@ -126,6 +143,8 @@ export type StoreMapEffectContext = Pick<
   revealFallbackTimeoutRef: RefObject<number | undefined>;
   routeFitFallbackTimeoutRef: RefObject<number | undefined>;
   routeLeftInset: number;
+  /** 길찾기 경로를 맞출 때 비워 둘 아래쪽 높이(모바일 바텀 시트, px) */
+  routeBottomInset: number;
   routePreviewRef: RefObject<RoutePreview | null | undefined>;
   searchPointRef: RefObject<MapPoint | null | undefined>;
   selectedStoreCardLeftInset: number;

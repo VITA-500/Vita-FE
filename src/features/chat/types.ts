@@ -1,4 +1,19 @@
 export type ChatMessageRole = "user" | "assistant";
+export type {
+  ChatSendRequest,
+  ChatMessageResponse,
+  ChatStreamEvent,
+  ChatAssistantStatus,
+} from "./apiTypes";
+export type ChatConversationStatus =
+  | "idle"
+  | "loading"
+  | "thinking"
+  | "retrieving_faq"
+  | "generating"
+  | "done"
+  | "failed"
+  | "expired";
 
 /**
  * 답변 메시지의 결과 상태. 응답 중(loading)은 메시지가 아니라 streamingReply로 보여준다.
@@ -19,12 +34,35 @@ export type ChatMessage = {
   /** assistant 메시지에서만 쓴다. */
   status?: ChatAnswerStatus;
   sources?: readonly ChatAnswerSource[];
+  /** POST가 제공하는 FAQ ID. 제목·본문은 현재 SSE/기록 계약에 없다. */
+  relatedFaqIds?: readonly number[];
   actions?: readonly ChatAction[];
+  plans?: readonly ChatPlan[];
   storeMap?: ChatStoreMap;
   /** BE 메시지 id. 서버에 저장된 답변에만 있고, 피드백 같은 메시지 단위 API에 쓴다. */
   serverMessageId?: number;
   /** 답변 도움 여부. 같은 값을 다시 누르면 BE에 null을 보내 취소한다. */
   feedback?: ChatFeedback | null;
+};
+
+export type ChatPlan = {
+  planId?: number;
+  planCode?: string;
+  name: string;
+  summary?: string;
+  monthlyFee: number;
+  description?: string;
+  networkType?: string;
+  targetGroup?: string;
+  minAge?: number | null;
+  maxAge?: number | null;
+  dataPolicy?: string;
+  baseDataMb?: number | null;
+  exhaustedSpeedKbps?: number | null;
+  voicePolicy?: string;
+  voiceMinutes?: number | null;
+  smsPolicy?: string;
+  smsCount?: number | null;
 };
 
 export type ChatStatus = "idle" | "loading" | "success" | "error";
@@ -62,8 +100,8 @@ export type ChatStoreSummary = {
   distanceText?: string;
 };
 
-/** 매장을 찾은 기준 위치가 어디서 왔는지. current: 브라우저 현재 위치, default: 위치를 못 받아 쓴 기본 위치. */
-export type ChatStoreOriginSource = "current" | "default";
+/** 매장을 찾은 기준 위치가 어디서 왔는지. current: 브라우저 현재 위치, place: 질문에 나온 장소 기준, default: 예전 기본 위치 결과 호환. */
+export type ChatStoreOriginSource = "current" | "place" | "default";
 
 export type ChatStoreMap = {
   type?: ChatStoreType | null;
@@ -76,6 +114,8 @@ export type ChatStoreMap = {
   };
   /** 없으면(예전에 저장된 메시지·BE 응답) 실제 위치로 본다. */
   originSource?: ChatStoreOriginSource;
+  /** place/default 기준일 때 사용자에게 보여줄 기준 이름. */
+  originLabel?: string | null;
   stores: ChatStoreSummary[];
 };
 
@@ -116,8 +156,9 @@ export type SessionMessage = {
   createdAt: string;
   status?: ChatApiMessageStatus;
   feedback?: ChatFeedback | null;
-  storeMap?: ChatStoreMap | null;
-  actions?: readonly ChatAction[] | null;
+  storeMap?: import("./apiTypes").ChatApiStoreMap | null;
+  actions?: readonly import("./apiTypes").ChatApiAction[] | null;
+  plans?: readonly import("./apiTypes").ChatApiPlan[] | null;
 };
 
 export type SessionMessagesResponse = {

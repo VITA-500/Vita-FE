@@ -93,7 +93,7 @@ export type AdminStoreType = "PHONE" | "PARTNER";
 export type AdminStoreDetail = AdminStore & {
   lat: number;
   lng: number;
-  businessHours?: string;
+  businessHours?: string | null;
   phone?: string;
   consultServices: string[];
   providedServices: string[];
@@ -103,6 +103,17 @@ export type AdminStoreDetail = AdminStore & {
 export type AdminStoreRequest = Omit<
   AdminStoreDetail,
   "brand" | "category" | "benefitName" | "storeId" | "storeType"
+>;
+
+export type AdminStoreFormInput = Omit<
+  AdminStoreDetail,
+  | "brand"
+  | "category"
+  | "benefitName"
+  | "createdAt"
+  | "storeId"
+  | "storeType"
+  | "updatedAt"
 >;
 
 export type AdminBenefit = {

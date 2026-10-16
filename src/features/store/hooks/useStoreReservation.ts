@@ -72,6 +72,16 @@ export const useStoreReservation = () => {
       return;
     }
 
+    if (store.storeType === "PARTNER") {
+      showToast("제휴 매장은 방문 예약을 이용할 수 없어요.");
+      return;
+    }
+
+    if (!/^\d+$/.test(store.id)) {
+      showToast("이 매장은 예약 정보를 확인할 수 없어요.");
+      return;
+    }
+
     setReservationDate(getReservationDateValue());
     setReservationTime("");
     setReservationStore(store);

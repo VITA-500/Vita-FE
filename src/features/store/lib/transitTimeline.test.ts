@@ -9,6 +9,7 @@ const step = (
   detailMeta: "약 1분 이동",
   lineName: overrides.kind === "walk" ? "도보" : "노선",
   meta: "약 1분",
+  path: [],
   ...overrides,
 });
 

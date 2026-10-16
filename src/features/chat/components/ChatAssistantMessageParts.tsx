@@ -97,7 +97,13 @@ export const ErrorAnswer = ({
   </article>
 );
 
-export const StoppedAnswer = ({ content }: { content: string }) => (
+export const StoppedAnswer = ({
+  content,
+  onRetry,
+}: {
+  content: string;
+  onRetry?: () => void;
+}) => (
   <article className="border-border text-text-primary rounded-3xl border border-dashed bg-white/70 px-4 py-4 text-sm leading-6 md:px-5 dark:border-white/15 dark:bg-zinc-950/70 dark:text-white">
     {content && (
       <div className="opacity-70">
@@ -111,8 +117,18 @@ export const StoppedAnswer = ({ content }: { content: string }) => (
       )}
     >
       <CircleStop size={14} />
-      답변 생성을 중단했어요. 질문을 수정해서 다시 물어볼 수 있어요.
+      답변 생성을 중단했어요. 같은 질문을 다시 보내거나 수정할 수 있어요.
     </p>
+    {onRetry && (
+      <button
+        type="button"
+        onClick={onRetry}
+        className="border-border text-text-secondary mt-3 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition hover:bg-gray-100 dark:border-white/15 dark:text-gray-300 dark:hover:bg-white/10"
+      >
+        <RotateCw size={13} aria-hidden="true" />
+        다시 보내기
+      </button>
+    )}
   </article>
 );
 

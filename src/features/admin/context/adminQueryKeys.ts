@@ -7,6 +7,9 @@ import type {
   StoreSortField,
 } from "@/features/admin/context/adminDataTypes";
 import type { AdminStoreType } from "@/features/admin/types";
+import type { AdminUserStatus } from "@/features/admin/types/adminUsers";
+
+type AdminUserStatusFilter = AdminUserStatus | "";
 
 export const adminQueryKeys = {
   benefitsAll: ["admin", "benefits"] as const,
@@ -20,6 +23,14 @@ export const adminQueryKeys = {
   answerFeedbackAll: ["admin", "answerFeedback"] as const,
   answerFeedback: (limit: number) =>
     ["admin", "answerFeedback", { limit }] as const,
+  userSummary: ["admin", "users", "summary"] as const,
+  usersAll: ["admin", "users", "list"] as const,
+  users: (params: {
+    keyword: string;
+    page: number;
+    pageSize: number;
+    status: AdminUserStatusFilter;
+  }) => ["admin", "users", params] as const,
   faqs: ({
     category,
     keyword,
@@ -49,6 +60,7 @@ export const adminQueryKeys = {
     sortDirection,
     sortField,
     storeType,
+    category,
   }: {
     keyword: string;
     page: number;
@@ -56,10 +68,19 @@ export const adminQueryKeys = {
     sortDirection: StoreSortDirection;
     sortField: StoreSortField;
     storeType: AdminStoreType;
+    category?: string;
   }) =>
     [
       "admin",
       "stores",
-      { keyword, page, pageSize, sortDirection, sortField, storeType },
+      {
+        keyword,
+        page,
+        pageSize,
+        sortDirection,
+        sortField,
+        storeType,
+        category,
+      },
     ] as const,
 };

@@ -53,7 +53,7 @@ describe("admin form schemas", () => {
     expect(
       storeFormSchema.safeParse({
         address: "서울 강남구 테헤란로 111",
-        businessHours: "09:00~18:00",
+        businessHours: "09:00-18:00",
         lat: "37.2660",
         lng: "127.0000",
         name: "VITA 강남점",
@@ -73,5 +73,42 @@ describe("admin form schemas", () => {
         phone: "전화번호",
       }).success,
     ).toBe(false);
+  });
+
+  it.each([
+    "09:00~18:00",
+    "09:00 - 18:00",
+    "24:00-18:00",
+    "09:60-18:00",
+    "09:00-09:00",
+  ])("rejects hours outside the BE contract: %s", (businessHours) => {
+    expect(
+      storeFormSchema.safeParse({
+        name: "매장",
+        address: "서울",
+        lat: "37.5",
+        lng: "127",
+        businessHours,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    "22:00-02:00",
+    "00:00-23:59",
+    " 09:00-18:00 ",
+    "",
+    "   ",
+    undefined,
+  ])("allows overnight hours and optional values: %s", (businessHours) => {
+    expect(
+      storeFormSchema.safeParse({
+        name: "매장",
+        address: "서울",
+        lat: "37.5",
+        lng: "127",
+        businessHours,
+      }).success,
+    ).toBe(true);
   });
 });

@@ -11,11 +11,13 @@ import {
 } from "@/features/chat/components/ChatAssistantMessageParts";
 import { ChatAnswerFeedback } from "@/features/chat/components/ChatAnswerFeedback";
 import { ChatMarkdown } from "@/features/chat/components/ChatMarkdown";
+import { ChatPlanCardList } from "@/features/chat/components/ChatPlanCardList";
 import { ChatStoreMap } from "@/features/chat/components/ChatStoreMap";
 import { UserMessageBubble } from "@/features/chat/components/UserMessageBubble";
 import { canSendAnswerFeedback } from "@/features/chat/lib/chatAnswerFeedback";
 import { resolveChatActionHref } from "@/features/chat/lib/chatStoreActions";
 import { stripStoreTablesFromAnswer } from "@/features/chat/lib/chatStoreAnswerContent";
+import { toChatPlanCards } from "@/features/chat/lib/chatPlanCards";
 import type {
   ChatFeedback,
   ChatMessage,
@@ -36,7 +38,7 @@ type ChatMessageListProps = {
     assistantMessageId: string,
     feedback: ChatFeedback,
   ) => void;
-  /** 실패한 답변을 같은 질문으로 다시 요청한다. */
+  /** 실패하거나 중단된 답변을 같은 질문으로 다시 요청한다. */
   onRetryAnswer?: (assistantMessageId: string) => void;
   /** 피드백 저장·관리자 전달 중인 답변 메시지 id. */
   feedbackMessageIds?: ReadonlySet<string>;
@@ -88,7 +90,18 @@ const AssistantSuccessMessage = ({
   return (
     <AssistantRow hasStoreMap={Boolean(message.storeMap)}>
       <AssistantBubble>
-        {answerContent && <ChatMarkdown content={answerContent} />}
+        {answerContent && (
+          <ChatMarkdown
+            content={answerContent}
+            renderPlanCards={!message.plans?.length}
+          />
+        )}
+        {message.plans && message.plans.length > 0 && (
+          <ChatPlanCardList
+            plans={toChatPlanCards(message.plans)}
+            className="py-1"
+          />
+        )}
         {message.storeMap && <ChatStoreMap storeMap={message.storeMap} />}
 
         {message.actions && message.actions.length > 0 && (
@@ -181,7 +194,14 @@ const ChatMessageItem = ({
     return (
       <AssistantRow>
         {message.status === "stopped" ? (
-          <StoppedAnswer content={message.content} />
+          <StoppedAnswer
+            content={message.content}
+            onRetry={
+              isLastMessage && !isLoading && onRetryAnswer
+                ? () => onRetryAnswer(message.id)
+                : undefined
+            }
+          />
         ) : (
           <PendingAnswer content={message.content} />
         )}

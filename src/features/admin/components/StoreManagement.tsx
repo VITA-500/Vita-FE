@@ -1,6 +1,9 @@
 "use client";
-
-import { Edit2, Plus, Trash2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { env } from "@/shared/config/env";
+import { benefitCategoryFilterOptions } from "../lib/benefitManagementConfig";
+import { adminQueryKeys } from "../context/adminQueryKeys";
+import { Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
 import { AdminErrorBanner } from "@/features/admin/components/AdminErrorBanner";
@@ -9,63 +12,37 @@ import { AdminResultSummary } from "@/features/admin/components/AdminResultSumma
 import { FilterDropdown } from "@/features/admin/components/FilterDropdown";
 import { StoreDeleteModal } from "@/features/admin/components/StoreDeleteModal";
 import {
+  StoreRowActions,
+  StoreSkeletonCard,
+  StoreManagementTable,
+} from "@/features/admin/components/StoreManagementParts";
+import {
   StoreFormModal,
   type StoreInput,
 } from "@/features/admin/components/StoreFormModal";
 import { useActionStatus } from "@/features/admin/context/ActionStatusContext";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
 import { adminStoreService } from "@/features/admin/lib/adminStoreService";
-import type { AdminBenefit, AdminStoreType } from "@/features/admin/types";
-import { cn } from "@/shared/lib/cn";
+import type { AdminStoreType } from "@/features/admin/types";
 import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { SearchInput } from "@/shared/ui/SearchInput";
 import { showToast } from "@/shared/ui/ToastProvider";
-
-const pageSizeOptions = [20, 50, 100] as const;
-const MIN_TABLE_ROWS = 8;
-const sortOptions = [
-  {
-    direction: "desc",
-    field: "createdAt",
-    label: "최신 등록순",
-    value: "createdAt:desc",
-  },
-  {
-    direction: "desc",
-    field: "updatedAt",
-    label: "최근 수정순",
-    value: "updatedAt:desc",
-  },
-] as const;
-const pageSizeFilterOptions = pageSizeOptions.map((pageSize) => ({
-  label: `${pageSize}개`,
-  value: String(pageSize),
-}));
+import {
+  STORE_MIN_TABLE_ROWS,
+  storePageSizeFilterOptions,
+  storeSortOptions,
+  storeTypeLabels,
+} from "@/features/admin/lib/storeManagementConfig";
 
 type StoreManagementProps = {
   storeType?: AdminStoreType;
+  embedded?: boolean;
 };
-
-const storeTypeLabels: Record<
-  AdminStoreType,
-  { emptyName: string; name: string; title: string }
-> = {
-  PHONE: {
-    emptyName: "대리점",
-    name: "대리점",
-    title: "대리점 관리",
-  },
-  PARTNER: {
-    emptyName: "제휴점",
-    name: "제휴점",
-    title: "제휴점 관리",
-  },
-};
-
 export const StoreManagement = ({
   storeType = "PHONE",
+  embedded = false,
 }: StoreManagementProps) => {
   const {
     addStore,
@@ -85,6 +62,8 @@ export const StoreManagement = ({
     storeSortDirection,
     storeSortField,
     storeTypeFilter,
+    storeCategory,
+    setStoreCategory,
     stores,
     storeTotalCount,
     storeTotalPages,
@@ -96,11 +75,20 @@ export const StoreManagement = ({
   const [editingStoreId, setEditingStoreId] = useState<number | null>(null);
   const [deletingStoreId, setDeletingStoreId] = useState<number | null>(null);
   const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
-  const [benefits, setBenefits] = useState<AdminBenefit[]>([]);
-  const [benefitError, setBenefitError] = useState<string | null>(null);
   const hasSearchKeyword = storeKeyword.trim().length > 0;
   const isPartnerStore = storeType === "PARTNER";
   const isStoreTypeSynced = storeTypeFilter === storeType;
+
+  const Heading = embedded ? "h2" : "h1";
+  const benefitQuery = useQuery({
+    queryKey: [...adminQueryKeys.benefitsAll, "options"],
+    queryFn: () => adminStoreService.fetchBenefits(),
+    enabled: isPartnerStore && Boolean(env.apiBaseUrl),
+  });
+  const benefits = benefitQuery.data ?? [];
+  const benefitError = benefitQuery.error
+    ? "제휴 혜택 목록을 불러오지 못했습니다."
+    : null;
 
   const editingStore = editingStoreId
     ? getStoreDetail(editingStoreId)
@@ -113,46 +101,16 @@ export const StoreManagement = ({
   const rangeEnd = Math.min(storeTotalCount, rangeStart + stores.length - 1);
   const shouldShowSkeletonRows = isStoreLoading || !isStoreTypeSynced;
   const visibleSkeletonRows = shouldShowSkeletonRows
-    ? Math.min(storePageSize, MIN_TABLE_ROWS)
+    ? Math.min(storePageSize, STORE_MIN_TABLE_ROWS)
     : 0;
   const fillerRowCount = !shouldShowSkeletonRows
-    ? Math.max(0, MIN_TABLE_ROWS - stores.length)
+    ? Math.max(0, STORE_MIN_TABLE_ROWS - stores.length)
     : 0;
   const sortValue = `${storeSortField}:${storeSortDirection}`;
 
   useEffect(() => {
-    setStoreTypeFilter(storeType);
-  }, [setStoreTypeFilter, storeType]);
-
-  useEffect(() => {
-    if (!isPartnerStore) {
-      return;
-    }
-
-    let isCancelled = false;
-
-    void adminStoreService
-      .fetchBenefits()
-      .then((nextBenefits) => {
-        if (!isCancelled) {
-          setBenefits(nextBenefits);
-          setBenefitError(null);
-        }
-      })
-      .catch((error) => {
-        if (!isCancelled) {
-          setBenefitError(
-            error instanceof Error
-              ? error.message
-              : "제휴 브랜드 목록을 불러오지 못했습니다.",
-          );
-        }
-      });
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [isPartnerStore]);
+    if (storeTypeFilter !== storeType) setStoreTypeFilter(storeType);
+  }, [setStoreTypeFilter, storeType, storeTypeFilter]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -215,11 +173,17 @@ export const StoreManagement = ({
     <div>
       <div className="mb-7 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-normal text-gray-950 dark:text-white">
+          <Heading
+            className={
+              embedded
+                ? "text-lg font-bold text-gray-950 dark:text-white"
+                : "text-2xl font-extrabold tracking-normal text-gray-950 dark:text-white"
+            }
+          >
             {labels.title}
-          </h1>
+          </Heading>
           <p className="text-text-secondary mt-2 text-sm font-medium">
-            관리자 API 기준으로 {labels.name} 정보를 추가, 수정, 삭제합니다.
+            {labels.name} 정보를 추가·수정하고 연결된 혜택을 관리합니다.
           </p>
         </div>
 
@@ -250,14 +214,25 @@ export const StoreManagement = ({
             </Button>
           )}
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+          {isPartnerStore && (
+            <FilterDropdown
+              aria-label="제휴 업종 필터"
+              className="w-full sm:w-[160px]"
+              options={benefitCategoryFilterOptions}
+              value={storeCategory ?? "ALL"}
+              onChange={(value) =>
+                setStoreCategory(value === "ALL" ? undefined : value)
+              }
+            />
+          )}
           <FilterDropdown
             aria-label="매장 정렬"
             className="w-full sm:w-[160px]"
-            options={sortOptions}
+            options={storeSortOptions}
             value={sortValue}
             onChange={(nextValue) => {
-              const selected = sortOptions.find(
+              const selected = storeSortOptions.find(
                 (option) => option.value === nextValue,
               );
 
@@ -268,7 +243,7 @@ export const StoreManagement = ({
           <FilterDropdown
             aria-label="페이지당 매장 수"
             className="w-full sm:w-[120px]"
-            options={pageSizeFilterOptions}
+            options={storePageSizeFilterOptions}
             value={String(storePageSize)}
             onChange={(nextValue) => setStorePageSize(Number(nextValue))}
           />
@@ -334,117 +309,20 @@ export const StoreManagement = ({
         )}
       </div>
 
-      <Card padding="none" className="hidden overflow-hidden md:block">
-        <div className="overflow-x-auto">
-          <table
-            className={cn(
-              "w-full table-fixed border-collapse text-sm",
-              isPartnerStore ? "min-w-[1040px]" : "min-w-[860px]",
-            )}
-          >
-            <thead className="bg-surface-muted text-xs font-extrabold text-gray-400 dark:bg-white/5">
-              <tr>
-                <th className="w-[88px] px-5 py-4 text-left">ID</th>
-                <th className="w-[22%] px-4 py-4 text-left">매장명</th>
-                <th className="px-4 py-4 text-left">주소</th>
-                {isPartnerStore && (
-                  <th className="w-[180px] px-4 py-4 text-left">제휴 브랜드</th>
-                )}
-                <th className="w-[128px] px-4 py-4 text-center">등록일</th>
-                <th className="w-[160px] px-5 py-4 text-center">관리</th>
-              </tr>
-            </thead>
-            <tbody className="divide-border-soft divide-y dark:divide-white/10">
-              {shouldShowSkeletonRows ? (
-                Array.from({ length: visibleSkeletonRows }, (_, index) => (
-                  <StoreSkeletonRow
-                    key={`store-skeleton-${index}`}
-                    showPartnerColumn={isPartnerStore}
-                  />
-                ))
-              ) : stores.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={isPartnerStore ? 6 : 5}
-                    className="h-[640px] px-5 py-0"
-                  >
-                    <AdminEmptyState
-                      title="조건에 맞는 매장이 없습니다."
-                      description={`검색어를 조정하거나 새 ${labels.emptyName}을 추가해 주세요.`}
-                    />
-                  </td>
-                </tr>
-              ) : (
-                <>
-                  {stores.map((store) => (
-                    <tr
-                      key={store.storeId}
-                      className={cn(
-                        "hover:bg-surface-muted/70 h-20 transition dark:hover:bg-white/5",
-                      )}
-                    >
-                      <td className="px-5 py-4 font-bold text-gray-400">
-                        #{store.storeId}
-                      </td>
-                      <td className="truncate px-4 py-4 font-extrabold text-gray-800 dark:text-gray-100">
-                        {store.name}
-                      </td>
-                      <td className="truncate px-4 py-4 font-semibold text-gray-500">
-                        {store.address}
-                      </td>
-                      {isPartnerStore && (
-                        <td className="truncate px-4 py-4 font-semibold text-gray-500">
-                          {store.brand ? (
-                            <>
-                              <span className="font-extrabold text-gray-700 dark:text-gray-200">
-                                {store.brand}
-                              </span>
-                              <span className="ml-2 text-gray-400">
-                                {store.category ?? "-"}
-                              </span>
-                            </>
-                          ) : (
-                            "-"
-                          )}
-                        </td>
-                      )}
-                      <td className="px-4 py-4 text-center font-semibold text-gray-400">
-                        {formatKoreanDate(store.createdAt)}
-                      </td>
-                      <td className="px-5 py-4 text-center">
-                        <StoreRowActions
-                          onDelete={() => setDeletingStoreId(store.storeId)}
-                          onEdit={() => openEditModal(store.storeId)}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                  {Array.from({ length: fillerRowCount }, (_, index) => (
-                    <tr
-                      key={`store-filler-${index}`}
-                      aria-hidden="true"
-                      className="h-20"
-                    >
-                      <td colSpan={isPartnerStore ? 6 : 5} />
-                    </tr>
-                  ))}
-                </>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="border-border-soft flex min-h-[65px] items-center justify-center gap-1 border-t px-5 py-4 dark:border-white/10">
-          {!shouldShowSkeletonRows && stores.length > 0 && (
-            <AdminPagination
-              currentPage={storePage + 1}
-              disabled={isStoreLoading}
-              totalPages={storeTotalPages}
-              onPageChange={(page) => setStorePage(page - 1)}
-            />
-          )}
-        </div>
-      </Card>
+      <StoreManagementTable
+        stores={stores}
+        isPartnerStore={isPartnerStore}
+        emptyName={labels.emptyName}
+        shouldShowSkeletonRows={shouldShowSkeletonRows}
+        visibleSkeletonRows={visibleSkeletonRows}
+        fillerRowCount={fillerRowCount}
+        storePage={storePage}
+        isStoreLoading={isStoreLoading}
+        storeTotalPages={storeTotalPages}
+        onPageChange={setStorePage}
+        onEdit={openEditModal}
+        onDelete={setDeletingStoreId}
+      />
 
       <AdminResultSummary
         keyword={hasSearchKeyword ? storeKeyword : ""}
@@ -486,88 +364,3 @@ export const StoreManagement = ({
     </div>
   );
 };
-
-type StoreRowActionsProps = {
-  compact?: boolean;
-  onDelete: () => void;
-  onEdit: () => void;
-};
-
-const StoreRowActions = ({
-  compact = false,
-  onDelete,
-  onEdit,
-}: StoreRowActionsProps) => (
-  <div
-    className={cn("inline-flex items-center", compact ? "gap-1" : "gap-2 pr-3")}
-  >
-    <Button
-      variant="ghost"
-      size={compact ? "xs" : "sm"}
-      className={cn(
-        "rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white",
-        compact ? "h-9 w-9" : "h-12 w-12",
-      )}
-      aria-label="매장 수정"
-      onClick={onEdit}
-    >
-      <Edit2 size={compact ? 18 : 30} />
-    </Button>
-    <Button
-      variant="dangerGhost"
-      size={compact ? "xs" : "sm"}
-      className={cn("rounded-lg p-0", compact ? "h-9 w-9" : "h-12 w-12")}
-      aria-label="매장 삭제"
-      onClick={onDelete}
-    >
-      <Trash2 size={compact ? 18 : 30} />
-    </Button>
-  </div>
-);
-
-const StoreSkeletonRow = ({
-  showPartnerColumn,
-}: {
-  showPartnerColumn: boolean;
-}) => (
-  <tr className="h-20" aria-hidden="true">
-    <td className="px-5 py-4">
-      <div className="bg-surface-muted h-4 w-12 animate-pulse rounded-full dark:bg-white/10" />
-    </td>
-    <td className="px-4 py-4">
-      <div className="bg-surface-muted h-4 w-32 animate-pulse rounded-full dark:bg-white/10" />
-    </td>
-    <td className="px-4 py-4">
-      <div className="bg-surface-muted h-4 w-[min(360px,80%)] animate-pulse rounded-full dark:bg-white/10" />
-    </td>
-    {showPartnerColumn && (
-      <td className="px-4 py-4">
-        <div className="bg-surface-muted h-4 w-32 animate-pulse rounded-full dark:bg-white/10" />
-      </td>
-    )}
-    <td className="px-4 py-4">
-      <div className="bg-surface-muted mx-auto h-4 w-20 animate-pulse rounded-full dark:bg-white/10" />
-    </td>
-    <td className="px-5 py-4">
-      <div className="mx-auto flex justify-center gap-3">
-        <div className="bg-surface-muted h-10 w-10 animate-pulse rounded-lg dark:bg-white/10" />
-        <div className="bg-surface-muted h-10 w-10 animate-pulse rounded-lg dark:bg-white/10" />
-      </div>
-    </td>
-  </tr>
-);
-
-const StoreSkeletonCard = () => (
-  <Card padding="sm" aria-hidden="true">
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0 flex-1 space-y-3">
-        <div className="bg-surface-muted h-4 w-28 animate-pulse rounded-full dark:bg-white/10" />
-        <div className="bg-surface-muted h-3 w-full animate-pulse rounded-full dark:bg-white/10" />
-      </div>
-      <div className="flex gap-1">
-        <div className="bg-surface-muted h-9 w-9 animate-pulse rounded-lg dark:bg-white/10" />
-        <div className="bg-surface-muted h-9 w-9 animate-pulse rounded-lg dark:bg-white/10" />
-      </div>
-    </div>
-  </Card>
-);

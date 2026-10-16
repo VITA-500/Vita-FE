@@ -15,17 +15,18 @@ import {
   buildSidebarChatItems,
   type SidebarChatItem,
 } from "@/features/chat/lib/chatSidebarItems";
+import {
+  chatSidebarClassName,
+  chatSidebarIconButtonClassName,
+} from "@/features/chat/lib/chatSidebarStyles";
 import type { ChatMode, ChatSessionSummary } from "@/features/chat/types";
 import { cn } from "@/shared/lib/cn";
 import { Logo } from "@/shared/ui/Logo";
 
-const sidebarClassName =
-  "bg-surface-muted fixed inset-y-0 left-0 z-[100] flex overflow-hidden border-r border-gray-200 text-gray-950 transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-white/10 dark:text-white";
-const sidebarIconButtonClassName =
-  "flex h-10 w-10 items-center justify-center rounded-xl text-gray-500 transition hover:bg-white hover:text-gray-950 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white";
-
 type ChatSidebarProps = {
   isAuthenticated: boolean;
+  /** 토큰은 남아 있지만 사용자 조회가 실패한 세션 만료 상태. */
+  isAuthExpired?: boolean;
   isAuthLoading: boolean;
   isAuthReady: boolean;
   isOpen: boolean;
@@ -76,6 +77,7 @@ export const ChatSidebar = ({
   isAuthLoading,
   isAuthReady,
   isAuthenticated,
+  isAuthExpired = false,
   isOpen,
   onClose,
   onNewChat,
@@ -171,7 +173,13 @@ export const ChatSidebar = ({
   });
 
   return (
-    <aside className={cn(sidebarClassName, isOpen ? "w-[296px]" : "w-[64px]")}>
+    <aside
+      className={cn(
+        chatSidebarClassName,
+        // 모바일은 접힌 레일(64px)을 띄우지 않고 서랍처럼 화면 밖으로 완전히 숨긴다(좌측 상단 버튼으로 연다).
+        isOpen ? "w-[296px]" : "w-[296px] max-md:-translate-x-full md:w-[64px]",
+      )}
+    >
       <div className="flex h-full w-[296px] shrink-0 flex-col">
         <div className="flex h-16 items-center justify-between">
           <div
@@ -246,7 +254,7 @@ export const ChatSidebar = ({
               <button
                 type="button"
                 onClick={onOpenSearch}
-                className={sidebarIconButtonClassName}
+                className={chatSidebarIconButtonClassName}
                 aria-label="상담 검색"
               >
                 <Search size={19} />
@@ -262,7 +270,7 @@ export const ChatSidebar = ({
                 type="button"
                 onClick={onClose}
                 className={cn(
-                  sidebarIconButtonClassName,
+                  chatSidebarIconButtonClassName,
                   "md:cursor-ew-resize",
                 )}
                 aria-label="사이드바 닫기"
@@ -301,6 +309,7 @@ export const ChatSidebar = ({
             isOpen={isOpen}
             onHideTooltip={onHideTooltip}
             onNewChat={onNewChat}
+            onOpenSidebar={onOpen}
             onOpenSearch={onOpenSearch}
             onShowRailTooltip={onShowRailTooltip}
             pendingSessionId={pendingSessionId}
@@ -320,6 +329,24 @@ export const ChatSidebar = ({
               onShowRailTooltip={onShowRailTooltip}
               onTogglePin={handlePinChat}
             />
+          )}
+
+          {isAuthExpired && isOpen && (
+            <div className="mx-4 mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
+              <p className="font-bold">로그인이 만료되었어요.</p>
+              <p className="mt-1 text-xs leading-5 opacity-80">
+                저장된 상담을 계속 보려면
+                <br />
+                다시 로그인해 주세요.
+              </p>
+              <button
+                type="button"
+                onClick={onOpenLogin}
+                className="mt-3 flex h-9 w-full items-center justify-center rounded-xl bg-amber-200/70 text-xs font-extrabold text-amber-950 transition hover:bg-amber-200 dark:bg-amber-900/60 dark:text-amber-50 dark:hover:bg-amber-900"
+              >
+                다시 로그인
+              </button>
+            </div>
           )}
 
           {isAuthenticated && (

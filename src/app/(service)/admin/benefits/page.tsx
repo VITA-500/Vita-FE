@@ -1,5 +1,7 @@
-import { BenefitManagement } from "@/features/admin/components/BenefitManagement";
+import { redirect } from "next/navigation";
+import { routes } from "@/shared/constants/routes";
 
-const AdminBenefitsPage = () => <BenefitManagement />;
+const AdminBenefitsPage = () =>
+  redirect(`${routes.adminPartners}?view=benefits`);
 
 export default AdminBenefitsPage;

@@ -20,6 +20,8 @@ const serviceFilterBadgeClassName =
 type ServiceFilterBarProps = ServiceFilterCarouselProps & {
   /** 한 줄에 보여줄 뱃지 최대 개수. 폭이 모자라면 더 적게 보여주고 나머지는 더보기(…)로 보낸다. */
   maxVisibleCount?: number;
+  /** true면 뱃지 줄을 가운데 정렬한다(좁은 화면, sm 미만에서만). */
+  isCentered?: boolean;
   /** 더보기 드롭다운을 버튼의 왼쪽 끝(left)·오른쪽 끝(right)에 맞춰 연다. 좁은 화면은 오른쪽이 넘치지 않게 right. */
   moreMenuAlign?: "left" | "right";
 };
@@ -28,6 +30,7 @@ export const ServiceFilterCarousel = ({
   "aria-label": ariaLabel,
   consultOptions,
   consultValue,
+  isCentered = false,
   maxVisibleCount = VISIBLE_SERVICE_FILTER_COUNT,
   moreMenuAlign = "left",
   onConsultChange,
@@ -142,7 +145,10 @@ export const ServiceFilterCarousel = ({
   return (
     <div
       ref={containerRef}
-      className="relative flex h-12 w-full min-w-0 items-center gap-1.5 px-2"
+      className={cn(
+        "relative flex h-12 w-full min-w-0 items-center gap-1.5 px-2",
+        isCentered && "justify-center sm:justify-start",
+      )}
       role="group"
       aria-label={ariaLabel}
     >
@@ -273,6 +279,54 @@ export const ServiceFilterCarousel = ({
           )}
         </div>
       )}
+    </div>
+  );
+};
+
+/**
+ * 상담·서비스 필터 뱃지를 줄여 넣지 않고 모두 보여준다(넘치면 줄바꿈).
+ * 매장 목록 사이드바·바텀 시트처럼 공간이 있는 곳에서 쓴다. 지도 위 한 줄은 ServiceFilterCarousel.
+ */
+export const ServiceFilterWrapList = ({
+  "aria-label": ariaLabel,
+  consultOptions,
+  consultValue,
+  onConsultChange,
+  onProvidedChange,
+  providedOptions,
+  providedValue,
+}: ServiceFilterCarouselProps) => {
+  const filterItems = buildServiceFilterItems({
+    consultOptions,
+    consultValue,
+    onConsultChange,
+    onProvidedChange,
+    providedOptions,
+    providedValue,
+  });
+
+  return (
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label={ariaLabel}>
+      {filterItems.map((item) => {
+        const isSelected = item.value.includes(item.optionValue);
+
+        return (
+          <button
+            key={item.key}
+            type="button"
+            onClick={() => toggleServiceFilterItem(item)}
+            className={cn(
+              serviceFilterBadgeClassName,
+              "border bg-white shadow-sm hover:brightness-95 dark:bg-white",
+            )}
+            style={getServiceFilterBadgeStyle(item.pointColor, isSelected)}
+            aria-pressed={isSelected}
+          >
+            <item.icon size={13} aria-hidden="true" />
+            {item.label}
+          </button>
+        );
+      })}
     </div>
   );
 };

@@ -1,11 +1,15 @@
 import { stripStoreTablesFromAnswer } from "@/features/chat/lib/chatStoreAnswerContent";
-import { isPartnerStorePrompt } from "@/features/chat/lib/chatStoreMap";
+import {
+  hasRequestedServiceStoreMap,
+  isPartnerStorePrompt,
+} from "@/features/chat/lib/chatStoreMap";
 import type { ChatMessage, ChatStoreMap } from "@/features/chat/types";
 
 const isMismatchedPartnerStoreMap = (prompt: string, storeMap?: ChatStoreMap) =>
   isPartnerStorePrompt(prompt) &&
   Boolean(storeMap) &&
-  storeMap?.type !== "PARTNER";
+  storeMap?.type !== "PARTNER" &&
+  !hasRequestedServiceStoreMap(storeMap);
 
 const LOCATION_MISSING_LINE =
   /위치\s*정보.*없|위치.*확인.*못|위치.*허용|현재\s*위치.*알\s*수\s*없/;

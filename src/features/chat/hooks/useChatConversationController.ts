@@ -13,7 +13,9 @@ import { useChatAutoScroll } from "@/features/chat/hooks/useChatAutoScroll";
 import { useChatSessionList } from "@/features/chat/hooks/useChatSessionList";
 import { useChatConversationHydration } from "@/features/chat/hooks/useChatConversationHydration";
 import { useChatPromptSubmit } from "@/features/chat/hooks/useChatPromptSubmit";
+import { useChatInputFocus } from "@/features/chat/hooks/useChatInputFocus";
 import type {
+  ChatConversationStatus,
   ChatFeedback,
   ChatMessage,
   ChatMode,
@@ -38,6 +40,8 @@ export const useChatConversationController = ({
   isAuthReady,
   onRequireChatMode,
 }: UseChatConversationControllerParams) => {
+  const [conversationStatus, setConversationStatus] =
+    useState<ChatConversationStatus>("idle");
   const [chatInput, setChatInput] = useState("");
   const [chatStatus, setChatStatus] = useState<"idle" | "loading">("idle");
   const [loadingSessionId, setLoadingSessionId] = useState<number | null>(null);
@@ -75,7 +79,7 @@ export const useChatConversationController = ({
   );
   const chatSessions = serverChatSessions;
   const latestSelectRequestRef = useRef(0);
-  const chatInputRef = useRef<HTMLInputElement | null>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const activeConversationOwnerKeyRef = useRef("");
   const hasHydratedConversationRef = useRef(false);
   const hasChatStarted = messages.length > 0;
@@ -126,6 +130,14 @@ export const useChatConversationController = ({
     streamingReply,
   });
 
+  const resetConversationStatus = useCallback(() => {
+    answerAbortRef.current?.abort();
+    answerAbortRef.current = null;
+    setStreamingReply(null);
+    setChatStatus("idle");
+    setConversationStatus("idle");
+  }, []);
+
   const { applyChatSession } = useChatConversationHydration({
     activeConversationOwnerKeyRef,
     clearChatSessions,
@@ -137,7 +149,7 @@ export const useChatConversationController = ({
     isAuthReady,
     messages,
     refreshChatSessions,
-    setChatStatus,
+    setChatStatus: resetConversationStatus,
     setCurrentChatTitle,
     setCurrentGuestId,
     setCurrentSessionId,
@@ -158,46 +170,11 @@ export const useChatConversationController = ({
     setEditHintMessageId(null);
   }, []);
 
-  /**
-   * 답변을 다 보여준 뒤 바로 이어서 입력할 수 있게 입력창에 포커스를 준다.
-   * 검색창·확인 창처럼 다른 입력을 쓰는 중이면 빼앗지 않는다.
-   */
-  const focusChatInput = useCallback(() => {
-    const input = chatInputRef.current;
-
-    if (!input || input.disabled) return;
-
-    const activeElement = document.activeElement;
-
-    if (
-      activeElement instanceof HTMLElement &&
-      activeElement !== input &&
-      (activeElement.closest("[role='dialog']") ||
-        activeElement.matches(
-          "input, textarea, select, [contenteditable='true']",
-        ))
-    ) {
-      return;
-    }
-
-    input.focus({ preventScroll: true });
-  }, []);
-
-  // 답변이 끝나 입력 가능 상태(loading → idle)가 되면 화면이 다시 그려진 뒤 포커스를 준다.
-  const previousChatStatusRef = useRef(chatStatus);
-
-  useEffect(() => {
-    const wasLoading = previousChatStatusRef.current === "loading";
-    previousChatStatusRef.current = chatStatus;
-
-    if (!wasLoading || chatStatus !== "idle" || activeMode !== "chat") return;
-
-    let frameId = window.requestAnimationFrame(() => {
-      frameId = window.requestAnimationFrame(focusChatInput);
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, [activeMode, chatStatus, focusChatInput]);
+  const { focusChatInput } = useChatInputFocus({
+    activeMode,
+    chatInputRef,
+    chatStatus,
+  });
 
   const submitChatPrompt = useChatPromptSubmit({
     answerAbortRef,
@@ -214,6 +191,7 @@ export const useChatConversationController = ({
     refreshChatSessions,
     setChatInput,
     setChatStatus,
+    setConversationStatus,
     setCurrentChatTitle,
     setCurrentGuestId,
     setCurrentSessionId,
@@ -240,6 +218,7 @@ export const useChatConversationController = ({
 
     setStreamingReply(null);
     setChatStatus("idle");
+    setConversationStatus("idle");
     setMessages((currentMessages) => [
       ...currentMessages,
       createStoppedAssistantMessage(partialContent),
@@ -260,7 +239,7 @@ export const useChatConversationController = ({
     void submitChatPrompt(prompt, { replaceFromMessageId: userMessageId });
   };
 
-  /** 실패한 답변을 같은 질문으로 다시 요청한다. */
+  /** 실패하거나 중단된 답변을 같은 질문으로 다시 요청한다. */
   const retryAnswer = (assistantMessageId: string) => {
     const userMessage = findUserMessageBeforeAssistant(
       messages,
@@ -287,6 +266,7 @@ export const useChatConversationController = ({
     setCurrentGuestId(undefined);
     setCurrentSessionId(undefined);
     setChatStatus("idle");
+    setConversationStatus("idle");
     chatConversationStorage.clear(activeConversationOwnerKeyRef.current);
     window.requestAnimationFrame(() => chatInputRef.current?.focus());
   };
@@ -379,6 +359,7 @@ export const useChatConversationController = ({
     chatInputRef,
     chatSessions,
     chatStatus,
+    conversationStatus,
     currentChatTitle,
     currentSessionId,
     deleteChatSession,

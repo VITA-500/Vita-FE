@@ -9,25 +9,19 @@ import {
 import { chatService } from "@/features/chat/lib/chatService";
 import { createGuestId } from "@/features/chat/lib/chatConversationStorage";
 import {
-  createFallbackAssistantMessage,
   isStoreRelatedPrompt,
   toChatTitle,
 } from "@/features/chat/lib/chatMessages";
-import {
-  findPartnerChatStoreMap,
-  findChatStoreMap,
-  getCurrentChatLocation,
-  shouldUsePartnerStoreFallback,
-  shouldUseLocalStoreFallback,
-} from "@/features/chat/lib/chatStoreMap";
-import { chatStoreMapCache } from "@/features/chat/lib/chatStoreMapCache";
-import {
-  normalizeStoreMapMessageForPrompt,
-  shouldCacheStoreMapForPrompt,
-} from "@/features/chat/lib/chatStoreMapMessage";
+import { getCurrentChatLocation } from "@/features/chat/lib/chatStoreMap";
+import { getChatError } from "@/features/chat/lib/chatErrors";
 import { createTextReveal } from "@/features/chat/lib/chatTextReveal";
-import type { ChatMessage, ChatStreamingReply } from "@/features/chat/types";
+import type {
+  ChatMessage,
+  ChatStreamingReply,
+  ChatConversationStatus,
+} from "@/features/chat/types";
 import { ApiError } from "@/shared/api/http";
+import { showToast } from "@/shared/ui/ToastProvider";
 
 type SubmitChatPromptOptions = {
   /** 이 메시지부터 뒤를 지우고 새 질문으로 다시 묻는다(질문 수정 · 다시 시도). */
@@ -37,8 +31,9 @@ type SubmitChatPromptOptions = {
 type UseChatPromptSubmitParams = {
   answerAbortRef: RefObject<AbortController | null>;
   chatInput: string;
-  chatInputRef: RefObject<HTMLInputElement | null>;
+  chatInputRef: RefObject<HTMLTextAreaElement | null>;
   chatStatus: "idle" | "loading";
+  setConversationStatus: (status: ChatConversationStatus) => void;
   clearEditHint: () => void;
   currentChatTitle: string;
   currentGuestId?: string;
@@ -72,6 +67,7 @@ export const useChatPromptSubmit = ({
   refreshChatSessions,
   setChatInput,
   setChatStatus,
+  setConversationStatus,
   setCurrentChatTitle,
   setCurrentGuestId,
   setCurrentSessionId,
@@ -86,7 +82,12 @@ export const useChatPromptSubmit = ({
     ) => {
       const trimmedPrompt = prompt.trim();
 
-      if (!trimmedPrompt || chatStatus === "loading") return;
+      if (!trimmedPrompt || chatStatus === "loading" || answerAbortRef.current)
+        return;
+      if (trimmedPrompt.length > 2000) {
+        showToast("질문은 2000자 이내로 입력해 주세요.");
+        return;
+      }
 
       clearEditHint();
 
@@ -102,7 +103,6 @@ export const useChatPromptSubmit = ({
       const answerController = new AbortController();
       const { signal } = answerController;
 
-      answerAbortRef.current?.abort();
       answerAbortRef.current = answerController;
 
       setMessages((currentMessages) => {
@@ -118,6 +118,7 @@ export const useChatPromptSubmit = ({
       });
       if (!replaceFromMessageId) setChatInput("");
       setChatStatus("loading");
+      setConversationStatus("loading");
       setStreamingReply({ content: "" });
 
       const textReveal = createTextReveal(({ content, isPreparingBlock }) => {
@@ -137,7 +138,9 @@ export const useChatPromptSubmit = ({
             : (currentGuestId ?? createGuestId());
         const nextSessionId =
           currentSessionId ??
-          (await chatService.createSession(nextGuestId)).sessionId;
+          (await chatService.createSession(nextGuestId, signal)).sessionId;
+
+        if (signal.aborted) return;
 
         setCurrentGuestId(nextGuestId);
         setCurrentSessionId(nextSessionId);
@@ -162,60 +165,31 @@ export const useChatPromptSubmit = ({
           signal,
           onStage: (stage) => {
             if (signal.aborted) return;
+            setConversationStatus(
+              stage === "understanding"
+                ? "thinking"
+                : stage === "retrieving"
+                  ? "retrieving_faq"
+                  : "generating",
+            );
             setStreamingReply((reply) => ({ content: "", ...reply, stage }));
           },
           onDelta: (content) => {
             if (signal.aborted) return;
-            if (isStorePrompt) {
-              return;
-            }
+            setConversationStatus("generating");
             textReveal.push(content);
           },
         });
-        const shouldFindPartnerStores =
-          location &&
-          shouldUsePartnerStoreFallback(
-            trimmedPrompt,
-            assistantMessage.storeMap,
-          );
-        const shouldFindPhoneStores =
-          location &&
-          shouldUseLocalStoreFallback(trimmedPrompt) &&
-          !assistantMessage.storeMap;
-        const storeMapPromise = shouldFindPartnerStores
-          ? findPartnerChatStoreMap({
-              origin: location,
-              originSource: "current",
-              prompt: trimmedPrompt,
-            }).catch(() => undefined)
-          : shouldFindPhoneStores
-            ? findChatStoreMap({
-                origin: location,
-                originSource: "current",
-                prompt: trimmedPrompt,
-              }).catch(() => undefined)
-            : Promise.resolve(undefined);
-
-        const storeMap = await storeMapPromise;
-
         if (signal.aborted) return;
-
-        const answerStoreMap = storeMap ?? assistantMessage.storeMap;
-
-        if (answerStoreMap) {
-          if (shouldCacheStoreMapForPrompt(trimmedPrompt, answerStoreMap)) {
-            chatStoreMapCache.save(assistantMessage.id, answerStoreMap);
-          }
-        }
-
-        const nextAssistantMessage = normalizeStoreMapMessageForPrompt(
-          storeMap ? { ...assistantMessage, storeMap } : assistantMessage,
-          trimmedPrompt,
-        );
+        const nextAssistantMessage = assistantMessage;
 
         await textReveal.finish(nextAssistantMessage.content);
 
-        if (!signal.aborted) focusChatInput();
+        if (signal.aborted) return;
+        focusChatInput();
+        setConversationStatus(
+          assistantMessage.status === "error" ? "failed" : "done",
+        );
 
         setMessages((currentMessages) => [
           ...currentMessages,
@@ -232,12 +206,22 @@ export const useChatPromptSubmit = ({
           name: error instanceof Error ? error.name : "UnknownError",
           status: error instanceof ApiError ? error.status : undefined,
         });
-        const fallbackMessage =
-          await createFallbackAssistantMessage(trimmedPrompt);
-
-        if (signal.aborted) return;
-
-        setMessages((currentMessages) => [...currentMessages, fallbackMessage]);
+        const failure = getChatError(error);
+        setConversationStatus(failure.status);
+        if (failure.resetSession) setCurrentSessionId(undefined);
+        if (failure.status === "expired" && isAuthenticated) {
+          window.dispatchEvent(new Event("vita-auth-changed"));
+        }
+        setMessages((currentMessages) => [
+          ...currentMessages,
+          {
+            id: `assistant-error-${Date.now()}`,
+            role: "assistant",
+            content: failure.message,
+            status: "error",
+            createdAt: new Date().toISOString(),
+          },
+        ]);
       } finally {
         if (answerAbortRef.current === answerController) {
           answerAbortRef.current = null;
@@ -261,6 +245,7 @@ export const useChatPromptSubmit = ({
       refreshChatSessions,
       setChatInput,
       setChatStatus,
+      setConversationStatus,
       setCurrentChatTitle,
       setCurrentGuestId,
       setCurrentSessionId,

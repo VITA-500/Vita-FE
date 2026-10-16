@@ -40,6 +40,8 @@ export type TransitRouteStep = {
   kind: "walk" | "bus" | "subway" | "transit";
   lineName: string;
   meta: string;
+  /** 이 구간의 경로 좌표. 구간을 누르면 지도를 이 구간에 맞춘다. */
+  path: { lat: number; lng: number }[];
   /** 버스 종류(간선·지선 등) / 지하철 종류(일반·급행) */
   vehicleType?: string;
 };
@@ -123,6 +125,7 @@ const getTransitSteps = (route: StoreRoute | null): TransitRouteStep[] =>
       lineName:
         segment.kind === "walk" ? "도보" : (segment.lineName ?? "대중교통"),
       meta: getSegmentMoveText(segment),
+      path: segment.path,
       vehicleType: segment.vehicleType,
     })) ?? [];
 

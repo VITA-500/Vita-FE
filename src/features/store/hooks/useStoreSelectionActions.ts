@@ -60,10 +60,7 @@ type UseStoreSelectionActionsParams = Pick<
     ReturnType<typeof useLocationPermission>,
     "openLocationPermissionModal"
   > &
-  Pick<
-    ReturnType<typeof useStorePanelLayout>,
-    "setIsSearchHistoryOpen" | "setIsStoreListCollapsed"
-  > & {
+  Pick<ReturnType<typeof useStorePanelLayout>, "setIsSearchHistoryOpen"> & {
     activeMapCategory: MapCategory;
     routeDestinationStore?: StoreLocation;
     setActiveMapCategory: Dispatch<SetStateAction<MapCategory>>;
@@ -99,7 +96,6 @@ export const useStoreSelectionActions = ({
   setFocusPoint,
   setHasSelectedStoreInfo,
   setIsSearchHistoryOpen,
-  setIsStoreListCollapsed,
   setIsWaitingForPinSelection,
   setRouteReturnServices,
   setSearchAnchorSource,
@@ -211,12 +207,8 @@ export const useStoreSelectionActions = ({
 
   const handleRouteStart = (store: StoreLocation) => {
     startRoute(store.id);
+    // 모바일도 길찾기 정보를 바텀 시트에 바로 띄운다(경로는 시트 위쪽 지도 영역에 맞춘다).
     handleStoreSelect(store.id, { focusMap: true });
-
-    if (window.innerWidth < 768) {
-      setHasSelectedStoreInfo(false);
-      setIsStoreListCollapsed(true);
-    }
 
     if (userLocation) {
       watchLocation();

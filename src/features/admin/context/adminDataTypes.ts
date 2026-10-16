@@ -5,6 +5,7 @@ import type {
   AdminStore,
   AdminStoreDetail,
   AdminStoreType,
+  AdminStoreFormInput,
 } from "@/features/admin/types";
 
 export type FaqSaveInput = Pick<AdminFaq, "category" | "question"> & {
@@ -12,16 +13,7 @@ export type FaqSaveInput = Pick<AdminFaq, "category" | "question"> & {
   subcategory?: string;
 };
 
-export type StoreSaveInput = Omit<
-  AdminStoreDetail,
-  | "brand"
-  | "category"
-  | "benefitName"
-  | "createdAt"
-  | "storeId"
-  | "storeType"
-  | "updatedAt"
->;
+export type StoreSaveInput = AdminStoreFormInput;
 
 export type StoreSortField = "createdAt" | "name" | "updatedAt";
 export type StoreSortDirection = "asc" | "desc";
@@ -67,6 +59,7 @@ export type AdminStoreData = {
   storeSortDirection: StoreSortDirection;
   storeSortField: StoreSortField;
   storeTypeFilter: AdminStoreType;
+  storeCategory?: string;
   storeTotalCount: number;
   storeTotalPages: number;
   isStoreLoading: boolean;
@@ -79,6 +72,7 @@ export type AdminStoreData = {
   setStorePageSize: (pageSize: number) => void;
   setStoreSort: (field: StoreSortField, direction: StoreSortDirection) => void;
   setStoreTypeFilter: (storeType: AdminStoreType) => void;
+  setStoreCategory: (category?: string) => void;
   deleteStore: (storeId: number) => Promise<void>;
 };
 

@@ -15,6 +15,7 @@ type ChatSidebarNavProps = {
   isOpen: boolean;
   onHideTooltip: () => void;
   onNewChat: () => void;
+  onOpenSidebar: () => void;
   onOpenSearch: () => void;
   onShowRailTooltip: (
     label: string,
@@ -38,6 +39,7 @@ export const ChatSidebarNav = ({
   isOpen,
   onHideTooltip,
   onNewChat,
+  onOpenSidebar,
   onOpenSearch,
   onShowRailTooltip,
   pendingSessionId = null,
@@ -151,6 +153,7 @@ export const ChatSidebarNav = ({
         type="button"
         className="group relative flex h-11 w-[296px] items-center pr-3 text-sm font-bold text-gray-500 transition-colors duration-150 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white"
         aria-label="최근 상담"
+        onClick={onOpenSidebar}
         onMouseEnter={onShowRailTooltip("최근 상담")}
         onMouseLeave={onHideTooltip}
       >

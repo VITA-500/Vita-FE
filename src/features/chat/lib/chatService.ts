@@ -6,7 +6,6 @@ import type {
 import {
   guestHeaders,
   requestChatJson,
-  requestGuestChatJson,
 } from "@/features/chat/lib/chatApiClient";
 import { sendMessageWithStream } from "@/features/chat/lib/chatStream";
 import { ApiError, requestJson } from "@/shared/api/http";
@@ -78,21 +77,16 @@ export const chatService = {
 
     return claim;
   },
-  createSession: (guestId?: string) => {
-    if (guestId) {
-      return requestGuestChatJson<ChatSessionCreateResponse>(
-        "/chat/sessions",
-        guestId,
-        {
-          method: "POST",
-        },
-      );
-    }
-
-    return requestJson<ChatSessionCreateResponse>("/chat/sessions", {
-      method: "POST",
-      headers: guestHeaders(guestId),
-    });
+  createSession: (guestId?: string, signal?: AbortSignal) => {
+    return requestChatJson<ChatSessionCreateResponse>(
+      "/chat/sessions",
+      guestId,
+      {
+        method: "POST",
+        signal,
+        timeoutMs: 8000,
+      },
+    );
   },
   deleteSession: async (sessionId: number) => {
     await requestJson<void>(`/chat/sessions/${sessionId}`, {

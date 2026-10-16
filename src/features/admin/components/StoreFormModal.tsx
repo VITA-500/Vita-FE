@@ -11,6 +11,7 @@ import {
 import type {
   AdminBenefit,
   AdminStoreDetail,
+  AdminStoreFormInput,
   AdminStoreType,
 } from "@/features/admin/types";
 import { formatKoreanDate } from "@/shared/lib/date";
@@ -18,16 +19,7 @@ import { Button } from "@/shared/ui/Button";
 import { Modal } from "@/shared/ui/Modal";
 import { showToast } from "@/shared/ui/ToastProvider";
 
-export type StoreInput = Omit<
-  AdminStoreDetail,
-  | "brand"
-  | "category"
-  | "benefitName"
-  | "createdAt"
-  | "storeId"
-  | "storeType"
-  | "updatedAt"
->;
+export type StoreInput = AdminStoreFormInput;
 
 type StoreFormModalProps = {
   benefits: AdminBenefit[];
@@ -69,7 +61,7 @@ export const StoreFormModal = ({
       }
     : {
         address: "예: 서울 강남구 테헤란로 111",
-        businessHours: "예: 10:00~20:00",
+        businessHours: "예: 10:00-20:00",
         consultServices: "휴대폰상담, 요금제변경",
         name: "예: VITA 강남점",
         phone: "예: 02-1234-5678",
@@ -145,7 +137,7 @@ export const StoreFormModal = ({
       await onSave({
         address: values.address.trim(),
         benefitId: parseOptionalNumber(values.benefitId),
-        businessHours: values.businessHours?.trim() ?? "",
+        businessHours: values.businessHours?.trim() || null,
         consultServices: toServiceArray(values.consultServices),
         lat: Number(values.lat.trim()),
         lng: Number(values.lng.trim()),
