@@ -15,14 +15,13 @@ import {
   buildSidebarChatItems,
   type SidebarChatItem,
 } from "@/features/chat/lib/chatSidebarItems";
+import {
+  chatSidebarClassName,
+  chatSidebarIconButtonClassName,
+} from "@/features/chat/lib/chatSidebarStyles";
 import type { ChatMode, ChatSessionSummary } from "@/features/chat/types";
 import { cn } from "@/shared/lib/cn";
 import { Logo } from "@/shared/ui/Logo";
-
-const sidebarClassName =
-  "bg-surface-muted fixed inset-y-0 left-0 z-[100] flex overflow-hidden border-r border-gray-200 text-gray-950 transition-[width,translate] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-white/10 dark:text-white";
-const sidebarIconButtonClassName =
-  "flex h-10 w-10 items-center justify-center rounded-xl text-gray-500 transition hover:bg-white hover:text-gray-950 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white";
 
 type ChatSidebarProps = {
   isAuthenticated: boolean;
@@ -176,7 +175,7 @@ export const ChatSidebar = ({
   return (
     <aside
       className={cn(
-        sidebarClassName,
+        chatSidebarClassName,
         // 모바일은 접힌 레일(64px)을 띄우지 않고 서랍처럼 화면 밖으로 완전히 숨긴다(좌측 상단 버튼으로 연다).
         isOpen ? "w-[296px]" : "w-[296px] max-md:-translate-x-full md:w-[64px]",
       )}
@@ -255,7 +254,7 @@ export const ChatSidebar = ({
               <button
                 type="button"
                 onClick={onOpenSearch}
-                className={sidebarIconButtonClassName}
+                className={chatSidebarIconButtonClassName}
                 aria-label="상담 검색"
               >
                 <Search size={19} />
@@ -271,7 +270,7 @@ export const ChatSidebar = ({
                 type="button"
                 onClick={onClose}
                 className={cn(
-                  sidebarIconButtonClassName,
+                  chatSidebarIconButtonClassName,
                   "md:cursor-ew-resize",
                 )}
                 aria-label="사이드바 닫기"

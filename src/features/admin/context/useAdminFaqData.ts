@@ -117,7 +117,7 @@ export const useAdminFaqData = (): AdminFaqData => {
         }
 
         const nextFaqId = Math.max(0, ...faqs.map((faq) => faq.faqId)) + 1;
-        setFaqs([
+        setFaqs((currentFaqs) => [
           {
             ...input,
             faqId: nextFaqId,
@@ -125,7 +125,7 @@ export const useAdminFaqData = (): AdminFaqData => {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           },
-          ...faqs,
+          ...currentFaqs,
         ]);
       },
       deleteFaq: async (faqId) => {

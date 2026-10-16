@@ -144,7 +144,7 @@ const UserManagement = () => {
                 <th className="px-5 py-3.5">역할</th>
                 <th className="px-5 py-3.5">상태</th>
                 <th className="px-5 py-3.5">가입일</th>
-                <th className="px-5 py-3.5 text-right">관리</th>
+                <th className="px-5 py-3.5 text-center">관리</th>
               </tr>
             </thead>
             <tbody>
@@ -186,7 +186,7 @@ const UserManagement = () => {
                     <td className="px-5 py-4 text-gray-500">
                       {new Date(user.createdAt).toLocaleDateString("ko-KR")}
                     </td>
-                    <td className="px-5 py-4 text-right">
+                    <td className="px-5 py-4 text-center">
                       {user.status !== "DELETED" && (
                         <Button
                           size="sm"

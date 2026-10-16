@@ -25,21 +25,19 @@ import { useRouteRefocus } from "@/features/store/hooks/useRouteRefocus";
 import { useRouteViewportEffects } from "@/features/store/hooks/useRouteViewportEffects";
 import { useStoreMapEffect } from "@/features/store/hooks/useStoreMapEffect";
 import type { MapOverlayHandle } from "@/features/store/lib/kakaoMapTypes";
-import type { MapPoint } from "@/features/store/lib/mapFit";
-import type { RoutePreview } from "@/features/store/lib/mapRoute";
 import { getFallbackMarkerStyle } from "@/features/store/lib/storeMapFallbackLayout";
-import type { StoreMapPreviewProps } from "@/features/store/lib/storeMapPreviewTypes";
+import {
+  STORE_MAP_CARD_RESIZE_SETTLE_MS,
+  type FocusPointRef,
+  type RoutePreviewRef,
+  type SearchPointRef,
+  type StoreMapPreviewProps,
+} from "@/features/store/lib/storeMapPreviewTypes";
 import { cn } from "@/shared/lib/cn";
 
 export type { MapFitPadding } from "@/features/store/lib/mapFit";
 
 /** 카드 크기 변화가 이 시간(ms) 동안 멈춘 뒤에 위치를 다시 계산한다. */
-const CARD_RESIZE_SETTLE_MS = 80;
-
-type SearchPointRef = MapPoint | null | undefined;
-type FocusPointRef = MapPoint | null | undefined;
-type RoutePreviewRef = RoutePreview | null | undefined;
-
 // 카카오맵 overlay는 React 렌더링 밖의 DOM을 직접 다루므로 lifecycle 정리가 중요하다.
 // 마커/경로/카드 동작을 바꿀 때는 cleanup effect가 같이 따라가는지 확인한다.
 export const StoreMapPreview = ({
@@ -135,7 +133,7 @@ export const StoreMapPreview = ({
   const selectedStoreCardLayoutKey = useElementResizeKey(
     selectedStoreCardRef,
     selectedStoreCard,
-    CARD_RESIZE_SETTLE_MS,
+    STORE_MAP_CARD_RESIZE_SETTLE_MS,
   );
 
   const { adjustZoomLevel, isMapAnimating } = useMapZoom({

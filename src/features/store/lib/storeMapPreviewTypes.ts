@@ -12,6 +12,11 @@ import type { RoutePreview } from "@/features/store/lib/mapRoute";
 import type { MarkerColorInfo } from "@/features/store/lib/markerColors";
 import type { StoreLocation } from "@/features/store/types";
 
+export const STORE_MAP_CARD_RESIZE_SETTLE_MS = 80;
+export type SearchPointRef = MapPoint | null | undefined;
+export type FocusPointRef = MapPoint | null | undefined;
+export type RoutePreviewRef = RoutePreview | null | undefined;
+
 export type StoreMapPreviewProps = {
   className?: string;
   /** 채팅 답변 안처럼 낮은 지도. 최소 높이를 두지 않고 컨트롤을 모서리에 붙여 모두 보이게 한다. */

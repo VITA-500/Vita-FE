@@ -13,6 +13,7 @@ import { useChatAutoScroll } from "@/features/chat/hooks/useChatAutoScroll";
 import { useChatSessionList } from "@/features/chat/hooks/useChatSessionList";
 import { useChatConversationHydration } from "@/features/chat/hooks/useChatConversationHydration";
 import { useChatPromptSubmit } from "@/features/chat/hooks/useChatPromptSubmit";
+import { useChatInputFocus } from "@/features/chat/hooks/useChatInputFocus";
 import type {
   ChatFeedback,
   ChatMessage,
@@ -158,46 +159,11 @@ export const useChatConversationController = ({
     setEditHintMessageId(null);
   }, []);
 
-  /**
-   * 답변을 다 보여준 뒤 바로 이어서 입력할 수 있게 입력창에 포커스를 준다.
-   * 검색창·확인 창처럼 다른 입력을 쓰는 중이면 빼앗지 않는다.
-   */
-  const focusChatInput = useCallback(() => {
-    const input = chatInputRef.current;
-
-    if (!input || input.disabled) return;
-
-    const activeElement = document.activeElement;
-
-    if (
-      activeElement instanceof HTMLElement &&
-      activeElement !== input &&
-      (activeElement.closest("[role='dialog']") ||
-        activeElement.matches(
-          "input, textarea, select, [contenteditable='true']",
-        ))
-    ) {
-      return;
-    }
-
-    input.focus({ preventScroll: true });
-  }, []);
-
-  // 답변이 끝나 입력 가능 상태(loading → idle)가 되면 화면이 다시 그려진 뒤 포커스를 준다.
-  const previousChatStatusRef = useRef(chatStatus);
-
-  useEffect(() => {
-    const wasLoading = previousChatStatusRef.current === "loading";
-    previousChatStatusRef.current = chatStatus;
-
-    if (!wasLoading || chatStatus !== "idle" || activeMode !== "chat") return;
-
-    let frameId = window.requestAnimationFrame(() => {
-      frameId = window.requestAnimationFrame(focusChatInput);
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, [activeMode, chatStatus, focusChatInput]);
+  const { focusChatInput } = useChatInputFocus({
+    activeMode,
+    chatInputRef,
+    chatStatus,
+  });
 
   const submitChatPrompt = useChatPromptSubmit({
     answerAbortRef,
