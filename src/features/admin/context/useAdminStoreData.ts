@@ -33,6 +33,7 @@ export const useAdminStoreData = (
     env.apiBaseUrl ? [] : storeDetails,
   );
   const [storeError] = useState<string | null>(null);
+  const [storeCategory, setStoreCategoryState] = useState<string | undefined>();
   const [storeKeyword, setStoreKeywordState] = useState("");
   const [storePage, setStorePage] = useState(0);
   const [storePageSize, setStorePageSizeState] = useState(20);
@@ -55,6 +56,7 @@ export const useAdminStoreData = (
         size: storePageSize,
         sortBy: `${storeSortField},${storeSortDirection}`,
         storeType: storeTypeFilter,
+        category: storeTypeFilter === "PARTNER" ? storeCategory : undefined,
       }),
     queryKey: adminQueryKeys.stores({
       keyword: storeKeyword,
@@ -63,8 +65,18 @@ export const useAdminStoreData = (
       sortDirection: storeSortDirection,
       sortField: storeSortField,
       storeType: storeTypeFilter,
+      category: storeTypeFilter === "PARTNER" ? storeCategory : undefined,
     }),
   });
+
+  const invalidateStoreData = useCallback(
+    () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin", "stores"] }),
+        queryClient.invalidateQueries({ queryKey: adminQueryKeys.benefitsAll }),
+      ]),
+    [queryClient],
+  );
 
   const refreshStores = useCallback(async () => {
     if (!env.apiBaseUrl) return;
@@ -114,7 +126,13 @@ export const useAdminStoreData = (
 
   const setStoreTypeFilter = useCallback((storeType: AdminStoreType) => {
     setStoreTypeFilterState(storeType);
+    setStoreCategoryState(undefined);
     setStoreKeywordState("");
+    setStorePage(0);
+  }, []);
+
+  const setStoreCategory = useCallback((category?: string) => {
+    setStoreCategoryState(category);
     setStorePage(0);
   }, []);
 
@@ -126,9 +144,7 @@ export const useAdminStoreData = (
             ...input,
             storeType: storeTypeFilter,
           });
-          await queryClient.invalidateQueries({
-            queryKey: ["admin", "stores"],
-          });
+          await invalidateStoreData();
           return;
         }
 
@@ -156,6 +172,8 @@ export const useAdminStoreData = (
       storeSortDirection,
       storeSortField,
       storeTypeFilter,
+      storeCategory,
+      setStoreCategory,
       storeTotalCount: currentStoreTotalCount,
       storeTotalPages: currentStoreTotalPages,
       isStoreLoading: env.apiBaseUrl
@@ -170,9 +188,7 @@ export const useAdminStoreData = (
           setStoreSortField("updatedAt");
           setStoreSortDirection("desc");
           setStorePage(0);
-          await queryClient.invalidateQueries({
-            queryKey: ["admin", "stores"],
-          });
+          await invalidateStoreData();
           return;
         }
 
@@ -226,7 +242,7 @@ export const useAdminStoreData = (
             adminStoreService.updateStore(Number(storeId), input),
           ),
         );
-        await queryClient.invalidateQueries({ queryKey: ["admin", "stores"] });
+        await invalidateStoreData();
       },
       setStoreKeyword,
       setStorePage,
@@ -246,7 +262,7 @@ export const useAdminStoreData = (
         }
 
         await adminStoreService.deleteStore(storeId);
-        await queryClient.invalidateQueries({ queryKey: ["admin", "stores"] });
+        await invalidateStoreData();
       },
     }),
     [
@@ -255,7 +271,7 @@ export const useAdminStoreData = (
       currentStores,
       currentStoreTotalCount,
       currentStoreTotalPages,
-      queryClient,
+      invalidateStoreData,
       refreshStores,
       setStoreKeyword,
       setStorePageSize,
@@ -270,6 +286,8 @@ export const useAdminStoreData = (
       storeSortDirection,
       storeSortField,
       storeTypeFilter,
+      storeCategory,
+      setStoreCategory,
     ],
   );
 };

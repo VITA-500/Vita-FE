@@ -59,6 +59,7 @@ export type AdminStoreData = {
   storeSortDirection: StoreSortDirection;
   storeSortField: StoreSortField;
   storeTypeFilter: AdminStoreType;
+  storeCategory?: string;
   storeTotalCount: number;
   storeTotalPages: number;
   isStoreLoading: boolean;
@@ -71,6 +72,7 @@ export type AdminStoreData = {
   setStorePageSize: (pageSize: number) => void;
   setStoreSort: (field: StoreSortField, direction: StoreSortDirection) => void;
   setStoreTypeFilter: (storeType: AdminStoreType) => void;
+  setStoreCategory: (category?: string) => void;
   deleteStore: (storeId: number) => Promise<void>;
 };
 

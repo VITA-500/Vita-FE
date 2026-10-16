@@ -43,12 +43,14 @@ export const adminStoreService = {
     size,
     sortBy,
     storeType,
+    category,
   }: {
     keyword?: string;
     page: number;
     size: number;
     sortBy: string;
     storeType?: AdminStoreType;
+    category?: string;
   }) => {
     const response = await fetchStoreListPage({
       keyword,
@@ -56,6 +58,7 @@ export const adminStoreService = {
       size,
       sortBy,
       storeType,
+      category,
     });
     const stores = response.content.map((store) => ({
       ...store,
@@ -139,12 +142,14 @@ const fetchStoreListPage = async ({
   size,
   sortBy,
   storeType,
+  category,
 }: {
   keyword?: string;
   page: number;
   size: number;
   sortBy: string;
   storeType?: AdminStoreType;
+  category?: string;
 }) => {
   const params = new URLSearchParams({
     page: String(page),
@@ -158,6 +163,10 @@ const fetchStoreListPage = async ({
 
   if (storeType) {
     params.set("storeType", storeType);
+  }
+
+  if (storeType === "PARTNER" && category !== undefined) {
+    params.set("category", String(category));
   }
 
   return requestJson<StoreListResponse>(`/admin/stores?${params.toString()}`, {

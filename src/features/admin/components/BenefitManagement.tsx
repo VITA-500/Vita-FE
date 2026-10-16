@@ -1,8 +1,15 @@
 "use client";
 
-import { Edit2, Plus, Trash2 } from "lucide-react";
+import {
+  BenefitManagementHeader,
+  BenefitDeleteModal,
+  BenefitActions,
+  BenefitSummary,
+  BenefitCategoryBadge,
+  BenefitEmptyState,
+} from "./BenefitManagementParts";
+
 import { useEffect, useState } from "react";
-import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
 import { AdminErrorBanner } from "@/features/admin/components/AdminErrorBanner";
 import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { AdminResultSummary } from "@/features/admin/components/AdminResultSummary";
@@ -20,16 +27,11 @@ import {
   type BenefitCategoryFilter,
   type BenefitSort,
 } from "@/features/admin/context/useAdminBenefits";
-import {
-  type AdminBenefitDetail,
-  type AdminBenefitRequest,
-} from "@/features/admin/types";
-import { renderBenefitCategoryIcon } from "@/shared/ui/BenefitCategoryIcon";
+import { type AdminBenefitRequest } from "@/features/admin/types";
 import { ApiError } from "@/shared/api/http";
 import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
-import { Modal } from "@/shared/ui/Modal";
 import { SearchInput } from "@/shared/ui/SearchInput";
 import { showToast } from "@/shared/ui/ToastProvider";
 
@@ -38,7 +40,13 @@ const toErrorMessage = (error: unknown, fallback: string) =>
   error instanceof ApiError && error.message ? error.message : fallback;
 
 /** 관리자 제휴 혜택(브랜드) 관리: 검색·카테고리 필터, 등록·수정·삭제 */
-export const BenefitManagement = () => {
+export const BenefitManagement = ({
+  embedded = false,
+  onSelectCategory,
+}: {
+  embedded?: boolean;
+  onSelectCategory?: (category: string) => void;
+}) => {
   const {
     benefits,
     categoryFilter,
@@ -140,25 +148,10 @@ export const BenefitManagement = () => {
 
   return (
     <div>
-      <div className="mb-7 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-normal text-gray-950 dark:text-white">
-            제휴 혜택 관리
-          </h1>
-          <p className="text-text-secondary mt-2 text-sm font-medium">
-            제휴 브랜드와 혜택을 관리합니다. 등록한 혜택은 제휴점 관리에서
-            매장에 연결할 수 있어요.
-          </p>
-        </div>
-
-        <Button
-          size="sm"
-          leftIcon={<Plus size={16} />}
-          onClick={() => setIsCreateModalOpen(true)}
-        >
-          제휴 혜택 등록
-        </Button>
-      </div>
+      <BenefitManagementHeader
+        embedded={embedded}
+        onCreate={() => setIsCreateModalOpen(true)}
+      />
 
       <div className="mb-7 grid gap-3 xl:grid-cols-[minmax(280px,420px)_auto] xl:items-start xl:justify-between">
         <div className="flex gap-2">
@@ -226,6 +219,15 @@ export const BenefitManagement = () => {
           benefits.map((benefit) => (
             <Card key={benefit.benefitId} padding="sm">
               <BenefitSummary benefit={benefit} />
+              {onSelectCategory && (
+                <button
+                  type="button"
+                  className="text-brand mt-3 text-xs font-bold"
+                  onClick={() => onSelectCategory(benefit.category)}
+                >
+                  {benefit.category} 제휴점 보기
+                </button>
+              )}
               <div className="mt-4 flex justify-end gap-1.5">
                 <BenefitActions
                   benefit={benefit}
@@ -301,6 +303,15 @@ export const BenefitManagement = () => {
                     </td>
                     <td className="px-4 py-4 text-center font-bold text-gray-500">
                       {benefit.storeCount.toLocaleString("ko-KR")}곳
+                      {onSelectCategory && (
+                        <button
+                          type="button"
+                          className="text-brand mt-1 block w-full text-xs hover:underline"
+                          onClick={() => onSelectCategory(benefit.category)}
+                        >
+                          업종 매장 보기
+                        </button>
+                      )}
                     </td>
                     <td className="px-4 py-4 text-center font-semibold text-gray-400">
                       {formatKoreanDate(benefit.updatedAt)}
@@ -366,126 +377,11 @@ export const BenefitManagement = () => {
         onSave={saveEditedBenefit}
       />
 
-      <Modal
-        isOpen={deletingBenefit !== undefined}
+      <BenefitDeleteModal
+        benefit={deletingBenefit}
         onClose={() => setDeletingBenefitId(null)}
-        title="제휴 혜택을 삭제할까요?"
-        description={
-          deletingBenefit
-            ? `${deletingBenefit.brand} · ${deletingBenefit.name} 혜택이 삭제됩니다.`
-            : undefined
-        }
-        size="sm"
-        className="break-keep"
-        actions={
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setDeletingBenefitId(null)}
-            >
-              취소
-            </Button>
-            <Button variant="danger" size="sm" onClick={confirmDelete}>
-              삭제
-            </Button>
-          </>
-        }
-      >
-        <p className="text-text-secondary text-sm leading-6 font-semibold">
-          삭제한 혜택은 되돌릴 수 없어요.
-        </p>
-      </Modal>
+        onDelete={confirmDelete}
+      />
     </div>
-  );
-};
-
-const BenefitEmptyState = () => (
-  <AdminEmptyState
-    title="조건에 맞는 제휴 혜택이 없습니다."
-    description="검색어와 카테고리 필터를 조정하거나 새 제휴 혜택을 등록해 주세요."
-  />
-);
-
-const BenefitCategoryBadge = ({ category }: { category: string }) => (
-  <span className="bg-brand/10 text-brand inline-flex items-center gap-1 rounded-sm px-2 py-1 text-xs font-extrabold">
-    {renderBenefitCategoryIcon(category, 12)}
-    {category}
-  </span>
-);
-
-const BenefitSummary = ({ benefit }: { benefit: AdminBenefitDetail }) => (
-  <div className="min-w-0">
-    <div className="flex flex-wrap items-center gap-2">
-      <p className="truncate text-sm font-extrabold text-gray-900 dark:text-white">
-        {benefit.brand}
-      </p>
-      <BenefitCategoryBadge category={benefit.category} />
-    </div>
-    <p className="mt-1 text-sm font-bold text-gray-700 dark:text-gray-200">
-      {benefit.name}
-    </p>
-    {benefit.description && (
-      <p className="text-text-secondary mt-1 line-clamp-2 text-xs font-medium break-keep">
-        {benefit.description}
-      </p>
-    )}
-    <div className="text-text-secondary mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold">
-      <span>연결 매장 {benefit.storeCount.toLocaleString("ko-KR")}곳</span>
-      <span>수정 {formatKoreanDate(benefit.updatedAt)}</span>
-    </div>
-  </div>
-);
-
-/**
- * 수정·삭제 버튼. 연결된 제휴 매장이 있으면 BE가 삭제를 막으므로(409) 삭제 버튼을 끄고 이유를 툴팁으로 알려준다.
- * (비활성 버튼은 마우스 이벤트를 받지 않아 툴팁은 감싼 span에 둔다)
- */
-const BenefitActions = ({
-  benefit,
-  onDelete,
-  onEdit,
-  size,
-}: {
-  benefit: AdminBenefitDetail;
-  onDelete: () => void;
-  onEdit: () => void;
-  size: "sm" | "md";
-}) => {
-  const buttonClassName =
-    size === "md" ? "h-12 w-12 rounded-lg p-0" : "h-9 w-9 rounded-lg p-0";
-  const iconSize = size === "md" ? 26 : 20;
-  const canDelete = benefit.storeCount === 0;
-
-  return (
-    <>
-      <Button
-        variant="ghost"
-        size="sm"
-        className={`${buttonClassName} text-gray-400 hover:text-gray-700 dark:hover:text-white`}
-        aria-label={`${benefit.brand} 혜택 수정`}
-        onClick={onEdit}
-      >
-        <Edit2 size={iconSize} />
-      </Button>
-      <span
-        title={
-          canDelete
-            ? undefined
-            : `연결된 제휴 매장 ${benefit.storeCount}곳의 연결을 먼저 바꿔야 삭제할 수 있어요.`
-        }
-      >
-        <Button
-          variant="dangerGhost"
-          size="sm"
-          className={buttonClassName}
-          aria-label={`${benefit.brand} 혜택 삭제`}
-          disabled={!canDelete}
-          onClick={onDelete}
-        >
-          <Trash2 size={iconSize} />
-        </Button>
-      </span>
-    </>
   );
 };

@@ -46,7 +46,10 @@ export const useAdminBenefits = () => {
   });
 
   const refresh = () =>
-    queryClient.invalidateQueries({ queryKey: adminQueryKeys.benefitsAll });
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.benefitsAll }),
+      queryClient.invalidateQueries({ queryKey: ["admin", "stores"] }),
+    ]);
 
   // 검색·필터·정렬·페이지 크기가 바뀌면 첫 페이지부터 다시 본다.
   // (검색어 setter는 입력 지연 effect의 의존성이라 렌더마다 새로 만들지 않는다)
