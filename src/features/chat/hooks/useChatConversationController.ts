@@ -21,6 +21,7 @@ import type {
   ChatMode,
   ChatStreamingReply,
 } from "@/features/chat/types";
+import { ApiError } from "@/shared/api/http";
 import { showToast } from "@/shared/ui/ToastProvider";
 
 type UseChatConversationControllerParams = {
@@ -332,8 +333,15 @@ export const useChatConversationController = ({
 
       showToast("상담 이름을 바꿨어요.");
       return true;
-    } catch {
-      showToast("상담 이름을 바꾸지 못했어요. 잠시 후 다시 시도해 주세요.");
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 400) {
+        showToast(error.message);
+      } else if (error instanceof ApiError && error.status === 401) {
+        window.dispatchEvent(new Event("vita-auth-changed"));
+        showToast("로그인이 만료되었어요. 다시 로그인해 주세요.");
+      } else {
+        showToast("상담 이름을 바꾸지 못했어요. 잠시 후 다시 시도해 주세요.");
+      }
       return false;
     }
   };

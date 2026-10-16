@@ -1,6 +1,11 @@
 "use client";
 
-import { type FormEvent, type RefObject, useState } from "react";
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  type RefObject,
+  useState,
+} from "react";
 import { Pencil, Pin, PinOff, Trash2 } from "lucide-react";
 import type { SidebarChatItem } from "@/features/chat/lib/chatSidebarItems";
 
@@ -18,6 +23,9 @@ type ChatSessionMenuProps = {
 
 const itemClassName =
   "flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white";
+const CHAT_SESSION_TITLE_MAX_LENGTH = 30;
+
+const normalizeTitle = (value: string) => value.trim().replace(/\s+/g, " ");
 
 export const ChatSessionMenu = ({
   canManage,
@@ -33,40 +41,82 @@ export const ChatSessionMenu = ({
   const [isRenaming, setIsRenaming] = useState(false);
   const [title, setTitle] = useState(chat.title);
   const [isSaving, setIsSaving] = useState(false);
-  const trimmedTitle = title.trim();
+  const normalizedTitle = normalizeTitle(title);
+  const titleLength = Array.from(normalizedTitle).length;
+  const isTitleInvalid =
+    titleLength === 0 || titleLength > CHAT_SESSION_TITLE_MAX_LENGTH;
+  const canSave =
+    !isTitleInvalid && normalizedTitle !== chat.title && !isSaving;
 
   const submitRename = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!trimmedTitle || trimmedTitle === chat.title || isSaving) return;
+    if (!canSave) return;
 
     setIsSaving(true);
-    const didRename = await onRename(chat, trimmedTitle);
+    const didRename = await onRename(chat, normalizedTitle);
     setIsSaving(false);
     if (didRename) setIsRenaming(false);
+  };
+
+  const submitRenameOnEnter = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+
+    event.preventDefault();
+    event.currentTarget.form?.requestSubmit();
   };
 
   return (
     <div
       ref={menuRef}
-      className="fixed z-[130] w-[260px] rounded-3xl border border-gray-200 bg-white p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-zinc-900"
+      className="fixed z-[130] w-[260px] max-w-[calc(100vw-24px)] overflow-hidden rounded-3xl border border-gray-200 bg-white p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-zinc-900"
       style={{ left, top }}
     >
       {isRenaming ? (
-        <form onSubmit={submitRename} className="space-y-2 p-1">
+        <form onSubmit={submitRename} className="min-w-0 space-y-2 p-1">
           <label
             htmlFor="chat-session-title"
             className="block text-xs font-bold text-gray-500 dark:text-gray-400"
           >
             상담 이름
           </label>
-          <input
+          <textarea
             id="chat-session-title"
             autoFocus
+            rows={2}
+            wrap="soft"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
+            onKeyDown={submitRenameOnEnter}
             disabled={isSaving}
-            className="focus:border-brand focus:ring-brand/15 h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-950 outline-none focus:ring-2 disabled:opacity-60 dark:border-white/15 dark:bg-zinc-950 dark:text-white"
+            aria-describedby="chat-session-title-help"
+            aria-invalid={titleLength > CHAT_SESSION_TITLE_MAX_LENGTH}
+            className="focus:border-brand focus:ring-brand/15 field-sizing-content max-h-28 min-h-16 w-full min-w-0 resize-none overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm leading-5 font-semibold break-words text-gray-950 outline-none focus:ring-2 disabled:opacity-60 dark:border-white/15 dark:bg-zinc-950 dark:text-white"
           />
+          <div
+            id="chat-session-title-help"
+            className="flex items-start justify-between gap-2 text-[11px] font-semibold"
+          >
+            <span
+              className={
+                titleLength > CHAT_SESSION_TITLE_MAX_LENGTH
+                  ? "text-red-500"
+                  : "text-text-secondary"
+              }
+            >
+              {titleLength > CHAT_SESSION_TITLE_MAX_LENGTH
+                ? "30자 이내로 입력해 주세요."
+                : "공백은 한 칸으로 정리돼요."}
+            </span>
+            <span
+              className={
+                titleLength > CHAT_SESSION_TITLE_MAX_LENGTH
+                  ? "shrink-0 text-red-500"
+                  : "text-text-secondary shrink-0"
+              }
+            >
+              {titleLength}/{CHAT_SESSION_TITLE_MAX_LENGTH}
+            </span>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -78,9 +128,7 @@ export const ChatSessionMenu = ({
             </button>
             <button
               type="submit"
-              disabled={
-                !trimmedTitle || trimmedTitle === chat.title || isSaving
-              }
+              disabled={!canSave}
               className="bg-brand h-9 rounded-xl text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isSaving ? "저장 중" : "저장"}

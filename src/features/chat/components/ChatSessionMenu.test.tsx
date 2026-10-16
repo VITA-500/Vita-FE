@@ -60,4 +60,61 @@ describe("ChatSessionMenu", () => {
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
     await waitFor(() => expect(onRename).toHaveBeenCalledTimes(2));
   });
+
+  it("wraps a long title onto multiple lines instead of scrolling sideways", () => {
+    renderMenu(vi.fn().mockResolvedValue(true));
+
+    fireEvent.click(screen.getByRole("button", { name: "이름 바꾸기" }));
+    const input = screen.getByRole("textbox", { name: "상담 이름" });
+
+    fireEvent.change(input, {
+      target: { value: "띄어쓰기없이아주긴상담이름".repeat(20) },
+    });
+
+    expect(input.tagName).toBe("TEXTAREA");
+    expect(input).toHaveAttribute("wrap", "soft");
+    expect(input).toHaveClass(
+      "field-sizing-content",
+      "resize-none",
+      "overflow-x-hidden",
+      "break-words",
+    );
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("30자 이내로 입력해 주세요.")).toBeVisible();
+    expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
+  });
+
+  it("submits the renamed title with Enter", async () => {
+    const onRename = vi.fn().mockResolvedValue(true);
+    renderMenu(onRename);
+
+    fireEvent.click(screen.getByRole("button", { name: "이름 바꾸기" }));
+    const textarea = screen.getByRole("textbox", { name: "상담 이름" });
+    fireEvent.change(textarea, { target: { value: "Enter로 저장" } });
+    fireEvent.keyDown(textarea, { key: "Enter" });
+
+    await waitFor(() =>
+      expect(onRename).toHaveBeenCalledWith(chat, "Enter로 저장"),
+    );
+  });
+
+  it("matches the server whitespace normalization and Unicode count", async () => {
+    const onRename = vi.fn().mockResolvedValue(true);
+    renderMenu(onRename);
+
+    fireEvent.click(screen.getByRole("button", { name: "이름 바꾸기" }));
+    const textarea = screen.getByRole("textbox", { name: "상담 이름" });
+    fireEvent.change(textarea, {
+      target: { value: `  ${"🙂".repeat(24)}\n  상담   기록  ` },
+    });
+
+    expect(screen.getByText("30/30")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() =>
+      expect(onRename).toHaveBeenCalledWith(
+        chat,
+        `${"🙂".repeat(24)} 상담 기록`,
+      ),
+    );
+  });
 });
