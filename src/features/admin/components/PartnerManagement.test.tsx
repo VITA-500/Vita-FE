@@ -2,29 +2,29 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { PartnerManagement } from "./PartnerManagement";
 
-const { setStoreCategory } = vi.hoisted(() => ({
-  setStoreCategory: vi.fn(),
+const { setStoreBenefitId } = vi.hoisted(() => ({
+  setStoreBenefitId: vi.fn(),
 }));
 vi.mock("../context/AdminDataContext", () => ({
-  useAdminData: () => ({ setStoreCategory }),
+  useAdminData: () => ({ setStoreBenefitId }),
 }));
 vi.mock("./StoreManagement", () => ({
   StoreManagement: () => <p>제휴점 목록</p>,
 }));
 vi.mock("./BenefitManagement", () => ({
   BenefitManagement: ({
-    onSelectCategory,
+    onSelectBenefit,
   }: {
-    onSelectCategory: (category: string) => void;
+    onSelectBenefit: (benefitId: number) => void;
   }) => (
-    <button onClick={() => onSelectCategory("자동차")}>
-      자동차 제휴점 보기
+    <button onClick={() => onSelectBenefit(17)}>
+      선택 혜택 연결 매장 보기
     </button>
   ),
 }));
 
 describe("PartnerManagement", () => {
-  it("switches between stores and services and opens stores filtered by the selected category", () => {
+  it("switches views and opens stores filtered by the selected benefit", () => {
     render(<PartnerManagement />);
     expect(screen.getByRole("tab", { name: "제휴점" })).toHaveAttribute(
       "aria-selected",
@@ -35,8 +35,10 @@ describe("PartnerManagement", () => {
       "id",
       "partner-panel-benefits",
     );
-    fireEvent.click(screen.getByRole("button", { name: "자동차 제휴점 보기" }));
-    expect(setStoreCategory).toHaveBeenCalledWith("자동차");
+    fireEvent.click(
+      screen.getByRole("button", { name: "선택 혜택 연결 매장 보기" }),
+    );
+    expect(setStoreBenefitId).toHaveBeenCalledWith(17);
     expect(screen.getByRole("tabpanel")).toHaveTextContent("제휴점 목록");
   });
   it("opens the services view for the legacy benefits URL and supports keyboard navigation", () => {

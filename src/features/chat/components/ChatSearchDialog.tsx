@@ -3,9 +3,18 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MessageCircle, Search, X } from "lucide-react";
-import { formatSessionTitle } from "@/features/chat/lib/chatSidebarItems";
+import {
+  addRecentSearch,
+  buildChatSearchItems,
+  loadRecentSearches,
+  matchesSearchDates,
+  getSearchPeriodRange,
+  emptySearchPeriod,
+  saveRecentSearches,
+} from "../lib/chatSearch";
 import type { ChatSessionSummary } from "@/features/chat/types";
 import { cn } from "@/shared/lib/cn";
+import { ChatSearchPeriodFilter } from "./ChatSearchPeriodFilter";
 
 type ChatSearchDialogProps = {
   chatSessions: readonly ChatSessionSummary[];
@@ -14,59 +23,6 @@ type ChatSearchDialogProps = {
   isOpen: boolean;
   onClose: () => void;
   onSelectChat: (sessionId: number) => void;
-};
-
-const searchTabs = ["전체", "채팅"] as const;
-type SearchTab = (typeof searchTabs)[number];
-const RECENT_SEARCHES_STORAGE_KEY = "vita-chat-recent-searches";
-const MAX_RECENT_SEARCHES = 6;
-
-const getSearchPreview = (title: string) =>
-  `통신 상담 기록에서 "${title}"와 관련된 안내 내용을 확인해보세요.`;
-
-const formatSearchDate = (date: string) => {
-  const parsedDate = new Date(date);
-
-  if (Number.isNaN(parsedDate.getTime())) return "";
-
-  return `${parsedDate.getMonth() + 1}월 ${parsedDate.getDate()}일`;
-};
-
-const loadRecentSearches = () => {
-  if (typeof window === "undefined") return [];
-
-  try {
-    const value = JSON.parse(
-      window.localStorage.getItem(RECENT_SEARCHES_STORAGE_KEY) ?? "[]",
-    ) as unknown;
-
-    return Array.isArray(value)
-      ? value.filter((item): item is string => typeof item === "string")
-      : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveRecentSearches = (searches: readonly string[]) => {
-  window.localStorage.setItem(
-    RECENT_SEARCHES_STORAGE_KEY,
-    JSON.stringify(searches),
-  );
-};
-
-const addRecentSearch = (
-  searches: readonly string[],
-  query: string,
-): string[] => {
-  const trimmedQuery = query.trim();
-
-  if (!trimmedQuery) return [...searches];
-
-  return [
-    trimmedQuery,
-    ...searches.filter((search) => search !== trimmedQuery),
-  ].slice(0, MAX_RECENT_SEARCHES);
 };
 
 const highlightText = (text: string, query: string): ReactNode => {
@@ -115,46 +71,29 @@ export const ChatSearchDialog = ({
   onSelectChat,
 }: ChatSearchDialogProps) => {
   const [query, setQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<SearchTab>("전체");
+  const [periodSelection, setPeriodSelection] = useState(emptySearchPeriod);
+  const { period, selectedDate, startDate, endDate } = periodSelection;
+  const [rangeStart, rangeEnd] = getSearchPeriodRange(
+    period,
+    selectedDate,
+    startDate,
+    endDate,
+  );
+  const invalidRange = Boolean(rangeStart && rangeEnd && rangeStart > rangeEnd);
   const [isCloseTooltipVisible, setIsCloseTooltipVisible] = useState(false);
   const [recentSearches, setRecentSearches] =
     useState<string[]>(loadRecentSearches);
   const inputRef = useRef<HTMLInputElement>(null);
   const searchItems = useMemo(
     () =>
-      [
-        ...(currentChatTitle
-          ? [
-              {
-                date: "",
-                preview: "현재 열려 있는 상담입니다.",
-                sessionId: currentSessionId,
-                title: currentChatTitle,
-                type: "채팅" as const,
-              },
-            ]
-          : []),
-        ...chatSessions
-          .filter((session) => session.sessionId !== currentSessionId)
-          .map((session) => {
-            const title = formatSessionTitle(session);
-
-            return {
-              date: formatSearchDate(session.updatedAt),
-              preview: getSearchPreview(title),
-              sessionId: session.sessionId,
-              title,
-              type: "채팅" as const,
-            };
-          }),
-      ].map((item) => ({
-        ...item,
-        key: `${item.type}-${item.sessionId ?? item.title}`,
-      })),
+      buildChatSearchItems(chatSessions, currentChatTitle, currentSessionId),
     [chatSessions, currentChatTitle, currentSessionId],
   );
   const filteredItems = searchItems
-    .filter((item) => activeTab === "전체" || item.type === activeTab)
+    .filter(
+      (item) =>
+        !invalidRange && matchesSearchDates(item.date, rangeStart, rangeEnd),
+    )
     .filter((item) =>
       `${item.title} ${item.preview}`
         .toLowerCase()
@@ -183,10 +122,16 @@ export const ChatSearchDialog = ({
     }
 
     const frameId = window.requestAnimationFrame(() => {
-      setActiveTab("전체");
+      setPeriodSelection(emptySearchPeriod);
       setQuery("");
       inputRef.current?.focus();
     });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -197,7 +142,6 @@ export const ChatSearchDialog = ({
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.cancelAnimationFrame(frameId);
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isOpen, onClose]);
@@ -263,26 +207,14 @@ export const ChatSearchDialog = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3 px-4 pb-3">
-          {searchTabs.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                "h-10 rounded-full px-4 text-sm font-bold transition",
-                tab === activeTab
-                  ? "bg-gray-100 text-gray-950 dark:bg-white/10 dark:text-white"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-950 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white",
-              )}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+        <ChatSearchPeriodFilter
+          valueState={periodSelection}
+          onChange={setPeriodSelection}
+          resultCount={filteredItems.length}
+        />
 
         <div className="min-h-0 flex-1 overflow-y-auto rounded-b-3xl px-4 pb-5">
-          {!query && recentSearches.length > 0 && (
+          {!query && period === "all" && recentSearches.length > 0 && (
             <div className="mb-5 px-3">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <p className="text-sm font-bold text-gray-500 dark:text-gray-400">
@@ -373,12 +305,12 @@ export const ChatSearchDialog = ({
                   </span>
 
                   <span className="shrink-0 text-sm font-semibold text-gray-500 dark:text-gray-300">
-                    {item.date}
+                    {item.date ? item.date.replaceAll("-", ".") : ""}
                   </span>
                 </button>
               ))
             ) : (
-              <div className="flex min-h-[360px] items-center justify-center gap-3 text-gray-500 dark:text-gray-400">
+              <div className="flex min-h-[160px] items-center justify-center gap-3 text-gray-500 dark:text-gray-400">
                 <Search size={22} strokeWidth={1.8} />
                 <span className="text-base font-medium">
                   검색 결과가 없습니다

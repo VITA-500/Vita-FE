@@ -18,9 +18,9 @@ export const PartnerManagement = ({
   initialView?: PartnerView;
 }) => {
   const [view, setView] = useState<PartnerView>(initialView);
-  const { setStoreCategory } = useAdminData();
-  const selectCategory = (category: string) => {
-    setStoreCategory(category);
+  const { setStoreBenefitId } = useAdminData();
+  const selectBenefit = (benefitId: number) => {
+    setStoreBenefitId(benefitId);
     setView("stores");
   };
   return (
@@ -89,7 +89,7 @@ export const PartnerManagement = ({
         aria-labelledby="partner-tab-benefits"
         hidden={view !== "benefits"}
       >
-        <BenefitManagement embedded onSelectCategory={selectCategory} />
+        <BenefitManagement embedded onSelectBenefit={selectBenefit} />
       </div>
     </div>
   );

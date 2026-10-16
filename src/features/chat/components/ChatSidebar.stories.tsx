@@ -31,7 +31,6 @@ const meta = {
     onOpenHome: noop,
     onNewChat: noop,
     onOpenLogin: noop,
-    onOpenPreferences: noop,
     onOpenSearch: noop,
     onOpenProfile: noop,
     onOpenSettings: noop,

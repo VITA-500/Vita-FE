@@ -44,6 +44,7 @@ export const adminStoreService = {
     sortBy,
     storeType,
     category,
+    benefitId,
   }: {
     keyword?: string;
     page: number;
@@ -51,6 +52,7 @@ export const adminStoreService = {
     sortBy: string;
     storeType?: AdminStoreType;
     category?: string;
+    benefitId?: number;
   }) => {
     const response = await fetchStoreListPage({
       keyword,
@@ -59,6 +61,7 @@ export const adminStoreService = {
       sortBy,
       storeType,
       category,
+      benefitId,
     });
     const stores = response.content.map((store) => ({
       ...store,
@@ -143,6 +146,7 @@ const fetchStoreListPage = async ({
   sortBy,
   storeType,
   category,
+  benefitId,
 }: {
   keyword?: string;
   page: number;
@@ -150,6 +154,7 @@ const fetchStoreListPage = async ({
   sortBy: string;
   storeType?: AdminStoreType;
   category?: string;
+  benefitId?: number;
 }) => {
   const params = new URLSearchParams({
     page: String(page),
@@ -167,6 +172,10 @@ const fetchStoreListPage = async ({
 
   if (storeType === "PARTNER" && category !== undefined) {
     params.set("category", String(category));
+  }
+
+  if (storeType === "PARTNER" && benefitId !== undefined) {
+    params.set("benefitId", String(benefitId));
   }
 
   return requestJson<StoreListResponse>(`/admin/stores?${params.toString()}`, {

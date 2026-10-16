@@ -22,6 +22,14 @@ describe("session and feedback endpoint contracts", () => {
       "/chat/sessions/12/pin",
       expect.objectContaining({ method: "PATCH", body: '{"pinned":true}' }),
     );
+    await chatService.updateSessionTitle(12, "새 상담 이름");
+    expect(requestJson).toHaveBeenLastCalledWith(
+      "/chat/sessions/12/title",
+      expect.objectContaining({
+        method: "PATCH",
+        body: '{"title":"새 상담 이름"}',
+      }),
+    );
     await chatService.deleteSession(12);
     expect(requestJson).toHaveBeenLastCalledWith(
       "/chat/sessions/12",

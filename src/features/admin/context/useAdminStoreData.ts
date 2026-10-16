@@ -34,6 +34,9 @@ export const useAdminStoreData = (
   );
   const [storeError] = useState<string | null>(null);
   const [storeCategory, setStoreCategoryState] = useState<string | undefined>();
+  const [storeBenefitId, setStoreBenefitIdState] = useState<
+    number | undefined
+  >();
   const [storeKeyword, setStoreKeywordState] = useState("");
   const [storePage, setStorePage] = useState(0);
   const [storePageSize, setStorePageSizeState] = useState(20);
@@ -57,6 +60,7 @@ export const useAdminStoreData = (
         sortBy: `${storeSortField},${storeSortDirection}`,
         storeType: storeTypeFilter,
         category: storeTypeFilter === "PARTNER" ? storeCategory : undefined,
+        benefitId: storeTypeFilter === "PARTNER" ? storeBenefitId : undefined,
       }),
     queryKey: adminQueryKeys.stores({
       keyword: storeKeyword,
@@ -66,6 +70,7 @@ export const useAdminStoreData = (
       sortField: storeSortField,
       storeType: storeTypeFilter,
       category: storeTypeFilter === "PARTNER" ? storeCategory : undefined,
+      benefitId: storeTypeFilter === "PARTNER" ? storeBenefitId : undefined,
     }),
   });
 
@@ -127,12 +132,20 @@ export const useAdminStoreData = (
   const setStoreTypeFilter = useCallback((storeType: AdminStoreType) => {
     setStoreTypeFilterState(storeType);
     setStoreCategoryState(undefined);
+    setStoreBenefitIdState(undefined);
     setStoreKeywordState("");
     setStorePage(0);
   }, []);
 
   const setStoreCategory = useCallback((category?: string) => {
     setStoreCategoryState(category);
+    setStoreBenefitIdState(undefined);
+    setStorePage(0);
+  }, []);
+
+  const setStoreBenefitId = useCallback((benefitId?: number) => {
+    setStoreBenefitIdState(benefitId);
+    setStoreCategoryState(undefined);
     setStorePage(0);
   }, []);
 
@@ -173,7 +186,9 @@ export const useAdminStoreData = (
       storeSortField,
       storeTypeFilter,
       storeCategory,
+      storeBenefitId,
       setStoreCategory,
+      setStoreBenefitId,
       storeTotalCount: currentStoreTotalCount,
       storeTotalPages: currentStoreTotalPages,
       isStoreLoading: env.apiBaseUrl
@@ -287,7 +302,9 @@ export const useAdminStoreData = (
       storeSortField,
       storeTypeFilter,
       storeCategory,
+      storeBenefitId,
       setStoreCategory,
+      setStoreBenefitId,
     ],
   );
 };

@@ -17,6 +17,7 @@ type ChatSessionCreateResponse = {
 
 type ChatSessionClaimResponse = { sessionId: number; claimedAt: string };
 type ChatSessionPinResponse = { pinned: boolean; sessionId: number };
+type ChatSessionTitleResponse = { sessionId: number; title: string };
 
 export type ChatFeedbackResponse = {
   messageId: number;
@@ -123,6 +124,16 @@ export const chatService = {
       {
         method: "PATCH",
         body: JSON.stringify({ pinned }),
+        timeoutMs: 8000,
+      },
+    );
+  },
+  updateSessionTitle: (sessionId: number, title: string) => {
+    return requestJson<ChatSessionTitleResponse>(
+      `/chat/sessions/${sessionId}/title`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ title }),
         timeoutMs: 8000,
       },
     );

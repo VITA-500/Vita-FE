@@ -25,7 +25,6 @@ import { Logo } from "@/shared/ui/Logo";
 
 type ChatSidebarProps = {
   isAuthenticated: boolean;
-  /** 토큰은 남아 있지만 사용자 조회가 실패한 세션 만료 상태. */
   isAuthExpired?: boolean;
   isAuthLoading: boolean;
   isAuthReady: boolean;
@@ -35,7 +34,6 @@ type ChatSidebarProps = {
   onOpenHome: () => void;
   onNewChat: () => void;
   onOpenLogin: () => void;
-  onOpenPreferences: () => void;
   onOpenSearch: () => void;
   onOpenProfile: () => void;
   onOpenSettings: () => void;
@@ -51,21 +49,16 @@ type ChatSidebarProps = {
   activeMode: ChatMode;
   currentChatTitle?: string;
   chatSessions?: readonly ChatSessionSummary[];
-  /** 불러오는 중인 상담. 응답 전에도 사이드바에서 바로 선택 표시를 옮기기 위해 쓴다. */
   pendingSessionId?: number | null;
   activeSessionId?: number | null;
-  /** 상담별 제목(첫 질문). BE 세션 title이 비어 있어 FE가 알게 된 제목을 넘겨받는다. */
   sessionTitles?: Readonly<Record<number, string>>;
-  /** 최근 상담 목록(제목)을 아직 불러오는 중. 그동안은 목록을 접어 두고, 다 불러오면 펼친다. */
   isRecentChatsLoading?: boolean;
   onSelectChat?: (sessionId: number) => void;
-  /** "현재 상담"을 눌렀을 때. 지도·프로필 화면이면 채팅 화면으로 돌아간다. */
   onOpenCurrentChat?: () => void;
-  /** 현재 상담의 답변을 만드는 중. */
   isCurrentChatAnswering?: boolean;
-  /** 고정한 상담 id(고정한 순서). */
   pinnedSessionIds?: readonly number[];
   onTogglePinChat?: (sessionId: number) => void | Promise<void>;
+  onRenameChat?: (sessionId: number, title: string) => Promise<boolean>;
   onDeleteChat?: (sessionId: number) => void | Promise<void>;
 };
 
@@ -85,11 +78,11 @@ export const ChatSidebar = ({
   onOpen,
   onOpenHome,
   onOpenLogin,
-  onOpenPreferences,
   onOpenProfile,
   onOpenSearch,
   onOpenSettings,
   onDeleteChat,
+  onRenameChat,
   onSelectChat,
   onOpenCurrentChat,
   isCurrentChatAnswering = false,
@@ -106,7 +99,6 @@ export const ChatSidebar = ({
   const [deleteTargetChat, setDeleteTargetChat] =
     useState<SidebarChatItem | null>(null);
   const [isRecentChatsCollapsed, setIsRecentChatsCollapsed] = useState(false);
-  // 사용자가 직접 접었는지(isRecentChatsCollapsed)와 불러오는 중인지를 합쳐 실제로 접어 보일지 정한다.
   const isRecentChatsHidden = isRecentChatsCollapsed || isRecentChatsLoading;
   const chatMenuRef = useRef<HTMLDivElement>(null);
   const isGuest = isAuthReady && !isAuthenticated && !isAuthLoading;
@@ -154,6 +146,11 @@ export const ChatSidebar = ({
     onHideTooltip();
     setDeleteTargetChat(chat);
   };
+
+  const handleRenameChat = (chat: SidebarChatItem, title: string) =>
+    chat.sessionId === null || !onRenameChat
+      ? Promise.resolve(false)
+      : onRenameChat(chat.sessionId, title);
 
   const handleConfirmDeleteChat = () => {
     const targetSessionId = deleteTargetChat?.sessionId;
@@ -290,6 +287,7 @@ export const ChatSidebar = ({
             left={chatMenu.left}
             menuRef={chatMenuRef}
             onDelete={handleRequestDeleteChat}
+            onRename={handleRenameChat}
             onTogglePin={handlePinChat}
             top={chatMenu.top}
           />
@@ -391,7 +389,6 @@ export const ChatSidebar = ({
           isOpen={isOpen}
           onHideTooltip={onHideTooltip}
           onOpenLogin={onOpenLogin}
-          onOpenPreferences={onOpenPreferences}
           onOpenProfile={onOpenProfile}
           onOpenSettings={onOpenSettings}
           onShowRailTooltip={onShowRailTooltip}
