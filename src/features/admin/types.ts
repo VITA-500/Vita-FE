@@ -93,7 +93,7 @@ export type AdminStoreType = "PHONE" | "PARTNER";
 export type AdminStoreDetail = AdminStore & {
   lat: number;
   lng: number;
-  businessHours?: string;
+  businessHours?: string | null;
   phone?: string;
   consultServices: string[];
   providedServices: string[];
