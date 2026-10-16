@@ -13,12 +13,7 @@ import { useElementWidth } from "@/features/store/hooks/useElementWidth";
 import { useIsDesktopViewport } from "@/features/store/hooks/useIsDesktopViewport";
 import { useStoreMapPanel } from "@/features/store/hooks/useStoreMapPanel";
 import type { MapFitPadding } from "@/features/store/lib/mapFit";
-import type { StoreMapInitialAction } from "@/features/store/types";
-
-type StoreMapPanelProps = {
-  initialAction?: StoreMapInitialAction | null;
-  onOpenSidebar?: () => void;
-};
+import type { StoreMapPanelProps } from "@/features/store/lib/storeMapPanelTypes";
 
 export const StoreMapPanel = ({
   initialAction,
@@ -146,10 +141,6 @@ export const StoreMapPanel = ({
   } | null>(null);
   const isListOpen = !isStoreListCollapsed || isInfoOpen;
 
-  // 시트가 닫히면 다음에 열 때는 기본 높이로 연다.
-  if (!isListOpen && isSheetExpandedState) {
-    setIsSheetExpanded(false);
-  }
   // 길찾기 중(데스크톱): B는 A 뒤로 접혀 들어가고, 길찾기 정보는 A 자리에 보여준다.
   const isRouteViewOpen = isDesktop && isInfoOpen && isSelectedStoreRouteTarget;
   const isInfoPanelOpen = isInfoOpen && !isRouteViewOpen;
@@ -289,7 +280,7 @@ export const StoreMapPanel = ({
   ) : null;
   const isMobileRouteView =
     !isDesktop && isInfoOpen && isSelectedStoreRouteTarget;
-  const isSheetExpanded = isSheetExpandedState;
+  const isSheetExpanded = isListOpen && isSheetExpandedState;
   const isMobileReservationView = !isDesktop && reservationStore !== null;
   const closeReservationView = () => {
     cancelReservation();
