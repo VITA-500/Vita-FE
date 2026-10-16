@@ -1,4 +1,19 @@
 export type ChatMessageRole = "user" | "assistant";
+export type {
+  ChatSendRequest,
+  ChatMessageResponse,
+  ChatStreamEvent,
+  ChatAssistantStatus,
+} from "./apiTypes";
+export type ChatConversationStatus =
+  | "idle"
+  | "loading"
+  | "thinking"
+  | "retrieving_faq"
+  | "generating"
+  | "done"
+  | "failed"
+  | "expired";
 
 /**
  * 답변 메시지의 결과 상태. 응답 중(loading)은 메시지가 아니라 streamingReply로 보여준다.
@@ -19,6 +34,8 @@ export type ChatMessage = {
   /** assistant 메시지에서만 쓴다. */
   status?: ChatAnswerStatus;
   sources?: readonly ChatAnswerSource[];
+  /** POST가 제공하는 FAQ ID. 제목·본문은 현재 SSE/기록 계약에 없다. */
+  relatedFaqIds?: readonly number[];
   actions?: readonly ChatAction[];
   plans?: readonly ChatPlan[];
   storeMap?: ChatStoreMap;
@@ -139,9 +156,9 @@ export type SessionMessage = {
   createdAt: string;
   status?: ChatApiMessageStatus;
   feedback?: ChatFeedback | null;
-  storeMap?: ChatStoreMap | null;
-  actions?: readonly ChatAction[] | null;
-  plans?: readonly ChatPlan[] | null;
+  storeMap?: import("./apiTypes").ChatApiStoreMap | null;
+  actions?: readonly import("./apiTypes").ChatApiAction[] | null;
+  plans?: readonly import("./apiTypes").ChatApiPlan[] | null;
 };
 
 export type SessionMessagesResponse = {

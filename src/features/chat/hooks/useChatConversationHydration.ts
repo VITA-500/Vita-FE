@@ -17,7 +17,6 @@ import {
 } from "@/features/chat/lib/chatService";
 import { toChatMessage, toChatTitle } from "@/features/chat/lib/chatMessages";
 import { toSafeTitleText } from "@/features/chat/lib/chatTitleMask";
-import { restoreCachedStoreMaps } from "@/features/chat/lib/chatStoreMapCache";
 import type {
   ChatMessage,
   SessionMessagesResponse,
@@ -68,9 +67,7 @@ export const useChatConversationHydration = ({
 }: UseChatConversationHydrationParams) => {
   const applyChatSession = useCallback(
     (response: SessionMessagesResponse) => {
-      const nextMessages = restoreCachedStoreMaps(
-        response.messages.map(toChatMessage),
-      );
+      const nextMessages = response.messages.map(toChatMessage);
       const firstPrompt = response.messages.find(
         (message) => message.role === "USER" && message.content,
       )?.content;

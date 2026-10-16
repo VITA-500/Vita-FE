@@ -1,5 +1,4 @@
 import type {
-  ChatApiMessageStatus,
   ChatAction,
   ChatFeedback,
   ChatMessage,
@@ -13,24 +12,17 @@ export const FAILED_ANSWER_MESSAGE =
 export const PENDING_ANSWER_MESSAGE =
   "아직 답변을 만들고 있어요. 잠시 후 상담 내역을 다시 열어 주세요.";
 
-export type ChatMessageResponse = {
-  messageId: number;
-  status: ChatApiMessageStatus;
-  answer: string | null;
-  relatedFaqIds: number[];
-  createAt: string;
-  latencyMs: number;
+export type { ChatMessageResponse } from "@/features/chat/types";
+import type { ChatMessageResponse } from "@/features/chat/types";
+
+type AnswerResult = Omit<ChatMessageResponse, "plans"> & {
   feedback?: ChatFeedback | null;
   storeMap?: ChatStoreMap | null;
   actions?: readonly ChatAction[] | null;
   plans?: readonly ChatPlan[] | null;
-  stores?: ChatStoreMap["stores"] | null;
-  nearbyStores?: ChatStoreMap["stores"] | null;
 };
 
-export const toAssistantMessage = (
-  response: ChatMessageResponse,
-): ChatMessage => {
+export const toAssistantMessage = (response: AnswerResult): ChatMessage => {
   // BE는 답변 생성이 실패해도(FAILED) 200으로 answer: null을 준다.
   // 빈 말풍선 대신 다시 물어보라는 안내를 보여준다.
   const answer =
@@ -45,14 +37,9 @@ export const toAssistantMessage = (
     status: hasAnswer ? "success" : "error",
     createdAt: response.createAt,
     feedback: response.feedback ?? null,
-    storeMap:
-      response.storeMap ??
-      (response.stores?.length
-        ? { stores: response.stores }
-        : response.nearbyStores?.length
-          ? { stores: response.nearbyStores }
-          : undefined),
-    actions: response.actions ?? undefined,
-    plans: response.plans ?? undefined,
+    relatedFaqIds: hasAnswer ? response.relatedFaqIds : undefined,
+    storeMap: hasAnswer ? (response.storeMap ?? undefined) : undefined,
+    actions: hasAnswer ? (response.actions ?? undefined) : undefined,
+    plans: hasAnswer ? (response.plans ?? undefined) : undefined,
   };
 };

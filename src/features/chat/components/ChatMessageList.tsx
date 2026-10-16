@@ -38,7 +38,7 @@ type ChatMessageListProps = {
     assistantMessageId: string,
     feedback: ChatFeedback,
   ) => void;
-  /** 실패한 답변을 같은 질문으로 다시 요청한다. */
+  /** 실패하거나 중단된 답변을 같은 질문으로 다시 요청한다. */
   onRetryAnswer?: (assistantMessageId: string) => void;
   /** 피드백 저장·관리자 전달 중인 답변 메시지 id. */
   feedbackMessageIds?: ReadonlySet<string>;
@@ -194,7 +194,14 @@ const ChatMessageItem = ({
     return (
       <AssistantRow>
         {message.status === "stopped" ? (
-          <StoppedAnswer content={message.content} />
+          <StoppedAnswer
+            content={message.content}
+            onRetry={
+              isLastMessage && !isLoading && onRetryAnswer
+                ? () => onRetryAnswer(message.id)
+                : undefined
+            }
+          />
         ) : (
           <PendingAnswer content={message.content} />
         )}
