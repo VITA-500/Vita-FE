@@ -105,6 +105,17 @@ export type AdminStoreRequest = Omit<
   "brand" | "category" | "benefitName" | "storeId" | "storeType"
 >;
 
+export type AdminStoreFormInput = Omit<
+  AdminStoreDetail,
+  | "brand"
+  | "category"
+  | "benefitName"
+  | "createdAt"
+  | "storeId"
+  | "storeType"
+  | "updatedAt"
+>;
+
 export type AdminBenefit = {
   benefitId: number;
   brand: string;

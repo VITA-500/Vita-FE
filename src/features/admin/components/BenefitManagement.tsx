@@ -19,7 +19,7 @@ import {
   type AdminBenefitDetail,
   type AdminBenefitRequest,
 } from "@/features/admin/types";
-import { renderBenefitCategoryIcon } from "@/features/store/lib/benefitCategoryIcons";
+import { renderBenefitCategoryIcon } from "@/shared/ui/BenefitCategoryIcon";
 import { ApiError } from "@/shared/api/http";
 import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/Button";

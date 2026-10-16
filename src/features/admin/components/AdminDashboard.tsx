@@ -2,7 +2,7 @@
 
 import { AlertTriangle } from "lucide-react";
 import { AnswerFeedbackContent } from "@/features/admin/components/AnswerFeedbackContent";
-import { useAdminData } from "@/features/admin/context/AdminDataContext";
+import { useAdminStoreQuality } from "@/features/admin/context/useAdminStoreQuality";
 import { useAdminAnswerFeedback } from "@/features/admin/context/useAdminAnswerFeedback";
 import { useAdminUserSummary } from "@/features/admin/context/useAdminUserSummary";
 import { getAnswerFeedbackStatItems } from "@/features/admin/lib/answerFeedbackStats";
@@ -15,7 +15,12 @@ import { StatCard } from "@/shared/ui/StatCard";
 const DASHBOARD_FEEDBACK_LIMIT = 5;
 
 export const AdminDashboard = () => {
-  const { storeDetails } = useAdminData();
+  const {
+    missingPhone,
+    missingBusinessHours,
+    missingServices,
+    issueCount: dataQualityIssueCount,
+  } = useAdminStoreQuality();
   const {
     error: feedbackError,
     isLoading: isFeedbackLoading,
@@ -26,20 +31,6 @@ export const AdminDashboard = () => {
     isLoading: isUserSummaryLoading,
     summary: userSummary,
   } = useAdminUserSummary();
-  const storesMissingPhone = storeDetails.filter(
-    (store) => !store.phone?.trim(),
-  );
-  const storesMissingBusinessHours = storeDetails.filter(
-    (store) => !store.businessHours?.trim(),
-  );
-  const storesMissingServices = storeDetails.filter(
-    (store) =>
-      store.consultServices.length === 0 && store.providedServices.length === 0,
-  );
-  const dataQualityIssueCount =
-    storesMissingPhone.length +
-    storesMissingBusinessHours.length +
-    storesMissingServices.length;
 
   const adminStats = [
     ...getAnswerFeedbackStatItems(feedbackStats?.summary, isFeedbackLoading),
@@ -142,17 +133,17 @@ export const AdminDashboard = () => {
               <div className="grid gap-3 md:grid-cols-3">
                 <QualityRow
                   label="전화번호 누락"
-                  count={storesMissingPhone.length}
+                  count={missingPhone}
                   description="전화 연결 버튼과 매장 상세 안내에 영향"
                 />
                 <QualityRow
                   label="운영시간 누락"
-                  count={storesMissingBusinessHours.length}
+                  count={missingBusinessHours}
                   description="방문 전 안내 정확도에 영향"
                 />
                 <QualityRow
                   label="서비스 정보 누락"
-                  count={storesMissingServices.length}
+                  count={missingServices}
                   description="상담 가능 업무와 제공 서비스 필터에 영향"
                 />
               </div>

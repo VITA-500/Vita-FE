@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import {
   ShieldCheck,
   UserRound,
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
-import { adminUserService } from "@/features/admin/lib/adminUserService";
+import { useAdminUsers } from "@/features/admin/context/useAdminUsers";
+import { useAdminUserSummary } from "@/features/admin/context/useAdminUserSummary";
 import type {
   AdminUserListItem,
   AdminUserStatus,
@@ -15,65 +16,28 @@ import type {
 import { Card } from "@/shared/ui/Card";
 import { SearchInput } from "@/shared/ui/SearchInput";
 import { Button } from "@/shared/ui/Button";
-import { showToast } from "@/shared/ui/ToastProvider";
 
 const UserManagement = () => {
-  const [users, setUsers] = useState<AdminUserListItem[]>([]);
-  const [keyword, setKeyword] = useState("");
-  const [status, setStatus] = useState<AdminUserStatus | "">("");
-  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<AdminUserListItem | null>(null);
-  const counts = useMemo(
-    () => ({
-      total: users.length,
-      active: users.filter((user) => user.status === "ACTIVE").length,
-      suspended: users.filter((user) => user.status === "SUSPENDED").length,
-      admins: users.filter((user) => user.role === "ADMIN").length,
-    }),
-    [users],
-  );
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const response = await adminUserService.fetchUsers({
-        page: 0,
-        size: 100,
-        keyword,
-        status: status || undefined,
-      });
-      setUsers(response.content);
-    } catch {
-      showToast("회원 목록을 불러오지 못했어요.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    // 목록 조회 결과를 외부 API 응답과 동기화한다.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load();
-    // 상태 필터가 바뀔 때만 다시 조회한다.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
+  const {
+    users,
+    totalCount,
+    keyword,
+    status,
+    isLoading: loading,
+    setKeyword,
+    setStatus,
+    refetch,
+    changeUserStatus,
+  } = useAdminUsers();
+  const { summary } = useAdminUserSummary();
 
   const changeStatus = async (user: AdminUserListItem) => {
     const nextStatus: AdminUserStatus =
       user.status === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
     const reason = window.prompt("변경 사유를 입력해 주세요.");
     if (!reason?.trim()) return;
-    try {
-      await adminUserService.updateStatus(user.userId, nextStatus, reason);
-      showToast("회원 상태를 변경했어요.");
-      await load();
-    } catch (error) {
-      showToast(
-        error instanceof Error
-          ? error.message
-          : "회원 상태를 변경하지 못했어요.",
-      );
-    }
+    await changeUserStatus(user.userId, nextStatus, reason);
   };
 
   const statusLabel: Record<AdminUserStatus, string> = {
@@ -89,25 +53,25 @@ const UserManagement = () => {
   }> = [
     {
       label: "전체 회원",
-      count: counts.total,
+      count: totalCount,
       Icon: UsersRound,
       color: "text-brand bg-brand/10",
     },
     {
       label: "활성 회원",
-      count: counts.active,
+      count: summary?.active ?? 0,
       Icon: UserRound,
       color: "text-emerald-600 bg-emerald-50",
     },
     {
       label: "정지 회원",
-      count: counts.suspended,
+      count: summary?.suspended ?? 0,
       Icon: UserRound,
       color: "text-rose-600 bg-rose-50",
     },
     {
       label: "관리자",
-      count: counts.admins,
+      count: summary?.admins ?? 0,
       Icon: ShieldCheck,
       color: "text-violet-600 bg-violet-50",
     },
@@ -124,7 +88,7 @@ const UserManagement = () => {
           </p>
         </div>
         <span className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-gray-500 shadow-sm dark:bg-zinc-900">
-          총 {counts.total}명
+          총 {totalCount}명
         </span>
       </header>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -148,9 +112,6 @@ const UserManagement = () => {
             className="md:max-w-md"
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") void load();
-            }}
             placeholder="이메일 또는 이름으로 검색"
           />
           <select
@@ -165,7 +126,11 @@ const UserManagement = () => {
             <option value="SUSPENDED">정지</option>
             <option value="DELETED">탈퇴</option>
           </select>
-          <Button size="sm" className="h-11 px-5" onClick={() => void load()}>
+          <Button
+            size="sm"
+            className="h-11 px-5"
+            onClick={() => void refetch()}
+          >
             검색
           </Button>
         </div>
