@@ -1,5 +1,9 @@
 import { FilterDropdown } from "@/shared/ui/FilterDropdown";
 import {
+  CalendarDateField,
+  CalendarDateRangeField,
+} from "@/shared/ui/CalendarDateField";
+import {
   emptySearchPeriod,
   searchPeriodOptions,
   type SearchPeriod,
@@ -40,48 +44,22 @@ export const ChatSearchPeriodFilter = ({
       {period === "date" && (
         <label className="mt-3 block text-xs font-semibold text-gray-500 dark:text-gray-400">
           날짜 선택
-          <input
-            type="date"
-            aria-label="검색 날짜"
+          <CalendarDateField
+            ariaLabel="검색 날짜"
             value={selectedDate}
-            onChange={(event) =>
-              onChange({ ...valueState, selectedDate: event.target.value })
-            }
-            className="mt-1 block h-10 w-full rounded-xl border border-gray-200 bg-transparent px-3 text-sm text-gray-900 dark:border-white/15 dark:text-white dark:scheme-dark"
+            onChange={(date) => onChange({ ...valueState, selectedDate: date })}
+            className="mt-1"
           />
         </label>
       )}
       {period === "range" && (
-        <div className="mt-3 flex items-end gap-2">
-          <label className="min-w-0 flex-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
-            시작일
-            <input
-              type="date"
-              aria-label="검색 시작일"
-              value={startDate}
-              max={endDate || undefined}
-              onChange={(event) =>
-                onChange({ ...valueState, startDate: event.target.value })
-              }
-              className="mt-1 block h-10 w-full min-w-0 rounded-xl border border-gray-200 bg-transparent px-3 text-sm text-gray-900 dark:border-white/15 dark:text-white dark:scheme-dark"
-            />
-          </label>
-          <span className="pb-2 text-gray-400" aria-hidden="true">
-            –
-          </span>
-          <label className="min-w-0 flex-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
-            종료일
-            <input
-              type="date"
-              aria-label="검색 종료일"
-              value={endDate}
-              min={startDate || undefined}
-              onChange={(event) =>
-                onChange({ ...valueState, endDate: event.target.value })
-              }
-              className="mt-1 block h-10 w-full min-w-0 rounded-xl border border-gray-200 bg-transparent px-3 text-sm text-gray-900 dark:border-white/15 dark:text-white dark:scheme-dark"
-            />
-          </label>
+        <div className="mt-3">
+          <CalendarDateRangeField
+            ariaLabel="검색 기간"
+            startDate={startDate}
+            endDate={endDate}
+            onChange={(range) => onChange({ ...valueState, ...range })}
+          />
         </div>
       )}
       {period !== "all" && (

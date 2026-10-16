@@ -129,4 +129,19 @@ describe("chat search date range", () => {
       ).toHaveTextContent("전체 기간"),
     );
   });
+
+  it("opens one range calendar for the direct period selection", async () => {
+    setup();
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText("검색...")).toHaveFocus(),
+    );
+    choosePeriod("기간 직접 선택");
+    fireEvent.click(screen.getByRole("button", { name: "검색 기간 선택" }));
+
+    expect(
+      screen.getByRole("dialog", { name: "검색 기간 달력" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByLabelText("검색 시작일")).toHaveLength(1);
+    expect(screen.getAllByLabelText("검색 종료일")).toHaveLength(1);
+  });
 });
