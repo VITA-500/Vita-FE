@@ -25,7 +25,6 @@ export const adminQueryKeys = {
     ["admin", "answerFeedback", { limit }] as const,
   userSummary: ["admin", "users", "summary"] as const,
   usersAll: ["admin", "users", "list"] as const,
-  storeQuality: ["admin", "stores", "quality"] as const,
   users: (params: {
     keyword: string;
     page: number;
@@ -61,6 +60,7 @@ export const adminQueryKeys = {
     sortDirection,
     sortField,
     storeType,
+    category,
   }: {
     keyword: string;
     page: number;
@@ -68,10 +68,19 @@ export const adminQueryKeys = {
     sortDirection: StoreSortDirection;
     sortField: StoreSortField;
     storeType: AdminStoreType;
+    category?: string;
   }) =>
     [
       "admin",
       "stores",
-      { keyword, page, pageSize, sortDirection, sortField, storeType },
+      {
+        keyword,
+        page,
+        pageSize,
+        sortDirection,
+        sortField,
+        storeType,
+        category,
+      },
     ] as const,
 };
