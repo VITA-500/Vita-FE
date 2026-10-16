@@ -1,5 +1,5 @@
 import { Modal } from "@/shared/ui/Modal";
-import { Edit2, Trash2, Plus } from "lucide-react";
+import { ChevronRight, Edit2, Trash2, Plus } from "lucide-react";
 import type { AdminBenefitDetail } from "../types";
 import { AdminEmptyState } from "./AdminEmptyState";
 import { renderBenefitCategoryIcon } from "@/shared/ui/BenefitCategoryIcon";
@@ -21,8 +21,10 @@ export const BenefitCategoryBadge = ({ category }: { category: string }) => (
 
 export const BenefitSummary = ({
   benefit,
+  onSelectCategory,
 }: {
   benefit: AdminBenefitDetail;
+  onSelectCategory?: (category: string) => void;
 }) => (
   <div className="min-w-0">
     <div className="flex flex-wrap items-center gap-2">
@@ -40,11 +42,39 @@ export const BenefitSummary = ({
       </p>
     )}
     <div className="text-text-secondary mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold">
-      <span>연결 매장 {benefit.storeCount.toLocaleString("ko-KR")}곳</span>
+      <BenefitStoreCount
+        benefit={benefit}
+        onSelectCategory={onSelectCategory}
+      />
       <span>수정 {formatKoreanDate(benefit.updatedAt)}</span>
     </div>
   </div>
 );
+
+export const BenefitStoreCount = ({
+  benefit,
+  onSelectCategory,
+}: {
+  benefit: AdminBenefitDetail;
+  onSelectCategory?: (category: string) => void;
+}) =>
+  onSelectCategory ? (
+    <button
+      type="button"
+      aria-label={`${benefit.category} 제휴점 모아보기`}
+      onClick={() => onSelectCategory(benefit.category)}
+      className="group text-text-secondary hover:text-brand focus-visible:ring-brand/30 inline-flex min-h-8 cursor-pointer items-center gap-0.5 rounded-md px-1.5 font-bold tabular-nums transition-colors hover:bg-gray-100 focus-visible:ring-2 focus-visible:outline-none dark:hover:bg-white/10"
+    >
+      <span>{benefit.storeCount.toLocaleString("ko-KR")}곳</span>
+      <ChevronRight
+        size={14}
+        aria-hidden="true"
+        className="transition-transform group-hover:translate-x-0.5"
+      />
+    </button>
+  ) : (
+    <span>{benefit.storeCount.toLocaleString("ko-KR")}곳</span>
+  );
 
 /**
  * 수정·삭제 버튼. 연결된 제휴 매장이 있으면 BE가 삭제를 막으므로(409) 삭제 버튼을 끄고 이유를 툴팁으로 알려준다.
