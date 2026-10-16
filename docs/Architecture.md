@@ -18,6 +18,14 @@ VITA FE는 Next.js App Router 기반이며, Feature-Sliced Design을 참고한 `
 - feature 간 직접 import는 피하고, 공통화가 필요하면 `shared`로 이동한다.
 - route path, UI text, env 접근은 문자열을 흩뿌리지 않고 `shared/constants`, `shared/config`를 우선 사용한다.
 
+## Refactoring Rules
+
+- 하나의 컴포넌트 파일은 화면 조합과 표시를 중심으로 유지하며, 400줄을 넘기면 하위 컴포넌트·도메인 훅·helper로 분리한다.
+- 파일을 분리할 때 기존 파일의 일부만 별도 staging하지 않고, 하나의 책임 단위에 속한 파일을 함께 커밋한다.
+- API 조회·mutation은 `features/{feature}/lib`의 service와 query hook으로 분리하고, 화면 컴포넌트에서 직접 fetch하지 않는다.
+- 대시보드 집계는 현재 화면 목록을 재사용하지 않고 별도 집계 query를 사용한다.
+- 라우트별 데이터 Provider는 `src/app`의 해당 페이지 또는 레이아웃에서 조립하며, 전역 관리자 레이아웃에서 모든 도메인 데이터를 선조회하지 않는다.
+
 ## Feature Structure
 
 Feature 내부는 필요에 따라 아래 구조를 사용한다.
