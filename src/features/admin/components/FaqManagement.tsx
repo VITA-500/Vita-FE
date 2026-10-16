@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit2, Eye, Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
 import { AdminErrorBanner } from "@/features/admin/components/AdminErrorBanner";
@@ -9,6 +9,11 @@ import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { AdminResultSummary } from "@/features/admin/components/AdminResultSummary";
 import { FilterDropdown } from "@/features/admin/components/FilterDropdown";
 import { FaqStatusModal } from "@/features/admin/components/FaqStatusModal";
+import { FaqRowActions } from "@/features/admin/components/FaqRowActions";
+import {
+  FaqSkeletonCard,
+  FaqSkeletonRow,
+} from "@/features/admin/components/FaqManagementParts";
 import { useActionStatus } from "@/features/admin/context/ActionStatusContext";
 import { useAdminData } from "@/features/admin/context/AdminDataContext";
 import type { AdminFaqCategory } from "@/features/admin/types";
@@ -207,36 +212,13 @@ export const FaqManagement = () => {
               </div>
 
               <div className="mt-4 flex flex-wrap justify-end gap-1.5">
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  className="h-9 w-9 rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white"
-                  aria-label="FAQ 수정"
-                  onClick={() => setEditingFaqId(faq.faqId)}
-                >
-                  <Edit2 size={20} />
-                </Button>
-                {faq.status === "ACTIVE" ? (
-                  <Button
-                    variant="dangerGhost"
-                    size="xs"
-                    className="h-9 w-9 rounded-lg p-0"
-                    aria-label="FAQ 삭제"
-                    onClick={() => setDeletingFaqId(faq.faqId)}
-                  >
-                    <Trash2 size={20} />
-                  </Button>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    className="h-9 w-9 rounded-lg p-0 text-green-500 hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-500/10 dark:hover:text-green-300"
-                    aria-label="FAQ 활성화"
-                    onClick={() => setActivatingFaqId(faq.faqId)}
-                  >
-                    <Eye size={20} />
-                  </Button>
-                )}
+                <FaqRowActions
+                  compact
+                  isActive={faq.status === "ACTIVE"}
+                  onEdit={() => setEditingFaqId(faq.faqId)}
+                  onDelete={() => setDeletingFaqId(faq.faqId)}
+                  onActivate={() => setActivatingFaqId(faq.faqId)}
+                />
               </div>
             </Card>
           ))
@@ -297,38 +279,12 @@ export const FaqManagement = () => {
                         {formatKoreanDate(faq.createdAt)}
                       </td>
                       <td className="px-5 py-4 text-center">
-                        <div className="inline-flex items-center justify-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-12 w-12 rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white"
-                            aria-label="FAQ 수정"
-                            onClick={() => setEditingFaqId(faq.faqId)}
-                          >
-                            <Edit2 size={30} />
-                          </Button>
-                          {faq.status === "ACTIVE" ? (
-                            <Button
-                              variant="dangerGhost"
-                              size="sm"
-                              className="h-12 w-12 rounded-lg p-0"
-                              aria-label="FAQ 삭제"
-                              onClick={() => setDeletingFaqId(faq.faqId)}
-                            >
-                              <Trash2 size={30} />
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-12 w-12 rounded-lg p-0 text-green-500 hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-500/10 dark:hover:text-green-300"
-                              aria-label="FAQ 활성화"
-                              onClick={() => setActivatingFaqId(faq.faqId)}
-                            >
-                              <Eye size={30} />
-                            </Button>
-                          )}
-                        </div>
+                        <FaqRowActions
+                          isActive={faq.status === "ACTIVE"}
+                          onEdit={() => setEditingFaqId(faq.faqId)}
+                          onDelete={() => setDeletingFaqId(faq.faqId)}
+                          onActivate={() => setActivatingFaqId(faq.faqId)}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -420,41 +376,3 @@ export const FaqManagement = () => {
     </div>
   );
 };
-
-const FaqSkeletonRow = () => (
-  <tr className="h-20" aria-hidden="true">
-    <td className="px-5 py-4">
-      <div className="bg-surface-muted h-4 w-12 animate-pulse rounded-full dark:bg-white/10" />
-    </td>
-    <td className="px-4 py-4">
-      <div className="bg-surface-muted h-4 w-[min(360px,80%)] animate-pulse rounded-full dark:bg-white/10" />
-    </td>
-    <td className="px-4 py-4">
-      <div className="bg-surface-muted h-4 w-24 animate-pulse rounded-full dark:bg-white/10" />
-    </td>
-    <td className="px-4 py-4">
-      <div className="bg-surface-muted mx-auto h-4 w-20 animate-pulse rounded-full dark:bg-white/10" />
-    </td>
-    <td className="px-5 py-4">
-      <div className="mx-auto flex justify-center gap-2">
-        <div className="bg-surface-muted h-12 w-12 animate-pulse rounded-lg dark:bg-white/10" />
-        <div className="bg-surface-muted h-12 w-12 animate-pulse rounded-lg dark:bg-white/10" />
-      </div>
-    </td>
-  </tr>
-);
-
-const FaqSkeletonCard = () => (
-  <Card padding="sm" aria-hidden="true">
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0 flex-1 space-y-3">
-        <div className="bg-surface-muted h-4 w-full animate-pulse rounded-full dark:bg-white/10" />
-        <div className="bg-surface-muted h-3 w-2/3 animate-pulse rounded-full dark:bg-white/10" />
-      </div>
-    </div>
-    <div className="mt-4 flex justify-end gap-1.5">
-      <div className="bg-surface-muted h-9 w-9 animate-pulse rounded-lg dark:bg-white/10" />
-      <div className="bg-surface-muted h-9 w-9 animate-pulse rounded-lg dark:bg-white/10" />
-    </div>
-  </Card>
-);
