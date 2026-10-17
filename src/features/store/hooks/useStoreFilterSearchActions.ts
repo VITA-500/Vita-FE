@@ -4,6 +4,7 @@ import type { StoreSearchActionsParams } from "@/features/store/hooks/storeSearc
 import { usePinAutoFitSkip } from "@/features/store/hooks/usePinAutoFitSkip";
 import type { MapViewport } from "@/features/store/lib/storePanelStores";
 import { showToast } from "@/shared/ui/ToastProvider";
+import { isDesktopWidth } from "@/features/store/lib/desktopBreakpoint";
 
 export type { StoreSearchActionsParams };
 
@@ -104,7 +105,7 @@ export const useStoreFilterSearchActions = ({
     setHasSelectedStoreInfo(false);
 
     // 모바일은 목록 패널이 화면을 크게 덮으므로 필터 선택만으로 목록을 펼치지 않는다(지도 핀으로 먼저 확인).
-    if (window.innerWidth >= 768) {
+    if (isDesktopWidth(window.innerWidth)) {
       setIsStoreListCollapsed(false);
     }
 

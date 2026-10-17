@@ -194,3 +194,26 @@ export const getSameLocationStores = (
         (store) => getCoordinateKey(store) === getCoordinateKey(selectedStore),
       )
     : [];
+
+/**
+ * 여러 매장 묶음에서 id로 매장을 찾는다. 앞에 넘긴 묶음을 먼저 본다.
+ * (같은 매장이라도 화면에 보여주는 묶음 쪽 값이 더 최신일 수 있어 우선순위가 중요하다)
+ */
+export const findStoreById = (
+  storeId: string | undefined,
+  ...storeLists: StoreLocation[][]
+) => {
+  if (!storeId) {
+    return undefined;
+  }
+
+  for (const storeList of storeLists) {
+    const store = storeList.find((candidate) => candidate.id === storeId);
+
+    if (store) {
+      return store;
+    }
+  }
+
+  return undefined;
+};

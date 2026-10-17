@@ -7,6 +7,11 @@ import type {
   StoreLocation,
   StoreOpenFilter,
 } from "@/features/store/types";
+import {
+  readJsonStorage,
+  removeStorage,
+  writeJsonStorage,
+} from "@/shared/lib/browserStorage";
 
 /**
  * 매장 지도에서 로그인하러 갈 때 지금 보던 화면을 잠깐 보관했다가, 로그인 후 지도로 돌아오면 그대로 되살린다.
@@ -57,47 +62,34 @@ export const saveStoreMapSnapshot = (input: StoreMapSnapshotInput) => {
     version: STORE_MAP_SNAPSHOT_VERSION,
   };
 
-  try {
-    window.sessionStorage.setItem(
-      STORE_MAP_SNAPSHOT_STORAGE_KEY,
-      JSON.stringify(snapshot),
-    );
-  } catch {
-    // 저장소를 쓸 수 없으면(용량 초과·비공개 모드 등) 복원 없이 기본 지도로 돌아온다.
-  }
+  // 저장소를 쓸 수 없으면(용량 초과·비공개 모드 등) 복원 없이 기본 지도로 돌아온다.
+  writeJsonStorage("session", STORE_MAP_SNAPSHOT_STORAGE_KEY, snapshot);
 };
 
 /** 보관해 둔 지도 화면. 없거나 오래됐거나 형식이 맞지 않으면 null (읽기만 하고 지우지 않는다). */
 export const readStoreMapSnapshot = (): StoreMapSnapshot | null => {
-  try {
-    const raw = window.sessionStorage.getItem(STORE_MAP_SNAPSHOT_STORAGE_KEY);
+  const stored = readJsonStorage("session", STORE_MAP_SNAPSHOT_STORAGE_KEY);
 
-    if (!raw) {
-      return null;
-    }
-
-    const snapshot = JSON.parse(raw) as Partial<StoreMapSnapshot>;
-
-    if (
-      snapshot.version !== STORE_MAP_SNAPSHOT_VERSION ||
-      typeof snapshot.savedAt !== "number" ||
-      Date.now() - snapshot.savedAt > STORE_MAP_SNAPSHOT_MAX_AGE_MS ||
-      !Array.isArray(snapshot.stores)
-    ) {
-      clearStoreMapSnapshot();
-      return null;
-    }
-
-    return snapshot as StoreMapSnapshot;
-  } catch {
+  if (stored === null) {
     return null;
   }
+
+  const snapshot = stored as Partial<StoreMapSnapshot>;
+
+  if (
+    typeof stored !== "object" ||
+    snapshot.version !== STORE_MAP_SNAPSHOT_VERSION ||
+    typeof snapshot.savedAt !== "number" ||
+    Date.now() - snapshot.savedAt > STORE_MAP_SNAPSHOT_MAX_AGE_MS ||
+    !Array.isArray(snapshot.stores)
+  ) {
+    clearStoreMapSnapshot();
+    return null;
+  }
+
+  return snapshot as StoreMapSnapshot;
 };
 
 export const clearStoreMapSnapshot = () => {
-  try {
-    window.sessionStorage.removeItem(STORE_MAP_SNAPSHOT_STORAGE_KEY);
-  } catch {
-    // 지울 수 없어도 다음 저장 때 덮어쓴다.
-  }
+  removeStorage("session", STORE_MAP_SNAPSHOT_STORAGE_KEY);
 };

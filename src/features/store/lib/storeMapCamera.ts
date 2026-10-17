@@ -11,6 +11,7 @@ import type {
   StoreMapEffectContext,
   StoreMapInstance,
 } from "@/features/store/lib/storeMapPreviewTypes";
+import { isDesktopWidth } from "@/features/store/lib/desktopBreakpoint";
 
 /** 지도 타일이 그려졌다는 이벤트(tilesloaded)가 오지 않아도 로딩 화면을 걷는 시간(ms) */
 const MAP_FIRST_PAINT_FALLBACK_MS = 3000;
@@ -149,8 +150,9 @@ export const setupStoreMap = ({
         projection?.containerPointFromCoords &&
         containerRect
       ) {
-        const leftInset =
-          containerRect.width >= 768 ? selectedStoreCardLeftInset : 0;
+        const leftInset = isDesktopWidth(containerRect.width)
+          ? selectedStoreCardLeftInset
+          : 0;
         const topInset = getStoreCardTopInset(containerRect.width);
         const cardHeight = getStoreCardHeight(selectedStoreCardRef.current);
         const targetX = leftInset + (containerRect.width - leftInset) / 2;

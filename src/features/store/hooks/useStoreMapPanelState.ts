@@ -21,6 +21,7 @@ import {
 import {
   buildMarkerLabelById,
   defaultMapLocation,
+  findStoreById,
   getMapStoreVisibility,
   getSameLocationStores,
   type MapSearchPoint,
@@ -172,14 +173,15 @@ export const useStoreMapPanelState = (
     userLocation,
   });
   const { categorySelectedStore, categoryStores, mapStores } = results;
-  const routeDestinationStore =
-    categoryStores.find((store) => store.id === routeDestinationStoreId) ??
-    stores.find((store) => store.id === routeDestinationStoreId);
+  const routeDestinationStore = findStoreById(
+    routeDestinationStoreId,
+    categoryStores,
+    stores,
+  );
   // 매장 목록에서 고른 매장은 정보 카드가 떠 있는 동안 그 핀만 남기고 다른 핀은 숨긴다.
   const soloStore =
     hasSelectedStoreInfo && soloStoreId
-      ? (categoryStores.find((store) => store.id === soloStoreId) ??
-        stores.find((store) => store.id === soloStoreId))
+      ? findStoreById(soloStoreId, categoryStores, stores)
       : undefined;
   const pagination = useStorePagination({
     mapStores,
