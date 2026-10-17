@@ -28,6 +28,7 @@ export const useStoreMapEffect = ({
   focusPoint,
   focusPointRef,
   getRouteObstacleRect,
+  initialLevel,
   isKakaoMapReady,
   isRouteCardDocked,
   isRouteCardHeld,
@@ -78,6 +79,7 @@ export const useStoreMapEffect = ({
       focusPoint,
       focusPointRef,
       getRouteObstacleRect,
+      initialLevel,
       isKakaoMapReady,
       isRouteCardDocked,
       isRouteCardHeld,
@@ -161,6 +163,7 @@ export const useStoreMapEffect = ({
     // ref·setter(…Ref, set…)는 컴포넌트에서 넘겨받지만 항상 같은 값이라, 의존성에 넣어도 다시 실행되는 시점은 기존과 같다.
   }, [
     focusPoint,
+    initialLevel,
     isKakaoMapReady,
     markRouteFitReadyRef,
     pendingRouteFitKeyRef,

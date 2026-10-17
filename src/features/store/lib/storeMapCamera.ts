@@ -28,6 +28,7 @@ export const setupStoreMap = ({
   fittedRouteKeyRef,
   focusPoint,
   focusPointRef,
+  initialLevel,
   isKakaoMapReady,
   mapContainerRef,
   mapRef,
@@ -65,11 +66,13 @@ export const setupStoreMap = ({
       : new kakaoMaps.LatLng(centerStore.lat, centerStore.lng);
 
   const isNewMap = mapRef.current === null;
+  // 처음 만들 때의 확대 레벨: 로그인 후 돌아와 복원할 때는 그때 보던 레벨, 아니면 4.
+  const startLevel = initialLevel ?? 4;
   const map =
     mapRef.current ??
     new kakaoMaps.Map(mapContainerRef.current, {
       center: initialCenter,
-      level: 4,
+      level: startLevel,
     });
   const shouldRecenterByFocusPoint =
     Boolean(focusPoint) && focusPointRef.current !== focusPoint;
@@ -130,7 +133,7 @@ export const setupStoreMap = ({
 
     if (recenterPoint) {
       map.setCenter(new kakaoMaps.LatLng(recenterPoint.lat, recenterPoint.lng));
-      map.setLevel(4);
+      map.setLevel(isNewMap ? startLevel : 4);
 
       // 선택 매장으로 이동할 때는 핀과 정보 카드가 왼쪽 패널에 가리지 않는 영역
       // (패널 오른쪽)의 가운데에 함께 보이도록 지도 중심을 보정한다.

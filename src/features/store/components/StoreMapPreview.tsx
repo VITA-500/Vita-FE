@@ -43,6 +43,7 @@ export type { MapFitPadding } from "@/features/store/lib/mapFit";
 export const StoreMapPreview = ({
   className,
   focusPoint,
+  initialLevel,
   isCompact = false,
   isFullBleed = false,
   isRouteCardDocked = false,
@@ -170,6 +171,7 @@ export const StoreMapPreview = ({
     focusPoint,
     focusPointRef,
     getRouteObstacleRect,
+    initialLevel,
     isKakaoMapReady,
     isRouteCardDocked,
     isRouteCardHeld,

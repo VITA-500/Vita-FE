@@ -21,6 +21,8 @@ import { showToast } from "@/shared/ui/ToastProvider";
 
 type UseBenefitStoresParams = {
   activeMapCategory: MapCategory;
+  /** 로그인 후 돌아와 되살릴 혜택 카테고리(storeMapSnapshot) */
+  initialSelectedBenefitCategory?: string;
   openFilter: StoreOpenFilter;
   userLocation: UserLocation | null;
 };
@@ -28,6 +30,7 @@ type UseBenefitStoresParams = {
 /** 제휴 혜택 탭에서 카테고리별 제휴 매장을 가까운 순으로 불러온다. 상단 혜택 뱃지 필터는 useBenefitServiceFilters가 맡는다. */
 export const useBenefitStores = ({
   activeMapCategory,
+  initialSelectedBenefitCategory,
   openFilter,
   userLocation,
 }: UseBenefitStoresParams) => {
@@ -35,7 +38,9 @@ export const useBenefitStores = ({
   const [benefitCategories, setBenefitCategories] = useState<
     BenefitCategoryOption[]
   >([]);
-  const [selectedBenefitCategory, setSelectedBenefitCategory] = useState("");
+  const [selectedBenefitCategory, setSelectedBenefitCategory] = useState(
+    initialSelectedBenefitCategory ?? "",
+  );
   const [benefitStores, setBenefitStores] = useState<StoreLocation[]>([]);
   const [isBenefitStoreLoading, setIsBenefitStoreLoading] = useState(false);
   const lastLookupKeyRef = useRef("");

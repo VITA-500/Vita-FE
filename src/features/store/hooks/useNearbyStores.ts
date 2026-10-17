@@ -11,6 +11,7 @@ import {
 import type { useStoreMapState } from "@/features/store/hooks/useStoreMapState";
 import type { useStoreSearchState } from "@/features/store/hooks/useStoreSearchState";
 import type { UserLocation } from "@/features/store/lib/geo";
+import type { StoreMapSnapshot } from "@/features/store/lib/storeMapSnapshot";
 import {
   defaultMapLocation,
   SEARCH_RADIUS_KM,
@@ -40,6 +41,8 @@ type UseNearbyStoresParams = Pick<
     setStoresOrigin: Dispatch<SetStateAction<MapSearchPoint | null>>;
     /** 영업 시간 필터. 바뀌면 같은 지점을 그 조건으로 다시 조회한다. */
     openFilter: StoreOpenFilter;
+    /** 로그인 후 돌아와 되살린 지도 화면. 있으면 들어올 때의 자동 조회·내 위치 이동을 건너뛴다. */
+    restoredSnapshot: StoreMapSnapshot | null;
     /** 위치를 받으면 내 위치로 지도를 옮기고 주변 매장을 불러올지 */
     shouldFocusUserLocationRef: RefObject<boolean>;
     userLocation: UserLocation | null;
@@ -61,14 +64,23 @@ export const useNearbyStores = ({
   setStoresOrigin,
   setSubmittedSearchStores,
   openFilter,
+  restoredSnapshot,
   shouldFocusUserLocationRef,
   userLocation,
 }: UseNearbyStoresParams) => {
   const openFilterKey = getOpenFilterKey(openFilter);
-  const hasFocusedInitialLocationRef = useRef(false);
+  // 되살린 화면이면 처음 위치를 받아도 내 위치로 지도를 옮기지 않는다(보던 지역을 유지).
+  const hasFocusedInitialLocationRef = useRef(Boolean(restoredSnapshot));
   const lastNearbyLookupKeyRef = useRef("");
+  // 되살린 화면이면 들어올 때·위치를 받았을 때의 자동 주변 조회를 건너뛴다(되살린 매장 목록을 덮어쓰지 않도록).
+  // 영업 시간 필터를 바꾸는 등 사용자가 조건을 바꾸면 그때부터는 원래대로 조회한다.
+  const skipAutoLookupOpenFilterKeyRef = useRef<string | null>(
+    restoredSnapshot ? openFilterKey : null,
+  );
   // 마지막으로 매장이 1곳 이상 조회된 지역. "이 위치에서 검색" 결과가 없으면 이곳으로 지도를 되돌린다.
-  const lastStoreAreaRef = useRef<MapSearchPoint>(defaultMapLocation);
+  const lastStoreAreaRef = useRef<MapSearchPoint>(
+    restoredSnapshot?.storesOrigin ?? defaultMapLocation,
+  );
   const nearbyLookup = useMemo(() => {
     const lookupLocation = userLocation ?? defaultMapLocation;
 
@@ -223,6 +235,14 @@ export const useNearbyStores = ({
 
     lastNearbyLookupKeyRef.current = nearbyLookup.key;
 
+    if (skipAutoLookupOpenFilterKeyRef.current !== null) {
+      if (skipAutoLookupOpenFilterKeyRef.current === openFilterKey) {
+        return;
+      }
+
+      skipAutoLookupOpenFilterKeyRef.current = null;
+    }
+
     let isCurrentRequest = true;
     let isSettled = false;
 
@@ -258,7 +278,7 @@ export const useNearbyStores = ({
       }
     };
     // setter는 항상 같은 값이라, 기존처럼 조회 지점(nearbyLookup)이 바뀔 때만 실행된다.
-  }, [nearbyLookup, openFilter, setStores, setStoresOrigin]);
+  }, [nearbyLookup, openFilter, openFilterKey, setStores, setStoresOrigin]);
 
   return {
     hasFocusedInitialLocationRef,

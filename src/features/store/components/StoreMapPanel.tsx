@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { StoreMapPanelMap } from "@/features/store/components/StoreMapPanelMap";
 import { StoreMapPanelShells } from "@/features/store/components/StoreMapPanelShells";
 import {
@@ -8,18 +8,47 @@ import {
   StoreMapPanelTopBar,
 } from "@/features/store/components/StoreMapPanelControls";
 import { StoreMapPanelInfoContent } from "@/features/store/components/StorePanelInfoBubble";
+import { useCloseOnOutsideTap } from "@/features/store/hooks/useCloseOnOutsideTap";
 import { useElementHeight } from "@/features/store/hooks/useElementHeight";
 import { useElementWidth } from "@/features/store/hooks/useElementWidth";
 import { useIsDesktopViewport } from "@/features/store/hooks/useIsDesktopViewport";
+import { useSavedStoreMapSnapshot } from "@/features/store/hooks/useSavedStoreMapSnapshot";
 import { useStoreMapPanel } from "@/features/store/hooks/useStoreMapPanel";
 import type { MapFitPadding } from "@/features/store/lib/mapFit";
-import type { StoreMapPanelProps } from "@/features/store/lib/storeMapPanelTypes";
+import type {
+  StoreMapPanelContentProps,
+  StoreMapPanelProps,
+} from "@/features/store/lib/storeMapPanelTypes";
 
+/**
+ * 매장 지도 화면.
+ * 로그인하러 가기 전에 보던 지도 화면이 보관돼 있으면, 화면을 띄운 뒤 읽어 그 상태로 다시 그린다.
+ * (서버에서 그린 HTML과 첫 화면이 달라지지 않도록 저장소는 화면을 띄운 뒤에 읽는다)
+ * 채팅 등에서 특정 매장을 열며 들어온 경우(initialAction)는 그 동작을 우선하고 되살리지 않는다.
+ */
 export const StoreMapPanel = ({
   initialAction,
   onOpenSidebar,
 }: StoreMapPanelProps) => {
-  const panel = useStoreMapPanel(initialAction);
+  const restoredSnapshot = useSavedStoreMapSnapshot(!initialAction);
+
+  return (
+    <StoreMapPanelContent
+      // 보관한 화면을 읽으면 처음 값부터 다시 시작하도록 새로 그린다.
+      key={restoredSnapshot ? `restored:${restoredSnapshot.savedAt}` : "fresh"}
+      initialAction={initialAction}
+      onOpenSidebar={onOpenSidebar}
+      restoredSnapshot={restoredSnapshot}
+    />
+  );
+};
+
+const StoreMapPanelContent = ({
+  initialAction,
+  onOpenSidebar,
+  restoredSnapshot,
+}: StoreMapPanelContentProps) => {
+  const panel = useStoreMapPanel(initialAction, restoredSnapshot);
   const {
     activeMapCategory,
     activeStorePage,
@@ -144,20 +173,11 @@ export const StoreMapPanel = ({
   // 길찾기 중(데스크톱): B는 A 뒤로 접혀 들어가고, 길찾기 정보는 A 자리에 보여준다.
   const isRouteViewOpen = isDesktop && isInfoOpen && isSelectedStoreRouteTarget;
   const isInfoPanelOpen = isInfoOpen && !isRouteViewOpen;
-  useEffect(() => {
-    if (!isInfoPanelOpen) return;
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!(event.target instanceof Node)) return;
-      if (infoPanelRef.current?.contains(event.target)) return;
-      if (listPanelRef.current?.contains(event.target)) return;
-
-      closeSelectedStoreInfo();
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => window.removeEventListener("pointerdown", handlePointerDown);
-  }, [closeSelectedStoreInfo, isInfoPanelOpen]);
+  useCloseOnOutsideTap({
+    isEnabled: isInfoPanelOpen,
+    onClose: closeSelectedStoreInfo,
+    panelRefs: [infoPanelRef, listPanelRef, sheetRef],
+  });
   // 지도에서 사이드바가 덮는 왼쪽 폭(데스크톱) / 바텀 시트가 덮는 아래쪽 높이(모바일)
   const panelLeftInset =
     isDesktop && isListOpen

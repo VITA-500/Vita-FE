@@ -5,9 +5,15 @@ import { useUserLocation } from "@/features/store/hooks/useUserLocation";
 import { formatDistance, getDistanceMeters } from "@/features/store/lib/geo";
 import type { StoreLocation } from "@/features/store/types";
 
-export const useStoreMapState = (stores: StoreLocation[]) => {
-  const [selectedStoreId, setSelectedStoreId] = useState(stores[0]?.id ?? "");
-  const [searchQuery, setSearchQuery] = useState("");
+export const useStoreMapState = (
+  stores: StoreLocation[],
+  /** 로그인 후 돌아와 되살릴 값(storeMapSnapshot) */
+  initial?: { searchQuery?: string; selectedStoreId?: string },
+) => {
+  const [selectedStoreId, setSelectedStoreId] = useState(
+    initial?.selectedStoreId || (stores[0]?.id ?? ""),
+  );
+  const [searchQuery, setSearchQuery] = useState(initial?.searchQuery ?? "");
   const [activeFilter, setActiveFilter] = useState("전체");
   const {
     location: userLocation,

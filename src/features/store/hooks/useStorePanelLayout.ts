@@ -6,10 +6,15 @@ import { useEffect, useRef, useState } from "react";
  * 지도 위 패널 배치: 검색 드롭다운·매장 목록 열림 상태, 패널 크기 측정,
  * 핀·경로가 패널에 가리지 않도록 비워 둘 여백, 바깥 클릭·Esc로 닫기.
  */
-export const useStorePanelLayout = () => {
+export const useStorePanelLayout = (
+  /** 로그인 후 돌아와 되살릴 목록 접힘 상태(storeMapSnapshot) */
+  initialIsStoreListCollapsed = false,
+) => {
   const [isSearchHistoryOpen, setIsSearchHistoryOpen] = useState(false);
   // 지도 화면에 들어오면 매장 목록 사이드바(바텀 시트)를 펼친 상태로 시작한다.
-  const [isStoreListCollapsed, setIsStoreListCollapsed] = useState(false);
+  const [isStoreListCollapsed, setIsStoreListCollapsed] = useState(
+    initialIsStoreListCollapsed,
+  );
   const [routeLeftInset, setRouteLeftInset] = useState(0);
   const collapsedSearchRef = useRef<HTMLDivElement>(null);
   const panelRootRef = useRef<HTMLDivElement>(null);
