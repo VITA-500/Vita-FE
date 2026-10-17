@@ -28,7 +28,10 @@ export const useStoreMapPanelActions = (state: StoreMapPanelState) => {
     isRouteActive: Boolean(state.routeDestinationStoreId),
     locationStatus: state.locationStatus,
     // 모달에서 "위치 허용"을 누르는 시점에 호출된다.
-    onConsent: () => selection.focusUserLocation(),
+    onConsent: () => {
+      state.setCameraOwner("auto");
+      selection.focusUserLocation();
+    },
     onRouteCancel: state.resetRouteState,
     requestLocation: state.requestLocation,
     shouldFocusUserLocationRef: state.shouldFocusUserLocationRef,
@@ -73,6 +76,7 @@ export const useStoreMapPanelActions = (state: StoreMapPanelState) => {
     }
   };
   const showNearbyStoresAfterRoute = () => {
+    state.setCameraOwner("auto");
     if (state.routeReturnServices.length > 0) {
       applyRouteReturnServices(state.routeReturnServices);
       return;
@@ -100,5 +104,35 @@ export const useStoreMapPanelActions = (state: StoreMapPanelState) => {
     ...filterSearch,
     ...textSearch,
     showNearbyStoresAfterRoute,
+    focusUserLocation: () => {
+      state.setCameraOwner("auto");
+      selection.focusUserLocation();
+    },
+    setOpenFilter: (...args: Parameters<typeof state.setOpenFilter>) => {
+      state.setCameraOwner("auto");
+      state.setOpenFilter(...args);
+    },
+    changeMapCategory: (
+      ...args: Parameters<typeof selection.changeMapCategory>
+    ) => {
+      state.setCameraOwner("auto");
+      selection.changeMapCategory(...args);
+    },
+    changeBenefitCategory: (
+      ...args: Parameters<typeof state.changeBenefitCategory>
+    ) => {
+      state.setCameraOwner("auto");
+      state.changeBenefitCategory(...args);
+    },
+    setBenefitServiceFilters: (
+      ...args: Parameters<typeof state.setBenefitServiceFilters>
+    ) => {
+      state.setCameraOwner("auto");
+      state.setBenefitServiceFilters(...args);
+    },
+    clearBenefitServiceFilters: () => {
+      state.setCameraOwner("auto");
+      state.clearBenefitServiceFilters();
+    },
   };
 };

@@ -12,6 +12,7 @@ import type { RoutePreview } from "@/features/store/lib/mapRoute";
 import type { MarkerColorInfo } from "@/features/store/lib/markerColors";
 import type { MapViewport } from "@/features/store/lib/storePanelStores";
 import type { StoreLocation } from "@/features/store/types";
+import type { StoreMapCameraOwner } from "@/features/store/hooks/useStoreMapCameraOwner";
 
 export const STORE_MAP_CARD_RESIZE_SETTLE_MS = 80;
 /**
@@ -105,6 +106,8 @@ export type StoreMapPreviewProps = {
   isPinAutoFitPaused?: boolean;
   /** 자동 맞춤 직전에 호출해 true면 이번 맞춤을 건너뛴다(필터 해제 직후 보던 화면 유지 등). */
   shouldSkipPinAutoFit?: () => boolean;
+  cameraOwnerRef?: RefObject<StoreMapCameraOwner>;
+  onUserCameraControl?: () => void;
   onFocusUserLocation?: () => void;
   onSelectedStoreCardClose?: () => void;
   onSearchFromMapPoint?: () => void;
@@ -126,6 +129,7 @@ export type StoreMapEffectContext = Pick<
   | "markerLabelById"
   | "onCenterChange"
   | "onMapPointSelect"
+  | "onUserCameraControl"
   | "onRouteObstructed"
   | "onSelectedStoreCardClose"
   | "onSelectStore"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useStoreMapCameraOwner } from "@/features/store/hooks/useStoreMapCameraOwner";
 import { useBenefitStores } from "@/features/store/hooks/useBenefitStores";
 import { useServiceFilters } from "@/features/store/hooks/useServiceFilters";
 import { useStoreMapState } from "@/features/store/hooks/useStoreMapState";
@@ -50,6 +51,7 @@ export const useStoreMapPanelState = (
     )
       ? restoredSnapshot.selectedStoreId
       : "";
+  const camera = useStoreMapCameraOwner(Boolean(restoredSnapshot));
   const reservation = useStoreReservation();
   const [stores, setStores] = useState<StoreLocation[]>(
     restoredSnapshot?.stores ?? [],
@@ -284,6 +286,7 @@ export const useStoreMapPanelState = (
     (isWaitingForPinSelection || Boolean(mapSelectedStore));
 
   return {
+    ...camera,
     ...reservation,
     ...layout,
     ...mapState,

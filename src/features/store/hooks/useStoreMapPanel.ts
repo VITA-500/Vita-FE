@@ -39,16 +39,6 @@ export const useStoreMapPanel = (
     void actions.handleInitialStoreAction(initialAction);
   }, [actions, initialAction, initialActionKey]);
 
-  // 되살린 매장 묶음. 이 묶음이 그대로인 동안에는 핀 자동 맞춤으로 지도를 옮기지 않는다(보던 화면 유지).
-  const restoredMapStoresKeyRef = useRef<string | null>(
-    restoredSnapshot ? state.mapStoresKey : null,
-  );
-  const latestMapStoresKeyRef = useRef(state.mapStoresKey);
-
-  useEffect(() => {
-    latestMapStoresKeyRef.current = state.mapStoresKey;
-  }, [state.mapStoresKey]);
-
   // 되살린 기록은 한 번만 쓴다. (다시 들어올 때 또 되살아나지 않도록 화면을 띄운 뒤 지운다)
   useEffect(() => {
     if (restoredSnapshot) {
@@ -77,11 +67,6 @@ export const useStoreMapPanel = (
       handleReserve(pendingReservationStore);
     }
   }, [handleReserve, isAuthenticated, isAuthLoading, pendingReservationStore]);
-
-  /** 되살린 화면을 유지하는 중이라 핀 자동 맞춤을 건너뛸지 */
-  const shouldSkipRestoredPinAutoFit = () =>
-    restoredMapStoresKeyRef.current !== null &&
-    restoredMapStoresKeyRef.current === latestMapStoresKeyRef.current;
 
   /** 로그인하러 가기 직전: 지금 보던 지도 화면(검색·필터·위치·고른 매장·예약하려던 매장)을 보관한다. */
   const saveMapStateBeforeLogin = () => {
@@ -115,7 +100,6 @@ export const useStoreMapPanel = (
     /** 로그인 후 돌아올 주소(일회성 매장 선택·길찾기 없이 지도만 연다) */
     loginReturnTo: STORE_MAP_RETURN_PATH,
     saveMapStateBeforeLogin,
-    shouldSkipRestoredPinAutoFit,
   };
 };
 

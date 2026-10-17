@@ -36,6 +36,7 @@ export const useStoreTextSearchActions = ({
   searchPoint,
   searchQuery,
   searchVisibleArea,
+  setCameraOwner,
   setConsultServiceFilters,
   setHasSelectedStoreInfo,
   setIsSearchHistoryOpen,
@@ -58,6 +59,7 @@ export const useStoreTextSearchActions = ({
       return;
     }
 
+    setCameraOwner("auto");
     const areaPoint = searchPoint;
     const isTextSearch = Boolean(searchQuery.trim()) && !isTagSearchQuery;
     const isCategorySearch = isTagSearchQuery && hasActiveServiceFilter;
@@ -107,6 +109,7 @@ export const useStoreTextSearchActions = ({
       return;
     }
 
+    setCameraOwner("auto");
     addSearchHistory(searchQuery);
 
     // 검색어가 하려는 일(서비스)을 뜻하면 매장명 검색보다 서비스 검색을 우선한다.
@@ -150,6 +153,7 @@ export const useStoreTextSearchActions = ({
   const handleSearchQueryChange = (nextQuery: string) => {
     // 태그 검색어를 모두 지우면 뱃지 필터도 함께 해제한다.
     if (isTagSearchQuery && !nextQuery.trim()) {
+      setCameraOwner("user");
       setConsultServiceFilters([]);
       setProvidedServiceFilters([]);
       restorePreTagSearchStores();

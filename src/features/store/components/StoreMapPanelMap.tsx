@@ -15,7 +15,7 @@ type StoreMapPanelMapProps = Pick<
   | "initialMapLevel"
   | "isMapSearchLoading"
   | "isOtherStoresVisible"
-  | "isPinAutoFitSkippedRef"
+  | "cameraOwnerRef"
   | "locationStatus"
   | "mapSelectedStore"
   | "mapSelectedStoreId"
@@ -34,7 +34,7 @@ type StoreMapPanelMapProps = Pick<
   | "setRouteMapReadyKey"
   | "setSearchAnchorSource"
   | "setSearchPoint"
-  | "shouldSkipRestoredPinAutoFit"
+  | "setCameraOwner"
   | "visibleMapStores"
 > & {
   getPinFitPadding: (container: {
@@ -72,7 +72,7 @@ export const StoreMapPanelMap = ({
   isListOpen,
   isMapSearchLoading,
   isOtherStoresVisible,
-  isPinAutoFitSkippedRef,
+  cameraOwnerRef,
   locationStatus,
   mapSelectedStore,
   mapSelectedStoreId,
@@ -95,7 +95,7 @@ export const StoreMapPanelMap = ({
   setSearchAnchorSource,
   setSearchPoint,
   sheetBottomInset,
-  shouldSkipRestoredPinAutoFit,
+  setCameraOwner,
   showStoreInfoCard,
   soloStore,
   userLocation,
@@ -112,9 +112,8 @@ export const StoreMapPanelMap = ({
     isPinAutoFitPaused={Boolean(
       routeDestinationStoreId || soloStore || hasSelectedStoreInfo,
     )}
-    shouldSkipPinAutoFit={() =>
-      isPinAutoFitSkippedRef.current || shouldSkipRestoredPinAutoFit()
-    }
+    cameraOwnerRef={cameraOwnerRef}
+    onUserCameraControl={() => setCameraOwner("user")}
     isFullBleed
     isSearchFromMapPointLoading={isMapSearchLoading}
     routePreview={routePreview}
@@ -133,6 +132,7 @@ export const StoreMapPanelMap = ({
     isUserLocationLoading={locationStatus === "requesting"}
     onFocusUserLocation={focusUserLocation}
     onMapPointSelect={(point, viewport) => {
+      setCameraOwner("user");
       setSearchAnchorSource("map");
 
       // 뱃지(카테고리) 검색 중이면 옮긴 영역에서 바로 다시 찾고, 아니면 "이 지역에서 재검색" 버튼을 띄운다.
