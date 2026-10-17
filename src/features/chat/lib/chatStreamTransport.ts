@@ -1,3 +1,5 @@
+import { parseStreamEvent } from "./chatStreamEvent";
+export { parseStreamEvent } from "./chatStreamEvent";
 import {
   createChatApiUrl,
   guestHeaders,
@@ -10,7 +12,7 @@ import type {
   SessionMessagesResponse,
 } from "../types";
 import { ApiError } from "@/shared/api/http";
-import { readSseStream, type SseEvent } from "@/shared/api/sse";
+import { readSseStream } from "@/shared/api/sse";
 /** 구독 후 `connected`를 기다리는 최대 시간. 넘기면 스트리밍 없이 전송하고 재조회로 결과를 받는다. */
 const STREAM_CONNECT_TIMEOUT_MS = 5000;
 /** 메시지 전송 후 답변 완료까지 기다리는 최대 시간 */
@@ -164,78 +166,3 @@ export const pollAssistantAnswer = async ({
 
 export const isTerminalStatus = (status: ChatApiMessageStatus) =>
   status === "COMPLETED" || status === "FAILED";
-
-export const parseStreamEvent = (event: SseEvent): ChatStreamEvent | null => {
-  try {
-    const p = JSON.parse(event.data);
-    if (
-      !p ||
-      !Number.isSafeInteger(p.sessionId) ||
-      !Number.isSafeInteger(p.messageId)
-    )
-      return null;
-    switch (event.event) {
-      case "assistant_status":
-        if (!["thinking", "retrieving_faq", "generating"].includes(p.status))
-          return null;
-        break;
-      case "assistant_delta":
-        if (typeof p.delta !== "string") return null;
-        break;
-      case "assistant_done":
-        if (typeof p.content !== "string") return null;
-        if (
-          p.actions != null &&
-          (!Array.isArray(p.actions) ||
-            !p.actions.every(
-              (action: { label?: unknown; href?: unknown } | null) =>
-                action &&
-                typeof action.label === "string" &&
-                typeof action.href === "string",
-            ))
-        )
-          return null;
-        if (
-          p.plans != null &&
-          (!Array.isArray(p.plans) ||
-            !p.plans.every(
-              (plan: { name?: unknown; monthlyFee?: unknown } | null) =>
-                plan &&
-                typeof plan.name === "string" &&
-                typeof plan.monthlyFee === "number",
-            ))
-        )
-          return null;
-        if (
-          p.storeMap != null &&
-          (!Array.isArray(p.storeMap.stores) ||
-            !p.storeMap.stores.every(
-              (
-                store: {
-                  id?: unknown;
-                  name?: unknown;
-                  lat?: unknown;
-                  lng?: unknown;
-                } | null,
-              ) =>
-                store &&
-                typeof store.id === "string" &&
-                typeof store.name === "string" &&
-                typeof store.lat === "number" &&
-                typeof store.lng === "number",
-            ))
-        )
-          return null;
-        break;
-      case "assistant_error":
-        if (typeof p.code !== "string" || typeof p.message !== "string")
-          return null;
-        break;
-      default:
-        return null;
-    }
-    return { name: event.event, payload: p } as ChatStreamEvent;
-  } catch {
-    return null;
-  }
-};
