@@ -6,6 +6,7 @@ import type {
 } from "@/features/store/hooks/useStoreFilterSearchActions";
 import type { StoreSearchHistoryItem } from "@/features/store/hooks/useStoreSearchHistory";
 import { showToast } from "@/shared/ui/ToastProvider";
+import { isDesktopWidth } from "@/features/store/lib/desktopBreakpoint";
 
 type UseStoreTextSearchActionsParams = StoreSearchActionsParams &
   Pick<
@@ -35,6 +36,7 @@ export const useStoreTextSearchActions = ({
   searchPoint,
   searchQuery,
   searchVisibleArea,
+  setCameraOwner,
   setConsultServiceFilters,
   setHasSelectedStoreInfo,
   setIsSearchHistoryOpen,
@@ -57,6 +59,7 @@ export const useStoreTextSearchActions = ({
       return;
     }
 
+    setCameraOwner("auto");
     const areaPoint = searchPoint;
     const isTextSearch = Boolean(searchQuery.trim()) && !isTagSearchQuery;
     const isCategorySearch = isTagSearchQuery && hasActiveServiceFilter;
@@ -106,6 +109,7 @@ export const useStoreTextSearchActions = ({
       return;
     }
 
+    setCameraOwner("auto");
     addSearchHistory(searchQuery);
 
     // 검색어가 하려는 일(서비스)을 뜻하면 매장명 검색보다 서비스 검색을 우선한다.
@@ -130,7 +134,7 @@ export const useStoreTextSearchActions = ({
     }
 
     // 모바일은 목록 패널이 화면을 크게 덮으므로 검색 결과도 지도 핀으로 먼저 보여주고, 목록은 사용자가 직접 펼친다.
-    if (window.innerWidth >= 768) {
+    if (isDesktopWidth(window.innerWidth)) {
       setIsStoreListCollapsed(false);
     }
 
@@ -149,6 +153,7 @@ export const useStoreTextSearchActions = ({
   const handleSearchQueryChange = (nextQuery: string) => {
     // 태그 검색어를 모두 지우면 뱃지 필터도 함께 해제한다.
     if (isTagSearchQuery && !nextQuery.trim()) {
+      setCameraOwner("user");
       setConsultServiceFilters([]);
       setProvidedServiceFilters([]);
       restorePreTagSearchStores();

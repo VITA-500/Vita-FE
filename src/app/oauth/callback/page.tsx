@@ -4,6 +4,11 @@ import { Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authService } from "@/features/auth/lib/authService";
+import {
+  buildLoginHref,
+  LOGIN_RETURN_PARAM,
+  takeRememberedLoginReturnTo,
+} from "@/features/auth/lib/loginReturn";
 import { tokenStorage } from "@/features/auth/lib/tokenStorage";
 import { routes } from "@/shared/constants/routes";
 import { Logo } from "@/shared/ui/Logo";
@@ -21,12 +26,18 @@ const OAuthCallbackContent = () => {
 
   useEffect(() => {
     const completeOAuthLogin = async () => {
+      // 소셜 로그인을 시작하기 전에 보관해 둔 돌아갈 화면. 실패해 로그인 화면으로 돌아가도 이어서 쓴다.
+      const returnTo = takeRememberedLoginReturnTo();
+
       if (error) {
         const message =
           oauthErrorMessages[error] ?? "소셜 로그인에 실패했습니다.";
+        const params = new URLSearchParams({ oauthError: error });
+
+        if (returnTo) params.set(LOGIN_RETURN_PARAM, returnTo);
 
         showToast(message);
-        router.replace(`${routes.login}?oauthError=${error}`);
+        router.replace(`${routes.login}?${params.toString()}`);
         return;
       }
 
@@ -35,11 +46,12 @@ const OAuthCallbackContent = () => {
         tokenStorage.setAuthHint();
         window.dispatchEvent(new Event("vita-auth-changed"));
         showToast("로그인되었습니다.");
-        router.replace(routes.chat);
+        // 로그인 화면에 들어오기 전 화면(예: 매장 지도)으로 돌아간다.
+        router.replace(returnTo ?? routes.chat);
       } catch {
         tokenStorage.removeAuthHint();
         showToast("로그인 정보를 확인하지 못했습니다.");
-        router.replace(routes.login);
+        router.replace(buildLoginHref(returnTo));
       }
     };
 

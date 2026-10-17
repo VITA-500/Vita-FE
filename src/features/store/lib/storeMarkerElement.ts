@@ -4,6 +4,7 @@ import {
   playMarkerEnterAnimation,
 } from "@/features/store/lib/mapOverlayElements";
 import type { MarkerColorInfo } from "@/features/store/lib/markerColors";
+import { STORE_MARKER_DATA_ATTRIBUTE } from "@/features/store/lib/storeMapPreviewTypes";
 import {
   getMarkerGradientId,
   getStorePinSvgMarkup,
@@ -41,6 +42,7 @@ export const createStoreMarkerElement = ({
   // 모바일은 화면이 좁아 핀끼리 겹치기 쉬우므로 80% 크기로 줄인다.
   // 핀 끝(아래 가운데)이 좌표에 붙어 있으므로 아래 가운데를 기준으로 줄인다.
   container.className = "relative origin-bottom max-md:scale-[0.8]";
+  container.setAttribute(STORE_MARKER_DATA_ATTRIBUTE, "");
 
   if (shouldAnimateEnter) {
     playMarkerEnterAnimation(container);

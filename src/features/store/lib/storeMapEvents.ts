@@ -5,9 +5,11 @@ import type {
 import type { KakaoMapWithProjection } from "@/features/store/lib/mapFit";
 import type { createSelectedStoreCardController } from "@/features/store/lib/storeMapCardController";
 import type {
+  MapViewportBounds,
   StoreMapEffectContext,
   StoreMapInstance,
 } from "@/features/store/lib/storeMapPreviewTypes";
+import { isDesktopWidth } from "@/features/store/lib/desktopBreakpoint";
 
 type SelectedStoreCardController = ReturnType<
   typeof createSelectedStoreCardController
@@ -31,6 +33,7 @@ export const bindStoreMapEvents = ({
   markRouteFitReadyRef,
   onCenterChange,
   onMapPointSelect,
+  onUserCameraControl,
   onRouteObstructed,
   onSelectedStoreCardClose,
   onViewportChange,
@@ -44,16 +47,41 @@ export const bindStoreMapEvents = ({
   updateSelectedStoreCardPosition,
 }: StoreMapEffectContext & StoreMapInstance & SelectedStoreCardController) => {
   const mapEventApi = kakaoMaps.event as unknown as KakaoMapEventApi;
+  /** 지금 보이는 지도 영역. 영역을 구하지 못하면 null */
+  const getCurrentViewport = (): MapViewportBounds | null => {
+    const center = (map as KakaoMapWithCenter).getCenter();
+    const bounds = map.getBounds?.();
+    const southWest = bounds?.getSouthWest?.();
+    const northEast = bounds?.getNorthEast?.();
+
+    if (!southWest || !northEast) {
+      return null;
+    }
+
+    return {
+      center: { lat: center.getLat(), lng: center.getLng() },
+      level: map.getLevel(),
+      northEast: { lat: northEast.getLat(), lng: northEast.getLng() },
+      southWest: { lat: southWest.getLat(), lng: southWest.getLng() },
+    };
+  };
   const handleMapDragEnd = () => {
+    onUserCameraControl?.();
     const movedCenter = (map as KakaoMapWithCenter).getCenter();
 
-    onMapPointSelect?.({
-      lat: movedCenter.getLat(),
-      lng: movedCenter.getLng(),
-    });
+    // 카카오맵은 드래그를 놓을 때 idle을 dragend보다 먼저 보낸다(지도는 이미 멈춘 상태).
+    // 그래서 옮긴 영역을 idle에서 기다리지 않고 여기서 바로 구해 함께 넘긴다.
+    onMapPointSelect?.(
+      {
+        lat: movedCenter.getLat(),
+        lng: movedCenter.getLng(),
+      },
+      getCurrentViewport(),
+    );
     // 길찾기 중(데스크톱)에는 지도를 끌어 경로를 살펴봐도 카드를 닫지 않는다.
-    const isDesktop =
-      (mapContainerRef.current?.getBoundingClientRect().width ?? 0) >= 768;
+    const isDesktop = isDesktopWidth(
+      mapContainerRef.current?.getBoundingClientRect().width ?? 0,
+    );
 
     if (!(isRouteCardDocked && isDesktop)) {
       onSelectedStoreCardClose?.();
@@ -76,8 +104,9 @@ export const bindStoreMapEvents = ({
       return;
     }
 
-    const isDesktop =
-      (mapContainerRef.current?.getBoundingClientRect().width ?? 0) >= 768;
+    const isDesktop = isDesktopWidth(
+      mapContainerRef.current?.getBoundingClientRect().width ?? 0,
+    );
 
     if (selectedStore && !(isRouteCardDocked && isDesktop)) {
       onSelectedStoreCardClose?.();
@@ -147,16 +176,10 @@ export const bindStoreMapEvents = ({
 
     onCenterChange?.({ lat: center.getLat(), lng: center.getLng() });
 
-    const bounds = map.getBounds?.();
-    const southWest = bounds?.getSouthWest?.();
-    const northEast = bounds?.getNorthEast?.();
+    const viewport = getCurrentViewport();
 
-    if (southWest && northEast) {
-      onViewportChange?.({
-        center: { lat: center.getLat(), lng: center.getLng() },
-        northEast: { lat: northEast.getLat(), lng: northEast.getLng() },
-        southWest: { lat: southWest.getLat(), lng: southWest.getLng() },
-      });
+    if (viewport) {
+      onViewportChange?.(viewport);
     }
     revealPendingCard();
 

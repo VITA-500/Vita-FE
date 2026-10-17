@@ -23,6 +23,9 @@ export const useStoreReservation = () => {
   const [isReservationSubmitting, setIsReservationSubmitting] = useState(false);
   const [isLoginRequiredModalOpen, setIsLoginRequiredModalOpen] =
     useState(false);
+  // 로그인이 필요해 예약하지 못한 매장. 로그인하고 돌아오면 이 매장 예약을 이어서 연다.
+  const [loginRequiredStore, setLoginRequiredStore] =
+    useState<StoreLocation | null>(null);
   const [isToastBackdropVisible, setIsToastBackdropVisible] = useState(false);
 
   const handleReservationConfirm = async () => {
@@ -68,6 +71,7 @@ export const useStoreReservation = () => {
     }
 
     if (!isAuthenticated) {
+      setLoginRequiredStore(store);
       setIsLoginRequiredModalOpen(true);
       return;
     }
@@ -96,7 +100,10 @@ export const useStoreReservation = () => {
     closeLoginRequiredModal: () => setIsLoginRequiredModalOpen(false),
     handleReservationConfirm,
     handleReserve,
+    isAuthenticated,
+    isAuthLoading,
     isLoginRequiredModalOpen,
+    loginRequiredStore,
     isReservationSubmitting,
     isToastBackdropVisible,
     minReservationDate: getReservationDateValue(),

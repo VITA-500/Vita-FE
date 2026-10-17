@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildMarkerLabelById,
   buildSearchableStores,
+  findStoreById,
   getMapStoreVisibility,
   getSameLocationStores,
   getViewportAreaQuery,
@@ -78,7 +79,7 @@ describe("getViewportAreaQuery", () => {
     });
   });
 
-  it("clamps the radius between 0.3km and 3km", () => {
+  it("clamps the radius between 0.3km and 5km (BE limit)", () => {
     const tiny: MapViewport = {
       center,
       northEast: { lat: 37.5001, lng: 127.0001 },
@@ -91,7 +92,7 @@ describe("getViewportAreaQuery", () => {
     };
 
     expect(getViewportAreaQuery(tiny, center).radiusKm).toBe(0.3);
-    expect(getViewportAreaQuery(huge, center).radiusKm).toBe(3);
+    expect(getViewportAreaQuery(huge, center).radiusKm).toBe(5);
   });
 });
 
@@ -185,5 +186,20 @@ describe("getSameLocationStores", () => {
 
   it("returns an empty list without a selected store", () => {
     expect(getSameLocationStores(undefined, [near], [near])).toEqual([]);
+  });
+});
+
+describe("findStoreById", () => {
+  it("returns the store from the first list that has the id", () => {
+    const updatedNear = { ...near, name: "업데이트된 매장" };
+
+    expect(findStoreById("near", [updatedNear], [near])).toBe(updatedNear);
+    expect(findStoreById("far", [near], [middle, far])).toBe(far);
+  });
+
+  it("returns undefined for an empty or unknown id", () => {
+    expect(findStoreById(undefined, [near])).toBeUndefined();
+    expect(findStoreById("", [near])).toBeUndefined();
+    expect(findStoreById("missing", [near], [middle])).toBeUndefined();
   });
 });

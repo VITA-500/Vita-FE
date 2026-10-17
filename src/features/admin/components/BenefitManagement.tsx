@@ -7,6 +7,7 @@ import {
   BenefitSummary,
   BenefitCategoryBadge,
   BenefitEmptyState,
+  BenefitStoreCount,
 } from "./BenefitManagementParts";
 
 import { useEffect, useState } from "react";
@@ -42,10 +43,10 @@ const toErrorMessage = (error: unknown, fallback: string) =>
 /** 관리자 제휴 혜택(브랜드) 관리: 검색·카테고리 필터, 등록·수정·삭제 */
 export const BenefitManagement = ({
   embedded = false,
-  onSelectCategory,
+  onSelectBenefit,
 }: {
   embedded?: boolean;
-  onSelectCategory?: (category: string) => void;
+  onSelectBenefit?: (benefitId: number) => void;
 }) => {
   const {
     benefits,
@@ -218,16 +219,10 @@ export const BenefitManagement = ({
         ) : (
           benefits.map((benefit) => (
             <Card key={benefit.benefitId} padding="sm">
-              <BenefitSummary benefit={benefit} />
-              {onSelectCategory && (
-                <button
-                  type="button"
-                  className="text-brand mt-3 text-xs font-bold"
-                  onClick={() => onSelectCategory(benefit.category)}
-                >
-                  {benefit.category} 제휴점 보기
-                </button>
-              )}
+              <BenefitSummary
+                benefit={benefit}
+                onSelectBenefit={onSelectBenefit}
+              />
               <div className="mt-4 flex justify-end gap-1.5">
                 <BenefitActions
                   benefit={benefit}
@@ -257,7 +252,7 @@ export const BenefitManagement = ({
               <th className="w-[22%] px-5 py-4 text-left">브랜드</th>
               <th className="px-4 py-4 text-left">혜택</th>
               <th className="w-[120px] px-4 py-4 text-left">카테고리</th>
-              <th className="w-[96px] px-4 py-4 text-center">연결 매장</th>
+              <th className="w-[112px] px-4 py-4 text-center">연결 매장</th>
               <th className="w-[128px] px-4 py-4 text-center">수정일</th>
               <th className="w-[140px] px-5 py-4 text-center">관리</th>
             </tr>
@@ -302,16 +297,10 @@ export const BenefitManagement = ({
                       <BenefitCategoryBadge category={benefit.category} />
                     </td>
                     <td className="px-4 py-4 text-center font-bold text-gray-500">
-                      {benefit.storeCount.toLocaleString("ko-KR")}곳
-                      {onSelectCategory && (
-                        <button
-                          type="button"
-                          className="text-brand mt-1 block w-full text-xs hover:underline"
-                          onClick={() => onSelectCategory(benefit.category)}
-                        >
-                          업종 매장 보기
-                        </button>
-                      )}
+                      <BenefitStoreCount
+                        benefit={benefit}
+                        onSelectBenefit={onSelectBenefit}
+                      />
                     </td>
                     <td className="px-4 py-4 text-center font-semibold text-gray-400">
                       {formatKoreanDate(benefit.updatedAt)}

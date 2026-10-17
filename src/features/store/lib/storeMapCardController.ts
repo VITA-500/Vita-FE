@@ -9,6 +9,7 @@ import type {
   StoreMapEffectContext,
   StoreMapInstance,
 } from "@/features/store/lib/storeMapPreviewTypes";
+import { isDesktopWidth } from "@/features/store/lib/desktopBreakpoint";
 
 /** 초점 이동 완료(idle) 신호가 오지 않을 때 카드를 보여주기까지 기다리는 최대 시간(ms) */
 const CARD_REVEAL_FALLBACK_MS = 700;
@@ -51,8 +52,9 @@ export const createSelectedStoreCardController = ({
     }
 
     const containerRect = mapContainerRef.current.getBoundingClientRect();
-    const effectiveLeftInset =
-      containerRect.width >= 768 ? selectedStoreCardLeftInset : 0;
+    const effectiveLeftInset = isDesktopWidth(containerRect.width)
+      ? selectedStoreCardLeftInset
+      : 0;
     const availableWidth = containerRect.width - effectiveLeftInset - 24;
     const cardWidth = Math.min(320, Math.max(0, availableWidth));
     const cardHeight = getStoreCardHeight(selectedStoreCardRef.current);
@@ -104,7 +106,7 @@ export const createSelectedStoreCardController = ({
     // 카드가 화면·왼쪽 패널 밖으로 빠져나가는 경우는 panToFitSelectedCard가 지도를 살짝 밀어 해결한다.
     // 모바일: 화면이 좁아 지도를 밀어도 카드가 넘치거나(길찾기 중엔 밀지 않음, 이후 드래그 등)
     // 화면 밖으로 잘리기 쉬우므로, 카드가 들어갈 수 있는 범위 안으로 위치를 붙잡아 둔다.
-    const isMobile = containerRect.width < 768;
+    const isMobile = !isDesktopWidth(containerRect.width);
     const left = isMobile
       ? clampValue(point.x, layout.minX, layout.maxX)
       : point.x;

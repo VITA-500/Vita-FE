@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { env } from "@/shared/config/env";
 import { benefitCategoryFilterOptions } from "../lib/benefitManagementConfig";
 import { adminQueryKeys } from "../context/adminQueryKeys";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
 import { AdminErrorBanner } from "@/features/admin/components/AdminErrorBanner";
@@ -63,7 +63,9 @@ export const StoreManagement = ({
     storeSortField,
     storeTypeFilter,
     storeCategory,
+    storeBenefitId,
     setStoreCategory,
+    setStoreBenefitId,
     stores,
     storeTotalCount,
     storeTotalPages,
@@ -86,6 +88,9 @@ export const StoreManagement = ({
     enabled: isPartnerStore && Boolean(env.apiBaseUrl),
   });
   const benefits = benefitQuery.data ?? [];
+  const selectedBenefit = benefits.find(
+    (benefit) => benefit.benefitId === storeBenefitId,
+  );
   const benefitError = benefitQuery.error
     ? "제휴 혜택 목록을 불러오지 못했습니다."
     : null;
@@ -215,6 +220,21 @@ export const StoreManagement = ({
           )}
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+          {isPartnerStore && storeBenefitId !== undefined && (
+            <button
+              type="button"
+              onClick={() => setStoreBenefitId(undefined)}
+              className="border-brand/20 bg-brand/5 text-brand hover:bg-brand/10 inline-flex h-12 max-w-full items-center justify-between gap-2 rounded-xl border px-3 text-sm font-bold transition"
+              aria-label="연결 혜택 필터 해제"
+            >
+              <span className="truncate">
+                {selectedBenefit
+                  ? `${selectedBenefit.brand} · ${selectedBenefit.name}`
+                  : `선택한 혜택 #${storeBenefitId}`}
+              </span>
+              <X size={15} className="shrink-0" aria-hidden="true" />
+            </button>
+          )}
           {isPartnerStore && (
             <FilterDropdown
               aria-label="제휴 업종 필터"

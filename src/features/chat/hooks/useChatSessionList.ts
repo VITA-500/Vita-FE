@@ -122,6 +122,17 @@ export const useChatSessionList = (isAuthenticated: boolean) => {
     },
     [],
   );
+  const setChatSessionTitle = useCallback(
+    (sessionId: number, title: string) => {
+      setChatSessions((sessions) =>
+        sessions.map((session) =>
+          session.sessionId === sessionId ? { ...session, title } : session,
+        ),
+      );
+      setSessionTitles((titles) => ({ ...titles, [sessionId]: title }));
+    },
+    [],
+  );
 
   return {
     chatSessions,
@@ -131,6 +142,7 @@ export const useChatSessionList = (isAuthenticated: boolean) => {
     refreshChatSessions,
     sessionTitles,
     setChatSessionPinned,
+    setChatSessionTitle,
     setSessionTitles,
   };
 };

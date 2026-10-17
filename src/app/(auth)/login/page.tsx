@@ -8,6 +8,10 @@ import {
   authService,
   type OAuthProvider,
 } from "@/features/auth/lib/authService";
+import {
+  readLoginReturnToFromLocation,
+  rememberLoginReturnTo,
+} from "@/features/auth/lib/loginReturn";
 import { tokenStorage } from "@/features/auth/lib/tokenStorage";
 import { TextField } from "@/shared/ui/TextField";
 import { ApiError } from "@/shared/api/http";
@@ -103,7 +107,8 @@ const LoginPage = () => {
         await authService.getMe();
         window.dispatchEvent(new Event("vita-auth-changed"));
         showToast("로그인되었습니다.");
-        router.push(routes.chat);
+        // 지도에서 예약하려다 로그인한 경우 등, 들어오기 전 화면으로 돌아간다.
+        router.push(readLoginReturnToFromLocation() ?? routes.chat);
         return;
       }
 
@@ -131,6 +136,8 @@ const LoginPage = () => {
 
   const handleSocialLogin = (provider: OAuthProvider) => {
     resetFeedback();
+    // 소셜 로그인은 BE를 거쳐 /oauth/callback으로 돌아오므로, 돌아갈 화면을 미리 보관해 둔다.
+    rememberLoginReturnTo(readLoginReturnToFromLocation());
     window.location.assign(authService.createOAuthAuthorizationUrl(provider));
   };
 

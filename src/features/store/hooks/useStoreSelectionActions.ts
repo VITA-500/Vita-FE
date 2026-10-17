@@ -15,14 +15,17 @@ import type { useStoreRoute } from "@/features/store/hooks/useStoreRoute";
 import { useStoreRouteReturnActions } from "@/features/store/hooks/useStoreRouteReturnActions";
 import type { useStoreSearchResults } from "@/features/store/hooks/useStoreSearchResults";
 import type { useStoreSearchState } from "@/features/store/hooks/useStoreSearchState";
-import type { MapSearchPoint } from "@/features/store/lib/storePanelStores";
+import {
+  findStoreById,
+  type MapSearchPoint,
+} from "@/features/store/lib/storePanelStores";
 import {
   getGeolocationPermissionState,
   LOCATION_CONSENT_STORAGE_KEY,
-  readStorage,
 } from "@/features/store/lib/storePanelStorage";
 import { storeService } from "@/features/store/lib/storeService";
 import type { MapCategory, StoreLocation } from "@/features/store/types";
+import { readStorage } from "@/shared/lib/browserStorage";
 import { showToast } from "@/shared/ui/ToastProvider";
 
 type UseStoreSelectionActionsParams = Pick<
@@ -152,11 +155,13 @@ export const useStoreSelectionActions = ({
     setIsWaitingForPinSelection(false);
     setSelectedStoreId(storeId);
 
-    const nextStore =
-      categoryDisplayStores.find((store) => store.id === storeId) ??
-      categoryStores.find((store) => store.id === storeId) ??
-      searchableStores.find((store) => store.id === storeId) ??
-      stores.find((store) => store.id === storeId);
+    const nextStore = findStoreById(
+      storeId,
+      categoryDisplayStores,
+      categoryStores,
+      searchableStores,
+      stores,
+    );
 
     if (nextStore && !stores.some((store) => store.id === nextStore.id)) {
       setStores((prevStores) => [...prevStores, nextStore]);

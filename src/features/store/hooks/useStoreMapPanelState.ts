@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useStoreMapCameraOwner } from "@/features/store/hooks/useStoreMapCameraOwner";
 import { useBenefitStores } from "@/features/store/hooks/useBenefitStores";
 import { useServiceFilters } from "@/features/store/hooks/useServiceFilters";
 import { useStoreMapState } from "@/features/store/hooks/useStoreMapState";
@@ -12,6 +13,7 @@ import { useStoreSearchHistory } from "@/features/store/hooks/useStoreSearchHist
 import { useStoreSearchResults } from "@/features/store/hooks/useStoreSearchResults";
 import { useStoreSearchState } from "@/features/store/hooks/useStoreSearchState";
 import { buildMarkerColorInfoById } from "@/features/store/lib/markerColors";
+import type { StoreMapSnapshot } from "@/features/store/lib/storeMapSnapshot";
 import { ALL_STORE_OPEN_FILTER } from "@/features/store/lib/storeOpenHours";
 import {
   buildRoutePreview,
@@ -20,6 +22,7 @@ import {
 import {
   buildMarkerLabelById,
   defaultMapLocation,
+  findStoreById,
   getMapStoreVisibility,
   getSameLocationStores,
   type MapSearchPoint,
@@ -36,16 +39,34 @@ import type {
  * 매장 지도 패널의 상태와 화면에 보여줄 값: 매장 목록·선택, 검색 상태·결과, 길찾기, 필터, 페이지,
  * 지도 핀·카드에 넘길 값. 동작(조회·검색·선택)은 useStoreMapPanelActions가 이 값을 받아 처리한다.
  */
-export const useStoreMapPanelState = () => {
+export const useStoreMapPanelState = (
+  /** 로그인하러 가기 전에 보던 지도 화면. 있으면 각 상태의 처음 값으로 쓴다(StoreMapPanel이 읽어 넘긴다). */
+  restoredSnapshot: StoreMapSnapshot | null = null,
+) => {
+  // 고른 매장은 지금 매장 묶음(stores) 안에 있을 때만 되살린다(아니면 첫 매장으로 바뀌어 다른 매장 정보가 뜬다).
+  const restoredSelectedStoreId =
+    restoredSnapshot &&
+    restoredSnapshot.stores.some(
+      (store) => store.id === restoredSnapshot.selectedStoreId,
+    )
+      ? restoredSnapshot.selectedStoreId
+      : "";
+  const camera = useStoreMapCameraOwner(Boolean(restoredSnapshot));
   const reservation = useStoreReservation();
-  const [stores, setStores] = useState<StoreLocation[]>([]);
-  const [focusPoint, setFocusPoint] = useState<MapSearchPoint | null>(
-    defaultMapLocation,
+  const [stores, setStores] = useState<StoreLocation[]>(
+    restoredSnapshot?.stores ?? [],
   );
-  const layout = useStorePanelLayout();
-  const [soloStoreId, setSoloStoreId] = useState("");
+  const [focusPoint, setFocusPoint] = useState<MapSearchPoint | null>(
+    restoredSnapshot?.mapViewport?.center ?? defaultMapLocation,
+  );
+  const layout = useStorePanelLayout(restoredSnapshot?.isStoreListCollapsed);
+  const [soloStoreId, setSoloStoreId] = useState(
+    restoredSelectedStoreId ? (restoredSnapshot?.soloStoreId ?? "") : "",
+  );
   // 현재 stores를 조회한 기준 지점(내 위치·지도에서 고른 지점 등). 매장 순서(A, B, C…)는 이 지점에서 가까운 순이다.
-  const [storesOrigin, setStoresOrigin] = useState<MapSearchPoint | null>(null);
+  const [storesOrigin, setStoresOrigin] = useState<MapSearchPoint | null>(
+    restoredSnapshot?.storesOrigin ?? null,
+  );
   // 핀(현재 페이지 12곳) 외 나머지 매장 위치를 반투명 원으로 함께 보여줄지
   const [isOtherStoresVisible, setIsOtherStoresVisible] = useState(false);
   const [searchFitTarget, setSearchFitTarget] = useState<{
@@ -65,16 +86,22 @@ export const useStoreMapPanelState = () => {
   const [isMapSearchLoading, setIsMapSearchLoading] = useState(false);
   const [isWaitingForPinSelection, setIsWaitingForPinSelection] =
     useState(false);
-  const [hasSelectedStoreInfo, setHasSelectedStoreInfo] = useState(false);
-  const [activeMapCategory, setActiveMapCategory] =
-    useState<MapCategory>("store");
+  const [hasSelectedStoreInfo, setHasSelectedStoreInfo] = useState(
+    Boolean(restoredSelectedStoreId && restoredSnapshot?.hasSelectedStoreInfo),
+  );
+  const [activeMapCategory, setActiveMapCategory] = useState<MapCategory>(
+    restoredSnapshot?.activeMapCategory ?? "store",
+  );
   const [openFilter, setOpenFilter] = useState<StoreOpenFilter>(
-    ALL_STORE_OPEN_FILTER,
+    restoredSnapshot?.openFilter ?? ALL_STORE_OPEN_FILTER,
   );
   const [routeReturnServices, setRouteReturnServices] = useState<string[]>([]);
   const shouldFocusUserLocationRef = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const mapState = useStoreMapState(stores);
+  const mapState = useStoreMapState(stores, {
+    searchQuery: restoredSnapshot?.searchQuery,
+    selectedStoreId: restoredSelectedStoreId,
+  });
   const {
     displayStores,
     locationStatus,
@@ -84,6 +111,7 @@ export const useStoreMapPanelState = () => {
   } = mapState;
   const searchState = useStoreSearchState({
     focusPoint,
+    initial: restoredSnapshot,
     searchQuery,
     setHasSelectedStoreInfo,
     userLocation,
@@ -98,6 +126,7 @@ export const useStoreMapPanelState = () => {
   const route = useStoreRoute(userLocation);
   const benefit = useBenefitStores({
     activeMapCategory,
+    initialSelectedBenefitCategory: restoredSnapshot?.selectedBenefitCategory,
     openFilter,
     userLocation,
   });
@@ -109,7 +138,12 @@ export const useStoreMapPanelState = () => {
     routeResultMessage,
     walkingRoute,
   } = route;
-  const filters = useServiceFilters({ allStores, stores });
+  const filters = useServiceFilters({
+    allStores,
+    initialConsultServiceFilters: restoredSnapshot?.consultServiceFilters,
+    initialProvidedServiceFilters: restoredSnapshot?.providedServiceFilters,
+    stores,
+  });
   const {
     consultServiceFilterOptions,
     consultServiceFilters,
@@ -141,14 +175,15 @@ export const useStoreMapPanelState = () => {
     userLocation,
   });
   const { categorySelectedStore, categoryStores, mapStores } = results;
-  const routeDestinationStore =
-    categoryStores.find((store) => store.id === routeDestinationStoreId) ??
-    stores.find((store) => store.id === routeDestinationStoreId);
+  const routeDestinationStore = findStoreById(
+    routeDestinationStoreId,
+    categoryStores,
+    stores,
+  );
   // 매장 목록에서 고른 매장은 정보 카드가 떠 있는 동안 그 핀만 남기고 다른 핀은 숨긴다.
   const soloStore =
     hasSelectedStoreInfo && soloStoreId
-      ? (categoryStores.find((store) => store.id === soloStoreId) ??
-        stores.find((store) => store.id === soloStoreId))
+      ? findStoreById(soloStoreId, categoryStores, stores)
       : undefined;
   const pagination = useStorePagination({
     mapStores,
@@ -251,6 +286,7 @@ export const useStoreMapPanelState = () => {
     (isWaitingForPinSelection || Boolean(mapSelectedStore));
 
   return {
+    ...camera,
     ...reservation,
     ...layout,
     ...mapState,
@@ -276,6 +312,7 @@ export const useStoreMapPanelState = () => {
     markerLabelById,
     otherMapStores,
     removeSearchHistory,
+    restoredSnapshot,
     routeDestinationStore,
     routePreview,
     routeReturnServices,

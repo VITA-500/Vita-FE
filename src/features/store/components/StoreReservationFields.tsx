@@ -1,4 +1,5 @@
 import type { buildReservationTimeSlots } from "@/features/store/lib/reservationTimeSlots";
+import { CalendarDateField } from "@/shared/ui/CalendarDateField";
 
 type StoreReservationFieldsProps = {
   maxReservationDate: string;
@@ -25,13 +26,13 @@ export const StoreReservationFields = ({
       <span className="text-text-secondary text-xs font-extrabold">
         방문 날짜
       </span>
-      <input
-        type="date"
+      <CalendarDateField
+        ariaLabel="방문 날짜"
         value={reservationDate}
         min={minReservationDate}
         max={maxReservationDate}
-        onChange={(event) => onReservationDateChange(event.target.value)}
-        className="border-border focus:border-brand/70 mt-2 h-10 w-full rounded-xl border bg-white px-3 text-sm font-bold text-gray-900 outline-none dark:border-white/10 dark:bg-zinc-950 dark:text-white"
+        onChange={onReservationDateChange}
+        className="mt-2"
       />
     </label>
     <div>

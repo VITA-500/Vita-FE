@@ -5,7 +5,6 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PanelLeft } from "lucide-react";
 import { ChatConversationContent } from "@/features/chat/components/ChatConversationContent";
-import { ChatPreferencesPanel } from "@/features/chat/components/ChatPreferencesPanel";
 import { ChatSidebar } from "@/features/chat/components/ChatSidebar";
 import { ChatSearchDialog } from "@/features/chat/components/ChatSearchDialog";
 import { ChatSettingsPanel } from "@/features/chat/components/ChatSettingsPanel";
@@ -21,9 +20,9 @@ import type {
   StoreRouteMode,
 } from "@/features/store/types";
 import { useChatConversationController } from "@/features/chat/hooks/useChatConversationController";
-import { useChatPreferences } from "@/features/chat/hooks/useChatPreferences";
 import { useChatTour } from "@/features/chat/hooks/useChatTour";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
+import { buildLoginHref } from "@/features/auth/lib/loginReturn";
 import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
 
@@ -55,7 +54,6 @@ const ChatPageContent = () => {
     setIsMobileSidebarOpen(nextIsOpen);
   };
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isGuestNewChatDialogOpen, setIsGuestNewChatDialogOpen] =
     useState(false);
@@ -76,7 +74,6 @@ const ChatPageContent = () => {
     }
   }
   const startChatTour = useChatTour();
-  const { preferences, updatePreferences } = useChatPreferences();
   const {
     chatInput,
     chatInputRef,
@@ -94,6 +91,7 @@ const ChatPageContent = () => {
     loadingSessionId,
     messages,
     pinnedSessionIds,
+    renameChatSession,
     scrollContainerRef,
     sessionTitles,
     setChatInput,
@@ -171,7 +169,14 @@ const ChatPageContent = () => {
         onClose={() => setIsSidebarOpen(false)}
         onOpenHome={() => router.push(routes.home)}
         onNewChat={handleNewChat}
-        onOpenLogin={() => router.push(routes.login)}
+        // 로그인 후 지금 보던 화면(상담·매장 지도·마이페이지)으로 돌아온다.
+        onOpenLogin={() =>
+          router.push(
+            buildLoginHref(
+              `${window.location.pathname}${window.location.search}`,
+            ),
+          )
+        }
         onOpenSearch={() => {
           setRailTooltip(null);
           setIsSearchOpen(true);
@@ -179,10 +184,6 @@ const ChatPageContent = () => {
         onOpenProfile={() => {
           setRailTooltip(null);
           router.push(routes.myPage);
-        }}
-        onOpenPreferences={() => {
-          setRailTooltip(null);
-          setIsPreferencesOpen(true);
         }}
         onOpenSettings={() => {
           setRailTooltip(null);
@@ -225,6 +226,7 @@ const ChatPageContent = () => {
         isCurrentChatAnswering={chatStatus === "loading"}
         pinnedSessionIds={pinnedSessionIds}
         onTogglePinChat={togglePinChatSession}
+        onRenameChat={renameChatSession}
         onDeleteChat={deleteChatSession}
       />
 
@@ -301,12 +303,6 @@ const ChatPageContent = () => {
         onSelectChat={(targetSessionId) => {
           void handleSelectChat(targetSessionId);
         }}
-      />
-      <ChatPreferencesPanel
-        isOpen={isPreferencesOpen}
-        onClose={() => setIsPreferencesOpen(false)}
-        onSave={updatePreferences}
-        preferences={preferences}
       />
       <ChatSettingsPanel
         isOpen={isSettingsOpen}

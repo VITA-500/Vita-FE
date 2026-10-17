@@ -1,6 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import {
+  readJsonStorage,
+  readStorage,
+  writeJsonStorage,
+  writeStorage,
+} from "@/shared/lib/browserStorage";
 
 const HISTORY_STORAGE_KEY = "vita-store-search-history";
 const HISTORY_ENABLED_STORAGE_KEY = "vita-store-search-history-enabled";
@@ -13,40 +19,22 @@ export type StoreSearchHistoryItem = {
 };
 
 const readHistory = (): StoreSearchHistoryItem[] => {
-  try {
-    const rawValue = window.localStorage.getItem(HISTORY_STORAGE_KEY);
-    const parsed: unknown = rawValue ? JSON.parse(rawValue) : [];
+  const parsed = readJsonStorage("local", HISTORY_STORAGE_KEY);
 
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed
-      .filter(
-        (item): item is StoreSearchHistoryItem =>
-          typeof item?.query === "string" && item.query.trim().length > 0,
-      )
-      .slice(0, MAX_HISTORY_COUNT);
-  } catch {
+  if (!Array.isArray(parsed)) {
     return [];
   }
+
+  return parsed
+    .filter(
+      (item): item is StoreSearchHistoryItem =>
+        typeof item?.query === "string" && item.query.trim().length > 0,
+    )
+    .slice(0, MAX_HISTORY_COUNT);
 };
 
-const readEnabled = () => {
-  try {
-    return window.localStorage.getItem(HISTORY_ENABLED_STORAGE_KEY) !== "false";
-  } catch {
-    return true;
-  }
-};
-
-const writeStorage = (key: string, value: string) => {
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {
-    // 저장소를 쓸 수 없는 환경(시크릿 모드 등)에서는 메모리 상태만 유지한다.
-  }
-};
+const readEnabled = () =>
+  readStorage("local", HISTORY_ENABLED_STORAGE_KEY) !== "false";
 
 /** 매장 검색 히스토리(최근 검색어)와 저장 on/off 설정을 브라우저에 보관한다. */
 export const useStoreSearchHistory = () => {
@@ -78,7 +66,7 @@ export const useStoreSearchHistory = () => {
           ...prevHistory.filter((item) => item.query !== trimmedQuery),
         ].slice(0, MAX_HISTORY_COUNT);
 
-        writeStorage(HISTORY_STORAGE_KEY, JSON.stringify(nextHistory));
+        writeJsonStorage("local", HISTORY_STORAGE_KEY, nextHistory);
 
         return nextHistory;
       });
@@ -90,7 +78,7 @@ export const useStoreSearchHistory = () => {
     setHistory((prevHistory) => {
       const nextHistory = prevHistory.filter((item) => item.query !== query);
 
-      writeStorage(HISTORY_STORAGE_KEY, JSON.stringify(nextHistory));
+      writeJsonStorage("local", HISTORY_STORAGE_KEY, nextHistory);
 
       return nextHistory;
     });
@@ -98,14 +86,14 @@ export const useStoreSearchHistory = () => {
 
   const clearHistory = useCallback(() => {
     setHistory([]);
-    writeStorage(HISTORY_STORAGE_KEY, "[]");
+    writeJsonStorage("local", HISTORY_STORAGE_KEY, []);
   }, []);
 
   const toggleHistoryEnabled = useCallback(() => {
     setIsHistoryEnabled((isEnabled) => {
       const nextEnabled = !isEnabled;
 
-      writeStorage(HISTORY_ENABLED_STORAGE_KEY, String(nextEnabled));
+      writeStorage("local", HISTORY_ENABLED_STORAGE_KEY, String(nextEnabled));
 
       return nextEnabled;
     });

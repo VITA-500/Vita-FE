@@ -1,9 +1,10 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { DESKTOP_MIN_WIDTH_PX } from "@/features/store/lib/desktopBreakpoint";
 
-/** 데스크톱 레이아웃 기준(Tailwind md). 지도 패널은 이 너비부터 좌측 사이드바, 그 아래는 바텀 시트로 보여준다. */
-const DESKTOP_QUERY = "(min-width: 768px)";
+/** 데스크톱 레이아웃 기준(DESKTOP_MIN_WIDTH_PX) 미디어 쿼리 */
+const DESKTOP_QUERY = `(min-width: ${DESKTOP_MIN_WIDTH_PX}px)`;
 
 const subscribe = (onChange: () => void) => {
   const mediaQuery = window.matchMedia(DESKTOP_QUERY);
@@ -12,7 +13,7 @@ const subscribe = (onChange: () => void) => {
   return () => mediaQuery.removeEventListener("change", onChange);
 };
 
-/** 지금 화면이 데스크톱 너비(768px 이상)인지. 서버 렌더링에서는 데스크톱으로 본다. */
+/** 지금 화면이 데스크톱 너비(DESKTOP_MIN_WIDTH_PX 이상)인지. 서버 렌더링에서는 데스크톱으로 본다. */
 export const useIsDesktopViewport = () =>
   useSyncExternalStore(
     subscribe,

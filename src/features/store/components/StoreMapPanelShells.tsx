@@ -24,10 +24,12 @@ type StoreMapPanelShellsProps = Pick<
   | "isRouteSearchOverlayVisible"
   | "isToastBackdropVisible"
   | "locationStatus"
+  | "loginReturnTo"
   | "maxReservationDate"
   | "minReservationDate"
   | "requestUserLocationFromModal"
   | "reservationDate"
+  | "saveMapStateBeforeLogin"
   | "reservationStore"
   | "reservationTime"
   | "setReservationDate"
@@ -77,11 +79,13 @@ export const StoreMapPanelShells = ({
   isToastBackdropVisible,
   listPanelRef,
   locationStatus,
+  loginReturnTo,
   maxReservationDate,
   minReservationDate,
   onSheetExpandedChange,
   requestUserLocationFromModal,
   reservationDate,
+  saveMapStateBeforeLogin,
   reservationStore,
   reservationTime,
   setReservationDate,
@@ -287,8 +291,10 @@ export const StoreMapPanelShells = ({
         isLocationRequesting={locationStatus === "requesting"}
         isLoginRequiredModalOpen={isLoginRequiredModalOpen}
         isReservationSubmitting={isReservationSubmitting}
+        loginReturnTo={loginReturnTo}
         maxReservationDate={maxReservationDate}
         minReservationDate={minReservationDate}
+        onBeforeLogin={saveMapStateBeforeLogin}
         onDismissLocationPermission={dismissLocationPermissionModal}
         onLoginRequiredClose={closeLoginRequiredModal}
         onRequestUserLocation={requestUserLocationFromModal}

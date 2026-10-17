@@ -18,12 +18,22 @@ import {
   type MapSearchPoint,
   type MapViewport,
 } from "@/features/store/lib/storePanelStores";
+import type { StoreMapSnapshot } from "@/features/store/lib/storeMapSnapshot";
 import { storeService } from "@/features/store/lib/storeService";
 import type { StoreLocation } from "@/features/store/types";
 import { showToast } from "@/shared/ui/ToastProvider";
 
 type UseStoreSearchStateParams = {
   focusPoint: MapSearchPoint | null;
+  /** 로그인 후 돌아와 되살릴 검색 상태(storeMapSnapshot) */
+  initial?: Pick<
+    StoreMapSnapshot,
+    | "allStores"
+    | "mapViewport"
+    | "searchAnchorSource"
+    | "submittedSearchOrigin"
+    | "submittedSearchStores"
+  > | null;
   searchQuery: string;
   setHasSelectedStoreInfo: Dispatch<SetStateAction<boolean>>;
   userLocation: UserLocation | null;
@@ -35,16 +45,19 @@ type UseStoreSearchStateParams = {
  */
 export const useStoreSearchState = ({
   focusPoint,
+  initial,
   searchQuery,
   setHasSelectedStoreInfo,
   userLocation,
 }: UseStoreSearchStateParams) => {
-  const [mapCenter, setMapCenter] = useState<MapSearchPoint | null>(null);
+  const [mapCenter, setMapCenter] = useState<MapSearchPoint | null>(
+    initial?.mapViewport?.center ?? null,
+  );
   const [submittedSearchOrigin, setSubmittedSearchOrigin] =
-    useState<MapSearchPoint | null>(null);
+    useState<MapSearchPoint | null>(initial?.submittedSearchOrigin ?? null);
   const [submittedSearchStores, setSubmittedSearchStores] = useState<
     StoreLocation[] | null
-  >(null);
+  >(initial?.submittedSearchStores ?? null);
   // 좌표가 실제로 바뀐 경우에만 상태를 갱신해 불필요한 재렌더를 막는다.
   const updateMapCenter = useCallback((point: MapSearchPoint) => {
     setMapCenter((prevPoint) =>
@@ -56,14 +69,18 @@ export const useStoreSearchState = ({
     );
   }, []);
   // 검색용 매장 풀: 검색 기준 지역(지도 중심)마다 주변 매장을 조회해 누적한다.
-  const [allStores, setAllStores] = useState<StoreLocation[]>([]);
+  const [allStores, setAllStores] = useState<StoreLocation[]>(
+    initial?.allStores ?? [],
+  );
   const loadedSearchAreaKeyRef = useRef("");
   // 지금 보이는 지도 영역(지도 이동·확대/축소가 끝날 때마다 갱신)
-  const [mapViewport, setMapViewport] = useState<MapViewport | null>(null);
+  const [mapViewport, setMapViewport] = useState<MapViewport | null>(
+    initial?.mapViewport ?? null,
+  );
   // 텍스트 검색 정렬 중심 좌표의 출처: 내 위치 버튼·위치 허용 → "user", 사용자가 지도를 직접 옮김 → "map"
   const [searchAnchorSource, setSearchAnchorSourceState] = useState<
     "user" | "map"
-  >("user");
+  >(initial?.searchAnchorSource ?? "user");
   /**
    * 뱃지(태그) 검색의 기준 영역.
    * 뱃지 검색 결과에 맞춰 지도가 자동으로 옮겨지고 확대돼도 기준은 그대로 둬서,
@@ -116,7 +133,7 @@ export const useStoreSearchState = ({
 
     return true;
   };
-  /** 지금 보이는 지도 영역을 덮는 조회 중심·반경(km). 반경은 화면 중심→모서리 거리, 최대 3km. */
+  /** 지금 보이는 지도 영역을 덮는 조회 중심·반경(km). 반경은 화면 중심→모서리 거리, 최대 5km(BE 상한). */
   const getVisibleAreaQuery = (viewport: MapViewport | null = mapViewport) =>
     getViewportAreaQuery(viewport, searchCenter);
   /**
@@ -225,6 +242,7 @@ export const useStoreSearchState = ({
     mapViewport,
     restorePreTagSearchStores,
     searchAddedStoreIdsRef,
+    searchAnchorSource,
     searchCenter,
     searchVisibleArea,
     setAllStores,

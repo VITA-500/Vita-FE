@@ -1,3 +1,4 @@
+import { isDesktopWidth } from "@/features/store/lib/desktopBreakpoint";
 /**
  * 매장 정보 카드 위치 계산 공통 값.
  * - 선택 매장으로 지도 중심을 옮길 때와, 카드가 지도 위쪽 밖으로 나가지 않게 막을 때 같은 값을 쓴다.
@@ -41,7 +42,7 @@ export type KakaoMapWithProjection = KakaoMap & {
 };
 
 export const getStoreCardTopInset = (containerWidth: number) =>
-  containerWidth >= 768
+  isDesktopWidth(containerWidth)
     ? STORE_CARD_TOP_INSET_DESKTOP
     : STORE_CARD_TOP_INSET_MOBILE;
 
@@ -112,7 +113,7 @@ export const getRouteVisiblePadding = (
   padding: MapFitPadding,
   containerWidth: number,
 ): MapFitPadding =>
-  containerWidth >= 768
+  isDesktopWidth(containerWidth)
     ? { ...ROUTE_TIGHT_FIT_PADDING, left: padding.left }
     : padding;
 
@@ -231,15 +232,14 @@ export const getRouteFitPadding = ({
   selectedStoreCardLeftInset: number;
 }) => ({
   bottom: Math.max(96, routeBottomInset ? routeBottomInset + 24 : 0),
-  left:
-    containerWidth >= 768
-      ? Math.max(
-          48,
-          selectedStoreCardLeftInset ? selectedStoreCardLeftInset + 24 : 0,
-          // 출발-경로-도착이 왼쪽 매장 목록 패널 아래로 가려지지 않도록 패널 폭만큼 비운다.
-          routeLeftInset ? routeLeftInset + 32 : 0,
-        )
-      : 48,
+  left: isDesktopWidth(containerWidth)
+    ? Math.max(
+        48,
+        selectedStoreCardLeftInset ? selectedStoreCardLeftInset + 24 : 0,
+        // 출발-경로-도착이 왼쪽 매장 목록 패널 아래로 가려지지 않도록 패널 폭만큼 비운다.
+        routeLeftInset ? routeLeftInset + 32 : 0,
+      )
+    : 48,
   right: 72,
   // 길찾기 카드는 도착 매장 핀 위에 붙어 뜨므로, 위쪽에 카드가 들어갈 자리를 남긴다.
   top: hasStoreCard
@@ -247,7 +247,7 @@ export const getRouteFitPadding = ({
       getStoreCardHeight(cardElement, 240) +
       STORE_CARD_MARKER_GAP
     : // 카드가 없으면(매장 정보는 사이드바에) 위쪽은 검색창 줄만 피한다. 모바일은 검색창·필터 줄이 더 높다.
-      containerWidth >= 768
+      isDesktopWidth(containerWidth)
       ? 72
       : 160,
 });
@@ -258,7 +258,7 @@ export const getDefaultPinFitPadding = (
   routeLeftInset: number,
 ): MapFitPadding => ({
   bottom: 72,
-  left: containerWidth >= 768 ? Math.max(48, routeLeftInset + 32) : 48,
+  left: isDesktopWidth(containerWidth) ? Math.max(48, routeLeftInset + 32) : 48,
   right: 96,
   top: 120,
 });

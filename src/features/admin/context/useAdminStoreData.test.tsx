@@ -87,4 +87,22 @@ describe("partner store filters", () => {
       queryKey: adminQueryKeys.benefitsAll,
     });
   });
+  it("filters by one benefit and clears it when a category is selected", async () => {
+    const { result } = setup();
+    await waitFor(() => expect(result.current.isStoreLoading).toBe(false));
+
+    act(() => result.current.setStoreBenefitId(17));
+    await waitFor(() =>
+      expect(adminStoreService.fetchStores).toHaveBeenLastCalledWith(
+        expect.objectContaining({ benefitId: 17, category: undefined }),
+      ),
+    );
+
+    act(() => result.current.setStoreCategory("여가"));
+    await waitFor(() =>
+      expect(adminStoreService.fetchStores).toHaveBeenLastCalledWith(
+        expect.objectContaining({ benefitId: undefined, category: "여가" }),
+      ),
+    );
+  });
 });

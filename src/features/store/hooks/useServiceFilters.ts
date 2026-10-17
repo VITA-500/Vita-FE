@@ -14,19 +14,24 @@ type UseServiceFiltersParams = {
   allStores: StoreLocation[];
   /** 지금 지도에 불러온 매장 */
   stores: StoreLocation[];
+  /** 로그인 후 돌아와 되살릴 선택 값(storeMapSnapshot) */
+  initialConsultServiceFilters?: string[];
+  initialProvidedServiceFilters?: string[];
 };
 
 /** 상담·서비스 필터 뱃지: 선택 값, 뱃지 옵션, 뱃지 색, 매장 거르기 */
 export const useServiceFilters = ({
   allStores,
+  initialConsultServiceFilters,
+  initialProvidedServiceFilters,
   stores,
 }: UseServiceFiltersParams) => {
   const [consultServiceFilters, setConsultServiceFilters] = useState<string[]>(
-    [],
+    initialConsultServiceFilters ?? [],
   );
   const [providedServiceFilters, setProvidedServiceFilters] = useState<
     string[]
-  >([]);
+  >(initialProvidedServiceFilters ?? []);
   // 필터 뱃지 옵션: 지역을 옮길 때마다 순서·구성이 바뀌어 뱃지가 자리를 옮기지 않도록
   // 지금까지 불러온 모든 매장(검색 풀 포함)과 선택 중인 값을 합쳐 가나다순으로 고정한다.
   const consultServiceFilterOptions = useMemo(

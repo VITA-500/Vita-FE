@@ -1,8 +1,9 @@
-import { routes } from "@/shared/constants/routes";
+import { useRouter } from "next/navigation";
+import { buildLoginHref } from "@/features/auth/lib/loginReturn";
 import { StoreReservationFields } from "@/features/store/components/StoreReservationFields";
 import { useReservationSlots } from "@/features/store/hooks/useReservationSlots";
 import type { StoreLocation } from "@/features/store/types";
-import { Button, ButtonLink } from "@/shared/ui/Button";
+import { Button } from "@/shared/ui/Button";
 import { Modal } from "@/shared/ui/Modal";
 
 type StorePanelModalsProps = {
@@ -12,6 +13,10 @@ type StorePanelModalsProps = {
   isLocationRequesting: boolean;
   isLoginRequiredModalOpen: boolean;
   isReservationSubmitting: boolean;
+  /** 로그인 후 돌아올 화면. 없으면 지금 화면(주소)으로 돌아온다. */
+  loginReturnTo?: string;
+  /** "로그인하기"로 로그인 화면에 가기 직전(지금 보던 상태 저장 등) */
+  onBeforeLogin?: () => void;
   maxReservationDate: string;
   minReservationDate: string;
   onDismissLocationPermission: () => void;
@@ -33,6 +38,8 @@ export const StorePanelModals = ({
   isLocationRequesting,
   isLoginRequiredModalOpen,
   isReservationSubmitting,
+  loginReturnTo,
+  onBeforeLogin,
   maxReservationDate,
   minReservationDate,
   onDismissLocationPermission,
@@ -46,6 +53,17 @@ export const StorePanelModals = ({
   reservationStore,
   reservationTime,
 }: StorePanelModalsProps) => {
+  const router = useRouter();
+  /** 로그인 화면으로 간다. 로그인을 마치면 들어오기 전 화면으로 돌아온다. */
+  const goToLogin = () => {
+    onBeforeLogin?.();
+    onLoginRequiredClose();
+    router.push(
+      buildLoginHref(
+        loginReturnTo ?? `${window.location.pathname}${window.location.search}`,
+      ),
+    );
+  };
   const {
     handleReservationDateChange,
     isReservationTimeAvailable,
@@ -148,9 +166,9 @@ export const StorePanelModals = ({
             >
               닫기
             </Button>
-            <ButtonLink href={routes.login} size="sm">
+            <Button size="sm" onClick={goToLogin}>
               로그인하기
-            </ButtonLink>
+            </Button>
           </>
         }
       >

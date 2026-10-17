@@ -12,6 +12,7 @@ import { filterStoresByOpenFilter } from "@/features/store/lib/storeOpenHours";
 import {
   buildSearchableStores,
   defaultMapLocation,
+  findStoreById,
   sortStoresByDistance,
   type MapSearchPoint,
 } from "@/features/store/lib/storePanelStores";
@@ -90,10 +91,11 @@ export const useStoreSearchResults = ({
       : filterOpenStores(benefitStores);
   const categorySelectedStore =
     activeMapCategory === "store" || activeMapCategory === "benefit"
-      ? (categoryDisplayStores.find(
-          (store) => store.id === selectedStore?.id,
+      ? (findStoreById(
+          selectedStore?.id,
+          categoryDisplayStores,
+          categoryStores,
         ) ??
-        categoryStores.find((store) => store.id === selectedStore?.id) ??
         categoryDisplayStores[0] ??
         categoryStores[0])
       : undefined;

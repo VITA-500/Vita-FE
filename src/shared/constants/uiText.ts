@@ -24,9 +24,9 @@ export const uiText = {
       "현재 위치를 기준으로 가까운 매장을 찾고\n지도에서 위치와 거리를 한눈에 확인할 수 있어요.",
 
     recommendLabel: "03  추천",
-    recommendTitle: "나에게 맞는 요금제를\n한눈에 비교해보세요.",
+    recommendTitle: "궁금한 요금제를\n한눈에 확인해보세요.",
     recommendDescription:
-      "사용 패턴과 상담 내용을 바탕으로\n추천 요금제와 주요 혜택을 쉽게 비교할 수 있어요.",
+      "상담에서 안내받은 요금제의 월 요금과\n주요 혜택을 카드로 확인할 수 있어요.",
 
     featureLabel: "주요 기능",
     featureTitle: "통신 정보,\n여기저기 찾지 마세요.",
@@ -34,14 +34,14 @@ export const uiText = {
 
     features: [
       {
-        title: "FAQ 둘러보기",
+        title: "FAQ 기반 AI 상담",
         description:
-          "카테고리별 질문을 직접 찾아보고 자주 묻는 내용을 빠르게 확인해요.",
+          "궁금한 내용을 물어보면 관련 FAQ를 찾아 필요한 답변을 정리해드려요.",
       },
       {
-        title: "요금제 비교",
+        title: "요금제 안내",
         description:
-          "가상의 요금제를 나란히 두고 조건과 차이를 한눈에 비교해요.",
+          "상담에서 안내받은 요금제의 월 요금과 주요 혜택을 카드로 확인해요.",
       },
       {
         title: "최근 본 매장",

@@ -43,6 +43,7 @@ export type { MapFitPadding } from "@/features/store/lib/mapFit";
 export const StoreMapPreview = ({
   className,
   focusPoint,
+  initialLevel,
   isCompact = false,
   isFullBleed = false,
   isRouteCardDocked = false,
@@ -80,6 +81,8 @@ export const StoreMapPreview = ({
   pinAutoFitKey = "",
   isPinAutoFitPaused = false,
   shouldSkipPinAutoFit,
+  cameraOwnerRef,
+  onUserCameraControl,
   onSelectedStoreCardClose,
   onSearchFromMapPoint,
 }: StoreMapPreviewProps) => {
@@ -146,6 +149,7 @@ export const StoreMapPreview = ({
     selectedStoreCard,
     selectedStoreCardLeftInset,
     selectedStoreCardRef,
+    onUserCameraControl,
   });
 
   const {
@@ -170,6 +174,7 @@ export const StoreMapPreview = ({
     focusPoint,
     focusPointRef,
     getRouteObstacleRect,
+    initialLevel,
     isKakaoMapReady,
     isRouteCardDocked,
     isRouteCardHeld,
@@ -182,6 +187,7 @@ export const StoreMapPreview = ({
     markRouteFitReadyRef,
     onCenterChange,
     onMapPointSelect,
+    onUserCameraControl,
     onRouteObstructed,
     onSearchFromMapPoint,
     onSelectedStoreCardClose,
@@ -218,7 +224,8 @@ export const StoreMapPreview = ({
     storesRef.current = stores;
     getPinFitPaddingRef.current = getPinFitPadding;
     isPinAutoFitPausedRef.current = isPinAutoFitPaused;
-    shouldSkipPinAutoFitRef.current = shouldSkipPinAutoFit;
+    shouldSkipPinAutoFitRef.current = () =>
+      cameraOwnerRef?.current === "user" || shouldSkipPinAutoFit?.() === true;
     routeLeftInsetRef.current = routeLeftInset;
   });
 

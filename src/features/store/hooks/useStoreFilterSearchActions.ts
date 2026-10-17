@@ -1,10 +1,9 @@
 "use client";
 
-import { useRef } from "react";
 import type { StoreSearchActionsParams } from "@/features/store/hooks/storeSearchActionsParams";
-import { usePinAutoFitSkip } from "@/features/store/hooks/usePinAutoFitSkip";
 import type { MapViewport } from "@/features/store/lib/storePanelStores";
 import { showToast } from "@/shared/ui/ToastProvider";
+import { isDesktopWidth } from "@/features/store/lib/desktopBreakpoint";
 
 export type { StoreSearchActionsParams };
 
@@ -34,6 +33,7 @@ export const useStoreFilterSearchActions = ({
   searchQuery,
   searchVisibleArea,
   setAllStores,
+  setCameraOwner,
   setConsultServiceFilters,
   setHasSelectedStoreInfo,
   setIsSearchHistoryOpen,
@@ -49,11 +49,6 @@ export const useStoreFilterSearchActions = ({
   updateMapCenter,
   updateStoresByLocation,
 }: StoreSearchActionsParams) => {
-  // 필터 해제 직후 잠시 핀 자동 맞춤(지도 이동)을 멈춰 보던 화면을 그대로 둔다.
-  const { isPinAutoFitSkippedRef, skipPinAutoFitForAWhile } =
-    usePinAutoFitSkip();
-  // 뱃지(필터) 검색 중 사용자가 지도를 끌어 옮겼다: 이동이 끝나면(idle) 보이는 영역에서 다시 찾는다.
-  const shouldRefreshTagSearchOnIdleRef = useRef(false);
   /**
    * 필터 뱃지 변경. 검색창이 비어 있거나 이미 태그 검색(#…) 중이면
    * 선택한 뱃지를 "#텍스트"로 입력창에 넣고, 현재 지도 영역에서 매장을 다시 조회해 목록·핀으로 보여준다.
@@ -62,6 +57,7 @@ export const useStoreFilterSearchActions = ({
     kind: "consult" | "provided",
     nextValue: string[],
   ) => {
+    setCameraOwner("auto");
     const nextConsult = kind === "consult" ? nextValue : consultServiceFilters;
     const nextProvided =
       kind === "provided" ? nextValue : providedServiceFilters;
@@ -90,6 +86,7 @@ export const useStoreFilterSearchActions = ({
     { forceFetch = false }: { forceFetch?: boolean } = {},
   ) => {
     const tags = [...nextConsult, ...nextProvided];
+    setCameraOwner(tags.length === 0 ? "user" : "auto");
 
     setSearchQuery(tags.map((tag) => `#${tag}`).join(" "));
     setIsSearchHistoryOpen(false);
@@ -98,7 +95,6 @@ export const useStoreFilterSearchActions = ({
     // 그 화면의 매장(필터 없이)을 불러와, 사용자가 그 지역에서 다시 검색하거나 뱃지를 고를 수 있게 한다.
     if (tags.length === 0) {
       restorePreTagSearchStores();
-      skipPinAutoFitForAWhile();
       updateStoresByLocation(mapViewport?.center ?? searchCenter);
       return;
     }
@@ -107,7 +103,7 @@ export const useStoreFilterSearchActions = ({
     setHasSelectedStoreInfo(false);
 
     // 모바일은 목록 패널이 화면을 크게 덮으므로 필터 선택만으로 목록을 펼치지 않는다(지도 핀으로 먼저 확인).
-    if (window.innerWidth >= 768) {
+    if (isDesktopWidth(window.innerWidth)) {
       setIsStoreListCollapsed(false);
     }
 
@@ -151,39 +147,45 @@ export const useStoreFilterSearchActions = ({
 
     return true;
   };
-  /** 지도 이동·확대/축소가 끝날 때: 보이는 영역을 기억하고, 텍스트 검색 중 사용자가 지도를 옮겼으면 자동 재검색 */
+  /**
+   * 지도 이동·확대/축소가 끝날 때(idle): 보이는 영역과 중심만 기억한다.
+   * 지도를 옮겨도 여기서는 다시 검색하지 않는다(화면만 둘러보려는 사용자를 헷갈리게 하지 않도록).
+   * 핀 자동 맞춤·확대/축소 같은 이동도 idle을 내므로, 자동 재검색은 사용자가 끌어 옮겼을 때만 한다(refreshTagSearchAfterDrag).
+   */
   const handleViewportChange = (viewport: MapViewport) => {
-    // 지도를 옮겨도 자동으로 다시 검색하지 않는다(화면만 둘러보려는 사용자를 헷갈리게 하지 않도록).
-    // 다시 찾기는 "이 위치에서 검색" 버튼으로만 한다(searchInCurrentArea).
-    // 단, 뱃지(필터) 검색 중에는 결과가 처음 찾은 지역에 묶여 옮긴 화면에 핀이 뜨지 않으므로,
-    // 사용자가 직접 끌어 옮긴 경우에 한해 선택한 뱃지를 유지한 채 보이는 영역에서 다시 찾는다.
     setMapViewport(viewport);
     updateMapCenter(viewport.center);
-
-    if (!shouldRefreshTagSearchOnIdleRef.current) {
-      return;
-    }
-
-    shouldRefreshTagSearchOnIdleRef.current = false;
-
+  };
+  /**
+   * 뱃지(필터) 검색 중 사용자가 지도를 끌어 옮겼을 때(dragend): 선택한 뱃지를 유지한 채 옮긴 영역에서 바로 다시 찾는다.
+   * (뱃지 검색 결과는 처음 찾은 지역에 묶여 있어 옮긴 화면에 핀이 뜨지 않으므로)
+   * 사용자가 고른 화면을 그대로 두도록 결과에 맞춘 지도 자동 이동은 다음 결과 변경 동작까지 멈춘다.
+   * 다시 찾았으면 true, 뱃지 검색 중이 아니라 다시 찾지 않았으면 false("이 위치에서 검색" 버튼을 띄운다).
+   */
+  const refreshTagSearchAfterDrag = (viewport: MapViewport) => {
     if (
       !isTagSearchQuery ||
       !hasActiveServiceFilter ||
       routeDestinationStoreId
     ) {
-      return;
+      return false;
     }
 
+    handleViewportChange(viewport);
     setSearchPoint(null);
     setSoloStoreId("");
+    setCameraOwner("user");
     void searchVisibleArea("tag", { viewport }).then((results) => {
       if (results && filterStoresByServices(results).length === 0) {
         showToast("이 지역에는 선택한 서비스를 제공하는 매장이 없어요.");
       }
     });
+
+    return true;
   };
   /** 뱃지 필터를 모두 해제하고 기본 검색 방식(내 위치/기본 위치 주변 매장)으로 되돌린다. */
   const clearServiceFilters = () => {
+    setCameraOwner(isTagSearchQuery ? "user" : "auto");
     setConsultServiceFilters([]);
     setProvidedServiceFilters([]);
 
@@ -242,7 +244,6 @@ export const useStoreFilterSearchActions = ({
     clearTextSearchSession,
     handleServiceFilterChange,
     handleViewportChange,
-    isPinAutoFitSkippedRef,
-    shouldRefreshTagSearchOnIdleRef,
+    refreshTagSearchAfterDrag,
   };
 };
