@@ -32,6 +32,7 @@ type UseMapZoomParams = {
   selectedStoreCard?: ReactNode;
   selectedStoreCardLeftInset: number;
   selectedStoreCardRef: RefObject<HTMLDivElement | null>;
+  onUserCameraControl?: () => void;
 };
 
 /**
@@ -48,6 +49,7 @@ export const useMapZoom = ({
   selectedStoreCard,
   selectedStoreCardLeftInset,
   selectedStoreCardRef,
+  onUserCameraControl,
 }: UseMapZoomParams) => {
   const zoomFocusTimeoutRef = useRef<number | undefined>(undefined);
   const zoomSettleTimeoutRef = useRef<number | undefined>(undefined);
@@ -62,6 +64,7 @@ export const useMapZoom = ({
   );
 
   const adjustZoomLevel = (direction: "in" | "out") => {
+    onUserCameraControl?.();
     const map = mapRef.current;
 
     if (!map) {

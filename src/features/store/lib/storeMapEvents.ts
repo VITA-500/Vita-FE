@@ -33,6 +33,7 @@ export const bindStoreMapEvents = ({
   markRouteFitReadyRef,
   onCenterChange,
   onMapPointSelect,
+  onUserCameraControl,
   onRouteObstructed,
   onSelectedStoreCardClose,
   onViewportChange,
@@ -65,6 +66,7 @@ export const bindStoreMapEvents = ({
     };
   };
   const handleMapDragEnd = () => {
+    onUserCameraControl?.();
     const movedCenter = (map as KakaoMapWithCenter).getCenter();
 
     // 카카오맵은 드래그를 놓을 때 idle을 dragend보다 먼저 보낸다(지도는 이미 멈춘 상태).

@@ -1,7 +1,6 @@
 "use client";
 
 import type { StoreSearchActionsParams } from "@/features/store/hooks/storeSearchActionsParams";
-import { usePinAutoFitSkip } from "@/features/store/hooks/usePinAutoFitSkip";
 import type { MapViewport } from "@/features/store/lib/storePanelStores";
 import { showToast } from "@/shared/ui/ToastProvider";
 import { isDesktopWidth } from "@/features/store/lib/desktopBreakpoint";
@@ -34,6 +33,7 @@ export const useStoreFilterSearchActions = ({
   searchQuery,
   searchVisibleArea,
   setAllStores,
+  setCameraOwner,
   setConsultServiceFilters,
   setHasSelectedStoreInfo,
   setIsSearchHistoryOpen,
@@ -49,9 +49,6 @@ export const useStoreFilterSearchActions = ({
   updateMapCenter,
   updateStoresByLocation,
 }: StoreSearchActionsParams) => {
-  // 필터 해제 직후 잠시 핀 자동 맞춤(지도 이동)을 멈춰 보던 화면을 그대로 둔다.
-  const { isPinAutoFitSkippedRef, skipPinAutoFitForAWhile } =
-    usePinAutoFitSkip();
   /**
    * 필터 뱃지 변경. 검색창이 비어 있거나 이미 태그 검색(#…) 중이면
    * 선택한 뱃지를 "#텍스트"로 입력창에 넣고, 현재 지도 영역에서 매장을 다시 조회해 목록·핀으로 보여준다.
@@ -60,6 +57,7 @@ export const useStoreFilterSearchActions = ({
     kind: "consult" | "provided",
     nextValue: string[],
   ) => {
+    setCameraOwner("auto");
     const nextConsult = kind === "consult" ? nextValue : consultServiceFilters;
     const nextProvided =
       kind === "provided" ? nextValue : providedServiceFilters;
@@ -88,6 +86,7 @@ export const useStoreFilterSearchActions = ({
     { forceFetch = false }: { forceFetch?: boolean } = {},
   ) => {
     const tags = [...nextConsult, ...nextProvided];
+    setCameraOwner(tags.length === 0 ? "user" : "auto");
 
     setSearchQuery(tags.map((tag) => `#${tag}`).join(" "));
     setIsSearchHistoryOpen(false);
@@ -96,7 +95,6 @@ export const useStoreFilterSearchActions = ({
     // 그 화면의 매장(필터 없이)을 불러와, 사용자가 그 지역에서 다시 검색하거나 뱃지를 고를 수 있게 한다.
     if (tags.length === 0) {
       restorePreTagSearchStores();
-      skipPinAutoFitForAWhile();
       updateStoresByLocation(mapViewport?.center ?? searchCenter);
       return;
     }
@@ -161,7 +159,7 @@ export const useStoreFilterSearchActions = ({
   /**
    * 뱃지(필터) 검색 중 사용자가 지도를 끌어 옮겼을 때(dragend): 선택한 뱃지를 유지한 채 옮긴 영역에서 바로 다시 찾는다.
    * (뱃지 검색 결과는 처음 찾은 지역에 묶여 있어 옮긴 화면에 핀이 뜨지 않으므로)
-   * 사용자가 고른 화면을 그대로 두도록 결과에 맞춘 지도 자동 이동은 잠시 멈춘다.
+   * 사용자가 고른 화면을 그대로 두도록 결과에 맞춘 지도 자동 이동은 다음 결과 변경 동작까지 멈춘다.
    * 다시 찾았으면 true, 뱃지 검색 중이 아니라 다시 찾지 않았으면 false("이 위치에서 검색" 버튼을 띄운다).
    */
   const refreshTagSearchAfterDrag = (viewport: MapViewport) => {
@@ -176,11 +174,8 @@ export const useStoreFilterSearchActions = ({
     handleViewportChange(viewport);
     setSearchPoint(null);
     setSoloStoreId("");
-    skipPinAutoFitForAWhile();
+    setCameraOwner("user");
     void searchVisibleArea("tag", { viewport }).then((results) => {
-      // 응답이 늦게 와도 새 핀이 꽂힐 때 지도가 움직이지 않도록 결과 도착 시점부터 다시 잠깐 멈춘다.
-      skipPinAutoFitForAWhile();
-
       if (results && filterStoresByServices(results).length === 0) {
         showToast("이 지역에는 선택한 서비스를 제공하는 매장이 없어요.");
       }
@@ -190,6 +185,7 @@ export const useStoreFilterSearchActions = ({
   };
   /** 뱃지 필터를 모두 해제하고 기본 검색 방식(내 위치/기본 위치 주변 매장)으로 되돌린다. */
   const clearServiceFilters = () => {
+    setCameraOwner(isTagSearchQuery ? "user" : "auto");
     setConsultServiceFilters([]);
     setProvidedServiceFilters([]);
 
@@ -248,7 +244,6 @@ export const useStoreFilterSearchActions = ({
     clearTextSearchSession,
     handleServiceFilterChange,
     handleViewportChange,
-    isPinAutoFitSkippedRef,
     refreshTagSearchAfterDrag,
   };
 };

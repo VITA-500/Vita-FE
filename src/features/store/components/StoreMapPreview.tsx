@@ -81,6 +81,8 @@ export const StoreMapPreview = ({
   pinAutoFitKey = "",
   isPinAutoFitPaused = false,
   shouldSkipPinAutoFit,
+  cameraOwnerRef,
+  onUserCameraControl,
   onSelectedStoreCardClose,
   onSearchFromMapPoint,
 }: StoreMapPreviewProps) => {
@@ -147,6 +149,7 @@ export const StoreMapPreview = ({
     selectedStoreCard,
     selectedStoreCardLeftInset,
     selectedStoreCardRef,
+    onUserCameraControl,
   });
 
   const {
@@ -184,6 +187,7 @@ export const StoreMapPreview = ({
     markRouteFitReadyRef,
     onCenterChange,
     onMapPointSelect,
+    onUserCameraControl,
     onRouteObstructed,
     onSearchFromMapPoint,
     onSelectedStoreCardClose,
@@ -220,7 +224,8 @@ export const StoreMapPreview = ({
     storesRef.current = stores;
     getPinFitPaddingRef.current = getPinFitPadding;
     isPinAutoFitPausedRef.current = isPinAutoFitPaused;
-    shouldSkipPinAutoFitRef.current = shouldSkipPinAutoFit;
+    shouldSkipPinAutoFitRef.current = () =>
+      cameraOwnerRef?.current === "user" || shouldSkipPinAutoFit?.() === true;
     routeLeftInsetRef.current = routeLeftInset;
   });
 

@@ -61,6 +61,7 @@ export type StoreSearchActionsParams = Pick<
     "setIsSearchHistoryOpen" | "setIsStoreListCollapsed"
   > &
   Pick<ReturnType<typeof useStoreSearchHistory>, "addHistory"> & {
+    setCameraOwner: (owner: "user" | "auto") => void;
     /** 지금 정보 카드가 떠 있는(또는 길찾기 도착) 매장 */
     mapSelectedStore?: StoreLocation;
     searchInputRef: RefObject<HTMLInputElement | null>;
