@@ -11,12 +11,11 @@ type StoreMapPanelMapProps = Pick<
   | "focusUserLocation"
   | "handleStoreSelect"
   | "handleViewportChange"
-  | "hasActiveServiceFilter"
   | "hasSelectedStoreInfo"
+  | "initialMapLevel"
   | "isMapSearchLoading"
   | "isOtherStoresVisible"
   | "isPinAutoFitSkippedRef"
-  | "isTagSearchQuery"
   | "locationStatus"
   | "mapSelectedStore"
   | "mapSelectedStoreId"
@@ -24,6 +23,7 @@ type StoreMapPanelMapProps = Pick<
   | "markerColorInfoById"
   | "markerLabelById"
   | "otherMapStores"
+  | "refreshTagSearchAfterDrag"
   | "routeDestinationStoreId"
   | "routeLeftInset"
   | "routePreview"
@@ -34,7 +34,7 @@ type StoreMapPanelMapProps = Pick<
   | "setRouteMapReadyKey"
   | "setSearchAnchorSource"
   | "setSearchPoint"
-  | "shouldRefreshTagSearchOnIdleRef"
+  | "shouldSkipRestoredPinAutoFit"
   | "visibleMapStores"
 > & {
   getPinFitPadding: (container: {
@@ -65,15 +65,14 @@ export const StoreMapPanelMap = ({
   getPinFitPadding,
   handleStoreSelect,
   handleViewportChange,
-  hasActiveServiceFilter,
   hasSelectedStoreInfo,
+  initialMapLevel,
   isBenefitCategory,
   isDesktop,
   isListOpen,
   isMapSearchLoading,
   isOtherStoresVisible,
   isPinAutoFitSkippedRef,
-  isTagSearchQuery,
   locationStatus,
   mapSelectedStore,
   mapSelectedStoreId,
@@ -82,6 +81,7 @@ export const StoreMapPanelMap = ({
   markerLabelById,
   otherMapStores,
   panelLeftInset,
+  refreshTagSearchAfterDrag,
   routeDestinationStoreId,
   routeFocusTarget,
   routeLeftInset,
@@ -95,7 +95,7 @@ export const StoreMapPanelMap = ({
   setSearchAnchorSource,
   setSearchPoint,
   sheetBottomInset,
-  shouldRefreshTagSearchOnIdleRef,
+  shouldSkipRestoredPinAutoFit,
   showStoreInfoCard,
   soloStore,
   userLocation,
@@ -104,6 +104,7 @@ export const StoreMapPanelMap = ({
   <StoreMapPreview
     className="absolute inset-0"
     focusPoint={focusPoint}
+    initialLevel={initialMapLevel}
     fitTarget={searchFitTarget}
     markerEnterKey={`${currentStorePage}:${mapStoresKey}`}
     getPinFitPadding={getPinFitPadding}
@@ -111,7 +112,9 @@ export const StoreMapPanelMap = ({
     isPinAutoFitPaused={Boolean(
       routeDestinationStoreId || soloStore || hasSelectedStoreInfo,
     )}
-    shouldSkipPinAutoFit={() => isPinAutoFitSkippedRef.current}
+    shouldSkipPinAutoFit={() =>
+      isPinAutoFitSkippedRef.current || shouldSkipRestoredPinAutoFit()
+    }
     isFullBleed
     isSearchFromMapPointLoading={isMapSearchLoading}
     routePreview={routePreview}
@@ -129,11 +132,21 @@ export const StoreMapPanelMap = ({
     userLocation={userLocation}
     isUserLocationLoading={locationStatus === "requesting"}
     onFocusUserLocation={focusUserLocation}
-    onMapPointSelect={(point) => {
-      setSearchPoint(point);
-      shouldRefreshTagSearchOnIdleRef.current =
-        !isBenefitCategory && isTagSearchQuery && hasActiveServiceFilter;
+    onMapPointSelect={(point, viewport) => {
       setSearchAnchorSource("map");
+
+      // 뱃지(카테고리) 검색 중이면 옮긴 영역에서 바로 다시 찾고, 아니면 "이 지역에서 재검색" 버튼을 띄운다.
+      // 매장 정보를 보고 있는 중이면 목록이 바뀌지 않도록 자동으로 찾지 않고 버튼만 띄운다.
+      if (
+        !isBenefitCategory &&
+        !showStoreInfoCard &&
+        viewport &&
+        refreshTagSearchAfterDrag(viewport)
+      ) {
+        return;
+      }
+
+      setSearchPoint(point);
     }}
     onViewportChange={handleViewportChange}
     onSearchFromMapPoint={() => {

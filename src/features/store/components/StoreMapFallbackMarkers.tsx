@@ -4,6 +4,7 @@ import {
 } from "@/features/store/lib/mapOverlayElements";
 import type { MarkerColorInfo } from "@/features/store/lib/markerColors";
 import { getFallbackMarkerStyle } from "@/features/store/lib/storeMapFallbackLayout";
+import { STORE_MARKER_DATA_ATTRIBUTE } from "@/features/store/lib/storeMapPreviewTypes";
 import { getStoreMarkerLabel } from "@/features/store/lib/storeMarkerOverlays";
 import {
   getMarkerGradientId,
@@ -64,6 +65,7 @@ export const StoreMapFallbackMarkers = ({
         <button
           key={store.id}
           type="button"
+          {...{ [STORE_MARKER_DATA_ATTRIBUTE]: "" }}
           onClick={() => onSelectStore(store.id)}
           aria-pressed={isSelected}
           className={cn(

@@ -10,12 +10,21 @@ import type { MapOverlayHandle } from "@/features/store/lib/kakaoMapTypes";
 import type { MapFitPadding, MapPoint } from "@/features/store/lib/mapFit";
 import type { RoutePreview } from "@/features/store/lib/mapRoute";
 import type { MarkerColorInfo } from "@/features/store/lib/markerColors";
+import type { MapViewport } from "@/features/store/lib/storePanelStores";
 import type { StoreLocation } from "@/features/store/types";
 
 export const STORE_MAP_CARD_RESIZE_SETTLE_MS = 80;
+/**
+ * 매장 핀(과 같은 위치 매장 목록)에 붙이는 data 속성.
+ * 매장 정보가 열린 채 다른 핀을 누르면 "패널 밖 탭"으로 닫지 않고 그 매장으로 바로 바꾸기 위해 쓴다.
+ */
+export const STORE_MARKER_DATA_ATTRIBUTE = "data-store-marker";
 export type SearchPointRef = MapPoint | null | undefined;
 export type FocusPointRef = MapPoint | null | undefined;
 export type RoutePreviewRef = RoutePreview | null | undefined;
+
+/** 지금 보이는 지도 영역(중심·남서·북동 모서리·확대 레벨) */
+export type MapViewportBounds = MapViewport;
 
 export type StoreMapPreviewProps = {
   className?: string;
@@ -25,6 +34,8 @@ export type StoreMapPreviewProps = {
   /** 길찾기 중 도착 매장 카드인지. 데스크톱에서는 지도 조작(드래그·확대/축소·클릭)으로 닫히지 않는다. */
   isRouteCardDocked?: boolean;
   focusPoint?: MapPoint | null;
+  /** 지도를 처음 만들 때의 확대 레벨(기본 4). 로그인 후 돌아와 보던 화면을 복원할 때 쓴다. */
+  initialLevel?: number;
   isSearchFromMapPointLoading?: boolean;
   selectedStore?: StoreLocation;
   selectedStoreCard?: ReactNode;
@@ -49,15 +60,18 @@ export type StoreMapPreviewProps = {
   routePreview?: RoutePreview | null;
   userLocation?: UserLocation | null;
   isUserLocationLoading?: boolean;
-  onMapPointSelect?: (point: MapPoint) => void;
+  /**
+   * 사용자가 지도를 끌어 옮긴 직후(dragend). 옮긴 지도 중심과 그때 보이는 영역을 함께 알려준다.
+   * (영역을 구하지 못하면 viewport는 null)
+   */
+  onMapPointSelect?: (
+    point: MapPoint,
+    viewport: MapViewportBounds | null,
+  ) => void;
   /** 지도 이동·확대/축소가 끝날 때마다 현재 지도 중심을 알려준다. */
   onCenterChange?: (point: MapPoint) => void;
   /** 지도 이동·확대/축소가 끝날 때마다 지금 보이는 지도 영역(중심·남서·북동 모서리)을 알려준다. */
-  onViewportChange?: (viewport: {
-    center: MapPoint;
-    northEast: MapPoint;
-    southWest: MapPoint;
-  }) => void;
+  onViewportChange?: (viewport: MapViewportBounds) => void;
   /** 매장 id별 핀 글자. 없으면 stores 순서대로 A, B, C… */
   markerLabelById?: Record<string, string>;
   /** 매장 id별 핀 색상 정보. 선택된 서비스 필터가 있으면 색 분할·추가 개수를 반영한다. */
@@ -107,6 +121,7 @@ export type StoreMapEffectContext = Pick<
   StoreMapPreviewProps,
   | "focusPoint"
   | "getRouteObstacleRect"
+  | "initialLevel"
   | "markerColorInfoById"
   | "markerLabelById"
   | "onCenterChange"

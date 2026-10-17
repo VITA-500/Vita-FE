@@ -78,7 +78,7 @@ describe("getViewportAreaQuery", () => {
     });
   });
 
-  it("clamps the radius between 0.3km and 3km", () => {
+  it("clamps the radius between 0.3km and 5km (BE limit)", () => {
     const tiny: MapViewport = {
       center,
       northEast: { lat: 37.5001, lng: 127.0001 },
@@ -91,7 +91,7 @@ describe("getViewportAreaQuery", () => {
     };
 
     expect(getViewportAreaQuery(tiny, center).radiusKm).toBe(0.3);
-    expect(getViewportAreaQuery(huge, center).radiusKm).toBe(3);
+    expect(getViewportAreaQuery(huge, center).radiusKm).toBe(5);
   });
 });
 

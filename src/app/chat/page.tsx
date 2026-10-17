@@ -22,6 +22,7 @@ import type {
 import { useChatConversationController } from "@/features/chat/hooks/useChatConversationController";
 import { useChatTour } from "@/features/chat/hooks/useChatTour";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
+import { buildLoginHref } from "@/features/auth/lib/loginReturn";
 import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
 
@@ -168,7 +169,14 @@ const ChatPageContent = () => {
         onClose={() => setIsSidebarOpen(false)}
         onOpenHome={() => router.push(routes.home)}
         onNewChat={handleNewChat}
-        onOpenLogin={() => router.push(routes.login)}
+        // 로그인 후 지금 보던 화면(상담·매장 지도·마이페이지)으로 돌아온다.
+        onOpenLogin={() =>
+          router.push(
+            buildLoginHref(
+              `${window.location.pathname}${window.location.search}`,
+            ),
+          )
+        }
         onOpenSearch={() => {
           setRailTooltip(null);
           setIsSearchOpen(true);
