@@ -167,6 +167,31 @@ export const useChatConversationHydration = ({
         clearChatSessions();
       }
 
+      // 새로고침하면 localStorage에는 스트리밍 중인 assistant 답변이 저장되지 않을 수 있다.
+      // 현재 세션을 서버에서 다시 읽어 PENDING/COMPLETED 상태와 답변 내용을 복원한다.
+      if (nextConversation?.sessionId) {
+        try {
+          const serverConversation = await chatService.getMessages(
+            nextConversation.sessionId,
+            nextConversation.guestId,
+          );
+
+          if (!isCancelled) {
+            nextConversation = {
+              ...nextConversation,
+              messages: serverConversation.messages.map(toChatMessage),
+            };
+          }
+        } catch (error) {
+          // 서버를 잠시 조회하지 못해도 localStorage의 마지막 화면은 유지한다.
+          console.warn("Chat conversation restore failed", {
+            name: error instanceof Error ? error.name : "UnknownError",
+            status: error instanceof ApiError ? error.status : undefined,
+            sessionId: nextConversation.sessionId,
+          });
+        }
+      }
+
       if (isCancelled) return;
 
       activeConversationOwnerKeyRef.current = ownerKey;
