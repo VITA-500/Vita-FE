@@ -11,15 +11,21 @@ import type { AdminUserStatus } from "@/features/admin/types/adminUsers";
 
 type AdminUserStatusFilter = AdminUserStatus | "";
 
+const faqsAll = ["admin", "faqs"] as const;
+const storesAll = ["admin", "stores"] as const;
+const benefitsAll = ["admin", "benefits"] as const;
+
 export const adminQueryKeys = {
-  benefitsAll: ["admin", "benefits"] as const,
+  faqsAll,
+  storesAll,
+  benefitsAll,
   benefits: (params: {
     category: string;
     keyword: string;
     page: number;
     pageSize: number;
     sortBy: string;
-  }) => ["admin", "benefits", params] as const,
+  }) => [...benefitsAll, params] as const,
   answerFeedbackAll: ["admin", "answerFeedback"] as const,
   answerFeedback: (limit: number) =>
     ["admin", "answerFeedback", { limit }] as const,
@@ -49,8 +55,7 @@ export const adminQueryKeys = {
     status: FaqStatusFilter;
   }) =>
     [
-      "admin",
-      "faqs",
+      ...faqsAll,
       { category, keyword, page, pageSize, sortDirection, sortField, status },
     ] as const,
   stores: ({
@@ -73,8 +78,7 @@ export const adminQueryKeys = {
     benefitId?: number;
   }) =>
     [
-      "admin",
-      "stores",
+      ...storesAll,
       {
         keyword,
         page,
