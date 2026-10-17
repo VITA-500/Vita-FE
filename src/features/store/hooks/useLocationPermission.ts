@@ -6,10 +6,9 @@ import {
   getGeolocationPermissionState,
   LOCATION_CONSENT_STORAGE_KEY,
   LOCATION_MODAL_DISMISSED_STORAGE_KEY,
-  readStorage,
-  writeStorage,
 } from "@/features/store/lib/storePanelStorage";
 import type { UserLocationStatus } from "@/features/store/hooks/useUserLocation";
+import { readStorage, writeStorage } from "@/shared/lib/browserStorage";
 import { showToast } from "@/shared/ui/ToastProvider";
 
 type UseLocationPermissionParams = {

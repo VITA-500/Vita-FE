@@ -9,6 +9,7 @@ import type {
   StoreMapEffectContext,
   StoreMapInstance,
 } from "@/features/store/lib/storeMapPreviewTypes";
+import { isDesktopWidth } from "@/features/store/lib/desktopBreakpoint";
 
 type SelectedStoreCardController = ReturnType<
   typeof createSelectedStoreCardController
@@ -76,8 +77,9 @@ export const bindStoreMapEvents = ({
       getCurrentViewport(),
     );
     // 길찾기 중(데스크톱)에는 지도를 끌어 경로를 살펴봐도 카드를 닫지 않는다.
-    const isDesktop =
-      (mapContainerRef.current?.getBoundingClientRect().width ?? 0) >= 768;
+    const isDesktop = isDesktopWidth(
+      mapContainerRef.current?.getBoundingClientRect().width ?? 0,
+    );
 
     if (!(isRouteCardDocked && isDesktop)) {
       onSelectedStoreCardClose?.();
@@ -100,8 +102,9 @@ export const bindStoreMapEvents = ({
       return;
     }
 
-    const isDesktop =
-      (mapContainerRef.current?.getBoundingClientRect().width ?? 0) >= 768;
+    const isDesktop = isDesktopWidth(
+      mapContainerRef.current?.getBoundingClientRect().width ?? 0,
+    );
 
     if (selectedStore && !(isRouteCardDocked && isDesktop)) {
       onSelectedStoreCardClose?.();

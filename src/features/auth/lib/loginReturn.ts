@@ -1,4 +1,9 @@
 import { routes } from "@/shared/constants/routes";
+import {
+  readStorage,
+  removeStorage,
+  writeStorage,
+} from "@/shared/lib/browserStorage";
 
 /**
  * 로그인 후 돌아갈 화면.
@@ -44,25 +49,18 @@ export const readLoginReturnToFromLocation = () => {
 
 /** 소셜 로그인으로 떠나기 전에 돌아갈 화면을 보관한다(없으면 지운다). */
 export const rememberLoginReturnTo = (returnTo: string | null) => {
-  try {
-    if (returnTo) {
-      window.sessionStorage.setItem(LOGIN_RETURN_STORAGE_KEY, returnTo);
-    } else {
-      window.sessionStorage.removeItem(LOGIN_RETURN_STORAGE_KEY);
-    }
-  } catch {
-    // 저장소를 쓸 수 없으면 로그인 후 기본 화면으로 간다.
+  // 저장소를 쓸 수 없으면 로그인 후 기본 화면으로 간다.
+  if (returnTo) {
+    writeStorage("session", LOGIN_RETURN_STORAGE_KEY, returnTo);
+  } else {
+    removeStorage("session", LOGIN_RETURN_STORAGE_KEY);
   }
 };
 
 /** 소셜 로그인 콜백에서 보관해 둔 돌아갈 화면을 꺼내고 지운다. */
 export const takeRememberedLoginReturnTo = () => {
-  try {
-    const value = window.sessionStorage.getItem(LOGIN_RETURN_STORAGE_KEY);
+  const value = readStorage("session", LOGIN_RETURN_STORAGE_KEY);
 
-    window.sessionStorage.removeItem(LOGIN_RETURN_STORAGE_KEY);
-    return sanitizeLoginReturnTo(value);
-  } catch {
-    return null;
-  }
+  removeStorage("session", LOGIN_RETURN_STORAGE_KEY);
+  return sanitizeLoginReturnTo(value);
 };

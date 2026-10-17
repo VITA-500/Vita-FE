@@ -6,6 +6,7 @@ import type {
 } from "@/features/store/hooks/useStoreFilterSearchActions";
 import type { StoreSearchHistoryItem } from "@/features/store/hooks/useStoreSearchHistory";
 import { showToast } from "@/shared/ui/ToastProvider";
+import { isDesktopWidth } from "@/features/store/lib/desktopBreakpoint";
 
 type UseStoreTextSearchActionsParams = StoreSearchActionsParams &
   Pick<
@@ -130,7 +131,7 @@ export const useStoreTextSearchActions = ({
     }
 
     // 모바일은 목록 패널이 화면을 크게 덮으므로 검색 결과도 지도 핀으로 먼저 보여주고, 목록은 사용자가 직접 펼친다.
-    if (window.innerWidth >= 768) {
+    if (isDesktopWidth(window.innerWidth)) {
       setIsStoreListCollapsed(false);
     }
 

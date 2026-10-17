@@ -16,6 +16,7 @@ import {
 } from "@/features/store/lib/mapFit";
 import type { RoutePreview } from "@/features/store/lib/mapRoute";
 import type { StoreLocation } from "@/features/store/types";
+import { isDesktopWidth } from "@/features/store/lib/desktopBreakpoint";
 
 /** 길찾기 중 확대/축소 전에 초점 지점으로 지도를 미리 옮기는 시간(ms, 카카오 panTo 애니메이션 여유 포함) */
 const ZOOM_FOCUS_PAN_MS = 280;
@@ -90,7 +91,7 @@ export const useMapZoom = ({
 
     // 길찾기 중: 확대는 도착 매장(정보 카드가 떠 있으면 카드 포함), 축소는 경로 전체 가운데를 초점으로 잡아
     // 확대/축소 후 경로와 카드가 검색 패널·카드에 가리지 않는 영역 가운데에 오도록 부드럽게 옮긴다.
-    const isDesktop = containerRect.width >= 768;
+    const isDesktop = isDesktopWidth(containerRect.width);
     const leftInset = isDesktop
       ? Math.max(selectedStoreCardLeftInset, routeLeftInset + 16)
       : 0;

@@ -1,6 +1,7 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
+import { findStoreById } from "@/features/store/lib/storePanelStores";
 import { storeService } from "@/features/store/lib/storeService";
 import type {
   MapCategory,
@@ -49,11 +50,13 @@ export const useInitialStoreAction = ({
 
     setRouteReturnServices(action.activeServices ?? []);
 
-    const fallback =
-      categoryDisplayStores.find((store) => store.id === action.storeId) ??
-      categoryStores.find((store) => store.id === action.storeId) ??
-      searchableStores.find((store) => store.id === action.storeId) ??
-      stores.find((store) => store.id === action.storeId);
+    const fallback = findStoreById(
+      action.storeId,
+      categoryDisplayStores,
+      categoryStores,
+      searchableStores,
+      stores,
+    );
     const storeDetail = await storeService
       .fetchStoreDetail(action.storeId, fallback)
       .catch(() => null);
