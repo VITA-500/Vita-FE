@@ -23,13 +23,32 @@ className = "bg-surface-muted text-text-secondary";
 
 ## Component Ownership
 
-| Location                | Use                                                  |
-| ----------------------- | ---------------------------------------------------- |
-| `shared/ui`             | 여러 화면에서 재사용되는 UI primitive 또는 global UI |
-| `shared/layout`         | Header, Footer, page-level layout controls           |
-| `features/*/components` | 특정 feature에 묶인 UI                               |
+| Location                  | Use                                                                  |
+| ------------------------- | -------------------------------------------------------------------- |
+| `shared/ui/atoms`         | 더 쪼갤 수 없는 UI primitive                                         |
+| `shared/ui/molecules`     | atom 조합, 자체 상태가 거의 없는 UI                                  |
+| `shared/ui/organisms`     | 자체 상태·동작이 있는 UI 묶음 (도메인을 모르는 것만)                 |
+| `shared/providers`        | ThemeProvider, ToastProvider 등 앱 전역 provider                     |
+| `shared/layout`           | Header, Footer, page-level layout controls                           |
+| `entities/*/ui`           | 특정 데이터에 묶인 작은 UI (매장 핀, 영업 상태 배지, 요금제 카드 등) |
+| `features/*/components`   | 특정 feature에 묶인 UI                                               |
+| `app/{route}/_components` | 한 화면을 조립하는 컴포넌트 (여러 feature를 합치는 곳)               |
 
-Feature UI가 두 곳 이상에서 반복되기 전까지는 `shared/ui`로 올리지 않는다. 반복되거나 정책이 생긴 컴포넌트만 shared로 이동한다.
+Feature UI가 두 곳 이상에서 반복되기 전까지는 `shared/ui`로 올리지 않는다. 반복되거나 정책이 생긴 컴포넌트만 shared로 이동한다. 특정 데이터(매장, 요금제, 상담 등)를 아는 컴포넌트는 여러 곳에서 쓰더라도 `shared`가 아니라 해당 `entities/*/ui`에 둔다.
+
+## Shared UI Hierarchy
+
+`shared/ui`는 Atomic Design의 세 단계만 사용한다. templates·pages 단계는 `app`이 맡는다. Atomic 구분은 `shared/ui`에만 적용하고, `entities`·`features` 안 컴포넌트에는 적용하지 않는다.
+
+| 단계        | 기준                                                          | 예                                                                           |
+| ----------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `atoms`     | 더 쪼갤 수 없다. 다른 shared UI를 조합하지 않는다.            | Button, TextField, Select, Logo, UserAvatar, AnimatedLockIcon                |
+| `molecules` | atom을 조합한다. 열림 여부 정도를 빼면 자체 상태가 거의 없다. | SearchInput, FilterDropdown, CalendarDateField, ConfirmCheckbox, RailTooltip |
+| `organisms` | 자체 상태·동작(포커스, 단계 진행, portal 등)이 있는 묶음이다. | Modal, PortalDialog, GuidedStepFlow, Accordion                               |
+
+- 판단이 애매하면 "다른 shared UI를 조합하는가(atom 아님)", "열고 닫기 외의 상태나 키보드·포커스 처리를 가지는가(organism)" 순서로 본다.
+- 아래 단계는 위 단계를 import하지 않는다(atoms → molecules·organisms import 금지, molecules → organisms import 금지).
+- 한 feature에서만 쓰는 컴포넌트(예: 채팅 답변 카드)는 단계 분류 대상이 아니며, 해당 feature나 entity로 옮긴다.
 
 ## Shared UI Rules
 
