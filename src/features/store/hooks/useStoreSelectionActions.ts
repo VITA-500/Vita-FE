@@ -211,7 +211,7 @@ export const useStoreSelectionActions = ({
   };
 
   const handleRouteStart = (store: StoreLocation) => {
-    startRoute(store.id);
+    startRoute(store);
     // 모바일도 길찾기 정보를 바텀 시트에 바로 띄운다(경로는 시트 위쪽 지도 영역에 맞춘다).
     handleStoreSelect(store.id, { focusMap: true });
 

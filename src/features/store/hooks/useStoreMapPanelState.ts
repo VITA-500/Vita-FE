@@ -175,11 +175,12 @@ export const useStoreMapPanelState = (
     userLocation,
   });
   const { categorySelectedStore, categoryStores, mapStores } = results;
-  const routeDestinationStore = findStoreById(
-    routeDestinationStoreId,
-    categoryStores,
-    stores,
-  );
+  // 목록에서 찾은 최신 정보를 우선 쓰고, 목록이 다시 조회돼 빠졌으면 길찾기를 시작할 때의 매장으로 그린다.
+  const routeDestinationStore =
+    findStoreById(routeDestinationStoreId, categoryStores, stores) ??
+    (route.routeDestinationSnapshot?.id === routeDestinationStoreId
+      ? route.routeDestinationSnapshot
+      : undefined);
   // 매장 목록에서 고른 매장은 정보 카드가 떠 있는 동안 그 핀만 남기고 다른 핀은 숨긴다.
   const soloStore =
     hasSelectedStoreInfo && soloStoreId
