@@ -4,7 +4,7 @@ import type { MouseEvent } from "react";
 import { useCallback, useRef, useState } from "react";
 import { CircleHelp, LogIn, Moon, Sun } from "lucide-react";
 import { ChatAccountMenu } from "@/features/chat/components/ChatAccountMenu";
-import { usePointerDownOutside } from "@/features/chat/hooks/usePointerDownOutside";
+import { usePointerDownOutside } from "@/shared/hooks/usePointerDownOutside";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
 import { cn } from "@/shared/lib/cn";
 import { LogoutConfirmDialog } from "@/shared/ui/organisms/LogoutConfirmDialog";

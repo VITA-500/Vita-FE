@@ -6,7 +6,7 @@ import {
   getVisibleQuickActions,
 } from "@/features/chat/components/ChatQuickActionMenu";
 import { useChatClientSettings } from "@/features/chat/hooks/useChatClientSettings";
-import { usePointerDownOutside } from "@/features/chat/hooks/usePointerDownOutside";
+import { usePointerDownOutside } from "@/shared/hooks/usePointerDownOutside";
 
 type ChatComposerProps = {
   value: string;

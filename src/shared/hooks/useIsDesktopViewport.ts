@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { DESKTOP_MIN_WIDTH_PX } from "@/features/store/lib/desktopBreakpoint";
+import { DESKTOP_MIN_WIDTH_PX } from "@/shared/lib/desktopBreakpoint";
 
 /** 데스크톱 레이아웃 기준(DESKTOP_MIN_WIDTH_PX) 미디어 쿼리 */
 const DESKTOP_QUERY = `(min-width: ${DESKTOP_MIN_WIDTH_PX}px)`;

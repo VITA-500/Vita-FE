@@ -11,7 +11,7 @@ import type {
   StoreMapEffectContext,
   StoreMapInstance,
 } from "@/features/store/lib/storeMapPreviewTypes";
-import { isDesktopWidth } from "@/features/store/lib/desktopBreakpoint";
+import { isDesktopWidth } from "@/shared/lib/desktopBreakpoint";
 
 /** 지도 타일이 그려졌다는 이벤트(tilesloaded)가 오지 않아도 로딩 화면을 걷는 시간(ms) */
 const MAP_FIRST_PAINT_FALLBACK_MS = 3000;

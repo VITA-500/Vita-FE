@@ -3,7 +3,7 @@
 import type { StoreSearchActionsParams } from "@/features/store/hooks/storeSearchActionsParams";
 import type { MapViewport } from "@/features/store/lib/storePanelStores";
 import { showToast } from "@/shared/providers/ToastProvider";
-import { isDesktopWidth } from "@/features/store/lib/desktopBreakpoint";
+import { isDesktopWidth } from "@/shared/lib/desktopBreakpoint";
 
 export type { StoreSearchActionsParams };
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type RefObject } from "react";
-import { useElementResizeKey } from "@/features/store/hooks/useElementResizeKey";
+import { useElementResizeKey } from "@/shared/hooks/useElementResizeKey";
 import type { KakaoMapWithCenter } from "@/features/store/lib/kakaoMapTypes";
 import {
   getCenterPlacingPointAt,

@@ -10,7 +10,7 @@ import { ChatSessionMenu } from "@/features/chat/components/ChatSessionMenu";
 import { ChatSidebarFooter } from "@/features/chat/components/ChatSidebarFooter";
 import { ChatSidebarNav } from "@/features/chat/components/ChatSidebarNav";
 import { useFloatingChatMenu } from "@/features/chat/hooks/useFloatingChatMenu";
-import { usePointerDownOutside } from "@/features/chat/hooks/usePointerDownOutside";
+import { usePointerDownOutside } from "@/shared/hooks/usePointerDownOutside";
 import {
   buildSidebarChatItems,
   type SidebarChatItem,

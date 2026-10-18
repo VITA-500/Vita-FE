@@ -11,7 +11,7 @@ import { StoreMapControls } from "@/features/store/components/StoreMapControls";
 import { StoreMapFallbackMarkers } from "@/features/store/components/StoreMapFallbackMarkers";
 import { StoreMapSearchAreaButton } from "@/features/store/components/StoreMapSearchAreaButton";
 import { StoreMapSelectedCard } from "@/features/store/components/StoreMapSelectedCard";
-import { useElementResizeKey } from "@/features/store/hooks/useElementResizeKey";
+import { useElementResizeKey } from "@/shared/hooks/useElementResizeKey";
 import { useKakaoMapReady } from "@/features/store/hooks/useKakaoMapReady";
 import { useKeepSelectedCardInView } from "@/features/store/hooks/useKeepSelectedCardInView";
 import { useKeepSelectedPinVisible } from "@/features/store/hooks/useKeepSelectedPinVisible";
