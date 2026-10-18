@@ -1,4 +1,4 @@
-import { isDesktopWidth } from "@/features/store/lib/desktopBreakpoint";
+import { isDesktopWidth } from "@/shared/lib/desktopBreakpoint";
 /**
  * 매장 정보 카드 위치 계산 공통 값.
  * - 선택 매장으로 지도 중심을 옮길 때와, 카드가 지도 위쪽 밖으로 나가지 않게 막을 때 같은 값을 쓴다.

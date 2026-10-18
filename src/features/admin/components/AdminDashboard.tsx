@@ -5,8 +5,8 @@ import { CalendarDays, MessagesSquare } from "lucide-react";
 import { AnswerFeedbackContent } from "@/features/admin/components/AnswerFeedbackContent";
 import { useAdminAnswerFeedback } from "@/features/admin/context/useAdminAnswerFeedback";
 import { routes } from "@/shared/constants/routes";
-import { ButtonLink } from "@/shared/ui/Button";
-import { Card, CardContent, CardHeader } from "@/shared/ui/Card";
+import { ButtonLink } from "@/shared/ui/atoms/Button";
+import { Card, CardContent, CardHeader } from "@/shared/ui/atoms/Card";
 import { cn } from "@/shared/lib/cn";
 
 /** 대시보드에는 많이 나온 답변 피드백 몇 개만 보여주고, 나머지는 답변 피드백 페이지에서 본다. */

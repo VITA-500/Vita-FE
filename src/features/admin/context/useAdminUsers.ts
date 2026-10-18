@@ -5,7 +5,7 @@ import { useCallback, useState } from "react";
 import { adminQueryKeys } from "@/features/admin/context/adminQueryKeys";
 import { adminUserService } from "@/features/admin/lib/adminUserService";
 import type { AdminUserStatus } from "@/features/admin/types/adminUsers";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 export const useAdminUsers = () => {
   const queryClient = useQueryClient();

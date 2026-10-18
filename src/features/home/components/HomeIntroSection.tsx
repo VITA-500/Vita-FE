@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import MotionReveal from "@/shared/ui/MotionReveal";
+import MotionReveal from "@/shared/layout/MotionReveal";
 import { uiText } from "@/shared/constants/uiText";
-import { SectionHeading } from "@/shared/ui/Section";
+import { SectionHeading } from "@/shared/layout/Section";
 
 const HomeIntroSection = () => {
   const t = uiText;

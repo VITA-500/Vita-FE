@@ -1,5 +1,5 @@
 import { Edit2, Eye, Trash2 } from "lucide-react";
-import { Button } from "@/shared/ui/Button";
+import { Button } from "@/shared/ui/atoms/Button";
 
 type FaqRowActionsProps = {
   compact?: boolean;

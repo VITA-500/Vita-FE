@@ -1,10 +1,10 @@
-import { Modal } from "@/shared/ui/Modal";
+import { Modal } from "@/shared/ui/organisms/Modal";
 import { ChevronRight, Edit2, Trash2, Plus } from "lucide-react";
 import type { AdminBenefitDetail } from "../types";
 import { AdminEmptyState } from "./AdminEmptyState";
-import { renderBenefitCategoryIcon } from "@/shared/ui/BenefitCategoryIcon";
+import { renderBenefitCategoryIcon } from "@/shared/ui/atoms/BenefitCategoryIcon";
 import { formatKoreanDate } from "@/shared/lib/date";
-import { Button } from "@/shared/ui/Button";
+import { Button } from "@/shared/ui/atoms/Button";
 export const BenefitEmptyState = () => (
   <AdminEmptyState
     title="조건에 맞는 제휴 혜택이 없습니다."

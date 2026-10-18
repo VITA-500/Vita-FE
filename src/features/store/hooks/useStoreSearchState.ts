@@ -21,7 +21,7 @@ import {
 import type { StoreMapSnapshot } from "@/features/store/lib/storeMapSnapshot";
 import { storeService } from "@/features/store/lib/storeService";
 import type { StoreLocation } from "@/features/store/types";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 type UseStoreSearchStateParams = {
   focusPoint: MapSearchPoint | null;

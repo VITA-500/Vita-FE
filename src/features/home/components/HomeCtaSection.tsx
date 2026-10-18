@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { uiText } from "@/shared/constants/uiText";
-import MotionReveal from "@/shared/ui/MotionReveal";
+import MotionReveal from "@/shared/layout/MotionReveal";
 import { routes } from "@/shared/constants/routes";
-import { Button } from "@/shared/ui/Button";
+import { Button } from "@/shared/ui/atoms/Button";
 
 const HomeCtaSection = () => {
   const router = useRouter();

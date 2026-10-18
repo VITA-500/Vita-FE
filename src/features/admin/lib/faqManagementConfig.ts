@@ -1,5 +1,5 @@
 import { adminFaqCategories } from "@/features/admin/types";
-import type { SelectOption } from "@/shared/ui/Select";
+import type { SelectOption } from "@/shared/ui/atoms/Select";
 
 export const faqCategoryOptions: readonly SelectOption[] =
   adminFaqCategories.map((category) => ({ label: category, value: category }));

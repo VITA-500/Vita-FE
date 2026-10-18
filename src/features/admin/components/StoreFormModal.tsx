@@ -15,9 +15,9 @@ import type {
   AdminStoreType,
 } from "@/features/admin/types";
 import { formatKoreanDate } from "@/shared/lib/date";
-import { Button } from "@/shared/ui/Button";
-import { Modal } from "@/shared/ui/Modal";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { Button } from "@/shared/ui/atoms/Button";
+import { Modal } from "@/shared/ui/organisms/Modal";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 export type StoreInput = AdminStoreFormInput;
 

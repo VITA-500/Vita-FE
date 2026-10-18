@@ -22,7 +22,7 @@ import type {
   ChatStreamingReply,
 } from "@/features/chat/types";
 import { ApiError } from "@/shared/api/http";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 type UseChatConversationControllerParams = {
   activeMode: ChatMode;

@@ -17,7 +17,7 @@ import type {
   StoreLocation,
   StoreOpenFilter,
 } from "@/features/store/types";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 type UseBenefitStoresParams = {
   activeMapCategory: MapCategory;

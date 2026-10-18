@@ -3,10 +3,10 @@
 import { RotateCcw } from "lucide-react";
 import { QuickActionSection } from "@/features/chat/components/ChatSettingsSections";
 import { CHAT_TOUR_STORAGE_KEY } from "@/features/chat/constants";
-import { Button } from "@/shared/ui/Button";
-import { Modal } from "@/shared/ui/Modal";
-import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { Button } from "@/shared/ui/atoms/Button";
+import { Modal } from "@/shared/ui/organisms/Modal";
+import { ThemeToggleButton } from "@/shared/ui/molecules/ThemeToggleButton";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 type ChatSettingsPanelProps = {
   isOpen: boolean;

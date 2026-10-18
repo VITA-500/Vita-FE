@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { ChatSidebar } from "@/features/chat/components/ChatSidebar";
 import { AuthProvider } from "@/features/auth/hooks/useAuthUser";
-import { ThemeProvider } from "@/shared/ui/ThemeProvider";
+import { ThemeProvider } from "@/shared/providers/ThemeProvider";
 
 const noop = () => {};
 const tooltip = () => () => {};

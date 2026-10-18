@@ -7,7 +7,7 @@ import { adminAnswerFeedbackService } from "@/features/admin/lib/adminAnswerFeed
 import type { AdminAnswerFeedbackStats } from "@/features/admin/types";
 import { ApiError } from "@/shared/api/http";
 import { env } from "@/shared/config/env";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 const toLimitedMock = (limit: number): AdminAnswerFeedbackStats => ({
   ...mockAnswerFeedbackStats,

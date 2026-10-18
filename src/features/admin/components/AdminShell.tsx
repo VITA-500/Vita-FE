@@ -17,8 +17,11 @@ import {
 } from "lucide-react";
 import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
-import { Logo } from "@/shared/ui/Logo";
-import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
+import { Logo } from "@/shared/ui/atoms/Logo";
+import {
+  RailTooltip,
+  type RailTooltipProps,
+} from "@/shared/ui/molecules/RailTooltip";
 
 const adminMenus = [
   { label: "대시보드", href: routes.admin, icon: BarChart3 },

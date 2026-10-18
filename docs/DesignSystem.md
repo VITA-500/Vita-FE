@@ -40,14 +40,17 @@ Feature UI가 두 곳 이상에서 반복되기 전까지는 `shared/ui`로 올�
 
 `shared/ui`는 Atomic Design의 세 단계만 사용한다. templates·pages 단계는 `app`이 맡는다. Atomic 구분은 `shared/ui`에만 적용하고, `entities`·`features` 안 컴포넌트에는 적용하지 않는다.
 
-| 단계        | 기준                                                          | 예                                                                           |
-| ----------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `atoms`     | 더 쪼갤 수 없다. 다른 shared UI를 조합하지 않는다.            | Button, TextField, Select, Logo, UserAvatar, AnimatedLockIcon                |
-| `molecules` | atom을 조합한다. 열림 여부 정도를 빼면 자체 상태가 거의 없다. | SearchInput, FilterDropdown, CalendarDateField, ConfirmCheckbox, RailTooltip |
-| `organisms` | 자체 상태·동작(포커스, 단계 진행, portal 등)이 있는 묶음이다. | Modal, PortalDialog, GuidedStepFlow, Accordion                               |
+| 단계        | 기준                                                                                                  | 현재 컴포넌트                                                                                                                    |
+| ----------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `atoms`     | 하나의 요소 수준. 다른 shared UI를 import하지 않고 내부 상태가 없다.                                  | Button, Card, TextField, Select, Logo, UserAvatar, AnimatedLockIcon, BenefitCategoryIcon                                         |
+| `molecules` | 여러 요소로 된 하나의 조작·표시 단위. 다른 shared UI는 import하지 않고, 상태는 열림 여부 정도만 둔다. | SearchInput, FilterDropdown, CalendarDateField, ConfirmCheckbox, RailTooltip, ThemeToggleButton, WarningNotice                   |
+| `organisms` | 다른 shared UI(atom·organism)를 조합하거나, portal·포커스·단계 진행 같은 동작을 가진다.               | Accordion, ChecklistCard, GuidedStepFlow, InfoTable, Modal, PlanCard, PortalDialog, LogoutConfirmDialog, StatCard, StepGuideCard |
 
-- 판단이 애매하면 "다른 shared UI를 조합하는가(atom 아님)", "열고 닫기 외의 상태나 키보드·포커스 처리를 가지는가(organism)" 순서로 본다.
-- 아래 단계는 위 단계를 import하지 않는다(atoms → molecules·organisms import 금지, molecules → organisms import 금지).
+페이지 레이아웃용 컴포넌트(Section, MotionReveal)는 `shared/layout`, 앱 전역 provider(ThemeProvider, ToastProvider)는 `shared/providers`에 둔다.
+
+- 판단 순서: ① 다른 shared UI를 import하면 organism ② 아니면, 여러 요소를 묶은 조작·표시 단위이면 molecule ③ 둘 다 아니면 atom.
+- 아래 단계는 위 단계를 import하지 않는다(atoms → molecules·organisms import 금지, molecules → organisms import 금지). organism끼리는 import할 수 있다(예: LogoutConfirmDialog → PortalDialog).
+- Storybook title도 같은 구분을 따른다: `Shared/Atoms/Button`, `Shared/Molecules/SearchInput`, `Shared/Organisms/Modal`.
 - 한 feature에서만 쓰는 컴포넌트(예: 채팅 답변 카드)는 단계 분류 대상이 아니며, 해당 feature나 entity로 옮긴다.
 
 ## Shared UI Rules

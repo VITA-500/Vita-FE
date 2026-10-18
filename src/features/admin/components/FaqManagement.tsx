@@ -25,9 +25,9 @@ import {
   faqStatusFilterOptions,
 } from "@/features/admin/lib/faqManagementConfig";
 import { formatKoreanDate } from "@/shared/lib/date";
-import { Button } from "@/shared/ui/Button";
-import { Card } from "@/shared/ui/Card";
-import { SearchInput } from "@/shared/ui/SearchInput";
+import { Button } from "@/shared/ui/atoms/Button";
+import { Card } from "@/shared/ui/atoms/Card";
+import { SearchInput } from "@/shared/ui/molecules/SearchInput";
 type FaqCategoryFilter = "ALL" | AdminFaqCategory;
 type FaqStatusFilter = "ALL" | "ACTIVE" | "INACTIVE";
 

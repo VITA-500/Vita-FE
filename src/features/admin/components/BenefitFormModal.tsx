@@ -15,10 +15,10 @@ import {
   type AdminBenefitRequest,
 } from "@/features/admin/types";
 import { formatKoreanDate } from "@/shared/lib/date";
-import { Button } from "@/shared/ui/Button";
-import { Modal } from "@/shared/ui/Modal";
-import type { SelectOption } from "@/shared/ui/Select";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { Button } from "@/shared/ui/atoms/Button";
+import { Modal } from "@/shared/ui/organisms/Modal";
+import type { SelectOption } from "@/shared/ui/atoms/Select";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 const benefitCategoryOptions: readonly SelectOption[] =
   adminBenefitCategories.map((category) => ({

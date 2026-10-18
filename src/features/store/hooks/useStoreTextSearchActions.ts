@@ -5,8 +5,8 @@ import type {
   useStoreFilterSearchActions,
 } from "@/features/store/hooks/useStoreFilterSearchActions";
 import type { StoreSearchHistoryItem } from "@/features/store/hooks/useStoreSearchHistory";
-import { showToast } from "@/shared/ui/ToastProvider";
-import { isDesktopWidth } from "@/features/store/lib/desktopBreakpoint";
+import { showToast } from "@/shared/providers/ToastProvider";
+import { isDesktopWidth } from "@/shared/lib/desktopBreakpoint";
 
 type UseStoreTextSearchActionsParams = StoreSearchActionsParams &
   Pick<

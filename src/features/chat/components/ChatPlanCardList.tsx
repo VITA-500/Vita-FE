@@ -2,7 +2,7 @@
 
 import { ChatCardRail } from "@/features/chat/components/ChatCardRail";
 import type { ChatPlanCard } from "@/features/chat/lib/chatPlanCards";
-import { PlanCard } from "@/shared/ui/PlanCard";
+import { PlanCard } from "@/shared/ui/organisms/PlanCard";
 
 type ChatPlanCardListProps = {
   plans: readonly ChatPlanCard[];

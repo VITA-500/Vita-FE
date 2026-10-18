@@ -23,7 +23,7 @@ import type {
   ChatMessage,
   ChatStreamingReply,
 } from "@/features/chat/types";
-import { ButtonLink } from "@/shared/ui/Button";
+import { ButtonLink } from "@/shared/ui/atoms/Button";
 import { cn } from "@/shared/lib/cn";
 
 type ChatMessageListProps = {

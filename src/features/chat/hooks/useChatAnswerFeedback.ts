@@ -10,7 +10,7 @@ import { canSendAnswerFeedback } from "@/features/chat/lib/chatAnswerFeedback";
 import { chatService } from "@/features/chat/lib/chatService";
 import type { ChatFeedback, ChatMessage } from "@/features/chat/types";
 import { ApiError } from "@/shared/api/http";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 type SendFeedbackOptions = {
   /** true면 실패 토스트를 띄우지 않는다. 호출하는 쪽이 결과를 한 번에 안내할 때 쓴다. */

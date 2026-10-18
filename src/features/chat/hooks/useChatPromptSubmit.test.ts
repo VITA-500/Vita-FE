@@ -14,7 +14,7 @@ vi.mock("../lib/chatTextReveal", () => ({
     cancel: vi.fn(),
   }),
 }));
-vi.mock("@/shared/ui/ToastProvider", () => ({ showToast: vi.fn() }));
+vi.mock("@/shared/providers/ToastProvider", () => ({ showToast: vi.fn() }));
 
 const setup = (currentSessionId?: number) => {
   const params = {

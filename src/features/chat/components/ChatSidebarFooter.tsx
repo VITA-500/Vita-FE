@@ -4,14 +4,14 @@ import type { MouseEvent } from "react";
 import { useCallback, useRef, useState } from "react";
 import { CircleHelp, LogIn, Moon, Sun } from "lucide-react";
 import { ChatAccountMenu } from "@/features/chat/components/ChatAccountMenu";
-import { usePointerDownOutside } from "@/features/chat/hooks/usePointerDownOutside";
+import { usePointerDownOutside } from "@/shared/hooks/usePointerDownOutside";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
 import { cn } from "@/shared/lib/cn";
-import { LogoutConfirmDialog } from "@/shared/ui/LogoutConfirmDialog";
-import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
-import { useTheme } from "@/shared/ui/ThemeProvider";
-import { showToast } from "@/shared/ui/ToastProvider";
-import { UserAvatar } from "@/shared/ui/UserAvatar";
+import { LogoutConfirmDialog } from "@/shared/ui/organisms/LogoutConfirmDialog";
+import { ThemeToggleButton } from "@/shared/ui/molecules/ThemeToggleButton";
+import { useTheme } from "@/shared/providers/ThemeProvider";
+import { showToast } from "@/shared/providers/ToastProvider";
+import { UserAvatar } from "@/shared/ui/atoms/UserAvatar";
 
 type ChatSidebarFooterProps = {
   isAuthReady: boolean;

@@ -20,7 +20,7 @@ import {
 import { getOpenFilterKey } from "@/features/store/lib/storeOpenHours";
 import { storeService } from "@/features/store/lib/storeService";
 import type { StoreLocation, StoreOpenFilter } from "@/features/store/types";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 /** "이 지역에 매장 없음" 안내 후 직전 지역으로 지도를 되돌리기까지의 지연(ms). */
 const RESTORE_AREA_DELAY_MS = 1400;

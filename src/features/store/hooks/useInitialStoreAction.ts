@@ -9,7 +9,7 @@ import type {
   StoreMapInitialAction,
   StoreRouteMode,
 } from "@/features/store/types";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 type UseInitialStoreActionParams = {
   categoryDisplayStores: StoreLocation[];

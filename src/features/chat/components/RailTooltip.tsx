@@ -1,1 +1,4 @@
-export { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
+export {
+  RailTooltip,
+  type RailTooltipProps,
+} from "@/shared/ui/molecules/RailTooltip";

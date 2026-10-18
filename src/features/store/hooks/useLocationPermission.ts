@@ -9,7 +9,7 @@ import {
 } from "@/features/store/lib/storePanelStorage";
 import type { UserLocationStatus } from "@/features/store/hooks/useUserLocation";
 import { readStorage, writeStorage } from "@/shared/lib/browserStorage";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 type UseLocationPermissionParams = {
   /** 길찾기 중인지(도착 매장이 정해져 있는지) */

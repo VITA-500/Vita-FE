@@ -6,7 +6,7 @@ import {
   TransitRouteTimeline,
   type TransitTimelinePart,
 } from "@/features/store/components/TransitRouteTimeline";
-import { useElementHeight } from "@/features/store/hooks/useElementHeight";
+import { useElementHeight } from "@/shared/hooks/useElementHeight";
 import type { TransitRouteStep } from "@/features/store/lib/storeRoutePreview";
 import {
   buildTransitTimeline,

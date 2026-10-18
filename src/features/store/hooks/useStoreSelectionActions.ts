@@ -26,7 +26,7 @@ import {
 import { storeService } from "@/features/store/lib/storeService";
 import type { MapCategory, StoreLocation } from "@/features/store/types";
 import { readStorage } from "@/shared/lib/browserStorage";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 type UseStoreSelectionActionsParams = Pick<
   ReturnType<typeof useStoreMapState>,

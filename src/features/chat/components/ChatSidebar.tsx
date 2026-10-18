@@ -10,7 +10,7 @@ import { ChatSessionMenu } from "@/features/chat/components/ChatSessionMenu";
 import { ChatSidebarFooter } from "@/features/chat/components/ChatSidebarFooter";
 import { ChatSidebarNav } from "@/features/chat/components/ChatSidebarNav";
 import { useFloatingChatMenu } from "@/features/chat/hooks/useFloatingChatMenu";
-import { usePointerDownOutside } from "@/features/chat/hooks/usePointerDownOutside";
+import { usePointerDownOutside } from "@/shared/hooks/usePointerDownOutside";
 import {
   buildSidebarChatItems,
   type SidebarChatItem,
@@ -21,7 +21,7 @@ import {
 } from "@/features/chat/lib/chatSidebarStyles";
 import type { ChatMode, ChatSessionSummary } from "@/features/chat/types";
 import { cn } from "@/shared/lib/cn";
-import { Logo } from "@/shared/ui/Logo";
+import { Logo } from "@/shared/ui/atoms/Logo";
 
 type ChatSidebarProps = {
   isAuthenticated: boolean;

@@ -23,7 +23,7 @@ import {
 } from "@/features/chat/lib/chatStoreMap";
 import { ChatCardRail } from "@/features/chat/components/ChatCardRail";
 import type { ChatStoreMap as ChatStoreMapData } from "@/features/chat/types";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 const MAX_CHAT_STORE_COUNT = 5;
 const LEGACY_DEFAULT_CHAT_STORE_ORIGIN_LABEL = "선릉역 부근";

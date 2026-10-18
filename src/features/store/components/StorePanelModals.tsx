@@ -3,8 +3,8 @@ import { buildLoginHref } from "@/features/auth/lib/loginReturn";
 import { StoreReservationFields } from "@/features/store/components/StoreReservationFields";
 import { useReservationSlots } from "@/features/store/hooks/useReservationSlots";
 import type { StoreLocation } from "@/features/store/types";
-import { Button } from "@/shared/ui/Button";
-import { Modal } from "@/shared/ui/Modal";
+import { Button } from "@/shared/ui/atoms/Button";
+import { Modal } from "@/shared/ui/organisms/Modal";
 
 type StorePanelModalsProps = {
   /** false면 예약을 모달로 띄우지 않는다(모바일은 바텀 시트 안에서 예약한다). */

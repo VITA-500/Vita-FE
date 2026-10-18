@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { uiText } from "@/shared/constants/uiText";
 import { routes } from "@/shared/constants/routes";
-import MotionReveal from "@/shared/ui/MotionReveal";
-import { Button } from "@/shared/ui/Button";
+import MotionReveal from "@/shared/layout/MotionReveal";
+import { Button } from "@/shared/ui/atoms/Button";
 
 const HeroSection = () => {
   const router = useRouter();

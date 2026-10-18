@@ -1,5 +1,5 @@
 import type { buildReservationTimeSlots } from "@/features/store/lib/reservationTimeSlots";
-import { CalendarDateField } from "@/shared/ui/CalendarDateField";
+import { CalendarDateField } from "@/shared/ui/molecules/CalendarDateField";
 
 type StoreReservationFieldsProps = {
   maxReservationDate: string;

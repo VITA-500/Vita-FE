@@ -22,7 +22,7 @@ import type {
   SessionMessagesResponse,
 } from "@/features/chat/types";
 import { ApiError } from "@/shared/api/http";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 type MutableRef<T> = { current: T };
 

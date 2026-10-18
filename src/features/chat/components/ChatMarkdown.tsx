@@ -5,9 +5,9 @@ import {
   groupAnswerCards,
 } from "@/features/chat/lib/chatAnswerCards";
 import { blockToPlanCards } from "@/features/chat/lib/chatPlanCards";
-import { ChecklistCard } from "@/shared/ui/ChecklistCard";
-import { StepGuideCard } from "@/shared/ui/StepGuideCard";
-import { WarningNotice } from "@/shared/ui/WarningNotice";
+import { ChecklistCard } from "@/shared/ui/organisms/ChecklistCard";
+import { StepGuideCard } from "@/shared/ui/organisms/StepGuideCard";
+import { WarningNotice } from "@/shared/ui/molecules/WarningNotice";
 
 /**
  * 챗봇 답변(LLM이 만든 마크다운)을 말풍선 안에서 읽기 좋게 그려주는 가벼운 렌더러.

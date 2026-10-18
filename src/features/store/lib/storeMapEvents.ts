@@ -9,7 +9,7 @@ import type {
   StoreMapEffectContext,
   StoreMapInstance,
 } from "@/features/store/lib/storeMapPreviewTypes";
-import { isDesktopWidth } from "@/features/store/lib/desktopBreakpoint";
+import { isDesktopWidth } from "@/shared/lib/desktopBreakpoint";
 
 type SelectedStoreCardController = ReturnType<
   typeof createSelectedStoreCardController

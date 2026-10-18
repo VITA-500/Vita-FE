@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { isDesktopWidth } from "@/features/store/lib/desktopBreakpoint";
+import { isDesktopWidth } from "@/shared/lib/desktopBreakpoint";
 
 /**
  * 지도 위 패널 배치: 검색 드롭다운·매장 목록 열림 상태, 패널 크기 측정,

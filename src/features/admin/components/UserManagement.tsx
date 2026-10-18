@@ -13,9 +13,9 @@ import type {
   AdminUserListItem,
   AdminUserStatus,
 } from "@/features/admin/types/adminUsers";
-import { Card } from "@/shared/ui/Card";
-import { SearchInput } from "@/shared/ui/SearchInput";
-import { Button } from "@/shared/ui/Button";
+import { Card } from "@/shared/ui/atoms/Card";
+import { SearchInput } from "@/shared/ui/molecules/SearchInput";
+import { Button } from "@/shared/ui/atoms/Button";
 
 const UserManagement = () => {
   const [selected, setSelected] = useState<AdminUserListItem | null>(null);

@@ -9,7 +9,7 @@ import type {
 import { useState } from "react";
 import { FilterDropdown } from "@/features/admin/components/FilterDropdown";
 import { cn } from "@/shared/lib/cn";
-import type { SelectOption } from "@/shared/ui/Select";
+import type { SelectOption } from "@/shared/ui/atoms/Select";
 
 const fieldClassName =
   "border-border focus:border-brand focus:ring-brand/10 w-full rounded-xl border bg-white px-3 text-sm font-semibold text-gray-700 transition outline-none placeholder:font-medium placeholder:text-gray-400 focus:ring-2 dark:border-white/10 dark:bg-white/5 dark:text-gray-100";

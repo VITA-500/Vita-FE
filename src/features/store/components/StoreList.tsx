@@ -14,7 +14,7 @@ import { matchesStoreSearch } from "@/features/store/lib/geo";
 import type { StoreLocation } from "@/features/store/types";
 import { getKakaoDirectionUrl } from "@/features/store/lib/mapLinks";
 import { cn } from "@/shared/lib/cn";
-import { ButtonLink } from "@/shared/ui/Button";
+import { ButtonLink } from "@/shared/ui/atoms/Button";
 
 type StoreCardProps = {
   index: number;

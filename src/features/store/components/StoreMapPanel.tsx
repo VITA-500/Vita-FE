@@ -9,9 +9,9 @@ import {
 } from "@/features/store/components/StoreMapPanelControls";
 import { StoreMapPanelInfoContent } from "@/features/store/components/StorePanelInfoBubble";
 import { useCloseOnOutsideTap } from "@/features/store/hooks/useCloseOnOutsideTap";
-import { useElementHeight } from "@/features/store/hooks/useElementHeight";
-import { useElementWidth } from "@/features/store/hooks/useElementWidth";
-import { useIsDesktopViewport } from "@/features/store/hooks/useIsDesktopViewport";
+import { useElementHeight } from "@/shared/hooks/useElementHeight";
+import { useElementWidth } from "@/shared/hooks/useElementWidth";
+import { useIsDesktopViewport } from "@/shared/hooks/useIsDesktopViewport";
 import { useSavedStoreMapSnapshot } from "@/features/store/hooks/useSavedStoreMapSnapshot";
 import { useStoreMapPanel } from "@/features/store/hooks/useStoreMapPanel";
 import type { MapFitPadding } from "@/features/store/lib/mapFit";

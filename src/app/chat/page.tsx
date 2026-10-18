@@ -11,8 +11,11 @@ import { ChatSettingsPanel } from "@/features/chat/components/ChatSettingsPanel"
 import { GuestNewChatDialog } from "@/features/chat/components/GuestNewChatDialog";
 import { ProfilePanel } from "@/features/auth/components/ProfilePanel";
 import { StoreMapPanel } from "@/features/store/components/StoreMapPanel";
-import { useIsDesktopViewport } from "@/features/store/hooks/useIsDesktopViewport";
-import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
+import { useIsDesktopViewport } from "@/shared/hooks/useIsDesktopViewport";
+import {
+  RailTooltip,
+  type RailTooltipProps,
+} from "@/shared/ui/molecules/RailTooltip";
 import type { ChatMode } from "@/features/chat/types";
 import type {
   MapCategory,
