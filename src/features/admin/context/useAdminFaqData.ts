@@ -112,7 +112,9 @@ export const useAdminFaqData = (): AdminFaqData => {
       addFaq: async (input) => {
         if (env.apiBaseUrl) {
           await adminFaqService.createFaq(input);
-          await queryClient.invalidateQueries({ queryKey: ["admin", "faqs"] });
+          await queryClient.invalidateQueries({
+            queryKey: adminQueryKeys.faqsAll,
+          });
           return;
         }
 
@@ -131,7 +133,9 @@ export const useAdminFaqData = (): AdminFaqData => {
       deleteFaq: async (faqId) => {
         if (env.apiBaseUrl) {
           await adminFaqService.deleteFaq(faqId);
-          await queryClient.invalidateQueries({ queryKey: ["admin", "faqs"] });
+          await queryClient.invalidateQueries({
+            queryKey: adminQueryKeys.faqsAll,
+          });
           return;
         }
 
@@ -158,7 +162,9 @@ export const useAdminFaqData = (): AdminFaqData => {
       saveFaq: async (faqId, input) => {
         if (env.apiBaseUrl) {
           await adminFaqService.updateFaq(faqId, input);
-          await queryClient.invalidateQueries({ queryKey: ["admin", "faqs"] });
+          await queryClient.invalidateQueries({
+            queryKey: adminQueryKeys.faqsAll,
+          });
           return;
         }
 
@@ -176,7 +182,9 @@ export const useAdminFaqData = (): AdminFaqData => {
       setFaqStatus: async (faqId, status) => {
         if (env.apiBaseUrl) {
           await adminFaqService.updateFaq(faqId, { status });
-          await queryClient.invalidateQueries({ queryKey: ["admin", "faqs"] });
+          await queryClient.invalidateQueries({
+            queryKey: adminQueryKeys.faqsAll,
+          });
           return;
         }
 

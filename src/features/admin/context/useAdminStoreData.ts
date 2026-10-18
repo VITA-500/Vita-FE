@@ -9,6 +9,7 @@ import type {
   StoreSortField,
 } from "@/features/admin/context/adminDataTypes";
 import { adminQueryKeys } from "@/features/admin/context/adminQueryKeys";
+import { invalidateStoreBenefits } from "@/features/admin/context/invalidateStoreBenefits";
 import { adminStoreService } from "@/features/admin/lib/adminStoreService";
 import type {
   AdminStore,
@@ -75,11 +76,7 @@ export const useAdminStoreData = (
   });
 
   const invalidateStoreData = useCallback(
-    () =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["admin", "stores"] }),
-        queryClient.invalidateQueries({ queryKey: adminQueryKeys.benefitsAll }),
-      ]),
+    () => invalidateStoreBenefits(queryClient),
     [queryClient],
   );
 
