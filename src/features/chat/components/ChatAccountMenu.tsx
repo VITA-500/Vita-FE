@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronRight, CircleHelp, LogOut, Settings } from "lucide-react";
-import { UserAvatar } from "@/shared/ui/UserAvatar";
+import { UserAvatar } from "@/shared/ui/atoms/UserAvatar";
 
 type ChatAccountMenuProps = {
   displayName: string;

@@ -25,10 +25,10 @@ import { useAdminData } from "@/features/admin/context/AdminDataContext";
 import { adminStoreService } from "@/features/admin/lib/adminStoreService";
 import type { AdminStoreType } from "@/features/admin/types";
 import { formatKoreanDate } from "@/shared/lib/date";
-import { Button } from "@/shared/ui/Button";
-import { Card } from "@/shared/ui/Card";
-import { SearchInput } from "@/shared/ui/SearchInput";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { Button } from "@/shared/ui/atoms/Button";
+import { Card } from "@/shared/ui/atoms/Card";
+import { SearchInput } from "@/shared/ui/molecules/SearchInput";
+import { showToast } from "@/shared/providers/ToastProvider";
 import {
   STORE_MIN_TABLE_ROWS,
   storePageSizeFilterOptions,

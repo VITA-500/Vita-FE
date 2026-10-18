@@ -6,7 +6,7 @@ import { Mail } from "lucide-react";
 import { FaGithub } from "react-icons/fa";
 import { uiText } from "@/shared/constants/uiText";
 import { routes } from "@/shared/constants/routes";
-import { Logo } from "@/shared/ui/Logo";
+import { Logo } from "@/shared/ui/atoms/Logo";
 
 const isExternalLink = (href: string) => {
   return href.startsWith("http") || href.startsWith("mailto:");

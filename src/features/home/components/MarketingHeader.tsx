@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Menu, X } from "lucide-react";
 import HeaderControls from "@/features/auth/components/HeaderControls";
 import { routes } from "@/shared/constants/routes";
-import { Logo } from "@/shared/ui/Logo";
+import { Logo } from "@/shared/ui/atoms/Logo";
 
 const navItems = [
   { label: "서비스 소개", href: `${routes.home}#service-intro` },

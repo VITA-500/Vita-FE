@@ -4,8 +4,8 @@ import { AnswerFeedbackContent } from "@/features/admin/components/AnswerFeedbac
 import { useAdminAnswerFeedback } from "@/features/admin/context/useAdminAnswerFeedback";
 import { getAnswerFeedbackStatItems } from "@/features/admin/lib/answerFeedbackStats";
 import { ADMIN_ANSWER_FEEDBACK_MAX_LIMIT } from "@/features/admin/lib/adminAnswerFeedbackService";
-import { Card, CardContent, CardHeader } from "@/shared/ui/Card";
-import { StatCard } from "@/shared/ui/StatCard";
+import { Card, CardContent, CardHeader } from "@/shared/ui/atoms/Card";
+import { StatCard } from "@/shared/ui/organisms/StatCard";
 
 /** 챗봇 답변 피드백 페이지. 많이 나온 순으로 최대 200개까지 보여준다. */
 export const AnswerFeedbackManagement = () => {

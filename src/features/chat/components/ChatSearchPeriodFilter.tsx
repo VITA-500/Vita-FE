@@ -1,8 +1,8 @@
-import { FilterDropdown } from "@/shared/ui/FilterDropdown";
+import { FilterDropdown } from "@/shared/ui/molecules/FilterDropdown";
 import {
   CalendarDateField,
   CalendarDateRangeField,
-} from "@/shared/ui/CalendarDateField";
+} from "@/shared/ui/molecules/CalendarDateField";
 import {
   emptySearchPeriod,
   searchPeriodOptions,

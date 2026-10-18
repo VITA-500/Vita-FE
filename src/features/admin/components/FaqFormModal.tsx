@@ -15,10 +15,10 @@ import {
   type AdminFaqCategory,
 } from "@/features/admin/types";
 import { formatKoreanDate } from "@/shared/lib/date";
-import { Button } from "@/shared/ui/Button";
-import { Modal } from "@/shared/ui/Modal";
-import { showToast } from "@/shared/ui/ToastProvider";
-import type { SelectOption } from "@/shared/ui/Select";
+import { Button } from "@/shared/ui/atoms/Button";
+import { Modal } from "@/shared/ui/organisms/Modal";
+import { showToast } from "@/shared/providers/ToastProvider";
+import type { SelectOption } from "@/shared/ui/atoms/Select";
 
 const faqCategoryOptions: readonly SelectOption[] = adminFaqCategories.map(
   (category) => ({ label: category, value: category }),

@@ -13,12 +13,12 @@ import {
   rememberLoginReturnTo,
 } from "@/features/auth/lib/loginReturn";
 import { tokenStorage } from "@/features/auth/lib/tokenStorage";
-import { TextField } from "@/shared/ui/TextField";
+import { TextField } from "@/shared/ui/atoms/TextField";
 import { ApiError } from "@/shared/api/http";
-import { Button } from "@/shared/ui/Button";
+import { Button } from "@/shared/ui/atoms/Button";
 import { routes } from "@/shared/constants/routes";
-import { Logo } from "@/shared/ui/Logo";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { Logo } from "@/shared/ui/atoms/Logo";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 type AuthMode = "login" | "signup";
 

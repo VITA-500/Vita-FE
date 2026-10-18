@@ -1,8 +1,8 @@
 "use client";
 
 import type { AdminFaq } from "@/features/admin/types";
-import { Button } from "@/shared/ui/Button";
-import { Modal } from "@/shared/ui/Modal";
+import { Button } from "@/shared/ui/atoms/Button";
+import { Modal } from "@/shared/ui/organisms/Modal";
 
 type FaqStatusModalProps = {
   faq?: AdminFaq;

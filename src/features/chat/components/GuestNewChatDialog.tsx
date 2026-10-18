@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { X } from "lucide-react";
 import { routes } from "@/shared/constants/routes";
-import { PortalDialog } from "@/shared/ui/PortalDialog";
+import { PortalDialog } from "@/shared/ui/organisms/PortalDialog";
 
 type GuestNewChatDialogProps = {
   onCancel: () => void;

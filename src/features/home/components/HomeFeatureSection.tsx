@@ -12,8 +12,8 @@ import {
   Store,
 } from "lucide-react";
 import { uiText } from "@/shared/constants/uiText";
-import MotionReveal from "@/shared/ui/MotionReveal";
-import { SectionHeading } from "@/shared/ui/Section";
+import MotionReveal from "@/shared/layout/MotionReveal";
+import { SectionHeading } from "@/shared/layout/Section";
 
 const featureIcons = [BookOpenText, BarChart3, MapPin];
 const stepIcons = [MessageCircle, Search, Check, Store];

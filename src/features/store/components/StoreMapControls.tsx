@@ -2,7 +2,10 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Layers, LocateFixed, LocateOff, Minus, Plus } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
-import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
+import {
+  RailTooltip,
+  type RailTooltipProps,
+} from "@/shared/ui/molecules/RailTooltip";
 
 type StoreMapControlsProps = {
   hasUserLocation: boolean;

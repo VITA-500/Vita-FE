@@ -16,7 +16,7 @@ import { TransitRouteDetails } from "@/features/store/components/TransitRouteDet
 import type { TransitRouteStep } from "@/features/store/lib/storeRoutePreview";
 import type { StoreLocation, StoreRouteMode } from "@/features/store/types";
 import { cn } from "@/shared/lib/cn";
-import { Button } from "@/shared/ui/Button";
+import { Button } from "@/shared/ui/atoms/Button";
 
 const serviceBadgeClassName =
   "bg-surface-muted text-text-secondary rounded-full px-2.5 py-1 text-[11px] font-bold dark:bg-white/10 dark:text-gray-300";

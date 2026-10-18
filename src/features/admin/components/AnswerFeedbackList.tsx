@@ -9,8 +9,8 @@ import type {
 } from "@/features/admin/types";
 import { cn } from "@/shared/lib/cn";
 import { formatKoreanMonthDay } from "@/shared/lib/date";
-import { Button } from "@/shared/ui/Button";
-import { Modal } from "@/shared/ui/Modal";
+import { Button } from "@/shared/ui/atoms/Button";
+import { Modal } from "@/shared/ui/organisms/Modal";
 
 const failReasonLabels: Record<AdminAnswerFeedbackReason, string> = {
   ANSWER_FAILED: "답변 실패",

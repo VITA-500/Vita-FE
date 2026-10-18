@@ -3,7 +3,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { cn } from "@/shared/lib/cn";
-import { Button } from "@/shared/ui/Button";
+import { Button } from "@/shared/ui/atoms/Button";
 
 type AdminPaginationProps = {
   currentPage: number;

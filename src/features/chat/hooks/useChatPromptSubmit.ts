@@ -21,7 +21,7 @@ import type {
   ChatConversationStatus,
 } from "@/features/chat/types";
 import { ApiError } from "@/shared/api/http";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 type SubmitChatPromptOptions = {
   /** 이 메시지부터 뒤를 지우고 새 질문으로 다시 묻는다(질문 수정 · 다시 시도). */

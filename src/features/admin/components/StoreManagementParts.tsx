@@ -4,8 +4,8 @@ import { AdminPagination } from "./AdminPagination";
 import { formatKoreanDate } from "@/shared/lib/date";
 import { Edit2, Trash2 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
-import { Button } from "@/shared/ui/Button";
-import { Card } from "@/shared/ui/Card";
+import { Button } from "@/shared/ui/atoms/Button";
+import { Card } from "@/shared/ui/atoms/Card";
 
 export type StoreRowActionsProps = {
   compact?: boolean;

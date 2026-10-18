@@ -21,7 +21,7 @@ import {
 } from "@/features/chat/lib/chatSidebarStyles";
 import type { ChatMode, ChatSessionSummary } from "@/features/chat/types";
 import { cn } from "@/shared/lib/cn";
-import { Logo } from "@/shared/ui/Logo";
+import { Logo } from "@/shared/ui/atoms/Logo";
 
 type ChatSidebarProps = {
   isAuthenticated: boolean;

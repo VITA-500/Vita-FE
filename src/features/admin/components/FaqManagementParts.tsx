@@ -1,4 +1,4 @@
-import { Card } from "@/shared/ui/Card";
+import { Card } from "@/shared/ui/atoms/Card";
 
 export const FaqSkeletonRow = () => (
   <tr className="h-20" aria-hidden="true">

@@ -12,7 +12,10 @@ import { GuestNewChatDialog } from "@/features/chat/components/GuestNewChatDialo
 import { ProfilePanel } from "@/features/auth/components/ProfilePanel";
 import { StoreMapPanel } from "@/features/store/components/StoreMapPanel";
 import { useIsDesktopViewport } from "@/features/store/hooks/useIsDesktopViewport";
-import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
+import {
+  RailTooltip,
+  type RailTooltipProps,
+} from "@/shared/ui/molecules/RailTooltip";
 import type { ChatMode } from "@/features/chat/types";
 import type {
   MapCategory,

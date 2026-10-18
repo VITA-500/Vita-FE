@@ -1,4 +1,4 @@
 export {
   FilterDropdown,
   type FilterDropdownOption,
-} from "@/shared/ui/FilterDropdown";
+} from "@/shared/ui/molecules/FilterDropdown";

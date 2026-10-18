@@ -1,6 +1,6 @@
 "use client";
 
-import { PortalDialog } from "@/shared/ui/PortalDialog";
+import { PortalDialog } from "@/shared/ui/organisms/PortalDialog";
 
 type ChatDeleteConfirmDialogProps = {
   title: string;

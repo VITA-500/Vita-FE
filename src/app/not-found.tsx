@@ -1,5 +1,5 @@
 import { routes } from "@/shared/constants/routes";
-import { ButtonLink } from "@/shared/ui/Button";
+import { ButtonLink } from "@/shared/ui/atoms/Button";
 
 const NotFound = () => {
   return (

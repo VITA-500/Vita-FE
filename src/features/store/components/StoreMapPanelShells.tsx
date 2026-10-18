@@ -9,7 +9,7 @@ import { StoreReservationFields } from "@/features/store/components/StoreReserva
 import { StoreSidePanels } from "@/features/store/components/StoreSidePanels";
 import { useReservationSlots } from "@/features/store/hooks/useReservationSlots";
 import type { StoreMapPanelModel } from "@/features/store/hooks/useStoreMapPanel";
-import { Button } from "@/shared/ui/Button";
+import { Button } from "@/shared/ui/atoms/Button";
 
 type StoreMapPanelShellsProps = Pick<
   StoreMapPanelModel,

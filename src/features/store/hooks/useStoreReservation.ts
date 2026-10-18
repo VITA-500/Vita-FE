@@ -9,7 +9,7 @@ import {
 import { storeService } from "@/features/store/lib/storeService";
 import type { StoreLocation } from "@/features/store/types";
 import { ApiError } from "@/shared/api/http";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 /** 매장 방문 예약: 로그인 확인, 예약 확인 모달, 완료 안내 */
 export const useStoreReservation = () => {

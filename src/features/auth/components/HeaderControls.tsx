@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { LogOut, UserRound } from "lucide-react";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
-import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { ThemeToggleButton } from "@/shared/ui/molecules/ThemeToggleButton";
+import { showToast } from "@/shared/providers/ToastProvider";
 import { routes } from "@/shared/constants/routes";
-import { LogoutConfirmDialog } from "@/shared/ui/LogoutConfirmDialog";
+import { LogoutConfirmDialog } from "@/shared/ui/organisms/LogoutConfirmDialog";
 
 type HeaderControlsProps = {
   initialHasAccessToken?: boolean;

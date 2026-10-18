@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect } from "react";
 import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
 import { routes } from "@/shared/constants/routes";
-import { ButtonLink } from "@/shared/ui/Button";
-import { Card, CardContent } from "@/shared/ui/Card";
+import { ButtonLink } from "@/shared/ui/atoms/Button";
+import { Card, CardContent } from "@/shared/ui/atoms/Card";
 
 type AdminAuthGateProps = {
   children: ReactNode;

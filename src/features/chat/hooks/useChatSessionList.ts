@@ -3,7 +3,7 @@ import { chatService } from "@/features/chat/lib/chatService";
 import { toChatTitle } from "@/features/chat/lib/chatMessages";
 import type { ChatSessionSummary } from "@/features/chat/types";
 import { ApiError } from "@/shared/api/http";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 /** 사이드바 제목을 채우려고 상담 메시지를 동시에 조회하는 최대 개수. */
 const TITLE_FETCH_CONCURRENCY = 4;
