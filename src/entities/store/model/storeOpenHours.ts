@@ -1,4 +1,7 @@
-import type { StoreLocation, StoreOpenFilter } from "@/features/store/types";
+import type {
+  StoreLocation,
+  StoreOpenFilter,
+} from "@/entities/store/model/types";
 
 const MINUTES_PER_DAY = 24 * 60;
 /** "시간 선택" 필터 간격(분). 예약 시간 슬롯과 같은 30분 단위. */

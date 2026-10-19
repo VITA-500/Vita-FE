@@ -9,45 +9,14 @@ export {
   type AdminFaqUpdateRequest,
 } from "@/entities/faq";
 
-export type AdminStore = {
-  storeId: number;
-  name: string;
-  address: string;
-  storeType: AdminStoreType;
-  benefitId?: number | null;
-  brand?: string | null;
-  category?: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type AdminStoreType = "PHONE" | "PARTNER";
-
-export type AdminStoreDetail = AdminStore & {
-  lat: number;
-  lng: number;
-  businessHours?: string | null;
-  phone?: string;
-  consultServices: string[];
-  providedServices: string[];
-  benefitName?: string | null;
-};
-
-export type AdminStoreRequest = Omit<
+// 매장 타입은 entities/store로 옮겼다. 기존 import 경로 호환용 재내보내기.
+export type {
+  AdminStore,
   AdminStoreDetail,
-  "brand" | "category" | "benefitName" | "storeId" | "storeType"
->;
-
-export type AdminStoreFormInput = Omit<
-  AdminStoreDetail,
-  | "brand"
-  | "category"
-  | "benefitName"
-  | "createdAt"
-  | "storeId"
-  | "storeType"
-  | "updatedAt"
->;
+  AdminStoreFormInput,
+  AdminStoreRequest,
+  AdminStoreType,
+} from "@/entities/store";
 
 // 제휴 혜택 타입은 entities/benefit으로 옮겼다. 기존 import 경로 호환용 재내보내기.
 export {
