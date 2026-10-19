@@ -15,7 +15,25 @@ beforeEach(() => {
     error: null,
     isLoading: false,
     stats: {
-      summary: { repeatCount: 128, todayCount: 12, unresolvedCount: 24 },
+      summary: {
+        repeatCount: 128,
+        todayCount: 12,
+        unresolvedCount: 24,
+        todayLikeCount: 31,
+        todayDislikeCount: 5,
+        reasonCounts: {
+          NO_MATCH: 40,
+          LOW_SIMILARITY: 20,
+          ANSWER_FAILED: 4,
+          DISLIKED: 9,
+        },
+        todayReasonCounts: {
+          NO_MATCH: 2,
+          LOW_SIMILARITY: 1,
+          ANSWER_FAILED: 0,
+          DISLIKED: 3,
+        },
+      },
       candidates: [],
     },
     refetch: vi.fn(),
@@ -47,6 +65,20 @@ describe("AdminDashboard", () => {
       expect(screen.queryByText(label)).not.toBeInTheDocument();
   });
 
+  it("shows today's reactions and occurrence counts by reason", () => {
+    render(<AdminDashboard />);
+    const section = within(
+      screen.getByRole("region", { name: "오늘 사용자 반응과 사유별 발생" }),
+    );
+    expect(
+      section.getByRole("heading", { name: "오늘 좋아요" }),
+    ).toBeInTheDocument();
+    expect(section.getByText("31")).toBeInTheDocument();
+    expect(section.getByText("5")).toBeInTheDocument();
+    expect(section.getByText("검색 결과 없음")).toBeInTheDocument();
+    expect(section.getByText("40")).toBeInTheDocument();
+  });
+
   it("shows loading placeholders instead of dashes", () => {
     vi.mocked(useAdminAnswerFeedback).mockReturnValue({
       error: null,
@@ -57,7 +89,7 @@ describe("AdminDashboard", () => {
     render(<AdminDashboard />);
     expect(
       screen.getAllByRole("status", { name: "통계 조회 중" }),
-    ).toHaveLength(3);
+    ).toHaveLength(5);
     expect(screen.queryByText("-")).not.toBeInTheDocument();
     expect(
       screen.queryByText("점검할 누락 항목이 없습니다."),
@@ -72,7 +104,7 @@ describe("AdminDashboard", () => {
       refetch: vi.fn(),
     } as unknown as ReturnType<typeof useAdminAnswerFeedback>);
     render(<AdminDashboard />);
-    expect(screen.getAllByText("조회 실패")).toHaveLength(3);
+    expect(screen.getAllByText("조회 실패")).toHaveLength(6);
     expect(
       screen.queryByText("점검할 누락 항목이 없습니다."),
     ).not.toBeInTheDocument();

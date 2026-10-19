@@ -1,3 +1,4 @@
+import type { AdminAnswerFeedbackReason } from "@/entities/feedback";
 import type {
   FaqCategoryFilter,
   FaqSortDirection,
@@ -27,8 +28,8 @@ export const adminQueryKeys = {
     sortBy: string;
   }) => [...benefitsAll, params] as const,
   answerFeedbackAll: ["admin", "answerFeedback"] as const,
-  answerFeedback: (limit: number) =>
-    ["admin", "answerFeedback", { limit }] as const,
+  answerFeedback: (limit: number, reason?: AdminAnswerFeedbackReason) =>
+    ["admin", "answerFeedback", { limit, reason }] as const,
   userSummary: ["admin", "users", "summary"] as const,
   usersAll: ["admin", "users", "list"] as const,
   users: (params: {

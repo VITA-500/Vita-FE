@@ -51,6 +51,9 @@ type AnswerFeedbackListProps = {
   dismissingId?: number;
   /** 무시. 없으면 무시 버튼을 비활성으로 둔다. */
   onDismiss?: DismissFeedback;
+  /** 항목이 없을 때 문구(필터 탭마다 다르게 쓴다) */
+  emptyTitle?: string;
+  emptyDescription?: string;
 };
 
 /** 챗봇 답변 피드백 목록. 대시보드와 답변 피드백 페이지가 함께 쓴다. */
@@ -58,6 +61,8 @@ export const AnswerFeedbackList = ({
   candidates,
   dismissingId,
   onDismiss,
+  emptyTitle = "확인할 답변 피드백이 없어요.",
+  emptyDescription = "챗봇이 답하지 못했거나 사용자가 아쉬워요를 누른 답변이 생기면 여기에 모여요.",
 }: AnswerFeedbackListProps) => {
   const [dismissTarget, setDismissTarget] = useState<AdminAnswerFeedback>();
   const isDismissingTarget =
@@ -77,10 +82,7 @@ export const AnswerFeedbackList = ({
 
   if (candidates.length === 0) {
     return (
-      <AdminEmptyState
-        title="확인할 답변 피드백이 없어요."
-        description="챗봇이 답하지 못했거나 사용자가 아쉬워요를 누른 답변이 생기면 여기에 모여요."
-      />
+      <AdminEmptyState title={emptyTitle} description={emptyDescription} />
     );
   }
 
@@ -96,7 +98,7 @@ export const AnswerFeedbackList = ({
         <span>횟수</span>
         <span>피드백 유형</span>
         <span>최근 발생</span>
-        <span className="text-center">관리</span>
+        <span className="text-center">{onDismiss ? "관리" : ""}</span>
       </div>
       <div className="space-y-3">
         {candidates.map((candidate) => (
@@ -238,18 +240,7 @@ const FeedbackRow = ({
             >
               무시
             </Button>
-          ) : (
-            // 비활성 버튼은 마우스 이벤트를 받지 않아 툴팁은 감싼 span에 둔다.
-            <span title="지금은 무시할 수 없어요">
-              <button
-                type="button"
-                className="h-8 rounded-2xl px-3 text-xs font-bold text-gray-400"
-                disabled
-              >
-                무시
-              </button>
-            </span>
-          )}
+          ) : null}
         </div>
       </div>
 
