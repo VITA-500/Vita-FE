@@ -25,6 +25,10 @@ import { showToast } from "@/shared/providers/ToastProvider";
 /** "이 지역에 매장 없음" 안내 후 직전 지역으로 지도를 되돌리기까지의 지연(ms). */
 const RESTORE_AREA_DELAY_MS = 1400;
 
+/** 사용자가 고른 지역의 조회 key. 내 위치 key("lat:lng:filter")와 겹치지 않게 앞에 area를 붙인다. */
+const toAreaLookupKey = (area: MapSearchPoint, openFilterKey: string) =>
+  `area:${area.lat}:${area.lng}:${openFilterKey}`;
+
 type SearchState = ReturnType<typeof useStoreSearchState>;
 
 type UseNearbyStoresParams = Pick<
@@ -51,6 +55,10 @@ type UseNearbyStoresParams = Pick<
 /**
  * 주변 매장 조회: 들어올 때(내 위치 또는 기본 위치), 내 위치를 받았을 때, 지점을 골라 다시 조회할 때.
  * 조회 결과가 없으면 직전에 보던 지역으로 지도를 되돌린다.
+ *
+ * 내 위치 따라가기: 처음에는 내 위치(없으면 기본 위치) 주변 매장을 보여주고 위치가 바뀌면 다시 조회한다.
+ * 사용자가 지역을 직접 고르면("이 위치에서 검색" 등) 따라가기를 끄고, 위치가 바뀌어도 그 지역 결과를 유지한다
+ * (지도 서비스들과 같은 방식). "내 위치" 버튼을 누르면 다시 따라간다.
  */
 export const useNearbyStores = ({
   areaSearchRequestIdRef,
@@ -71,11 +79,16 @@ export const useNearbyStores = ({
   const openFilterKey = getOpenFilterKey(openFilter);
   // 되살린 화면이면 처음 위치를 받아도 내 위치로 지도를 옮기지 않는다(보던 지역을 유지).
   const hasFocusedInitialLocationRef = useRef(Boolean(restoredSnapshot));
-  const lastNearbyLookupKeyRef = useRef("");
-  // 되살린 화면이면 들어올 때·위치를 받았을 때의 자동 주변 조회를 건너뛴다(되살린 매장 목록을 덮어쓰지 않도록).
-  // 영업 시간 필터를 바꾸는 등 사용자가 조건을 바꾸면 그때부터는 원래대로 조회한다.
-  const skipAutoLookupOpenFilterKeyRef = useRef<string | null>(
-    restoredSnapshot ? openFilterKey : null,
+  // 되살린 화면은 사용자가 보던 지역이라 따라가기를 끈 상태로 시작한다.
+  const isFollowingUserLocationRef = useRef(!restoredSnapshot);
+  // 따라가기를 끈 뒤 결과를 유지할 지역. 영업 시간 필터를 바꾸면 이 지역을 그 조건으로 다시 조회한다.
+  // (ref 초기값은 렌더 중 ref를 읽지 않도록 같은 값을 따로 계산해 넣는다.)
+  const initialChosenArea =
+    restoredSnapshot?.storesOrigin ?? defaultMapLocation;
+  const chosenAreaRef = useRef<MapSearchPoint>(initialChosenArea);
+  // 되살린 화면이면 들어올 때의 자동 조회를 건너뛴다(되살린 매장 목록을 덮어쓰지 않도록).
+  const lastNearbyLookupKeyRef = useRef(
+    restoredSnapshot ? toAreaLookupKey(initialChosenArea, openFilterKey) : "",
   );
   // 마지막으로 매장이 1곳 이상 조회된 지역. "이 위치에서 검색" 결과가 없으면 이곳으로 지도를 되돌린다.
   const lastStoreAreaRef = useRef<MapSearchPoint>(
@@ -99,12 +112,38 @@ export const useNearbyStores = ({
 
   const updateStoresByLocation = (
     lookupLocation: MapSearchPoint,
-    options?: { showLoadingCard?: boolean; restoreOnEmpty?: boolean },
+    options?: {
+      showLoadingCard?: boolean;
+      restoreOnEmpty?: boolean;
+      /** 내 위치 주변으로 돌아가는 조회면 true. 없으면 사용자가 고른 지역으로 보고 따라가기를 끈다. */
+      followUserLocation?: boolean;
+    },
   ) => {
     let isCurrentRequest = true;
+    // 결과가 없어 직전 지역으로 되돌아갈 때 따라가기 상태도 함께 되돌린다.
+    const previousFollowState = {
+      area: chosenAreaRef.current,
+      isFollowing: isFollowingUserLocationRef.current,
+      lookupKey: lastNearbyLookupKeyRef.current,
+    };
+
+    if (options?.followUserLocation) {
+      isFollowingUserLocationRef.current = true;
+      lastNearbyLookupKeyRef.current = nearbyLookup?.key ?? "";
+    } else {
+      isFollowingUserLocationRef.current = false;
+      chosenAreaRef.current = lookupLocation;
+      lastNearbyLookupKeyRef.current = toAreaLookupKey(
+        lookupLocation,
+        openFilterKey,
+      );
+    }
     // 결과가 없거나 실패하면 기존 매장 핀은 그대로 두고, 직전에 보던 지역으로 지도를 되돌린다.
     const restorePreviousArea = (message: string) => {
       showToast(message);
+      chosenAreaRef.current = previousFollowState.area;
+      isFollowingUserLocationRef.current = previousFollowState.isFollowing;
+      lastNearbyLookupKeyRef.current = previousFollowState.lookupKey;
       setSearchPoint(null);
       setHasSelectedStoreInfo(false);
       setIsWaitingForPinSelection(false);
@@ -200,6 +239,8 @@ export const useNearbyStores = ({
         const lat = Number(userLocation.lat.toFixed(3));
         const lng = Number(userLocation.lng.toFixed(3));
 
+        isFollowingUserLocationRef.current = true;
+
         lastNearbyLookupKeyRef.current = `${lat}:${lng}:${openFilterKey}`;
         storeService
           .fetchNearbyStores({ lat, lng }, undefined, { openFilter })
@@ -229,34 +270,35 @@ export const useNearbyStores = ({
       return;
     }
 
-    if (lastNearbyLookupKeyRef.current === nearbyLookup.key) {
+    // 따라가기 중이면 내 위치(기본 위치) 주변을, 아니면 사용자가 고른 지역을 조회한다.
+    // 따라가기를 끈 상태에서는 위치가 바뀌어도 key가 같아 다시 조회하지 않고, 영업 시간 필터가 바뀔 때만 조회한다.
+    const lookup = isFollowingUserLocationRef.current
+      ? nearbyLookup
+      : {
+          key: toAreaLookupKey(chosenAreaRef.current, openFilterKey),
+          location: chosenAreaRef.current,
+        };
+
+    if (lastNearbyLookupKeyRef.current === lookup.key) {
       return;
     }
 
-    lastNearbyLookupKeyRef.current = nearbyLookup.key;
-
-    if (skipAutoLookupOpenFilterKeyRef.current !== null) {
-      if (skipAutoLookupOpenFilterKeyRef.current === openFilterKey) {
-        return;
-      }
-
-      skipAutoLookupOpenFilterKeyRef.current = null;
-    }
+    lastNearbyLookupKeyRef.current = lookup.key;
 
     let isCurrentRequest = true;
     let isSettled = false;
 
     storeService
-      .fetchNearbyStores(nearbyLookup.location, undefined, { openFilter })
+      .fetchNearbyStores(lookup.location, undefined, { openFilter })
       .then((nearbyStores) => {
         isSettled = true;
 
         if (isCurrentRequest) {
           if (nearbyStores.length > 0) {
-            lastStoreAreaRef.current = nearbyLookup.location;
+            lastStoreAreaRef.current = lookup.location;
           }
 
-          setStoresOrigin(nearbyLookup.location);
+          setStoresOrigin(lookup.location);
           setStores(nearbyStores);
         }
       })
@@ -280,10 +322,17 @@ export const useNearbyStores = ({
     // setter는 항상 같은 값이라, 기존처럼 조회 지점(nearbyLookup)이 바뀔 때만 실행된다.
   }, [nearbyLookup, openFilter, openFilterKey, setStores, setStoresOrigin]);
 
+  /** "내 위치" 버튼: 다시 내 위치를 따라간다. 지금 위치 주변 조회는 버튼 쪽에서 바로 한다. */
+  const resumeFollowingUserLocation = () => {
+    isFollowingUserLocationRef.current = true;
+    lastNearbyLookupKeyRef.current = nearbyLookup?.key ?? "";
+  };
+
   return {
     hasFocusedInitialLocationRef,
     lastNearbyLookupKeyRef,
     nearbyLookup,
+    resumeFollowingUserLocation,
     updateStoresByLocation,
   };
 };

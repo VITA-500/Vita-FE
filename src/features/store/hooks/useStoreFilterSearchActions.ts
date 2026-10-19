@@ -18,7 +18,6 @@ export const useStoreFilterSearchActions = ({
   filterStoresByServices,
   hasActiveServiceFilter,
   isTagSearchQuery,
-  lastNearbyLookupKeyRef,
   loadedSearchAreaKeyRef,
   mapSelectedStore,
   mapViewport,
@@ -207,8 +206,10 @@ export const useStoreFilterSearchActions = ({
     }
 
     if (nearbyLookup) {
-      lastNearbyLookupKeyRef.current = nearbyLookup.key;
-      updateStoresByLocation(nearbyLookup.location);
+      // 기본 검색 방식으로 돌아가므로 다시 내 위치를 따라간다.
+      updateStoresByLocation(nearbyLookup.location, {
+        followUserLocation: true,
+      });
     }
   };
   /**

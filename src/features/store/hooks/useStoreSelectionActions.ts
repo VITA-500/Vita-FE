@@ -57,7 +57,9 @@ type UseStoreSelectionActionsParams = Pick<
   > &
   Pick<
     ReturnType<typeof useNearbyStores>,
-    "hasFocusedInitialLocationRef" | "updateStoresByLocation"
+    | "hasFocusedInitialLocationRef"
+    | "resumeFollowingUserLocation"
+    | "updateStoresByLocation"
   > &
   Pick<
     ReturnType<typeof useLocationPermission>,
@@ -86,6 +88,7 @@ export const useStoreSelectionActions = ({
   categoryStores,
   changeRouteMode,
   hasFocusedInitialLocationRef,
+  resumeFollowingUserLocation,
   isTagSearchQuery,
   openLocationPermissionModal,
   requestLocation,
@@ -305,6 +308,7 @@ export const useStoreSelectionActions = ({
   });
   const focusUserLocation = () => {
     shouldFocusUserLocationRef.current = true;
+    resumeFollowingUserLocation();
     // 내 위치로 이동: 이후 텍스트 검색 정렬 중심은 내 위치
     setSearchAnchorSource("user");
 
