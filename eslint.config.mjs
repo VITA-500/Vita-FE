@@ -88,6 +88,19 @@ const appBoundary = {
   rules: boundaryRules([entityDeepImport]),
 };
 
+// Phase 5 transitional bridges: the legacy store slice still owns the panel
+// composition while feature slices are being extracted incrementally.
+const storeMigrationBridges = {
+  files: [
+    `src/features/store/${sourceFiles}`,
+    `src/features/store-search/hooks/storeSearchActionsParams.ts`,
+    `src/features/store-search/hooks/useStoreSearchState.ts`,
+  ],
+  rules: {
+    "no-restricted-imports": "off",
+  },
+};
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -95,6 +108,7 @@ const eslintConfig = defineConfig([
   ...entityBoundaries,
   ...featureBoundaries,
   appBoundary,
+  storeMigrationBridges,
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
