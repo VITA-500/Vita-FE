@@ -2,13 +2,13 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import { findStoreById } from "@/features/store/lib/storePanelStores";
-import { storeService } from "@/features/store/lib/storeService";
 import type {
   MapCategory,
   StoreLocation,
   StoreMapInitialAction,
   StoreRouteMode,
 } from "@/features/store/types";
+import { useFetchStoreDetail } from "@/entities/store";
 import { showToast } from "@/shared/providers/ToastProvider";
 
 type UseInitialStoreActionParams = {
@@ -40,6 +40,7 @@ export const useInitialStoreAction = ({
   showStoreOnMap,
   stores,
 }: UseInitialStoreActionParams) => {
+  const fetchStoreDetail = useFetchStoreDetail();
   const handleInitialStoreAction = async (action: StoreMapInitialAction) => {
     if (action.category) {
       setActiveMapCategory(action.category);
@@ -57,9 +58,9 @@ export const useInitialStoreAction = ({
       searchableStores,
       stores,
     );
-    const storeDetail = await storeService
-      .fetchStoreDetail(action.storeId, fallback)
-      .catch(() => null);
+    const storeDetail = await fetchStoreDetail(action.storeId, fallback).catch(
+      () => null,
+    );
     const store = storeDetail ?? fallback;
 
     if (!store) {

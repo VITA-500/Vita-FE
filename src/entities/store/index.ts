@@ -3,9 +3,11 @@ export { isApiStoreId, storeApi } from "@/entities/store/api/storeApi";
 export { adminStoreApi } from "@/entities/store/api/admin";
 export {
   nearbyStoresQueryOptions,
+  storeDetailQueryOptions,
   storeQueryKeys,
   useBenefitStoresQuery,
   useFetchNearbyStores,
+  useFetchStoreDetail,
 } from "@/entities/store/model/queries";
 export {
   ALL_STORE_OPEN_FILTER,

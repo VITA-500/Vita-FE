@@ -1,16 +1,27 @@
 import { renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useInitialStoreAction } from "./useInitialStoreAction";
-import { storeService } from "@/features/store/lib/storeService";
+
 import type { StoreLocation } from "@/features/store/types";
 import { showToast } from "@/shared/providers/ToastProvider";
 
-vi.mock("@/features/store/lib/storeService", () => ({
-  storeService: { fetchStoreDetail: vi.fn() },
+// vi.mock은 파일 맨 위로 끌어올려지므로 모킹 함수도 vi.hoisted로 먼저 만든다.
+const { fetchStoreDetail } = vi.hoisted(() => ({
+  fetchStoreDetail:
+    vi.fn<
+      (
+        storeId: string,
+        fallback?: StoreLocation,
+      ) => Promise<StoreLocation | null>
+    >(),
+}));
+
+// 상세 조회 캐시(QueryClient)는 entities/store 테스트에서 확인하고, 여기서는 진입 흐름만 본다.
+vi.mock("@/entities/store", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useFetchStoreDetail: () => fetchStoreDetail,
 }));
 vi.mock("@/shared/providers/ToastProvider", () => ({ showToast: vi.fn() }));
-
-const fetchStoreDetail = vi.mocked(storeService.fetchStoreDetail);
 
 const listed: StoreLocation = {
   address: "목록 주소",
