@@ -15,37 +15,49 @@ type SelectedStoreCardController = ReturnType<
   typeof createSelectedStoreCardController
 >;
 
+/** 이벤트 처리에 필요한 카드 controller 동작만 분리한 계약. */
+type StoreMapEventCardController = Pick<
+  SelectedStoreCardController,
+  | "getSelectedStoreCardLayout"
+  | "isSelectedCardInView"
+  | "panToFitSelectedCard"
+  | "revealPendingCard"
+  | "updateSelectedStoreCardPosition"
+>;
+
+/** 이벤트가 일어난 순간에 읽는 최신 값. 카드 controller는 지도를 다시 그릴 때마다 바뀌고, 아직 없을 수 있다. */
+export type StoreMapEventContext = Pick<
+  StoreMapEffectContext,
+  | "autoFitCardAfterZoomRef"
+  | "getRouteObstacleRect"
+  | "isRouteCardDocked"
+  | "lastMarkerClickAtRef"
+  | "mapContainerRef"
+  | "markRouteFitReadyRef"
+  | "onCenterChange"
+  | "onMapPointSelect"
+  | "onRouteObstructed"
+  | "onSelectedStoreCardClose"
+  | "onUserCameraControl"
+  | "onViewportChange"
+  | "pendingRouteFitKeyRef"
+  | "revealedCardStoreId"
+  | "routePreview"
+  | "selectedStore"
+  | "selectedStoreCardRef"
+> & { card: StoreMapEventCardController | null };
+
 /**
  * 지도 이벤트를 연결한다: 드래그 끝(지점 선택·카드 닫기), 빈 곳 클릭(카드 닫기), 확대/축소·이동(카드 위치 갱신),
  * 멈춤(idle: 중심·영역 알림, 보류한 카드 보이기, 경로 그리기 시작, 확대 후 카드 자리 확보, 길찾기 가림 확인).
- * 연결을 끊는 함수를 돌려준다.
+ * 지도 하나에 한 번만 연결하고, 값은 이벤트가 일어날 때 getContext()로 최신 값을 읽는다
+ * (핀·콜백이 바뀔 때마다 이벤트를 풀었다 다시 연결하지 않도록). 연결을 끊는 함수를 돌려준다.
  */
 export const bindStoreMapEvents = ({
-  autoFitCardAfterZoomRef,
-  getRouteObstacleRect,
-  getSelectedStoreCardLayout,
-  isRouteCardDocked,
-  isSelectedCardInView,
+  getContext,
   kakaoMaps,
-  lastMarkerClickAtRef,
   map,
-  mapContainerRef,
-  markRouteFitReadyRef,
-  onCenterChange,
-  onMapPointSelect,
-  onUserCameraControl,
-  onRouteObstructed,
-  onSelectedStoreCardClose,
-  onViewportChange,
-  panToFitSelectedCard,
-  pendingRouteFitKeyRef,
-  revealedCardStoreId,
-  revealPendingCard,
-  routePreview,
-  selectedStore,
-  selectedStoreCardRef,
-  updateSelectedStoreCardPosition,
-}: StoreMapEffectContext & StoreMapInstance & SelectedStoreCardController) => {
+}: StoreMapInstance & { getContext: () => StoreMapEventContext }) => {
   const mapEventApi = kakaoMaps.event as unknown as KakaoMapEventApi;
   /** 지금 보이는 지도 영역. 영역을 구하지 못하면 null */
   const getCurrentViewport = (): MapViewportBounds | null => {
@@ -66,12 +78,26 @@ export const bindStoreMapEvents = ({
     };
   };
   const handleMapDragEnd = () => {
+    const {
+      card,
+      isRouteCardDocked,
+      mapContainerRef,
+      onMapPointSelect,
+      onSelectedStoreCardClose,
+      onUserCameraControl,
+    } = getContext();
+
+    // 지점 선택을 받지 않는 지도(채팅 미리보기 등)에서는 드래그 끝을 무시한다.
+    if (!onMapPointSelect) {
+      return;
+    }
+
     onUserCameraControl?.();
     const movedCenter = (map as KakaoMapWithCenter).getCenter();
 
     // 카카오맵은 드래그를 놓을 때 idle을 dragend보다 먼저 보낸다(지도는 이미 멈춘 상태).
     // 그래서 옮긴 영역을 idle에서 기다리지 않고 여기서 바로 구해 함께 넘긴다.
-    onMapPointSelect?.(
+    onMapPointSelect(
       {
         lat: movedCenter.getLat(),
         lng: movedCenter.getLng(),
@@ -86,19 +112,25 @@ export const bindStoreMapEvents = ({
     if (!(isRouteCardDocked && isDesktop)) {
       onSelectedStoreCardClose?.();
     }
-    updateSelectedStoreCardPosition();
+    card?.updateSelectedStoreCardPosition();
   };
   const handleMapZoomChanged = () => {
-    updateSelectedStoreCardPosition();
+    getContext().card?.updateSelectedStoreCardPosition();
   };
 
-  if (onMapPointSelect) {
-    mapEventApi.addListener(map, "dragend", handleMapDragEnd);
-  }
+  mapEventApi.addListener(map, "dragend", handleMapDragEnd);
 
   // 지도 빈 곳을 클릭하면 정보 카드를 닫는다(드래그는 click이 아님).
   // 길찾기 중 데스크톱에서는 경로를 살펴보며 클릭해도 카드를 유지한다.
   const handleMapClick = () => {
+    const {
+      isRouteCardDocked,
+      lastMarkerClickAtRef,
+      mapContainerRef,
+      onSelectedStoreCardClose,
+      selectedStore,
+    } = getContext();
+
     // 핀 클릭 직후 지도 click이 이어서 들어오는 경우는 무시(방금 연 카드가 바로 닫히지 않도록)
     if (Date.now() - lastMarkerClickAtRef.current < 300) {
       return;
@@ -120,6 +152,13 @@ export const bindStoreMapEvents = ({
 
   /** 길찾기 중 지도 이동·확대가 끝났을 때 경로/출발·도착/카드가 패널에 가려졌는지 확인한다. */
   const checkRouteObstruction = () => {
+    const {
+      getRouteObstacleRect,
+      mapContainerRef,
+      onRouteObstructed,
+      routePreview,
+      selectedStoreCardRef,
+    } = getContext();
     const obstacleRect = getRouteObstacleRect?.();
     const containerRect = mapContainerRef.current?.getBoundingClientRect();
     const projection = (map as KakaoMapWithProjection).getProjection?.();
@@ -172,6 +211,16 @@ export const bindStoreMapEvents = ({
     }
   };
   const handleMapIdle = () => {
+    const {
+      autoFitCardAfterZoomRef,
+      card,
+      markRouteFitReadyRef,
+      onCenterChange,
+      onViewportChange,
+      pendingRouteFitKeyRef,
+      revealedCardStoreId,
+      selectedStore,
+    } = getContext();
     const center = (map as KakaoMapWithCenter).getCenter();
 
     onCenterChange?.({ lat: center.getLat(), lng: center.getLng() });
@@ -181,7 +230,7 @@ export const bindStoreMapEvents = ({
     if (viewport) {
       onViewportChange?.(viewport);
     }
-    revealPendingCard();
+    card?.revealPendingCard();
 
     // 길찾기 범위 맞춤 이동이 끝났으면 경로 그리기를 시작한다.
     if (pendingRouteFitKeyRef.current) {
@@ -199,18 +248,19 @@ export const bindStoreMapEvents = ({
       shouldAutoFit &&
       revealedCardStoreId &&
       revealedCardStoreId === selectedStore?.id
-        ? getSelectedStoreCardLayout()
+        ? card?.getSelectedStoreCardLayout()
         : null;
 
     if (
+      card &&
       layout &&
       layout.point.x >= 0 &&
       layout.point.x <= layout.containerRect.width &&
       layout.point.y >= 0 &&
       layout.point.y <= layout.containerRect.height &&
-      !isSelectedCardInView(layout)
+      !card.isSelectedCardInView(layout)
     ) {
-      panToFitSelectedCard(layout);
+      card.panToFitSelectedCard(layout);
     }
 
     checkRouteObstruction();
@@ -220,9 +270,7 @@ export const bindStoreMapEvents = ({
   mapEventApi.addListener(map, "idle", handleMapIdle);
 
   return () => {
-    if (onMapPointSelect) {
-      mapEventApi.removeListener(map, "dragend", handleMapDragEnd);
-    }
+    mapEventApi.removeListener(map, "dragend", handleMapDragEnd);
     mapEventApi.removeListener(map, "click", handleMapClick);
     mapEventApi.removeListener(map, "zoom_changed", handleMapZoomChanged);
     mapEventApi.removeListener(map, "center_changed", handleMapZoomChanged);
