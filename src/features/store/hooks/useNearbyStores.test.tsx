@@ -1,17 +1,21 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useNearbyStores } from "./useNearbyStores";
-import { storeService } from "@/features/store/lib/storeService";
+import { storeApi } from "@/entities/store";
 import type { StoreMapSnapshot } from "@/features/store/lib/storeMapSnapshot";
 import type { StoreLocation, StoreOpenFilter } from "@/features/store/types";
 import { showToast } from "@/shared/providers/ToastProvider";
 
-vi.mock("@/features/store/lib/storeService", () => ({
-  storeService: { fetchNearbyStores: vi.fn() },
+// 공개 API(@/entities/store)가 다시 내보내는 storeApi가 이 모킹 값이 된다.
+vi.mock("@/entities/store/api/storeApi", () => ({
+  isApiStoreId: (id: string) => /^\d+$/.test(id),
+  storeApi: { fetchNearbyStores: vi.fn() },
 }));
 vi.mock("@/shared/providers/ToastProvider", () => ({ showToast: vi.fn() }));
 
-const fetchNearbyStores = vi.mocked(storeService.fetchNearbyStores);
+const fetchNearbyStores = vi.mocked(storeApi.fetchNearbyStores);
 
 const store = (id: string): StoreLocation => ({
   address: "",
@@ -48,9 +52,17 @@ const setup = (initial: Partial<Props> = {}) => {
     areaSearchRequestIdRef: { current: 0 },
     shouldFocusUserLocationRef: { current: false },
   };
+  // 테스트마다 새 QueryClient로 감싸 캐시가 테스트끼리 섞이지 않게 한다.
+  const client = new QueryClient({
+    defaultOptions: { queries: { gcTime: Infinity } },
+  });
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
   const hook = renderHook(
     (props: Props) => useNearbyStores({ ...setters, ...refs, ...props }),
     {
+      wrapper,
       initialProps: {
         openFilter: ALL,
         restoredSnapshot: null,
@@ -345,7 +357,9 @@ describe("useNearbyStores 이 위치에서 검색", () => {
         { followUserLocation: true },
       );
     });
-    await waitFor(() => expect(fetchNearbyStores).toHaveBeenCalledTimes(3));
+    // 처음 조회와 같은 지점·조건이라 30초 캐시를 써서 요청을 다시 보내지 않는다.
+    await act(async () => {});
+    expect(fetchNearbyStores).toHaveBeenCalledTimes(2);
 
     rerender({
       openFilter: ALL,
@@ -353,6 +367,6 @@ describe("useNearbyStores 이 위치에서 검색", () => {
       userLocation: { lat: 37.52, lng: 127.03 },
     });
 
-    await waitFor(() => expect(fetchNearbyStores).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(fetchNearbyStores).toHaveBeenCalledTimes(3));
   });
 });

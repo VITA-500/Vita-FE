@@ -18,8 +18,8 @@ import {
   type MapSearchPoint,
 } from "@/features/store/lib/storePanelStores";
 import { getOpenFilterKey } from "@/features/store/lib/storeOpenHours";
-import { storeService } from "@/features/store/lib/storeService";
 import type { StoreLocation, StoreOpenFilter } from "@/features/store/types";
+import { useFetchNearbyStores } from "@/entities/store";
 import { showToast } from "@/shared/providers/ToastProvider";
 
 /** "이 지역에 매장 없음" 안내 후 직전 지역으로 지도를 되돌리기까지의 지연(ms). */
@@ -76,6 +76,7 @@ export const useNearbyStores = ({
   shouldFocusUserLocationRef,
   userLocation,
 }: UseNearbyStoresParams) => {
+  const fetchNearbyStores = useFetchNearbyStores();
   const openFilterKey = getOpenFilterKey(openFilter);
   // 되살린 화면이면 처음 위치를 받아도 내 위치로 지도를 옮기지 않는다(보던 지역을 유지).
   const hasFocusedInitialLocationRef = useRef(Boolean(restoredSnapshot));
@@ -166,8 +167,7 @@ export const useNearbyStores = ({
       setHasSelectedStoreInfo(false);
     }
 
-    storeService
-      .fetchNearbyStores(lookupLocation, undefined, { openFilter })
+    fetchNearbyStores(lookupLocation, { openFilter })
       .then((nearbyStores) => {
         if (isCurrentRequest) {
           if (options?.restoreOnEmpty && nearbyStores.length === 0) {
@@ -242,8 +242,7 @@ export const useNearbyStores = ({
         isFollowingUserLocationRef.current = true;
 
         lastNearbyLookupKeyRef.current = `${lat}:${lng}:${openFilterKey}`;
-        storeService
-          .fetchNearbyStores({ lat, lng }, undefined, { openFilter })
+        fetchNearbyStores({ lat, lng }, { openFilter })
           .then((nearbyStores) => {
             setStoresOrigin({ lat, lng });
             setStores(nearbyStores);
@@ -255,6 +254,7 @@ export const useNearbyStores = ({
     }
     // 상태 변경 함수(setter)와 ref는 패널에서 넘겨받지만 항상 같은 값이라, 기존처럼 위치가 바뀔 때만 실행된다.
   }, [
+    fetchNearbyStores,
     setFocusPoint,
     setSearchPoint,
     setStores,
@@ -288,8 +288,7 @@ export const useNearbyStores = ({
     let isCurrentRequest = true;
     let isSettled = false;
 
-    storeService
-      .fetchNearbyStores(lookup.location, undefined, { openFilter })
+    fetchNearbyStores(lookup.location, { openFilter })
       .then((nearbyStores) => {
         isSettled = true;
 
@@ -320,7 +319,14 @@ export const useNearbyStores = ({
       }
     };
     // setter는 항상 같은 값이라, 기존처럼 조회 지점(nearbyLookup)이 바뀔 때만 실행된다.
-  }, [nearbyLookup, openFilter, openFilterKey, setStores, setStoresOrigin]);
+  }, [
+    fetchNearbyStores,
+    nearbyLookup,
+    openFilter,
+    openFilterKey,
+    setStores,
+    setStoresOrigin,
+  ]);
 
   /** "내 위치" 버튼: 다시 내 위치를 따라간다. 지금 위치 주변 조회는 버튼 쪽에서 바로 한다. */
   const resumeFollowingUserLocation = () => {

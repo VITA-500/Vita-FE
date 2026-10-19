@@ -26,6 +26,7 @@ import {
 import { storeService } from "@/features/store/lib/storeService";
 import type { MapCategory, StoreLocation } from "@/features/store/types";
 import { readStorage } from "@/shared/lib/browserStorage";
+import { useFetchNearbyStores } from "@/entities/store";
 import { showToast } from "@/shared/providers/ToastProvider";
 
 type UseStoreSelectionActionsParams = Pick<
@@ -119,6 +120,7 @@ export const useStoreSelectionActions = ({
   userLocation,
   watchLocation,
 }: UseStoreSelectionActionsParams) => {
+  const fetchNearbyStores = useFetchNearbyStores();
   const showStoreOnMap = (
     storeId: string,
     storeDetail: StoreLocation,
@@ -324,8 +326,7 @@ export const useStoreSelectionActions = ({
       shouldFocusUserLocationRef.current = false;
 
       if (!routeDestinationStoreId) {
-        storeService
-          .fetchNearbyStores({ lat: userLocation.lat, lng: userLocation.lng })
+        fetchNearbyStores({ lat: userLocation.lat, lng: userLocation.lng })
           .then((nearbyStores) => {
             setStoresOrigin({ lat: userLocation.lat, lng: userLocation.lng });
             setStores(nearbyStores);
