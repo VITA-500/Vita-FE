@@ -7,6 +7,7 @@ import {
   getSameLocationStores,
   getViewportAreaQuery,
   isStoreInVisibleArea,
+  resolveRouteDestinationStore,
   sortStoresByDistance,
   type MapViewport,
 } from "@/features/store/lib/storePanelStores";
@@ -201,5 +202,30 @@ describe("findStoreById", () => {
     expect(findStoreById(undefined, [near])).toBeUndefined();
     expect(findStoreById("", [near])).toBeUndefined();
     expect(findStoreById("missing", [near], [middle])).toBeUndefined();
+  });
+});
+
+describe("resolveRouteDestinationStore", () => {
+  const destination = createStore("10", 37.51, 127.01);
+  const refreshed = { ...destination, name: "갱신된 매장" };
+  const other = createStore("20", 37.52, 127.02);
+
+  it("prefers the latest store from the lists", () => {
+    expect(
+      resolveRouteDestinationStore("10", destination, [other, refreshed]),
+    ).toBe(refreshed);
+  });
+
+  it("keeps the snapshot when nearby stores were refetched without the destination", () => {
+    // 채팅 → 길찾기로 들어온 뒤 내 위치·기본 위치 주변 매장으로 목록이 바뀐 경우
+    expect(resolveRouteDestinationStore("10", destination, [other], [])).toBe(
+      destination,
+    );
+  });
+
+  it("ignores a snapshot of a different store", () => {
+    expect(
+      resolveRouteDestinationStore("30", destination, [other]),
+    ).toBeUndefined();
   });
 });

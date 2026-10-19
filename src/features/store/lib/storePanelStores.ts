@@ -217,3 +217,15 @@ export const findStoreById = (
 
   return undefined;
 };
+
+/**
+ * 길찾기 도착 매장. 목록에서 찾은 최신 정보를 우선 쓰고, 주변 매장이 다시 조회돼 목록에서 빠졌으면
+ * 길찾기를 시작할 때 저장한 매장(snapshot)으로 그린다(채팅 → 길찾기 진입 등).
+ */
+export const resolveRouteDestinationStore = (
+  storeId: string,
+  snapshot: StoreLocation | null,
+  ...storeLists: StoreLocation[][]
+) =>
+  findStoreById(storeId, ...storeLists) ??
+  (snapshot && snapshot.id === storeId ? snapshot : undefined);

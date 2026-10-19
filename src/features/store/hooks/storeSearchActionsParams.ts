@@ -49,7 +49,7 @@ export type StoreSearchActionsParams = Pick<
   > &
   Pick<
     ReturnType<typeof useNearbyStores>,
-    "lastNearbyLookupKeyRef" | "nearbyLookup" | "updateStoresByLocation"
+    "nearbyLookup" | "updateStoresByLocation"
   > &
   Pick<ReturnType<typeof useStoreSelectionActions>, "handleStoreSelect"> &
   Pick<
