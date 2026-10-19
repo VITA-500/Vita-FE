@@ -98,7 +98,7 @@ describe("ChatSessionMenu", () => {
     );
   });
 
-  it("matches the server whitespace normalization and Unicode count", async () => {
+  it("shows the typed length but validates and saves with the server whitespace normalization", async () => {
     const onRename = vi.fn().mockResolvedValue(true);
     renderMenu(onRename);
 
@@ -108,7 +108,11 @@ describe("ChatSessionMenu", () => {
       target: { value: `  ${"🙂".repeat(24)}\n  상담   기록  ` },
     });
 
-    expect(screen.getByText("30/30")).toBeVisible();
+    // 카운터는 입력한 그대로(공백·줄바꿈 포함, 이모지는 1자) 센다.
+    expect(screen.getByText("38/30")).toBeVisible();
+    // 저장 가능 여부는 서버처럼 공백을 정리한 길이(30자) 기준이라 초과 안내가 뜨지 않는다.
+    expect(screen.getByText("공백은 한 칸으로 정리돼요.")).toBeVisible();
+    expect(screen.queryByText("30자 이내로 입력해 주세요.")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
     await waitFor(() =>
       expect(onRename).toHaveBeenCalledWith(
