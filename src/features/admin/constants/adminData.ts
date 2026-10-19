@@ -127,3 +127,12 @@ export const mockAnswerFeedbackStats: AdminAnswerFeedbackStats = {
     },
   ],
 };
+
+export const mockOperationsSummary = {
+  phoneStores: 128,
+  partnerStores: 342,
+  benefits: 24,
+  emptyBenefits: 2,
+  activeFaqs: 8,
+  suspendedUsers: 3,
+};
