@@ -1,5 +1,9 @@
 // 길찾기 entity 공개 API. 외부에서는 이 파일로만 import한다(docs/Architecture.md).
 export { routeApi } from "@/entities/route/api/routeApi";
+export {
+  routeQueryKeys,
+  useStoreRouteQuery,
+} from "@/entities/route/model/queries";
 export type { RouteResponse } from "@/entities/route/api/routeResponseTypes";
 export {
   getRoutePath,

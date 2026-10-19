@@ -1,14 +1,37 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  act,
+  renderHook as renderHookBase,
+  waitFor,
+  type RenderHookOptions,
+} from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useStoreRoute } from "./useStoreRoute";
-import { storeService } from "@/features/store/lib/storeService";
+import { routeApi } from "@/entities/route";
 import type { StoreLocation, StoreRoute } from "@/features/store/types";
 
-vi.mock("@/features/store/lib/storeService", () => ({
-  storeService: { fetchRoute: vi.fn() },
+// 공개 API(@/entities/route)가 다시 내보내는 routeApi가 이 모킹 값이 된다.
+vi.mock("@/entities/route/api/routeApi", () => ({
+  routeApi: { fetchRoute: vi.fn() },
 }));
 
-const fetchRoute = vi.mocked(storeService.fetchRoute);
+const fetchRoute = vi.mocked(routeApi.fetchRoute);
+
+/** 테스트마다 새 QueryClient로 감싸 캐시가 테스트끼리 섞이지 않게 한다. */
+const renderHook = <Result, Props>(
+  callback: (props: Props) => Result,
+  options?: RenderHookOptions<Props>,
+) => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { gcTime: Infinity } },
+  });
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
+
+  return renderHookBase(callback, { ...options, wrapper });
+};
 
 const destination: StoreLocation = {
   address: "서울 강남구",

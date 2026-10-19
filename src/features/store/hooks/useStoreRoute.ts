@@ -1,13 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import type { StoreLocation, StoreRouteMode } from "@/features/store/types";
+import { useStoreRouteQuery } from "@/entities/route";
 import { getDistanceMeters, type UserLocation } from "@/shared/lib/geo";
-import { storeService } from "@/features/store/lib/storeService";
-import type {
-  StoreLocation,
-  StoreRoute,
-  StoreRouteMode,
-} from "@/features/store/types";
 
 /**
  * 길찾기 중 위치 추적으로 내 위치가 갱신될 때, 마지막으로 경로를 조회한 위치에서 이만큼(m) 이상 움직여야 다시 조회한다.
@@ -27,6 +23,7 @@ const noRouteResultMessage =
 /**
  * 길찾기 상태: 도착 매장, 이동수단, 경로 조회 결과, 지도 범위 맞춤 완료 여부.
  * 도착 매장·이동수단이 바뀌면 바로, 내 위치는 이동수단별 기준 거리(ROUTE_REFETCH_DISTANCE_METERS) 이상 움직였을 때 다시 조회한다.
+ * 경로 조회와 캐시는 TanStack Query(useStoreRouteQuery)가 맡고, 여기서는 조회 조건만 관리한다.
  */
 export const useStoreRoute = (userLocation: UserLocation | null) => {
   const [routeDestinationStoreId, setRouteDestinationStoreId] = useState("");
@@ -34,12 +31,7 @@ export const useStoreRoute = (userLocation: UserLocation | null) => {
   // (예: 채팅 → 길찾기로 들어와 기본 위치·내 위치 주변 매장으로 목록이 바뀔 때) 경로를 그릴 수 있게 들고 있는다.
   const [routeDestinationSnapshot, setRouteDestinationSnapshot] =
     useState<StoreLocation | null>(null);
-  const [walkingRoute, setWalkingRoute] = useState<StoreRoute | null>(null);
   const [routeMode, setRouteMode] = useState<StoreRouteMode>("walk");
-  const [routeResultMessage, setRouteResultMessage] = useState<string | null>(
-    null,
-  );
-  const [isRouteLoading, setIsRouteLoading] = useState(false);
   // 출발-경로-도착이 보이도록 지도 범위 맞춤이 끝난 경로 key(이 전까지는 탐색 중 모달을 유지)
   const [routeMapReadyKey, setRouteMapReadyKey] = useState("");
   // 경로 조회에 쓰는 출발 위치. 내 위치가 이동수단별 기준 거리 이상 움직였을 때만 바꾼다.
@@ -56,62 +48,36 @@ export const useStoreRoute = (userLocation: UserLocation | null) => {
     setRouteOrigin(userLocation);
   }
 
+  const routeQuery = useStoreRouteQuery({
+    mode: routeMode,
+    origin: routeOrigin,
+    storeId: routeDestinationStoreId,
+  });
+  const walkingRoute = routeDestinationStoreId
+    ? (routeQuery.data ?? null)
+    : null;
+  const routeResultMessage =
+    routeDestinationStoreId && routeQuery.isError ? noRouteResultMessage : null;
+  // 위치를 아직 못 받았으면(권한 확인·위치 조회 중) 경로를 기다리는 중으로 본다.
+  const isRouteLoading = Boolean(
+    routeDestinationStoreId && (!routeOrigin || routeQuery.isFetching),
+  );
+
   /** 길찾기 시작: 이전 경로를 비우고 새 도착 매장으로 경로 조회를 시작한다. */
   const startRoute = (store: StoreLocation) => {
     setRouteMapReadyKey("");
     setRouteDestinationStoreId(store.id);
     setRouteDestinationSnapshot(store);
-    setWalkingRoute(null);
-    setRouteResultMessage(null);
-    setIsRouteLoading(true);
   };
   const changeRouteMode = (nextMode: StoreRouteMode) => {
     setRouteMapReadyKey("");
     setRouteMode(nextMode);
-    setWalkingRoute(null);
-    setRouteResultMessage(null);
-    setIsRouteLoading(Boolean(routeDestinationStoreId));
   };
   const resetRouteState = () => {
     setRouteMapReadyKey("");
     setRouteDestinationStoreId("");
     setRouteDestinationSnapshot(null);
-    setWalkingRoute(null);
-    setRouteResultMessage(null);
-    setIsRouteLoading(false);
   };
-
-  useEffect(() => {
-    if (!routeDestinationStoreId || !routeOrigin) {
-      return;
-    }
-
-    let isCurrentRequest = true;
-
-    storeService
-      .fetchRoute(routeDestinationStoreId, routeOrigin, routeMode)
-      .then((route) => {
-        if (isCurrentRequest) {
-          setWalkingRoute(route);
-          setRouteResultMessage(null);
-        }
-      })
-      .catch(() => {
-        if (isCurrentRequest) {
-          setWalkingRoute(null);
-          setRouteResultMessage(noRouteResultMessage);
-        }
-      })
-      .finally(() => {
-        if (isCurrentRequest) {
-          setIsRouteLoading(false);
-        }
-      });
-
-    return () => {
-      isCurrentRequest = false;
-    };
-  }, [routeDestinationStoreId, routeMode, routeOrigin]);
 
   return {
     changeRouteMode,
