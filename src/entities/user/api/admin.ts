@@ -3,10 +3,11 @@ import type {
   AdminUserListResponse,
   AdminUserRole,
   AdminUserStatus,
-} from "@/features/admin/types/adminUsers";
+} from "@/entities/user/model/adminUsers";
 import { requestJson } from "@/shared/api/http";
 
-export const adminUserService = {
+/** 관리자 회원 관리 API (/admin/users) */
+export const adminUserApi = {
   fetchUsers: (params: {
     page: number;
     size: number;

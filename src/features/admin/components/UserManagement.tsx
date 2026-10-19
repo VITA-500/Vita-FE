@@ -9,10 +9,7 @@ import {
 } from "lucide-react";
 import { useAdminUsers } from "@/features/admin/context/useAdminUsers";
 import { useAdminUserSummary } from "@/features/admin/context/useAdminUserSummary";
-import type {
-  AdminUserListItem,
-  AdminUserStatus,
-} from "@/features/admin/types/adminUsers";
+import type { AdminUserListItem, AdminUserStatus } from "@/entities/user";
 import { Card } from "@/shared/ui/atoms/Card";
 import { SearchInput } from "@/shared/ui/molecules/SearchInput";
 import { Button } from "@/shared/ui/atoms/Button";

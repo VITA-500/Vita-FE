@@ -7,7 +7,7 @@ import type {
   StoreSortField,
 } from "@/features/admin/context/adminDataTypes";
 import type { AdminStoreType } from "@/features/admin/types";
-import type { AdminUserStatus } from "@/features/admin/types/adminUsers";
+import type { AdminUserStatus } from "@/entities/user";
 
 type AdminUserStatusFilter = AdminUserStatus | "";
 

@@ -1,3 +1,4 @@
+import type { AnswerFeedback } from "@/entities/feedback";
 export type ChatMessageRole = "user" | "assistant";
 export type {
   ChatSendRequest,
@@ -24,7 +25,8 @@ export type ChatConversationStatus =
  */
 export type ChatAnswerStatus = "success" | "error" | "stopped" | "pending";
 
-export type ChatFeedback = "LIKE" | "DISLIKE";
+/** 답변 평가. 타입 정의는 entities/feedback에 있다. */
+export type ChatFeedback = AnswerFeedback;
 
 export type ChatMessage = {
   id: string;

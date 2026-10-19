@@ -1,4 +1,4 @@
-import type { PageResponse } from "@/features/admin/types";
+import type { PageResponse } from "@/shared/api/response";
 
 export type AdminUserRole = "USER" | "ADMIN";
 export type AdminUserStatus = "ACTIVE" | "SUSPENDED" | "DELETED";

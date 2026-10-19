@@ -1,21 +1,9 @@
+import type { FaqSearchResult } from "@/entities/faq/model/types";
 import { requestJson } from "@/shared/api/http";
+import type { PageResponse } from "@/shared/api/response";
 
-export type FaqSearchResult = {
-  id: number;
-  category: string;
-  subcategory: string | null;
-  question: string;
-  answer: string;
-};
-
-type PageResponse<T> = {
-  content: T[];
-  totalCount: number;
-  totalPages: number;
-  currentPage: number;
-};
-
-export const faqSearchService = {
+/** 사용자용 FAQ 검색 API */
+export const faqApi = {
   search: (keyword: string) => {
     const params = new URLSearchParams({
       keyword,

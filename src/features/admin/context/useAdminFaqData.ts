@@ -11,7 +11,7 @@ import type {
   FaqStatusFilter,
 } from "@/features/admin/context/adminDataTypes";
 import { adminQueryKeys } from "@/features/admin/context/adminQueryKeys";
-import { adminFaqService } from "@/features/admin/lib/adminFaqService";
+import { adminFaqApi } from "@/entities/faq";
 import type { AdminFaq } from "@/features/admin/types";
 import { env } from "@/shared/config/env";
 
@@ -35,7 +35,7 @@ export const useAdminFaqData = (): AdminFaqData => {
   const faqQuery = useQuery({
     enabled: Boolean(env.apiBaseUrl),
     queryFn: () =>
-      adminFaqService.fetchFaqs({
+      adminFaqApi.fetchFaqs({
         category: faqCategoryFilter === "ALL" ? undefined : faqCategoryFilter,
         keyword: faqKeyword,
         page: faqPage,
@@ -111,7 +111,7 @@ export const useAdminFaqData = (): AdminFaqData => {
       faqs: currentFaqs,
       addFaq: async (input) => {
         if (env.apiBaseUrl) {
-          await adminFaqService.createFaq(input);
+          await adminFaqApi.createFaq(input);
           await queryClient.invalidateQueries({
             queryKey: adminQueryKeys.faqsAll,
           });
@@ -132,7 +132,7 @@ export const useAdminFaqData = (): AdminFaqData => {
       },
       deleteFaq: async (faqId) => {
         if (env.apiBaseUrl) {
-          await adminFaqService.deleteFaq(faqId);
+          await adminFaqApi.deleteFaq(faqId);
           await queryClient.invalidateQueries({
             queryKey: adminQueryKeys.faqsAll,
           });
@@ -161,7 +161,7 @@ export const useAdminFaqData = (): AdminFaqData => {
       refreshFaqs,
       saveFaq: async (faqId, input) => {
         if (env.apiBaseUrl) {
-          await adminFaqService.updateFaq(faqId, input);
+          await adminFaqApi.updateFaq(faqId, input);
           await queryClient.invalidateQueries({
             queryKey: adminQueryKeys.faqsAll,
           });
@@ -181,7 +181,7 @@ export const useAdminFaqData = (): AdminFaqData => {
       setFaqSort,
       setFaqStatus: async (faqId, status) => {
         if (env.apiBaseUrl) {
-          await adminFaqService.updateFaq(faqId, { status });
+          await adminFaqApi.updateFaq(faqId, { status });
           await queryClient.invalidateQueries({
             queryKey: adminQueryKeys.faqsAll,
           });

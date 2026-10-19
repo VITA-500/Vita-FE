@@ -1,5 +1,4 @@
 import type {
-  ChatFeedback,
   ChatSessionListResponse,
   SessionMessagesResponse,
 } from "@/features/chat/types";
@@ -8,6 +7,7 @@ import {
   requestChatJson,
 } from "@/features/chat/lib/chatApiClient";
 import { sendMessageWithStream } from "@/features/chat/lib/chatStream";
+import { feedbackApi } from "@/entities/feedback";
 import { ApiError, requestJson } from "@/shared/api/http";
 
 type ChatSessionCreateResponse = {
@@ -19,10 +19,7 @@ type ChatSessionClaimResponse = { sessionId: number; claimedAt: string };
 type ChatSessionPinResponse = { pinned: boolean; sessionId: number };
 type ChatSessionTitleResponse = { sessionId: number; title: string };
 
-export type ChatFeedbackResponse = {
-  messageId: number;
-  feedback: ChatFeedback | null;
-};
+export type { AnswerFeedbackResponse as ChatFeedbackResponse } from "@/entities/feedback";
 
 /**
  * 진행 중인 claim 요청. 로그인 직후 채팅 화면의 effect가 여러 번 실행되면
@@ -104,19 +101,8 @@ export const chatService = {
   getSessions: () => {
     return requestJson<ChatSessionListResponse>("/chat/sessions");
   },
-  /**
-   * 답변 피드백(회원 전용, null이면 취소).
-   * BE는 DISLIKE면 관리자 답변 피드백 목록에 올리고, LIKE로 바꾸거나 취소하면 내린다.
-   */
-  sendFeedback: (messageId: number, feedback: ChatFeedback | null) => {
-    return requestJson<ChatFeedbackResponse>(
-      `/chat/messages/${messageId}/feedback`,
-      {
-        method: "POST",
-        body: JSON.stringify({ feedback }),
-      },
-    );
-  },
+  /** 답변 피드백. entities/feedback으로 옮겼고 기존 호출부 호환을 위해 남겨 둔다. */
+  sendFeedback: feedbackApi.sendAnswerFeedback,
   sendMessage: sendMessageWithStream,
   updateSessionPin: (sessionId: number, pinned: boolean) => {
     return requestJson<ChatSessionPinResponse>(

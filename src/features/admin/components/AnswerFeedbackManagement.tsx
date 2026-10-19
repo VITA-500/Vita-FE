@@ -3,7 +3,7 @@
 import { AnswerFeedbackContent } from "@/features/admin/components/AnswerFeedbackContent";
 import { useAdminAnswerFeedback } from "@/features/admin/context/useAdminAnswerFeedback";
 import { getAnswerFeedbackStatItems } from "@/features/admin/lib/answerFeedbackStats";
-import { ADMIN_ANSWER_FEEDBACK_MAX_LIMIT } from "@/features/admin/lib/adminAnswerFeedbackService";
+import { ADMIN_ANSWER_FEEDBACK_MAX_LIMIT } from "@/entities/feedback";
 import { Card, CardContent, CardHeader } from "@/shared/ui/atoms/Card";
 import { StatCard } from "@/shared/ui/organisms/StatCard";
 

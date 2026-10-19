@@ -4,9 +4,9 @@ import type {
   AdminFaqCreateRequest,
   AdminFaqStatus,
   AdminFaqUpdateRequest,
-  PageResponse,
-} from "@/features/admin/types";
+} from "@/entities/faq/model/types";
 import { requestJson } from "@/shared/api/http";
+import type { PageResponse } from "@/shared/api/response";
 
 type FetchFaqsParams = {
   category?: AdminFaqCategory;
@@ -17,7 +17,8 @@ type FetchFaqsParams = {
   sortBy?: string;
 };
 
-export const adminFaqService = {
+/** 관리자 FAQ 관리 API (/admin/faqs) */
+export const adminFaqApi = {
   fetchFaqs: async ({
     category,
     keyword,
