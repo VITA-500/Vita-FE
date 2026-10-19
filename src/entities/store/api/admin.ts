@@ -1,21 +1,13 @@
 import type {
   AdminStore,
   AdminStoreDetail,
+  AdminStoreFormInput,
   AdminStoreType,
-} from "@/features/admin/types";
-import { benefitApi } from "@/entities/benefit";
+} from "@/entities/store/model/types";
 import { requestJson } from "@/shared/api/http";
 
-type AdminStoreRequest = Omit<
-  AdminStoreDetail,
-  | "brand"
-  | "category"
-  | "benefitName"
-  | "createdAt"
-  | "storeId"
-  | "storeType"
-  | "updatedAt"
->;
+/** PATCH /admin/stores/{id} 요청. 매장 종류는 바꿀 수 없다. */
+type AdminStoreRequest = AdminStoreFormInput;
 type AdminStoreCreateRequest = AdminStoreRequest & {
   storeType: AdminStoreType;
 };
@@ -32,7 +24,8 @@ type StoreListItemResponse = Omit<AdminStore, "storeType"> &
 type StoreDetailResponse = Omit<AdminStoreDetail, "storeType"> &
   Partial<Pick<AdminStoreDetail, "storeType">>;
 type StoreUpdateResponse = Pick<AdminStore, "storeId" | "updatedAt">;
-export const adminStoreService = {
+/** 관리자 매장 관리 API (/admin/stores). 목록은 매장 상세(/stores/{id})까지 함께 받는다. */
+export const adminStoreApi = {
   /** 매장 수만 필요할 때. 상세 조회 없이 목록 totalCount만 쓴다. */
   countStores: async (storeType?: AdminStoreType) => {
     const response = await fetchStoreListPage({
@@ -127,9 +120,6 @@ export const adminStoreService = {
       timeoutMs: 8000,
     });
   },
-
-  /** 매장 폼의 혜택 선택지. /benefits/list 조회는 entities/benefit 하나로 모았다. */
-  fetchBenefits: (category?: string) => benefitApi.fetchBenefits({ category }),
 };
 
 const fetchStoreListPage = async ({

@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { requestJson } from "@/shared/api/http";
-import { storeService } from "./storeService";
+import { storeApi } from "./storeApi";
 
 vi.mock("@/shared/api/http", () => ({ requestJson: vi.fn() }));
 
 const mockedRequestJson = vi.mocked(requestJson);
 
-describe("storeService.fetchNearbyStores", () => {
+describe("storeApi.fetchNearbyStores", () => {
   afterEach(() => {
     mockedRequestJson.mockReset();
   });
@@ -37,7 +37,7 @@ describe("storeService.fetchNearbyStores", () => {
       ],
     });
 
-    const stores = await storeService.fetchNearbyStores(
+    const stores = await storeApi.fetchNearbyStores(
       { lat: 37.498, lng: 127.027 },
       3,
     );
@@ -76,7 +76,7 @@ describe("storeService.fetchNearbyStores", () => {
       ],
     });
 
-    const stores = await storeService.fetchNearbyStores(
+    const stores = await storeApi.fetchNearbyStores(
       { lat: 37.5, lng: 127 },
       3,
       { openFilter: { mode: "at", time: "18:00" } },
@@ -93,7 +93,7 @@ describe("storeService.fetchNearbyStores", () => {
   });
 });
 
-describe("storeService.fetchStoreDetail", () => {
+describe("storeApi.fetchStoreDetail", () => {
   afterEach(() => {
     mockedRequestJson.mockReset();
   });
@@ -113,7 +113,7 @@ describe("storeService.fetchStoreDetail", () => {
       benefitName: "음료 할인",
     });
 
-    const store = await storeService.fetchStoreDetail("21", {
+    const store = await storeApi.fetchStoreDetail("21", {
       id: "21",
       name: "제휴 카페",
       address: "",

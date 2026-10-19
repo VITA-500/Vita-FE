@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { requestJson } from "@/shared/api/http";
-import { adminStoreService } from "./adminStoreService";
+import { adminStoreApi } from "./admin";
 vi.mock("@/shared/api/http", () => ({ requestJson: vi.fn() }));
 beforeEach(() => {
   vi.mocked(requestJson).mockReset().mockResolvedValue({
@@ -14,7 +14,7 @@ describe("admin store category filter contract", () => {
   it.each(["여가", "쇼핑", "자동차"])(
     "filters %s with the BE category parameter and preserves search and pagination",
     async (category) => {
-      await adminStoreService.fetchStores({
+      await adminStoreApi.fetchStores({
         storeType: "PARTNER",
         category,
         page: 2,
@@ -38,13 +38,13 @@ describe("admin store category filter contract", () => {
     },
   );
   it("omits category for all-categories and phone store requests", async () => {
-    await adminStoreService.fetchStores({
+    await adminStoreApi.fetchStores({
       storeType: "PARTNER",
       page: 0,
       size: 20,
       sortBy: "createdAt,desc",
     });
-    await adminStoreService.fetchStores({
+    await adminStoreApi.fetchStores({
       storeType: "PHONE",
       category: "자동차",
       page: 0,
@@ -55,7 +55,7 @@ describe("admin store category filter contract", () => {
       expect(String(url)).not.toContain("category");
   });
   it("filters partner stores by the exact connected benefit", async () => {
-    await adminStoreService.fetchStores({
+    await adminStoreApi.fetchStores({
       storeType: "PARTNER",
       benefitId: 17,
       page: 0,

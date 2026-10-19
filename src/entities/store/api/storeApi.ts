@@ -1,19 +1,10 @@
-import { formatDistance } from "@/features/store/lib/geo";
-import type { UserLocation } from "@/features/store/lib/geo";
-import {
-  getRoutePath,
-  getRouteSegments,
-  type RouteResponse,
-} from "@/features/store/lib/storeRouteResponse";
-import { toOpenFilterParams } from "@/features/store/lib/storeOpenHours";
+import { toOpenFilterParams } from "@/entities/store/model/storeOpenHours";
 import type {
   StoreLocation,
   StoreOpenFilter,
-  StoreRoute,
-  StoreRouteMode,
-} from "@/features/store/types";
-import { reservationApi } from "@/entities/reservation";
+} from "@/entities/store/model/types";
 import { requestJson } from "@/shared/api/http";
+import { formatDistance, type UserLocation } from "@/shared/lib/geo";
 
 type StoreNearbyItemResponse = {
   storeId: number;
@@ -60,9 +51,8 @@ type StoreDetailResponse = {
   benefitName?: string | null;
 };
 
-export type { ReservationResponse } from "@/entities/reservation";
-
-const isApiStoreId = (storeId: string) => /^\d+$/.test(storeId);
+/** 지도 목업 매장처럼 숫자가 아닌 id는 API 매장이 아니다. */
+export const isApiStoreId = (storeId: string) => /^\d+$/.test(storeId);
 
 const toNearbyStoreLocation = (
   store: StoreNearbyItemResponse,
@@ -111,12 +101,56 @@ const toStoreLocation = (
   storeType: store.storeType ?? fallback?.storeType ?? "PHONE",
 });
 
+type BenefitStoreItemResponse = {
+  storeId: number;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  distanceKm: number;
+  businessHours?: string | null;
+  openNow?: boolean | null;
+  benefitId: number;
+  brand: string;
+  category: string;
+  benefitName: string;
+  benefitDescription?: string | null;
+};
+
+type BenefitStoresResponse = {
+  category: string;
+  stores: BenefitStoreItemResponse[];
+};
+
+const toBenefitStoreLocation = (
+  store: BenefitStoreItemResponse,
+): StoreLocation => ({
+  id: String(store.storeId),
+  name: store.name,
+  address: store.address,
+  benefitBrand: store.brand,
+  benefitCategory: store.category,
+  benefitDescription: store.benefitDescription ?? undefined,
+  benefitId: store.benefitId,
+  benefitName: store.benefitName,
+  businessHours: store.businessHours ?? undefined,
+  consultServices: [],
+  openNow: store.openNow ?? undefined,
+  phone: "",
+  providedServices: [store.benefitName],
+  lat: Number(store.lat),
+  lng: Number(store.lng),
+  distanceText: formatDistance(store.distanceKm * 1000),
+  storeType: "PARTNER",
+});
+
 type FetchNearbyStoresOptions = {
   /** 영업 시간 필터(BE openNow / openAt). 없으면 조건 없이 조회한다. */
   openFilter?: StoreOpenFilter;
 };
 
-export const storeService = {
+/** 매장 API (/stores, /benefits/{category}/stores). 매장 지도·채팅이 함께 쓴다. */
+export const storeApi = {
   /** 기준 좌표에서 반경(km, 기본 1.5km) 안의 매장을 가까운 순으로 모두 가져온다. storeType은 BE 값을 쓴다. */
   fetchNearbyStores: async (
     location?: UserLocation,
@@ -160,36 +194,33 @@ export const storeService = {
 
     return toStoreLocation(response, fallback);
   },
-  fetchRoute: async (
-    storeId: string,
-    location: UserLocation,
-    mode: StoreRouteMode,
-  ): Promise<StoreRoute> => {
-    if (!isApiStoreId(storeId)) {
-      throw new Error("NON_API_STORE_ID");
+  /** 혜택 카테고리별 주변 제휴 매장. 응답이 매장 모델이라 store entity에 둔다. */
+  fetchBenefitStores: async (
+    category: string,
+    location?: UserLocation,
+    radiusKm = 1.5,
+    limit = 100,
+    options: FetchNearbyStoresOptions = {},
+  ) => {
+    if (!location || !category) {
+      return [];
     }
 
     const params = new URLSearchParams({
-      fromLat: String(location.lat),
-      fromLng: String(location.lng),
-      mode,
+      lat: String(location.lat),
+      lng: String(location.lng),
+      radius: String(radiusKm),
+      limit: String(limit),
+      ...toOpenFilterParams(options.openFilter),
     });
 
-    const response = await requestJson<RouteResponse>(
-      `/stores/${storeId}/directions?${params.toString()}`,
+    const response = await requestJson<BenefitStoresResponse>(
+      `/benefits/${encodeURIComponent(category)}/stores?${params.toString()}`,
       {
-        timeoutMs: 7000,
+        timeoutMs: 12000,
       },
     );
 
-    return {
-      distanceMeters: response.distanceMeters,
-      durationSeconds: response.durationSeconds,
-      mode: response.mode,
-      path: getRoutePath(response),
-      segments: getRouteSegments(response),
-    };
+    return response.stores.map(toBenefitStoreLocation);
   },
-  /** 매장 예약. entities/reservation으로 옮겼고 기존 호출부 호환을 위해 남겨 둔다. */
-  reserveStore: reservationApi.createReservation,
 };

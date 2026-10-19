@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store/model/types";
 import {
   filterStoresByOpenFilter,
   getCurrentOpenState,
