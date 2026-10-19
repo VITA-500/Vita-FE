@@ -2,20 +2,8 @@ import { formatDistance } from "@/features/store/lib/geo";
 import type { UserLocation } from "@/features/store/lib/geo";
 import { toOpenFilterParams } from "@/features/store/lib/storeOpenHours";
 import type { StoreLocation, StoreOpenFilter } from "@/features/store/types";
+import { benefitApi, type BenefitCategoryOption } from "@/entities/benefit";
 import { requestJson } from "@/shared/api/http";
-
-type BenefitResponse = {
-  benefitId: number;
-  brand: string;
-  name: string;
-  category: string;
-  description: string;
-  storeCount: number;
-};
-
-type BenefitListResponse = {
-  benefits: BenefitResponse[];
-};
 
 type BenefitStoreItemResponse = {
   storeId: number;
@@ -38,11 +26,7 @@ type BenefitStoresResponse = {
   stores: BenefitStoreItemResponse[];
 };
 
-export type BenefitCategoryOption = {
-  label: string;
-  value: string;
-  storeCount: number;
-};
+export type { BenefitCategoryOption };
 
 const toBenefitStoreLocation = (
   store: BenefitStoreItemResponse,
@@ -66,32 +50,13 @@ const toBenefitStoreLocation = (
   storeType: "PARTNER",
 });
 
-const toBenefitCategoryOptions = (benefits: BenefitResponse[]) => {
-  const categoryMap = new Map<string, number>();
-
-  benefits.forEach((benefit) => {
-    categoryMap.set(
-      benefit.category,
-      (categoryMap.get(benefit.category) ?? 0) + benefit.storeCount,
-    );
-  });
-
-  return Array.from(categoryMap.entries()).map(([category, storeCount]) => ({
-    label: category,
-    value: category,
-    storeCount,
-  }));
-};
-
-/** 제휴 혜택 API: 혜택 카테고리 목록, 카테고리별 주변 제휴 매장 */
+/**
+ * 매장 지도의 제휴 혜택 조회: 혜택 카테고리 목록, 카테고리별 주변 제휴 매장.
+ * 혜택 목록은 entities/benefit을 쓴다. 제휴 매장 조회는 결과가 매장 모델이라 store entity를 만들 때 옮긴다.
+ */
 export const benefitService = {
-  fetchBenefitCategories: async () => {
-    const response = await requestJson<BenefitListResponse>("/benefits/list", {
-      timeoutMs: 7000,
-    });
-
-    return toBenefitCategoryOptions(response.benefits);
-  },
+  /** 혜택 카테고리 선택지. entities/benefit으로 옮겼고 기존 호출부 호환을 위해 그대로 둔다. */
+  fetchBenefitCategories: benefitApi.fetchBenefitCategories,
   fetchBenefitStores: async (
     category: string,
     location?: UserLocation,

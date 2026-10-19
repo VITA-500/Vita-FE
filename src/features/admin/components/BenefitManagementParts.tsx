@@ -2,7 +2,7 @@ import { Modal } from "@/shared/ui/organisms/Modal";
 import { ChevronRight, Edit2, Trash2, Plus } from "lucide-react";
 import type { AdminBenefitDetail } from "../types";
 import { AdminEmptyState } from "./AdminEmptyState";
-import { renderBenefitCategoryIcon } from "@/shared/ui/atoms/BenefitCategoryIcon";
+import { renderBenefitCategoryIcon } from "@/entities/benefit";
 import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/atoms/Button";
 export const BenefitEmptyState = () => (
