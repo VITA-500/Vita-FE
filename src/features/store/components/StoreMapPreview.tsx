@@ -62,6 +62,7 @@ export const StoreMapPreview = ({
   routePreview,
   stores,
   userLocation,
+  originPoint,
   isUserLocationLoading = false,
   onFocusUserLocation,
   onMapPointSelect,
@@ -216,6 +217,7 @@ export const StoreMapPreview = ({
     setSelectedStoreCardPosition,
     stores,
     userLocation,
+    originPoint,
   });
 
   useEffect(() => {

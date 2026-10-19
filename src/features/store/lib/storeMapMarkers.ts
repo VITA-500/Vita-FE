@@ -1,5 +1,6 @@
 import {
   createCurrentLocationOverlay,
+  createOriginPointOverlay,
   createStoreMarkerOverlay,
   groupStoresByCoordinate,
 } from "@/features/store/lib/storeMarkerOverlays";
@@ -25,6 +26,7 @@ export const drawStoreMarkers = ({
   setRevealedCardStoreId,
   stores,
   userLocation,
+  originPoint,
 }: StoreMapEffectContext & StoreMapInstance) => {
   overlayRefs.current.forEach(({ cleanup, overlay }) => {
     cleanup?.();
@@ -72,6 +74,12 @@ export const drawStoreMarkers = ({
       },
     }),
   );
+
+  if (originPoint) {
+    overlayRefs.current.push(
+      createOriginPointOverlay({ kakaoMaps, map, originPoint }),
+    );
+  }
 
   if (userLocation) {
     overlayRefs.current.push(

@@ -109,10 +109,13 @@ const AssistantSuccessMessage = ({
         {message.actions && message.actions.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
             {message.actions.map((action) => (
+              // 답변 아래 추천 버튼(예: 가까운 매장 보기)은 카드의 예약하기(주 버튼)보다 낮고
+              // 길찾기(보조 버튼)보다 높은 중간 단계라 outline으로 둔다.
               <ButtonLink
                 key={action.href}
                 href={resolveChatActionHref(action, message.storeMap)}
                 size="sm"
+                variant="outline"
                 className="rounded-full"
               >
                 {action.label}
