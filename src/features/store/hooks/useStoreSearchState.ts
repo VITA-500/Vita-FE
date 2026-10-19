@@ -19,8 +19,8 @@ import {
   type MapViewport,
 } from "@/features/store/lib/storePanelStores";
 import type { StoreMapSnapshot } from "@/features/store/lib/storeMapSnapshot";
-import { storeService } from "@/features/store/lib/storeService";
 import type { StoreLocation } from "@/features/store/types";
+import { useFetchNearbyStores } from "@/entities/store";
 import { showToast } from "@/shared/providers/ToastProvider";
 
 type UseStoreSearchStateParams = {
@@ -50,6 +50,7 @@ export const useStoreSearchState = ({
   setHasSelectedStoreInfo,
   userLocation,
 }: UseStoreSearchStateParams) => {
+  const fetchNearbyStores = useFetchNearbyStores();
   const [mapCenter, setMapCenter] = useState<MapSearchPoint | null>(
     initial?.mapViewport?.center ?? null,
   );
@@ -169,7 +170,7 @@ export const useStoreSearchState = ({
     const requestId = ++areaSearchRequestIdRef.current;
 
     try {
-      const areaStores = await storeService.fetchNearbyStores(center, radiusKm);
+      const areaStores = await fetchNearbyStores(center, { radiusKm });
 
       // 그 사이 새 검색이 시작됐거나 결과가 해제됐으면 늦게 도착한 이 응답은 버린다.
       if (requestId !== areaSearchRequestIdRef.current) {
@@ -221,7 +222,7 @@ export const useStoreSearchState = ({
 
     try {
       const { center, radiusKm } = getVisibleAreaQuery();
-      const areaStores = await storeService.fetchNearbyStores(center, radiusKm);
+      const areaStores = await fetchNearbyStores(center, { radiusKm });
 
       loadedSearchAreaKeyRef.current = searchCenterKey;
       mergeSearchStores(areaStores);
