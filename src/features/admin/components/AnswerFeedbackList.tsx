@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  ChevronDown,
-  MessageSquareWarning,
-  ThumbsDown,
-  ThumbsUp,
-} from "lucide-react";
+import { ChevronDown, MessageSquareWarning } from "lucide-react";
 import { useState } from "react";
 import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
 import type {
@@ -170,8 +165,6 @@ const FeedbackRow = ({
   const canDismiss = Boolean(onRequestDismiss);
   const answer = candidate.answer?.trim();
   const comments = candidate.comments ?? [];
-  const hasFeedbackCounts =
-    candidate.likeCount !== undefined || candidate.dislikeCount !== undefined;
 
   return (
     <div
@@ -204,27 +197,10 @@ const FeedbackRow = ({
             />
           </button>
         </div>
-        {(hasFeedbackCounts || comments.length > 0) && (
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-bold text-gray-400">
-            {hasFeedbackCounts && (
-              <>
-                <span className="inline-flex items-center gap-1">
-                  <ThumbsUp size={12} aria-hidden="true" />
-                  좋아요 {(candidate.likeCount ?? 0).toLocaleString("ko-KR")}
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <ThumbsDown size={12} aria-hidden="true" />
-                  아쉬워요{" "}
-                  {(candidate.dislikeCount ?? 0).toLocaleString("ko-KR")}
-                </span>
-              </>
-            )}
-            {comments.length > 0 && (
-              <span className="text-rose-500 dark:text-rose-300">
-                아쉬운 이유 {comments.length}개
-              </span>
-            )}
-          </div>
+        {comments.length > 0 && (
+          <p className="mt-1 text-[11px] font-bold text-rose-500 dark:text-rose-300">
+            아쉬운 이유 {comments.length}개
+          </p>
         )}
       </div>
 

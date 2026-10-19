@@ -46,14 +46,15 @@ export const useAdminAnswerFeedback = (limit: number) => {
 
 /**
  * 답변 피드백 무시(PATCH /admin/stats/chat/{id}/dismiss).
- * 성공하면 limit과 상관없이 답변 피드백 통계를 모두 다시 불러온다(대시보드·답변 피드백 페이지). 같은 묶음에 자동 감지 기록도 있으면 항목은 목록에 남는다.
+ * 성공하면 limit과 상관없이 답변 피드백 통계를 모두 다시 불러온다(대시보드·답변 피드백 페이지).
+ * 같은 질문 묶음의 자동 감지와 아쉬워요가 함께 목록에서 내려간다(2026-10-18 BE 확장).
  */
 export const useDismissAnswerFeedback = () => {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: (id: number) => adminAnswerFeedbackApi.dismiss(id),
     onSuccess: async ({ dismissedCount }) => {
-      showToast(`아쉬워요 ${dismissedCount}건을 무시 처리했어요.`);
+      showToast(`피드백 ${dismissedCount}건을 무시 처리했어요.`);
       await queryClient.invalidateQueries({
         queryKey: adminQueryKeys.answerFeedbackAll,
       });
