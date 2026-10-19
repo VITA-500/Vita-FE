@@ -11,7 +11,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { authService } from "@/features/auth/lib/authService";
-import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
+import { useAuthUser } from "@/entities/user";
 import { ApiError } from "@/shared/api/http";
 import { routes } from "@/shared/constants/routes";
 import { Button } from "@/shared/ui/atoms/Button";

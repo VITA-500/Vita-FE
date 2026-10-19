@@ -8,8 +8,8 @@ import {
   buildLoginHref,
   LOGIN_RETURN_PARAM,
   takeRememberedLoginReturnTo,
-} from "@/features/auth/lib/loginReturn";
-import { tokenStorage } from "@/features/auth/lib/tokenStorage";
+  tokenStorage,
+} from "@/entities/user";
 import { routes } from "@/shared/constants/routes";
 import { Logo } from "@/shared/ui/atoms/Logo";
 import { showToast } from "@/shared/providers/ToastProvider";

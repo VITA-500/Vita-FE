@@ -9,9 +9,9 @@ import {
   useMemo,
   useState,
 } from "react";
-import { authService } from "@/features/auth/lib/authService";
-import { tokenStorage } from "@/features/auth/lib/tokenStorage";
-import type { MyPageResponse } from "@/features/auth/types";
+import { userApi } from "@/entities/user/api/userApi";
+import { tokenStorage } from "@/entities/user/model/tokenStorage";
+import type { MyPageResponse } from "@/entities/user/model/types";
 import { ApiError } from "@/shared/api/http";
 
 type UseAuthUserOptions = {
@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const loadUser = useCallback(async () => {
     try {
-      const nextUser = await authService.getMe();
+      const nextUser = await userApi.getMe();
 
       tokenStorage.setAuthHint();
       return nextUser;
@@ -84,7 +84,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   );
 
   const logout = useCallback(async () => {
-    await authService.logout().catch(() => undefined);
+    await userApi.logout().catch(() => undefined);
     tokenStorage.removeAuthHint();
     setHasAccessToken(false);
     setIsReady(true);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
+import { useAuthUser } from "@/entities/user";
 import {
   getNextReservationDateValue,
   getReservationDateValue,

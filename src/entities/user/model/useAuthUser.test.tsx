@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/api/http";
-import type { MyPageResponse } from "@/features/auth/types";
+import type { MyPageResponse } from "./types";
 import { AuthProvider, useAuthUser } from "./useAuthUser";
 
 const mocks = vi.hoisted(() => ({
@@ -12,14 +12,14 @@ const mocks = vi.hoisted(() => ({
   setAuthHint: vi.fn(),
 }));
 
-vi.mock("@/features/auth/lib/authService", () => ({
-  authService: {
+vi.mock("@/entities/user/api/userApi", () => ({
+  userApi: {
     getMe: mocks.getMe,
     logout: mocks.logout,
   },
 }));
 
-vi.mock("@/features/auth/lib/tokenStorage", () => ({
+vi.mock("@/entities/user/model/tokenStorage", () => ({
   tokenStorage: {
     hasAccessTokenHint: mocks.hasAccessTokenHint,
     removeAuthHint: mocks.removeAuthHint,

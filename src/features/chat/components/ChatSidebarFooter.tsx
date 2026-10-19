@@ -5,7 +5,7 @@ import { useCallback, useRef, useState } from "react";
 import { CircleHelp, LogIn, Moon, Sun } from "lucide-react";
 import { ChatAccountMenu } from "@/features/chat/components/ChatAccountMenu";
 import { usePointerDownOutside } from "@/shared/hooks/usePointerDownOutside";
-import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
+import { useAuthUser } from "@/entities/user";
 import { cn } from "@/shared/lib/cn";
 import { LogoutConfirmDialog } from "@/shared/ui/organisms/LogoutConfirmDialog";
 import { ThemeToggleButton } from "@/shared/ui/molecules/ThemeToggleButton";
