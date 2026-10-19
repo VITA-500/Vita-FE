@@ -1,4 +1,4 @@
-import type { KakaoMapEventApi } from "@/features/store/lib/kakaoMapTypes";
+import type { KakaoMapEventApi } from "@/shared/lib/kakaoMapTypes";
 import {
   fitMapToRoute,
   getRouteFitPadding,

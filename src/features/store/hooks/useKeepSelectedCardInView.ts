@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 import { useElementResizeKey } from "@/shared/hooks/useElementResizeKey";
-import type { KakaoMapWithCenter } from "@/features/store/lib/kakaoMapTypes";
+import type { KakaoMapWithCenter } from "@/shared/lib/kakaoMapTypes";
 import {
   getCenterPlacingPointAt,
   getStoreCardTopInset,

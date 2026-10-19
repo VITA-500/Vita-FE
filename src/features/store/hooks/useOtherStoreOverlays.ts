@@ -7,7 +7,7 @@ import {
   type RefObject,
   type SetStateAction,
 } from "react";
-import type { MapOverlayHandle } from "@/features/store/lib/kakaoMapTypes";
+import type { MapOverlayHandle } from "@/shared/lib/kakaoMapTypes";
 import { createOtherStoreOverlay } from "@/features/store/lib/mapOverlayElements";
 import type { StoreLocation } from "@/entities/store";
 

@@ -12,7 +12,7 @@ import { StoreMapFallbackMarkers } from "@/features/store/components/StoreMapFal
 import { StoreMapSearchAreaButton } from "@/features/store/components/StoreMapSearchAreaButton";
 import { StoreMapSelectedCard } from "@/features/store/components/StoreMapSelectedCard";
 import { useElementResizeKey } from "@/shared/hooks/useElementResizeKey";
-import { useKakaoMapReady } from "@/features/store/hooks/useKakaoMapReady";
+import { useKakaoMapReady } from "@/shared/hooks/useKakaoMapReady";
 import { useKeepSelectedCardInView } from "@/features/store/hooks/useKeepSelectedCardInView";
 import { useKeepSelectedPinVisible } from "@/features/store/hooks/useKeepSelectedPinVisible";
 import { useMapFitTarget } from "@/features/store/hooks/useMapFitTarget";
@@ -24,7 +24,7 @@ import { useRouteOverlays } from "@/features/store/hooks/useRouteOverlays";
 import { useRouteRefocus } from "@/features/store/hooks/useRouteRefocus";
 import { useRouteViewportEffects } from "@/features/store/hooks/useRouteViewportEffects";
 import { useStoreMapEffect } from "@/features/store/hooks/useStoreMapEffect";
-import type { MapOverlayHandle } from "@/features/store/lib/kakaoMapTypes";
+import type { MapOverlayHandle } from "@/shared/lib/kakaoMapTypes";
 import { getFallbackMarkerStyle } from "@/features/store/lib/storeMapFallbackLayout";
 import {
   STORE_MAP_CARD_RESIZE_SETTLE_MS,
