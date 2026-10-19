@@ -3,16 +3,29 @@
 import { AdminErrorBanner } from "@/features/admin/components/AdminErrorBanner";
 import { AnswerFeedbackList } from "@/features/admin/components/AnswerFeedbackList";
 import { useDismissAnswerFeedback } from "@/features/admin/context/useAdminAnswerFeedback";
-import type { AdminAnswerFeedbackStats } from "@/features/admin/types";
+import type {
+  AdminAnswerFeedback,
+  AdminAnswerFeedbackStats,
+} from "@/features/admin/types";
 
 type AnswerFeedbackContentProps = {
   error: string | null;
   isLoading: boolean;
   stats: AdminAnswerFeedbackStats | null;
+  /** 보여줄 항목. 없으면 stats.candidates 전체(답변 피드백 페이지는 필터한 목록을 넘긴다). */
+  candidates?: readonly AdminAnswerFeedback[];
+  /** false면 무시 버튼을 두지 않는다(대시보드는 요약만 보여준다). */
+  allowDismiss?: boolean;
+  emptyTitle?: string;
+  emptyDescription?: string;
 };
 
 /** 답변 피드백 카드 본문(오류·불러오는 중·목록). 대시보드와 답변 피드백 페이지가 함께 쓴다. */
 export const AnswerFeedbackContent = ({
+  allowDismiss = true,
+  candidates,
+  emptyDescription,
+  emptyTitle,
   error,
   isLoading,
   stats,
@@ -29,9 +42,11 @@ export const AnswerFeedbackContent = ({
       ) : (
         stats && (
           <AnswerFeedbackList
-            candidates={stats.candidates}
+            candidates={candidates ?? stats.candidates}
             dismissingId={dismissingId}
-            onDismiss={dismiss}
+            emptyDescription={emptyDescription}
+            emptyTitle={emptyTitle}
+            onDismiss={allowDismiss ? dismiss : undefined}
           />
         )
       )}

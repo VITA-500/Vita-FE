@@ -9,7 +9,7 @@ import { ButtonLink } from "@/shared/ui/atoms/Button";
 import { Card, CardContent, CardHeader } from "@/shared/ui/atoms/Card";
 import { cn } from "@/shared/lib/cn";
 
-/** 대시보드에는 많이 나온 답변 피드백 몇 개만 보여주고, 나머지는 답변 피드백 페이지에서 본다. */
+/** 대시보드는 요약만: 많이 나온 답변 피드백 몇 개를 읽기 전용으로 보여주고, 확인·무시는 답변 피드백 페이지에서 한다. */
 const DASHBOARD_FEEDBACK_LIMIT = 5;
 
 export const AdminDashboard = () => {
@@ -69,10 +69,11 @@ export const AdminDashboard = () => {
         <Card>
           <CardHeader
             title="챗봇 답변 피드백"
-            description="챗봇이 답하지 못했거나 아쉬워요를 받은 답변을 확인하고 FAQ로 보완합니다."
+            description="많이 나온 순 상위 5건이에요. 유형별 확인과 무시 처리는 답변 피드백 페이지에서 하세요."
           />
           <CardContent>
             <AnswerFeedbackContent
+              allowDismiss={false}
               error={feedbackError}
               isLoading={isFeedbackLoading}
               stats={feedbackStats}
