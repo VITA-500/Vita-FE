@@ -12,6 +12,7 @@ import type {
   StoreRoute,
   StoreRouteMode,
 } from "@/features/store/types";
+import { reservationApi } from "@/entities/reservation";
 import { requestJson } from "@/shared/api/http";
 
 type StoreNearbyItemResponse = {
@@ -59,14 +60,7 @@ type StoreDetailResponse = {
   benefitName?: string | null;
 };
 
-export type ReservationResponse = {
-  reservationId: number;
-  storeId: number;
-  storeName: string;
-  date: string;
-  time: string;
-  status: "CONFIRMED" | string;
-};
+export type { ReservationResponse } from "@/entities/reservation";
 
 const isApiStoreId = (storeId: string) => /^\d+$/.test(storeId);
 
@@ -196,23 +190,6 @@ export const storeService = {
       segments: getRouteSegments(response),
     };
   },
-  reserveStore: async ({
-    date,
-    storeId,
-    time,
-  }: {
-    date: string;
-    storeId: string;
-    time: string;
-  }) => {
-    if (!isApiStoreId(storeId)) {
-      throw new Error("NON_API_STORE_ID");
-    }
-
-    return requestJson<ReservationResponse>(`/stores/${storeId}/reservations`, {
-      method: "POST",
-      body: JSON.stringify({ date, time }),
-      timeoutMs: 7000,
-    });
-  },
+  /** 매장 예약. entities/reservation으로 옮겼고 기존 호출부 호환을 위해 남겨 둔다. */
+  reserveStore: reservationApi.createReservation,
 };

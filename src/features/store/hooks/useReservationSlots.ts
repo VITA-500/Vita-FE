@@ -1,4 +1,4 @@
-import { buildReservationTimeSlots } from "@/features/store/lib/reservationTimeSlots";
+import { buildReservationTimeSlots } from "@/entities/reservation";
 import type { StoreLocation } from "@/features/store/types";
 
 type UseReservationSlotsParams = {
