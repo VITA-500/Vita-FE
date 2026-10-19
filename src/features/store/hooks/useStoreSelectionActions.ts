@@ -23,10 +23,9 @@ import {
   getGeolocationPermissionState,
   LOCATION_CONSENT_STORAGE_KEY,
 } from "@/features/store/lib/storePanelStorage";
-import { storeService } from "@/features/store/lib/storeService";
 import type { MapCategory, StoreLocation } from "@/features/store/types";
 import { readStorage } from "@/shared/lib/browserStorage";
-import { useFetchNearbyStores } from "@/entities/store";
+import { useFetchNearbyStores, useFetchStoreDetail } from "@/entities/store";
 import { showToast } from "@/shared/providers/ToastProvider";
 
 type UseStoreSelectionActionsParams = Pick<
@@ -121,6 +120,7 @@ export const useStoreSelectionActions = ({
   watchLocation,
 }: UseStoreSelectionActionsParams) => {
   const fetchNearbyStores = useFetchNearbyStores();
+  const fetchStoreDetail = useFetchStoreDetail();
   const showStoreOnMap = (
     storeId: string,
     storeDetail: StoreLocation,
@@ -176,8 +176,7 @@ export const useStoreSelectionActions = ({
       }
     }
 
-    storeService
-      .fetchStoreDetail(storeId, nextStore)
+    fetchStoreDetail(storeId, nextStore)
       .then((storeDetail) => {
         if (!storeDetail) {
           return;

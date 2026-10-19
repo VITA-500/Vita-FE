@@ -32,7 +32,7 @@ type NearbyStoresResponse = {
   stores: StoreNearbyItemResponse[];
 };
 
-type StoreDetailResponse = {
+export type StoreDetailResponse = {
   storeId: number;
   name: string;
   address: string;
@@ -77,7 +77,11 @@ const toNearbyStoreLocation = (
   storeType: store.storeType ?? "PHONE",
 });
 
-const toStoreLocation = (
+/**
+ * 상세 응답을 화면 모델로 바꾼다. 상세에 비어 있는 칸은 목록(주변 조회 등)에서 받은 값으로 채운다.
+ * 상세 응답만 캐시하고 목록 값은 쓸 때마다 이 함수로 합친다(거리처럼 목록마다 다른 값이 캐시에 섞이지 않도록).
+ */
+export const mergeStoreDetail = (
   store: StoreDetailResponse,
   fallback?: StoreLocation,
 ): StoreLocation => ({
@@ -180,6 +184,13 @@ export const storeApi = {
 
     return stores;
   },
+  /** 상세 응답 그대로(목록 값과 합치기 전). 캐시용. API 매장 id가 아니면 null */
+  fetchStoreDetailResponse: async (storeId: string) =>
+    isApiStoreId(storeId)
+      ? requestJson<StoreDetailResponse>(`/stores/${storeId}`, {
+          timeoutMs: 7000,
+        })
+      : null,
   fetchStoreDetail: async (storeId: string, fallback?: StoreLocation) => {
     if (!isApiStoreId(storeId)) {
       return fallback ?? null;
@@ -192,7 +203,7 @@ export const storeApi = {
       },
     );
 
-    return toStoreLocation(response, fallback);
+    return mergeStoreDetail(response, fallback);
   },
   /** 혜택 카테고리별 주변 제휴 매장. 응답이 매장 모델이라 store entity에 둔다. */
   fetchBenefitStores: async (

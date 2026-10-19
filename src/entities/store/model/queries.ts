@@ -7,13 +7,18 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { storeApi } from "@/entities/store/api/storeApi";
+import { mergeStoreDetail, storeApi } from "@/entities/store/api/storeApi";
 import { getOpenFilterKey } from "@/entities/store/model/storeOpenHours";
-import type { StoreOpenFilter } from "@/entities/store/model/types";
+import type {
+  StoreLocation,
+  StoreOpenFilter,
+} from "@/entities/store/model/types";
 import type { LatLng } from "@/shared/lib/geo";
 
 export const storeQueryKeys = {
   all: ["store"] as const,
+  detail: (storeId: string) =>
+    [...storeQueryKeys.all, "detail", storeId] as const,
   nearby: (
     location: LatLng,
     radiusKm: number | undefined,
@@ -102,6 +107,36 @@ export const useFetchNearbyStores = () => {
   return useCallback(
     (location: LatLng, query?: NearbyStoresQuery) =>
       queryClient.fetchQuery(nearbyStoresQueryOptions(location, query)),
+    [queryClient],
+  );
+};
+
+/** 매장 상세 응답(목록 값과 합치기 전). 영업시간·연락처는 자주 바뀌지 않아 5분 캐시한다. */
+export const storeDetailQueryOptions = (storeId: string) =>
+  queryOptions({
+    queryFn: () => storeApi.fetchStoreDetailResponse(storeId),
+    queryKey: storeQueryKeys.detail(storeId),
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+
+/**
+ * 매장 상세를 한 번 조회하는 함수(Promise). 상세 응답은 캐시하고, 목록에서 받은 값(fallback)은 매번 합친다.
+ * API 매장이 아니면(목업 등) 목록 값을 그대로 돌려준다.
+ */
+export const useFetchStoreDetail = () => {
+  const queryClient = useQueryClient();
+
+  return useCallback(
+    async (storeId: string, fallback?: StoreLocation) => {
+      const response = await queryClient.fetchQuery(
+        storeDetailQueryOptions(storeId),
+      );
+
+      return response
+        ? mergeStoreDetail(response, fallback)
+        : (fallback ?? null);
+    },
     [queryClient],
   );
 };
