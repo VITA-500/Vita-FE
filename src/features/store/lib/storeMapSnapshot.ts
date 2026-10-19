@@ -2,11 +2,8 @@ import type {
   MapSearchPoint,
   MapViewport,
 } from "@/features/store/lib/storePanelStores";
-import type {
-  MapCategory,
-  StoreLocation,
-  StoreOpenFilter,
-} from "@/features/store/types";
+import type { MapCategory } from "@/features/store/types";
+import type { StoreLocation, StoreOpenFilter } from "@/entities/store";
 import {
   readJsonStorage,
   removeStorage,

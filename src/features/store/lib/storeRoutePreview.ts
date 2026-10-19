@@ -4,14 +4,14 @@ import {
   formatWalkingTime,
   getDistanceMeters,
   type UserLocation,
-} from "@/features/store/lib/geo";
+} from "@/shared/lib/geo";
 import type { RoutePreview } from "@/features/store/lib/mapRoute";
-import type { TransitRouteStep } from "@/entities/route";
 import type {
-  StoreLocation,
+  TransitRouteStep,
   StoreRoute,
   StoreRouteMode,
-} from "@/features/store/types";
+} from "@/entities/route";
+import type { StoreLocation } from "@/entities/store";
 
 /** 이 직선거리(m) 안의 매장은 차량·자전거 경로가 크게 돌아가면 도보를 추천한다. */
 const WALK_RECOMMEND_MAX_STRAIGHT_METERS = 300;

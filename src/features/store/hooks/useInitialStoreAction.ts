@@ -4,10 +4,10 @@ import type { Dispatch, SetStateAction } from "react";
 import { findStoreById } from "@/features/store/lib/storePanelStores";
 import type {
   MapCategory,
-  StoreLocation,
   StoreMapInitialAction,
-  StoreRouteMode,
 } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
+import type { StoreRouteMode } from "@/entities/route";
 import { useFetchStoreDetail } from "@/entities/store";
 import { showToast } from "@/shared/providers/ToastProvider";
 

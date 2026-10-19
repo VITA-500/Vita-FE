@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildRouteSummary } from "@/features/store/lib/storeRoutePreview";
-import type { StoreLocation, StoreRoute } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
+import type { StoreRoute } from "@/entities/route";
 
 const store: StoreLocation = {
   id: "store-1",

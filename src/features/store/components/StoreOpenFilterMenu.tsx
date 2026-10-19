@@ -5,8 +5,8 @@ import {
   getNextOpenFilterTime,
   getOpenFilterLabel,
   OPEN_FILTER_TIME_OPTIONS,
-} from "@/features/store/lib/storeOpenHours";
-import type { StoreOpenFilter } from "@/features/store/types";
+} from "@/entities/store";
+import type { StoreOpenFilter } from "@/entities/store";
 import { cn } from "@/shared/lib/cn";
 
 type StoreOpenFilterMenuProps = {

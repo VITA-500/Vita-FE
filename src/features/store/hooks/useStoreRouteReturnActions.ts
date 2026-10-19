@@ -1,12 +1,13 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
-import type { UserLocation } from "@/features/store/lib/geo";
+import type { UserLocation } from "@/shared/lib/geo";
 import {
   defaultMapLocation,
   type MapSearchPoint,
 } from "@/features/store/lib/storePanelStores";
-import type { MapCategory, StoreLocation } from "@/features/store/types";
+import type { MapCategory } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
 
 type UseStoreRouteReturnActionsParams = {
   activeMapCategory: MapCategory;

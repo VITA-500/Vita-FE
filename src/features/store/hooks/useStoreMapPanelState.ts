@@ -12,9 +12,11 @@ import { useStoreRoute } from "@/features/store/hooks/useStoreRoute";
 import { useStoreSearchHistory } from "@/features/store/hooks/useStoreSearchHistory";
 import { useStoreSearchResults } from "@/features/store/hooks/useStoreSearchResults";
 import { useStoreSearchState } from "@/features/store/hooks/useStoreSearchState";
-import { buildMarkerColorInfoById } from "@/features/store/lib/markerColors";
+import {
+  buildMarkerColorInfoById,
+  ALL_STORE_OPEN_FILTER,
+} from "@/entities/store";
 import type { StoreMapSnapshot } from "@/features/store/lib/storeMapSnapshot";
-import { ALL_STORE_OPEN_FILTER } from "@/features/store/lib/storeOpenHours";
 import {
   buildRoutePreview,
   buildRouteSummary,
@@ -28,11 +30,8 @@ import {
   resolveRouteDestinationStore,
   type MapSearchPoint,
 } from "@/features/store/lib/storePanelStores";
-import type {
-  MapCategory,
-  StoreLocation,
-  StoreOpenFilter,
-} from "@/features/store/types";
+import type { MapCategory } from "@/features/store/types";
+import type { StoreLocation, StoreOpenFilter } from "@/entities/store";
 
 // 지도 화면은 검색, 필터, 위치, 길찾기 상태가 강하게 맞물린다.
 // 새 상태를 추가할 때는 useStoreMapState로 먼저 분리할 수 있는지 확인한다.

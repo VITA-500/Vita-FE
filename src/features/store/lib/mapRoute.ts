@@ -8,10 +8,7 @@ import {
   getTransitSegmentStyle,
   routeStyleByMode,
 } from "@/features/store/lib/routeStyles";
-import type {
-  StoreRouteMode,
-  StoreRouteSegmentKind,
-} from "@/features/store/types";
+import type { StoreRouteMode, StoreRouteSegmentKind } from "@/entities/route";
 
 // 기존 import 경로(@/features/store/lib/mapRoute)를 유지하기 위해 나눈 모듈을 다시 내보낸다.
 export { getPartialRoutePath };

@@ -11,7 +11,7 @@ import {
   sortStoresByDistance,
   type MapViewport,
 } from "@/features/store/lib/storePanelStores";
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
 
 const center = { lat: 37.5, lng: 127.0 };
 

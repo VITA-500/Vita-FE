@@ -5,10 +5,10 @@ import type { useServiceFilters } from "@/features/store/hooks/useServiceFilters
 import type { useStoreSearchState } from "@/features/store/hooks/useStoreSearchState";
 import {
   matchesStoreSearch,
-  type UserLocation,
-} from "@/features/store/lib/geo";
-import { findServicesInText } from "@/features/store/lib/serviceKeywords";
-import { filterStoresByOpenFilter } from "@/features/store/lib/storeOpenHours";
+  findServicesInText,
+  filterStoresByOpenFilter,
+} from "@/entities/store";
+import { type UserLocation } from "@/shared/lib/geo";
 import {
   buildSearchableStores,
   defaultMapLocation,
@@ -16,11 +16,8 @@ import {
   sortStoresByDistance,
   type MapSearchPoint,
 } from "@/features/store/lib/storePanelStores";
-import type {
-  MapCategory,
-  StoreLocation,
-  StoreOpenFilter,
-} from "@/features/store/types";
+import type { MapCategory } from "@/features/store/types";
+import type { StoreLocation, StoreOpenFilter } from "@/entities/store";
 
 type SearchState = ReturnType<typeof useStoreSearchState>;
 type ServiceFilters = ReturnType<typeof useServiceFilters>;

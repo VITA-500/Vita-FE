@@ -10,9 +10,8 @@ import {
   Search,
 } from "lucide-react";
 import type { UserLocationStatus } from "@/entities/location";
-import { matchesStoreSearch } from "@/features/store/lib/geo";
-import type { StoreLocation } from "@/features/store/types";
-import { getKakaoDirectionUrl } from "@/features/store/lib/mapLinks";
+import { matchesStoreSearch, getKakaoDirectionUrl } from "@/entities/store";
+import type { StoreLocation } from "@/entities/store";
 import { cn } from "@/shared/lib/cn";
 import { ButtonLink } from "@/shared/ui/atoms/Button";
 

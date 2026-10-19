@@ -2,7 +2,7 @@ import {
   getExtraServicesLabel,
   type ExtraService,
 } from "@/features/store/lib/mapOverlayElements";
-import type { MarkerColorInfo } from "@/features/store/lib/markerColors";
+import type { MarkerColorInfo, StoreLocation } from "@/entities/store";
 import { getFallbackMarkerStyle } from "@/features/store/lib/storeMapFallbackLayout";
 import { STORE_MARKER_DATA_ATTRIBUTE } from "@/features/store/lib/storeMapPreviewTypes";
 import { getStoreMarkerLabel } from "@/features/store/lib/storeMarkerOverlays";
@@ -11,7 +11,6 @@ import {
   getStorePinSvgMarkup,
   STORE_PIN_SHAPE_CLASS_NAME,
 } from "@/features/store/lib/storePinSvg";
-import type { StoreLocation } from "@/features/store/types";
 import { cn } from "@/shared/lib/cn";
 
 const ExtraServiceBadge = ({ services }: { services: ExtraService[] }) => (

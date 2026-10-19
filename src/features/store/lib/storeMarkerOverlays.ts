@@ -1,4 +1,4 @@
-import type { UserLocation } from "@/features/store/lib/geo";
+import type { UserLocation } from "@/shared/lib/geo";
 import type {
   KakaoMapsApi,
   MapOverlayHandle,
@@ -6,9 +6,8 @@ import type {
 } from "@/features/store/lib/kakaoMapTypes";
 import type { MapPoint } from "@/features/store/lib/mapFit";
 import { createClusterListElement } from "@/features/store/lib/mapOverlayElements";
-import type { MarkerColorInfo } from "@/features/store/lib/markerColors";
+import type { MarkerColorInfo, StoreLocation } from "@/entities/store";
 import { createStoreMarkerElement } from "@/features/store/lib/storeMarkerElement";
-import type { StoreLocation } from "@/features/store/types";
 import { getStoreMarkerLabel } from "@/entities/store";
 
 // 핀 글자 규칙은 entities/store로 옮겼다. 기존 import 경로 호환용 재내보내기.

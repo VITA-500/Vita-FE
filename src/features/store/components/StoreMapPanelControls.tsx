@@ -13,7 +13,7 @@ import {
   StorePanelStoreListHeader,
 } from "@/features/store/components/StorePanelStoreList";
 import type { StoreMapPanelModel } from "@/features/store/hooks/useStoreMapPanel";
-import type { StoreOpenFilter } from "@/features/store/types";
+import type { StoreOpenFilter } from "@/entities/store";
 import { cn } from "@/shared/lib/cn";
 
 type StoreMapPanelStoreListContentProps = Pick<

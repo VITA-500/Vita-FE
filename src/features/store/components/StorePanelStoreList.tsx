@@ -1,16 +1,13 @@
 import { ChevronDown } from "lucide-react";
 import { StoreOpenFilterMenu } from "@/features/store/components/StoreOpenFilterMenu";
-import { StoreOpenStatusBadge } from "@/features/store/components/StoreOpenStatusBadge";
+import { StoreOpenStatusBadge } from "@/entities/store";
 import { StorePanelPagination } from "@/features/store/components/StorePanelPagination";
 import { mapCategoryOptions } from "@/features/store/constants";
 import { renderBenefitCategoryIcon } from "@/entities/benefit";
 import { getStoreMarkerLabel } from "@/features/store/lib/storeMarkerOverlays";
 import type { BenefitCategoryOption } from "@/features/store/lib/benefitService";
-import type {
-  MapCategory,
-  StoreLocation,
-  StoreOpenFilter,
-} from "@/features/store/types";
+import type { MapCategory } from "@/features/store/types";
+import type { StoreLocation, StoreOpenFilter } from "@/entities/store";
 import { cn } from "@/shared/lib/cn";
 
 const getListTitle = (category: MapCategory) =>

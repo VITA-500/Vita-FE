@@ -6,7 +6,7 @@ import {
   type KakaoMapWithProjection,
   type MapFitPadding,
 } from "@/features/store/lib/mapFit";
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
 
 /** 패널이 밀려 나오는 애니메이션(300ms)이 끝난 뒤 핀 위치를 잰다. */
 const PIN_VISIBLE_CHECK_DELAY_MS = 340;

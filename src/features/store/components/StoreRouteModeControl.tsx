@@ -1,5 +1,5 @@
 import { Bike, Bus, Car, SportShoe } from "lucide-react";
-import type { StoreRouteMode } from "@/features/store/types";
+import type { StoreRouteMode } from "@/entities/route";
 import { cn } from "@/shared/lib/cn";
 
 const routeModeButtonClassName =

@@ -25,8 +25,8 @@ import type {
 import type {
   MapCategory,
   StoreMapInitialAction,
-  StoreRouteMode,
 } from "@/features/store/types";
+import type { StoreRouteMode } from "@/entities/route";
 import { useChatConversationController } from "@/features/chat/hooks/useChatConversationController";
 import { useChatTour } from "@/features/chat/hooks/useChatTour";
 import { buildLoginHref, useAuthUser } from "@/entities/user";

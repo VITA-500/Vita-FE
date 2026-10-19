@@ -2,7 +2,7 @@ import { useRouter } from "next/navigation";
 import { buildLoginHref } from "@/entities/user";
 import { StoreReservationFields } from "@/features/store/components/StoreReservationFields";
 import { useReservationSlots } from "@/features/store/hooks/useReservationSlots";
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
 import { Button } from "@/shared/ui/atoms/Button";
 import { Modal } from "@/shared/ui/organisms/Modal";
 

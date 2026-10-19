@@ -1,5 +1,5 @@
 import { buildReservationTimeSlots } from "@/entities/reservation";
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
 
 type UseReservationSlotsParams = {
   onReservationDateChange: (date: string) => void;

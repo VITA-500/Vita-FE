@@ -9,7 +9,8 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useStoreRoute } from "./useStoreRoute";
 import { routeApi } from "@/entities/route";
-import type { StoreLocation, StoreRoute } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
+import type { StoreRoute } from "@/entities/route";
 
 // 공개 API(@/entities/route)가 다시 내보내는 routeApi가 이 모킹 값이 된다.
 vi.mock("@/entities/route/api/routeApi", () => ({
