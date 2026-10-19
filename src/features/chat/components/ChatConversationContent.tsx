@@ -24,6 +24,7 @@ type ChatConversationContentProps = {
   onFeedbackAnswer?: (
     assistantMessageId: string,
     feedback: ChatFeedback,
+    comment?: string,
   ) => void;
   onRetryAnswer: (assistantMessageId: string) => void;
   /** 피드백 저장·관리자 전달 중인 답변 메시지 id. */

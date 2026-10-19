@@ -278,8 +278,12 @@ const ChatPageContent = () => {
               // 답변 피드백은 회원만 남길 수 있다. 비로그인이면 버튼 자체를 보여주지 않는다.
               onFeedbackAnswer={
                 isAuthenticated
-                  ? (assistantMessageId, feedback) =>
-                      void sendAnswerFeedback(assistantMessageId, feedback)
+                  ? (assistantMessageId, feedback, comment) =>
+                      void sendAnswerFeedback(
+                        assistantMessageId,
+                        feedback,
+                        comment,
+                      )
                   : undefined
               }
               onRetryAnswer={retryAnswer}

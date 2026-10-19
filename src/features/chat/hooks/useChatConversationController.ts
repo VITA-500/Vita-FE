@@ -99,8 +99,25 @@ export const useChatConversationController = ({
   const submitAnswerFeedback = async (
     assistantMessageId: string,
     feedback: ChatFeedback,
+    /** 아쉬워요 이유. 아쉬워요를 저장한 뒤 이유 입력 칸에서 보낼 때만 넘긴다. */
+    comment?: string,
   ) => {
     if (!isAuthenticated) return;
+
+    if (comment !== undefined) {
+      const savedFeedback = await sendAnswerFeedback(
+        assistantMessageId,
+        "DISLIKE",
+        { comment, silent: true },
+      );
+
+      showToast(
+        savedFeedback === "DISLIKE"
+          ? "아쉬운 점을 전달했어요. 답변을 개선하는 데 참고할게요."
+          : "이유를 전달하지 못했어요. 잠시 후 다시 시도해 주세요.",
+      );
+      return;
+    }
 
     const target = messages.find(
       (message) => message.id === assistantMessageId,

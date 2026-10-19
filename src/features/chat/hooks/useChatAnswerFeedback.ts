@@ -15,6 +15,8 @@ import { showToast } from "@/shared/providers/ToastProvider";
 type SendFeedbackOptions = {
   /** true면 실패 토스트를 띄우지 않는다. 호출하는 쪽이 결과를 한 번에 안내할 때 쓴다. */
   silent?: boolean;
+  /** 아쉬워요 이유. 있으면 같은 값을 다시 눌러도 취소하지 않고 이유와 함께 아쉬워요로 저장한다. */
+  comment?: string;
 };
 
 type UseChatAnswerFeedbackParams = {
@@ -36,7 +38,7 @@ export const useChatAnswerFeedback = ({
     async (
       assistantMessageId: string,
       feedback: ChatFeedback,
-      { silent = false }: SendFeedbackOptions = {},
+      { comment, silent = false }: SendFeedbackOptions = {},
     ): Promise<ChatFeedback | null | undefined> => {
       const target = messages.find(
         (message) => message.id === assistantMessageId,
@@ -56,13 +58,15 @@ export const useChatAnswerFeedback = ({
         return undefined;
       }
 
-      const nextFeedback = target.feedback === feedback ? null : feedback;
+      const nextFeedback =
+        comment !== undefined || target.feedback !== feedback ? feedback : null;
       setFeedbackMessageIds((ids) => new Set(ids).add(assistantMessageId));
 
       try {
         const response = await chatService.sendFeedback(
           target.serverMessageId,
           nextFeedback,
+          comment,
         );
 
         setMessages((currentMessages) =>
