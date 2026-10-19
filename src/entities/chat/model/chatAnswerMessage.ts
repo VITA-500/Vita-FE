@@ -4,7 +4,7 @@ import type {
   ChatMessage,
   ChatStoreMap,
   ChatPlan,
-} from "@/features/chat/types";
+} from "@/entities/chat/model/types";
 
 export const FAILED_ANSWER_MESSAGE =
   "답변을 생성하지 못했어요. 잠시 후 다시 시도해 주세요.";
@@ -12,8 +12,8 @@ export const FAILED_ANSWER_MESSAGE =
 export const PENDING_ANSWER_MESSAGE =
   "아직 답변을 만들고 있어요. 잠시 후 상담 내역을 다시 열어 주세요.";
 
-export type { ChatMessageResponse } from "@/features/chat/types";
-import type { ChatMessageResponse } from "@/features/chat/types";
+export type { ChatMessageResponse } from "@/entities/chat/api/apiTypes";
+import type { ChatMessageResponse } from "@/entities/chat/api/apiTypes";
 
 type AnswerResult = Omit<ChatMessageResponse, "plans"> & {
   feedback?: ChatFeedback | null;

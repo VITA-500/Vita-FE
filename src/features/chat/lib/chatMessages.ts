@@ -1,10 +1,11 @@
 import type { ChatMessage, SessionMessage } from "@/features/chat/types";
+import { isStoreRelatedPrompt } from "@/features/chat/lib/chatStoreMap";
 import {
   FAILED_ANSWER_MESSAGE,
   PENDING_ANSWER_MESSAGE,
-} from "@/features/chat/lib/chatAnswerMessage";
-import { isStoreRelatedPrompt } from "@/features/chat/lib/chatStoreMap";
-import { toChatPlan, toChatStoreMap } from "./chatResponseAdapters";
+  toChatPlan,
+  toChatStoreMap,
+} from "@/entities/chat";
 import { toSafeTitleText } from "@/features/chat/lib/chatTitleMask";
 
 export const toChatTitle = (prompt: string) => {

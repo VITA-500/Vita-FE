@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { parseStreamEvent } from "./chatStreamTransport";
-import { toChatStoreMap, toChatPlan } from "./chatResponseAdapters";
-import type { ChatApiPlan, ChatApiStoreMap } from "../apiTypes";
+import {
+  toChatPlan,
+  toChatStoreMap,
+} from "@/entities/chat/model/chatResponseAdapters";
+import type { ChatApiPlan, ChatApiStoreMap } from "./apiTypes";
 
 describe("chat stream contract", () => {
   it("ignores unknown events, invalid JSON, IDs and delta payloads", () => {

@@ -1,13 +1,9 @@
+import { guestHeaders, requestChatJson } from "./chatApiClient";
+import { sendMessageWithStream } from "./chatStream";
 import type {
   ChatSessionListResponse,
   SessionMessagesResponse,
-} from "@/features/chat/types";
-import {
-  guestHeaders,
-  requestChatJson,
-} from "@/features/chat/lib/chatApiClient";
-import { sendMessageWithStream } from "@/features/chat/lib/chatStream";
-import { feedbackApi } from "@/entities/feedback";
+} from "@/entities/chat/model/types";
 import { ApiError, requestJson } from "@/shared/api/http";
 
 type ChatSessionCreateResponse = {
@@ -18,8 +14,6 @@ type ChatSessionCreateResponse = {
 type ChatSessionClaimResponse = { sessionId: number; claimedAt: string };
 type ChatSessionPinResponse = { pinned: boolean; sessionId: number };
 type ChatSessionTitleResponse = { sessionId: number; title: string };
-
-export type { AnswerFeedbackResponse as ChatFeedbackResponse } from "@/entities/feedback";
 
 /**
  * 진행 중인 claim 요청. 로그인 직후 채팅 화면의 effect가 여러 번 실행되면
@@ -58,7 +52,8 @@ const requestClaim = async (
 export const isPermanentClaimError = (error: unknown) =>
   error instanceof ApiError && (error.status === 403 || error.status === 404);
 
-export const chatService = {
+/** 상담 API (/chat/sessions). 세션 생성·목록·메시지·고정·이름 변경·삭제, 게스트 세션 넘기기, 질문 전송(스트림). */
+export const chatApi = {
   claimGuestSession: (sessionId: number, guestId: string) => {
     const claimKey = `${sessionId}:${guestId}`;
     const pendingClaim = pendingClaims.get(claimKey);
@@ -101,8 +96,6 @@ export const chatService = {
   getSessions: () => {
     return requestJson<ChatSessionListResponse>("/chat/sessions");
   },
-  /** 답변 피드백. entities/feedback으로 옮겼고 기존 호출부 호환을 위해 남겨 둔다. */
-  sendFeedback: feedbackApi.sendAnswerFeedback,
   sendMessage: sendMessageWithStream,
   updateSessionPin: (sessionId: number, pinned: boolean) => {
     return requestJson<ChatSessionPinResponse>(
