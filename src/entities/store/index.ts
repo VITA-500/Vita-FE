@@ -33,6 +33,7 @@ export {
   getViewportAreaQuery,
   isStoreInVisibleArea,
   resolveRouteDestinationStore,
+  SEARCH_RADIUS_KM,
   sortStoresByDistance,
   type MapSearchPoint,
   type MapViewport,

@@ -14,11 +14,8 @@ import {
   sortStoresByDistance,
   type MapSearchPoint,
 } from "@/entities/store";
-import type {
-  MapCategory,
-  StoreLocation,
-  StoreOpenFilter,
-} from "@/entities/store";
+import type { StoreLocation, StoreOpenFilter } from "@/entities/store";
+import type { MapCategory } from "@/features/store-search/types";
 
 type SearchState = ReturnType<typeof useStoreSearchState>;
 type ServiceFilters = ReturnType<typeof useServiceFilters>;

@@ -3,14 +3,11 @@ import { StoreOpenFilterMenu } from "@/features/store-search/components/StoreOpe
 import { StoreOpenStatusBadge } from "@/entities/store";
 import { StorePanelPagination } from "@/features/store-search/components/StorePanelPagination";
 import { mapCategoryOptions } from "@/features/store-search/constants";
+import type { MapCategory } from "@/features/store-search/types";
 import { renderBenefitCategoryIcon } from "@/entities/benefit";
 import { getStoreMarkerLabel } from "@/entities/store";
 import type { BenefitCategoryOption } from "@/entities/benefit";
-import type {
-  MapCategory,
-  StoreLocation,
-  StoreOpenFilter,
-} from "@/entities/store";
+import type { StoreLocation, StoreOpenFilter } from "@/entities/store";
 import { cn } from "@/shared/lib/cn";
 
 const getListTitle = (category: MapCategory) =>
