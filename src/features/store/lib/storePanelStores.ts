@@ -3,7 +3,6 @@ import {
   getDistanceMeters,
   type UserLocation,
 } from "@/features/store/lib/geo";
-import { getStoreMarkerLabel } from "@/features/store/lib/storeMarkerOverlays";
 import type { StoreLocation } from "@/features/store/types";
 
 export type MapSearchPoint = {
@@ -117,24 +116,8 @@ export const sortStoresByDistance = (
       distanceText: formatDistance(distanceMeters),
     }));
 
-/** 지금 페이지 핀의 글자(A, B, C…). 다른 페이지에서 골라 함께 보여주는 매장 핀은 "•" */
-export const buildMarkerLabelById = (
-  pagedMapStores: StoreLocation[],
-  selectedStoreOutsidePage?: StoreLocation,
-) => {
-  const markerLabelById: Record<string, string> = Object.fromEntries(
-    pagedMapStores.map((store, index) => [
-      store.id,
-      getStoreMarkerLabel(index),
-    ]),
-  );
-
-  if (selectedStoreOutsidePage) {
-    markerLabelById[selectedStoreOutsidePage.id] = "•";
-  }
-
-  return markerLabelById;
-};
+// 핀 글자 규칙은 entities/store로 옮겼다. 기존 import 경로 호환용 재내보내기.
+export { buildMarkerLabelById } from "@/entities/store";
 
 type MapStoreVisibilityParams = {
   mapStores: StoreLocation[];

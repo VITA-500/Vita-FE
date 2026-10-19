@@ -1,4 +1,4 @@
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store/model/types";
 
 export type ServiceFilterOption = {
   label: string;

@@ -6,15 +6,6 @@ import { ChatStoreResultCard } from "@/features/chat/components/ChatStoreResultC
 import { StoreMapPreview } from "@/features/store/components/StoreMapPreview";
 import { StorePanelModals } from "@/features/store/components/StorePanelModals";
 import { useStoreReservation } from "@/features/store/hooks/useStoreReservation";
-import { buildMarkerLabelById } from "@/features/store/lib/storePanelStores";
-import {
-  buildMarkerColorInfoById,
-  buildStoreServiceColorByValue,
-} from "@/features/store/lib/markerColors";
-import {
-  KNOWN_CONSULT_SERVICES,
-  KNOWN_PROVIDED_SERVICES,
-} from "@/features/store/lib/serviceKeywords";
 import {
   CHAT_STORE_RADIUS_KM,
   findChatStoreMap,
@@ -28,6 +19,13 @@ import {
   getChatStoreMapUserLocation,
 } from "@/features/chat/lib/chatStoreMapOrigin";
 import type { ChatStoreMap as ChatStoreMapData } from "@/features/chat/types";
+import {
+  buildMarkerColorInfoById,
+  buildMarkerLabelById,
+  buildStoreServiceColorByValue,
+  KNOWN_CONSULT_SERVICES,
+  KNOWN_PROVIDED_SERVICES,
+} from "@/entities/store";
 import type { LatLng } from "@/shared/lib/geo";
 import { showToast } from "@/shared/providers/ToastProvider";
 
