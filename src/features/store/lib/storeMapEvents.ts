@@ -1,7 +1,7 @@
 import type {
   KakaoMapEventApi,
   KakaoMapWithCenter,
-} from "@/features/store/lib/kakaoMapTypes";
+} from "@/shared/lib/kakaoMapTypes";
 import type { KakaoMapWithProjection } from "@/features/store/lib/mapFit";
 import type { createSelectedStoreCardController } from "@/features/store/lib/storeMapCardController";
 import type {

@@ -6,7 +6,7 @@ import type {
   SetStateAction,
 } from "react";
 import type { UserLocation } from "@/shared/lib/geo";
-import type { MapOverlayHandle } from "@/features/store/lib/kakaoMapTypes";
+import type { MapOverlayHandle } from "@/shared/lib/kakaoMapTypes";
 import type { MapFitPadding, MapPoint } from "@/features/store/lib/mapFit";
 import type { RoutePreview } from "@/features/store/lib/mapRoute";
 import type { MarkerColorInfo, StoreLocation } from "@/entities/store";

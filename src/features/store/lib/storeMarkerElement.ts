@@ -1,4 +1,4 @@
-import type { StoreMarkerGroupEntry } from "@/features/store/lib/kakaoMapTypes";
+import type { StoreMarkerGroupEntry } from "@/features/store/lib/storeMarkerTypes";
 import {
   createExtraServiceBadgeElement,
   playMarkerEnterAnimation,

@@ -2,8 +2,8 @@ import type { UserLocation } from "@/shared/lib/geo";
 import type {
   KakaoMapsApi,
   MapOverlayHandle,
-  StoreMarkerGroupEntry,
-} from "@/features/store/lib/kakaoMapTypes";
+} from "@/shared/lib/kakaoMapTypes";
+import type { StoreMarkerGroupEntry } from "@/features/store/lib/storeMarkerTypes";
 import type { MapPoint } from "@/features/store/lib/mapFit";
 import { createClusterListElement } from "@/features/store/lib/mapOverlayElements";
 import type { MarkerColorInfo, StoreLocation } from "@/entities/store";

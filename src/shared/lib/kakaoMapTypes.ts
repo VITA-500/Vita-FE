@@ -1,5 +1,4 @@
-/** 지도 미리보기(StoreMapPreview)와 오버레이 helper가 함께 쓰는 카카오맵 관련 타입 */
-import type { StoreLocation } from "@/entities/store";
+/** 카카오맵 지도·이벤트·오버레이 공통 타입. 도메인(매장 등)을 모르는 타입만 둔다. */
 
 export type KakaoMapEventApi = {
   addListener: (
@@ -37,11 +36,6 @@ export type MapOverlayHandle = {
   marker?: KakaoMarker;
   overlay: KakaoCustomOverlay;
   cleanup?: () => void;
-};
-
-export type StoreMarkerGroupEntry = {
-  index: number;
-  store: StoreLocation;
 };
 
 export type KakaoMapsApi = NonNullable<NonNullable<Window["kakao"]>["maps"]>;

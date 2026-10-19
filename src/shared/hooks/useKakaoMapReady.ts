@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { loadKakaoMapScript } from "@/features/store/lib/kakaoMapScript";
+import { loadKakaoMapScript } from "@/shared/lib/kakaoMapScript";
 import { hasKakaoMapKey } from "@/shared/config/env";
 
 export const useKakaoMapReady = () => {
