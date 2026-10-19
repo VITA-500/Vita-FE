@@ -1,16 +1,14 @@
 import { ApiError, requestJson } from "@/shared/api/http";
-import { env } from "@/shared/config/env";
+import {
+  createApiUrl,
+  readJsonResponse,
+  type ApiErrorDetails,
+} from "@/shared/api/response";
 
 export const guestHeaders = (guestId?: string) =>
   guestId ? { "X-Guest-Id": guestId } : undefined;
 
-export const createChatApiUrl = (path: string) => {
-  if (/^https?:\/\//.test(path)) {
-    return path;
-  }
-
-  return `${env.apiBaseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
-};
+export const createChatApiUrl = (path: string) => createApiUrl(path);
 
 export const requestGuestChatJson = async <T>(
   path: string,
@@ -28,11 +26,8 @@ export const requestGuestChatJson = async <T>(
   });
 
   if (!response.ok) {
-    const errorBody = (await response.json().catch(() => null)) as {
-      message?: string;
-      code?: string;
-      fieldErrors?: { field: string; message: string }[] | null;
-    } | null;
+    const errorBody = (await response.json().catch(() => null)) as
+      (ApiErrorDetails & { message?: string }) | null;
 
     throw new ApiError(
       errorBody?.message ?? `Chat API failed: ${response.status}`,
@@ -41,17 +36,7 @@ export const requestGuestChatJson = async <T>(
     );
   }
 
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  const text = await response.text();
-
-  if (!text) {
-    return undefined as T;
-  }
-
-  return JSON.parse(text) as T;
+  return readJsonResponse<T>(response);
 };
 
 export const requestChatJson = <T>(

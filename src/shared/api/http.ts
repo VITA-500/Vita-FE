@@ -1,4 +1,8 @@
-import { env } from "@/shared/config/env";
+import {
+  createApiUrl,
+  readJsonResponse,
+  type ApiErrorDetails,
+} from "@/shared/api/response";
 
 type RequestOptions = RequestInit & {
   baseUrl?: string;
@@ -13,16 +17,9 @@ type CsrfTokenResponse = {
 export class ApiError extends Error {
   status: number;
   code?: string;
-  fieldErrors?: { field: string; message: string }[] | null;
+  fieldErrors?: ApiErrorDetails["fieldErrors"];
 
-  constructor(
-    message: string,
-    status: number,
-    details?: {
-      code?: string;
-      fieldErrors?: { field: string; message: string }[] | null;
-    },
-  ) {
+  constructor(message: string, status: number, details?: ApiErrorDetails) {
     super(message);
     this.name = "ApiError";
     this.status = status;
@@ -30,14 +27,6 @@ export class ApiError extends Error {
     this.fieldErrors = details?.fieldErrors;
   }
 }
-
-const createUrl = (path: string, baseUrl = env.apiBaseUrl) => {
-  if (/^https?:\/\//.test(path)) {
-    return path;
-  }
-
-  return `${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
-};
 
 let csrfTokenPromise: Promise<CsrfTokenResponse> | null = null;
 
@@ -77,7 +66,7 @@ export const requestJson = async <T>(
 
   try {
     const runRequest = async (csrfToken: CsrfTokenResponse | null) => {
-      const response = await fetch(createUrl(path, baseUrl), {
+      const response = await fetch(createApiUrl(path, baseUrl), {
         credentials: "include",
         ...requestOptions,
         signal:
@@ -101,11 +90,7 @@ export const requestJson = async <T>(
             const message = await response.text().catch(() => "");
 
             return message ? { message } : null;
-          })) as {
-          message?: string;
-          code?: string;
-          fieldErrors?: { field: string; message: string }[] | null;
-        } | null;
+          })) as (ApiErrorDetails & { message?: string }) | null;
 
         throw new ApiError(
           errorBody?.message ?? `API request failed: ${response.status}`,
@@ -114,17 +99,7 @@ export const requestJson = async <T>(
         );
       }
 
-      if (response.status === 204) {
-        return undefined as T;
-      }
-
-      const text = await response.text();
-
-      if (!text) {
-        return undefined as T;
-      }
-
-      return JSON.parse(text) as T;
+      return await readJsonResponse<T>(response);
     };
 
     if (!needsCsrfToken) {
