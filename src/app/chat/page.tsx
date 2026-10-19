@@ -4,7 +4,9 @@ import type { MouseEvent } from "react";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PanelLeft } from "lucide-react";
+import { ChatStoreMap } from "./_components/ChatStoreMap";
 import { ChatConversationContent } from "@/features/chat/components/ChatConversationContent";
+import { ChatStoreMapSlotProvider } from "@/features/chat/components/ChatStoreMapSlot";
 import { ChatSidebar } from "@/features/chat/components/ChatSidebar";
 import { ChatSearchDialog } from "@/features/chat/components/ChatSearchDialog";
 import { ChatSettingsPanel } from "@/features/chat/components/ChatSettingsPanel";
@@ -16,7 +18,10 @@ import {
   RailTooltip,
   type RailTooltipProps,
 } from "@/shared/ui/molecules/RailTooltip";
-import type { ChatMode } from "@/features/chat/types";
+import type {
+  ChatMode,
+  ChatStoreMap as ChatStoreMapData,
+} from "@/features/chat/types";
 import type {
   MapCategory,
   StoreMapInitialAction,
@@ -265,37 +270,39 @@ const ChatPageContent = () => {
               <ProfilePanel />
             </div>
           ) : (
-            <ChatConversationContent
-              chatInput={chatInput}
-              chatInputRef={chatInputRef}
-              chatStatus={chatStatus}
-              editHintMessageId={editHintMessageId}
-              hasChatStarted={hasChatStarted}
-              loadingSessionId={loadingSessionId}
-              messages={messages}
-              onChatInputChange={setChatInput}
-              onEditPrompt={editAndResubmitPrompt}
-              // 답변 피드백은 회원만 남길 수 있다. 비로그인이면 버튼 자체를 보여주지 않는다.
-              onFeedbackAnswer={
-                isAuthenticated
-                  ? (assistantMessageId, feedback, comment) =>
-                      void sendAnswerFeedback(
-                        assistantMessageId,
-                        feedback,
-                        comment,
-                      )
-                  : undefined
-              }
-              onRetryAnswer={retryAnswer}
-              feedbackMessageIds={feedbackMessageIds}
-              onStopAnswer={stopChatAnswer}
-              onSelectQuickAction={(prompt) => {
-                void submitChatPrompt(prompt);
-              }}
-              onSubmitPrompt={(prompt) => void submitChatPrompt(prompt)}
-              scrollContainerRef={scrollContainerRef}
-              streamingReply={streamingReply}
-            />
+            <ChatStoreMapSlotProvider renderStoreMap={renderChatStoreMap}>
+              <ChatConversationContent
+                chatInput={chatInput}
+                chatInputRef={chatInputRef}
+                chatStatus={chatStatus}
+                editHintMessageId={editHintMessageId}
+                hasChatStarted={hasChatStarted}
+                loadingSessionId={loadingSessionId}
+                messages={messages}
+                onChatInputChange={setChatInput}
+                onEditPrompt={editAndResubmitPrompt}
+                // 답변 피드백은 회원만 남길 수 있다. 비로그인이면 버튼 자체를 보여주지 않는다.
+                onFeedbackAnswer={
+                  isAuthenticated
+                    ? (assistantMessageId, feedback, comment) =>
+                        void sendAnswerFeedback(
+                          assistantMessageId,
+                          feedback,
+                          comment,
+                        )
+                    : undefined
+                }
+                onRetryAnswer={retryAnswer}
+                feedbackMessageIds={feedbackMessageIds}
+                onStopAnswer={stopChatAnswer}
+                onSelectQuickAction={(prompt) => {
+                  void submitChatPrompt(prompt);
+                }}
+                onSubmitPrompt={(prompt) => void submitChatPrompt(prompt)}
+                scrollContainerRef={scrollContainerRef}
+                streamingReply={streamingReply}
+              />
+            </ChatStoreMapSlotProvider>
           )}
         </div>
       </section>
@@ -378,6 +385,11 @@ const ChatPage = () => (
   <Suspense fallback={null}>
     <ChatPageContent />
   </Suspense>
+);
+
+/** 답변 속 매장 지도 블록. 채팅(feature)과 매장 지도(feature)를 여기서 조립한다. */
+const renderChatStoreMap = (storeMap: ChatStoreMapData) => (
+  <ChatStoreMap storeMap={storeMap} />
 );
 
 export default ChatPage;

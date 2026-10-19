@@ -12,7 +12,7 @@ import {
 import { ChatAnswerFeedback } from "@/features/chat/components/ChatAnswerFeedback";
 import { ChatMarkdown } from "@/features/chat/components/ChatMarkdown";
 import { ChatPlanCardList } from "@/features/chat/components/ChatPlanCardList";
-import { ChatStoreMap } from "@/features/chat/components/ChatStoreMap";
+import { useChatStoreMapSlot } from "@/features/chat/components/ChatStoreMapSlot";
 import { UserMessageBubble } from "@/features/chat/components/UserMessageBubble";
 import { canSendAnswerFeedback } from "@/features/chat/lib/chatAnswerFeedback";
 import { resolveChatActionHref } from "@/features/chat/lib/chatStoreActions";
@@ -84,6 +84,7 @@ const AssistantSuccessMessage = ({
     comment?: string,
   ) => void;
 }) => {
+  const renderStoreMap = useChatStoreMapSlot();
   const answerContent = stripStoreTablesFromAnswer(
     message.content ?? "",
     message.storeMap,
@@ -104,7 +105,7 @@ const AssistantSuccessMessage = ({
             className="py-1"
           />
         )}
-        {message.storeMap && <ChatStoreMap storeMap={message.storeMap} />}
+        {message.storeMap && renderStoreMap?.(message.storeMap)}
 
         {message.actions && message.actions.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
