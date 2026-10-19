@@ -114,7 +114,7 @@ export const AnswerFeedbackList = ({
         onClose={closeDismissModal}
         size="sm"
         title="이 피드백을 무시할까요?"
-        description="같은 질문으로 들어온 아쉬워요 피드백이 모두 무시 처리되고, 되돌릴 수 없어요."
+        description="같은 질문으로 들어온 피드백(자동 감지·아쉬워요)이 모두 목록에서 내려가고, 되돌릴 수 없어요."
         actions={
           <>
             <Button
@@ -142,7 +142,7 @@ export const AnswerFeedbackList = ({
               {dismissTarget.question}
             </p>
             <p className="text-text-secondary text-xs leading-5 font-semibold">
-              같은 질문에 답변 실패 기록도 있으면 목록에는 계속 남아요.
+              같은 질문이 나중에 다시 해결되지 않으면 새 항목으로 다시 올라와요.
             </p>
           </div>
         )}
@@ -161,11 +161,10 @@ const FeedbackRow = ({
   onRequestDismiss?: (candidate: AdminAnswerFeedback) => void;
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  // BE는 "아쉬워요"가 들어 있는 묶음만 무시할 수 있다(자동 감지만 있는 항목은 400).
-  // 목록에는 가장 최근 사유만 오므로, 최근 사유가 아쉬워요인 항목에서만 무시를 연다.
-  const canDismiss =
-    Boolean(onRequestDismiss) && candidate.failReason === "DISLIKED";
+  // 2026-10-18 BE부터 자동 감지만 있는 항목도 무시할 수 있다.
+  const canDismiss = Boolean(onRequestDismiss);
   const answer = candidate.answer?.trim();
+  const comments = candidate.comments ?? [];
 
   return (
     <div
@@ -198,6 +197,11 @@ const FeedbackRow = ({
             />
           </button>
         </div>
+        {comments.length > 0 && (
+          <p className="mt-1 text-[11px] font-bold text-rose-500 dark:text-rose-300">
+            아쉬운 이유 {comments.length}개
+          </p>
+        )}
       </div>
 
       {/* 모바일에서는 한 줄로 흐르고, md 이상에서는 각 항목이 표 칸에 들어간다. */}
@@ -236,7 +240,7 @@ const FeedbackRow = ({
             </Button>
           ) : (
             // 비활성 버튼은 마우스 이벤트를 받지 않아 툴팁은 감싼 span에 둔다.
-            <span title="아쉬워요로 들어온 피드백만 무시할 수 있어요">
+            <span title="지금은 무시할 수 없어요">
               <button
                 type="button"
                 className="h-8 rounded-2xl px-3 text-xs font-bold text-gray-400"
@@ -258,6 +262,18 @@ const FeedbackRow = ({
           <p className="max-h-48 min-w-0 flex-1 overflow-y-auto text-xs leading-5 font-medium break-words whitespace-pre-line text-gray-600 dark:text-gray-300">
             {answer || "저장된 답변이 없어요."}
           </p>
+        </div>
+      )}
+      {isExpanded && comments.length > 0 && (
+        <div className="flex items-start gap-2 rounded-xl bg-rose-50/60 px-3 py-2.5 md:col-span-full dark:bg-rose-500/10">
+          <span className="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] leading-4 font-extrabold text-rose-600 dark:bg-rose-500/20 dark:text-rose-300">
+            이유
+          </span>
+          <ul className="min-w-0 flex-1 space-y-1 text-xs leading-5 font-medium break-words text-gray-600 dark:text-gray-300">
+            {comments.map((comment, index) => (
+              <li key={`${index}-${comment}`}>{comment}</li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

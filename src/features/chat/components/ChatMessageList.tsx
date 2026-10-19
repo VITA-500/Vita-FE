@@ -37,6 +37,7 @@ type ChatMessageListProps = {
   onFeedbackAnswer?: (
     assistantMessageId: string,
     feedback: ChatFeedback,
+    comment?: string,
   ) => void;
   /** 실패하거나 중단된 답변을 같은 질문으로 다시 요청한다. */
   onRetryAnswer?: (assistantMessageId: string) => void;
@@ -80,6 +81,7 @@ const AssistantSuccessMessage = ({
   onFeedbackAnswer?: (
     assistantMessageId: string,
     feedback: ChatFeedback,
+    comment?: string,
   ) => void;
 }) => {
   const answerContent = stripStoreTablesFromAnswer(
@@ -124,7 +126,9 @@ const AssistantSuccessMessage = ({
         <ChatAnswerFeedback
           isFeedbackSubmitting={isFeedbackSubmitting}
           message={message}
-          onFeedback={(feedback) => onFeedbackAnswer(message.id, feedback)}
+          onFeedback={(feedback, comment) =>
+            onFeedbackAnswer(message.id, feedback, comment)
+          }
         />
       )}
     </AssistantRow>
@@ -154,6 +158,7 @@ const ChatMessageItem = ({
   onFeedbackAnswer?: (
     assistantMessageId: string,
     feedback: ChatFeedback,
+    comment?: string,
   ) => void;
   onRetryAnswer?: (assistantMessageId: string) => void;
 }) => {
