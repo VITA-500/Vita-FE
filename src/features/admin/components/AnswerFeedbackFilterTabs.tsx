@@ -3,11 +3,11 @@
 import type {
   AnswerFeedbackFilter,
   AnswerFeedbackQualityFilter,
-  countAnswerFeedbackByFilter,
+  getAnswerFeedbackTabCounts,
 } from "@/features/admin/lib/answerFeedbackFilters";
 import { cn } from "@/shared/lib/cn";
 
-type FeedbackCounts = ReturnType<typeof countAnswerFeedbackByFilter>;
+type FeedbackCounts = ReturnType<typeof getAnswerFeedbackTabCounts>;
 
 const filterTabs: {
   value: AnswerFeedbackFilter;
@@ -95,6 +95,7 @@ export const AnswerFeedbackFilterTabs = ({
 
     <p className="text-text-secondary text-xs leading-5 font-medium">
       {answerFeedbackFilterGuides[filter]}
+      <span className="ml-1 text-gray-400">(탭 숫자는 발생 횟수예요)</span>
     </p>
   </div>
 );

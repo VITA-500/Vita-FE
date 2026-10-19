@@ -3,6 +3,9 @@ import type { AdminAnswerFeedback } from "@/features/admin/types";
 import {
   countAnswerFeedbackByFilter,
   filterAnswerFeedback,
+  getAnswerFeedbackReasons,
+  getAnswerFeedbackTabCounts,
+  mergeAnswerFeedbackCandidates,
 } from "./answerFeedbackFilters";
 
 const candidate = (
@@ -55,6 +58,55 @@ describe("answer feedback filters", () => {
       failed: 1,
       NO_MATCH: 2,
       LOW_SIMILARITY: 1,
+    });
+  });
+
+  it("maps tabs to server reason filters", () => {
+    expect(getAnswerFeedbackReasons("all")).toEqual([undefined]);
+    expect(getAnswerFeedbackReasons("disliked")).toEqual(["DISLIKED"]);
+    expect(getAnswerFeedbackReasons("failed")).toEqual(["ANSWER_FAILED"]);
+    expect(getAnswerFeedbackReasons("quality")).toEqual([
+      "NO_MATCH",
+      "LOW_SIMILARITY",
+    ]);
+    expect(getAnswerFeedbackReasons("quality", "LOW_SIMILARITY")).toEqual([
+      "LOW_SIMILARITY",
+    ]);
+  });
+
+  it("merges reason lists without duplicates in count order", () => {
+    const shared = { ...candidate(7, "NO_MATCH"), count: 5 };
+    const merged = mergeAnswerFeedbackCandidates([
+      [shared, { ...candidate(8, "NO_MATCH"), count: 1 }],
+      [shared, { ...candidate(9, "LOW_SIMILARITY"), count: 3 }],
+    ]);
+
+    expect(ids(merged)).toEqual([7, 9, 8]);
+  });
+
+  it("uses server reason counts for tabs when available", () => {
+    expect(
+      getAnswerFeedbackTabCounts({
+        summary: {
+          unresolvedCount: 4,
+          repeatCount: 20,
+          todayCount: 1,
+          reasonCounts: {
+            NO_MATCH: 6,
+            LOW_SIMILARITY: 4,
+            ANSWER_FAILED: 2,
+            DISLIKED: 9,
+          },
+        },
+        candidates: [],
+      }),
+    ).toEqual({
+      all: 20,
+      disliked: 9,
+      quality: 10,
+      failed: 2,
+      NO_MATCH: 6,
+      LOW_SIMILARITY: 4,
     });
   });
 });

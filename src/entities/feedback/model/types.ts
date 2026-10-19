@@ -45,6 +45,14 @@ export type AdminAnswerFeedbackStats = {
     repeatCount: number;
     /** 오늘 마지막으로 나온 답변 피드백 항목 수 */
     todayCount: number;
+    /** 오늘(KST) 전체 답변이 받은 좋아요 수. 미해결 목록과 관계없음 (2026-10-19 BE #192, 예전 응답에는 없다) */
+    todayLikeCount?: number;
+    /** 오늘(KST) 전체 답변이 받은 아쉬워요 수. 미해결 목록과 관계없음 */
+    todayDislikeCount?: number;
+    /** 사유별 발생 수(무시한 것 제외). 자동 감지 답변에 아쉬워요까지 받으면 두 사유에 하나씩 센다 */
+    reasonCounts?: Record<AdminAnswerFeedbackReason, number>;
+    /** 사유별 오늘 발생 수 */
+    todayReasonCounts?: Record<AdminAnswerFeedbackReason, number>;
   };
   /** 많이 나온 순 */
   candidates: AdminAnswerFeedback[];

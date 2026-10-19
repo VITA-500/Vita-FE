@@ -1,9 +1,21 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { mockAnswerFeedbackStats } from "@/features/admin/constants/adminData";
 import { adminQueryKeys } from "@/features/admin/context/adminQueryKeys";
 import { adminAnswerFeedbackApi } from "@/entities/feedback";
+import {
+  filterAnswerFeedback,
+  getAnswerFeedbackReasons,
+  mergeAnswerFeedbackCandidates,
+  type AnswerFeedbackFilter,
+  type AnswerFeedbackQualityFilter,
+} from "@/features/admin/lib/answerFeedbackFilters";
 import type { AdminAnswerFeedbackStats } from "@/features/admin/types";
 import { ApiError } from "@/shared/api/http";
 import { env } from "@/shared/config/env";
@@ -41,6 +53,61 @@ export const useAdminAnswerFeedback = (limit: number) => {
     isLoading: query.isPending,
     refetch: query.refetch,
     stats: query.data ?? null,
+  };
+};
+
+/**
+ * 답변 피드백 페이지의 탭별 목록. 탭이 고른 사유로 서버에서 거른다(GET /admin/stats/chat?reason=).
+ * 응답 품질 "전체"는 사유를 하나만 받는 BE에 맞춰 검색 결과 없음·유사도 낮음을 따로 받아 합친다.
+ * summary는 reason과 관계없이 전체 기준이라 첫 응답의 값을 쓴다.
+ * API 주소가 없는 환경에서는 목데이터를 최근 사유 기준으로 거른다.
+ */
+export const useAdminAnswerFeedbackList = ({
+  filter,
+  limit,
+  qualityFilter,
+}: {
+  filter: AnswerFeedbackFilter;
+  limit: number;
+  qualityFilter: AnswerFeedbackQualityFilter;
+}) => {
+  const reasons = getAnswerFeedbackReasons(filter, qualityFilter);
+  const queries = useQueries({
+    queries: reasons.map((reason) => ({
+      enabled: Boolean(env.apiBaseUrl),
+      queryFn: () => adminAnswerFeedbackApi.fetchStats(limit, reason),
+      queryKey: adminQueryKeys.answerFeedback(limit, reason),
+    })),
+  });
+
+  if (!env.apiBaseUrl) {
+    const stats = toLimitedMock(limit);
+
+    return {
+      candidates: filterAnswerFeedback(stats.candidates, filter, qualityFilter),
+      error: null,
+      isLoading: false,
+      stats,
+    };
+  }
+
+  const results = queries.map((query) => query.data);
+  const stats = results[0] ?? null;
+  const isLoading = queries.some((query) => query.isPending);
+  const hasError = queries.some((query) => query.error);
+
+  return {
+    candidates:
+      isLoading || results.some((result) => !result)
+        ? []
+        : mergeAnswerFeedbackCandidates(
+            results.map((result) => result?.candidates ?? []),
+          ).slice(0, limit),
+    error: hasError
+      ? "답변 피드백을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
+      : null,
+    isLoading,
+    stats,
   };
 };
 

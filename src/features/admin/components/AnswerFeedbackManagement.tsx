@@ -6,10 +6,12 @@ import {
   AnswerFeedbackFilterTabs,
 } from "@/features/admin/components/AnswerFeedbackFilterTabs";
 import { AnswerFeedbackContent } from "@/features/admin/components/AnswerFeedbackContent";
-import { useAdminAnswerFeedback } from "@/features/admin/context/useAdminAnswerFeedback";
 import {
-  countAnswerFeedbackByFilter,
-  filterAnswerFeedback,
+  useAdminAnswerFeedback,
+  useAdminAnswerFeedbackList,
+} from "@/features/admin/context/useAdminAnswerFeedback";
+import {
+  getAnswerFeedbackTabCounts,
   type AnswerFeedbackFilter,
   type AnswerFeedbackQualityFilter,
 } from "@/features/admin/lib/answerFeedbackFilters";
@@ -26,25 +28,27 @@ const filterTitles: Record<AnswerFeedbackFilter, string> = {
 };
 
 /**
- * 답변 피드백 관리 페이지. 많이 나온 순으로 최대 200개를 불러와 유형별로 나눠 보고 무시 처리한다.
- * 대시보드는 요약(상위 몇 건)만 보여주고, 확인·처리는 이 페이지에서 한다.
+ * 답변 피드백 관리 페이지. 탭(유형)마다 서버 사유 필터로 많이 나온 순 최대 200개를 불러와 확인·무시 처리한다.
+ * 대시보드는 요약(지표·상위 몇 건)만 보여주고, 확인·처리는 이 페이지에서 한다.
  */
 export const AnswerFeedbackManagement = () => {
-  const { error, isLoading, stats } = useAdminAnswerFeedback(
-    ADMIN_ANSWER_FEEDBACK_MAX_LIMIT,
-  );
+  // 위쪽 카드와 탭 숫자는 전체 기준 summary를 쓴다(탭을 바꿔도 다시 불러오지 않는다).
+  const overview = useAdminAnswerFeedback(ADMIN_ANSWER_FEEDBACK_MAX_LIMIT);
   const [filter, setFilter] = useState<AnswerFeedbackFilter>("all");
   const [qualityFilter, setQualityFilter] =
     useState<AnswerFeedbackQualityFilter>("all");
-  const statItems = getAnswerFeedbackStatItems(stats?.summary, isLoading);
-  const allCandidates = useMemo(() => stats?.candidates ?? [], [stats]);
-  const counts = useMemo(
-    () => countAnswerFeedbackByFilter(allCandidates),
-    [allCandidates],
+  const list = useAdminAnswerFeedbackList({
+    filter,
+    limit: ADMIN_ANSWER_FEEDBACK_MAX_LIMIT,
+    qualityFilter,
+  });
+  const statItems = getAnswerFeedbackStatItems(
+    overview.stats?.summary,
+    overview.isLoading,
   );
-  const visibleCandidates = useMemo(
-    () => filterAnswerFeedback(allCandidates, filter, qualityFilter),
-    [allCandidates, filter, qualityFilter],
+  const counts = useMemo(
+    () => getAnswerFeedbackTabCounts(overview.stats),
+    [overview.stats],
   );
 
   const changeFilter = (nextFilter: AnswerFeedbackFilter) => {
@@ -79,10 +83,10 @@ export const AnswerFeedbackManagement = () => {
         <Card>
           <CardHeader
             title={filterTitles[filter]}
-            description="같은 질문은 하나로 묶어 발생 횟수가 많은 순으로 보여줍니다. 유형은 가장 최근 사유 기준이에요."
+            description="같은 질문은 하나로 묶어 발생 횟수가 많은 순으로 보여줍니다. 탭은 그 유형이 한 번이라도 나온 질문을 모아요."
           />
           <CardContent>
-            {!isLoading && stats && (
+            {overview.stats && (
               <div className="mb-5">
                 <AnswerFeedbackFilterTabs
                   counts={counts}
@@ -94,16 +98,16 @@ export const AnswerFeedbackManagement = () => {
               </div>
             )}
             <AnswerFeedbackContent
-              candidates={visibleCandidates}
+              candidates={list.candidates}
               emptyDescription={answerFeedbackFilterGuides[filter]}
               emptyTitle={
                 filter === "all"
                   ? undefined
                   : `${filterTitles[filter]} 항목이 없어요.`
               }
-              error={error}
-              isLoading={isLoading}
-              stats={stats}
+              error={list.error ?? overview.error}
+              isLoading={list.isLoading}
+              stats={list.stats}
             />
           </CardContent>
         </Card>

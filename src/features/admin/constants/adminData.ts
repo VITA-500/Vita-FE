@@ -76,7 +76,25 @@ export const storeDetails: AdminStoreDetail[] = storeRows.map(
 
 /** API 주소가 없는 환경(Storybook·로컬 목업)용 답변 피드백 통계. */
 export const mockAnswerFeedbackStats: AdminAnswerFeedbackStats = {
-  summary: { unresolvedCount: 3, repeatCount: 36, todayCount: 1 },
+  summary: {
+    unresolvedCount: 3,
+    repeatCount: 36,
+    todayCount: 1,
+    todayLikeCount: 8,
+    todayDislikeCount: 2,
+    reasonCounts: {
+      NO_MATCH: 18,
+      LOW_SIMILARITY: 9,
+      ANSWER_FAILED: 3,
+      DISLIKED: 6,
+    },
+    todayReasonCounts: {
+      NO_MATCH: 1,
+      LOW_SIMILARITY: 0,
+      ANSWER_FAILED: 0,
+      DISLIKED: 1,
+    },
+  },
   candidates: [
     {
       id: 1,
