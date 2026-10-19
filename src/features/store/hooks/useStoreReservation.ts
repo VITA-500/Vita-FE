@@ -5,8 +5,8 @@ import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
 import {
   getNextReservationDateValue,
   getReservationDateValue,
-} from "@/features/store/lib/reservationTimeSlots";
-import { storeService } from "@/features/store/lib/storeService";
+  reservationApi,
+} from "@/entities/reservation";
 import type { StoreLocation } from "@/features/store/types";
 import { ApiError } from "@/shared/api/http";
 import { showToast } from "@/shared/providers/ToastProvider";
@@ -40,7 +40,7 @@ export const useStoreReservation = () => {
 
     setIsReservationSubmitting(true);
     try {
-      await storeService.reserveStore({
+      await reservationApi.createReservation({
         date: reservationDate,
         storeId: reservationStore.id,
         time: reservationTime,

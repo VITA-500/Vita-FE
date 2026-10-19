@@ -1,4 +1,4 @@
-import type { buildReservationTimeSlots } from "@/features/store/lib/reservationTimeSlots";
+import type { buildReservationTimeSlots } from "@/entities/reservation";
 import { CalendarDateField } from "@/shared/ui/molecules/CalendarDateField";
 
 type StoreReservationFieldsProps = {
