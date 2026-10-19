@@ -7,19 +7,17 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import {
-  matchesStoreSearch,
-  type UserLocation,
-} from "@/features/store/lib/geo";
+import { matchesStoreSearch } from "@/entities/store";
+import type { UserLocation } from "@/shared/lib/geo";
 import {
   defaultMapLocation,
   getViewportAreaQuery,
   isStoreInVisibleArea,
   type MapSearchPoint,
   type MapViewport,
-} from "@/features/store/lib/storePanelStores";
+} from "@/entities/store";
 import type { StoreMapSnapshot } from "@/features/store/lib/storeMapSnapshot";
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
 import { useFetchNearbyStores } from "@/entities/store";
 import { showToast } from "@/shared/providers/ToastProvider";
 

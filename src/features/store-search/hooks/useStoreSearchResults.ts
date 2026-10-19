@@ -3,24 +3,22 @@
 import { useMemo } from "react";
 import type { useServiceFilters } from "@/features/store-search/hooks/useServiceFilters";
 import type { useStoreSearchState } from "@/features/store-search/hooks/useStoreSearchState";
-import {
-  matchesStoreSearch,
-  type UserLocation,
-} from "@/features/store/lib/geo";
+import { matchesStoreSearch } from "@/entities/store";
+import type { UserLocation } from "@/shared/lib/geo";
 import { findServicesInText } from "@/features/store-search/lib/serviceKeywords";
-import { filterStoresByOpenFilter } from "@/features/store/lib/storeOpenHours";
+import { filterStoresByOpenFilter } from "@/entities/store";
 import {
   buildSearchableStores,
   defaultMapLocation,
   findStoreById,
   sortStoresByDistance,
   type MapSearchPoint,
-} from "@/features/store/lib/storePanelStores";
+} from "@/entities/store";
 import type {
   MapCategory,
   StoreLocation,
   StoreOpenFilter,
-} from "@/features/store/types";
+} from "@/entities/store";
 
 type SearchState = ReturnType<typeof useStoreSearchState>;
 type ServiceFilters = ReturnType<typeof useServiceFilters>;

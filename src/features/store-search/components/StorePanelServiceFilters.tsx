@@ -2,7 +2,7 @@ import {
   ServiceFilterCarousel,
   ServiceFilterWrapList,
 } from "@/features/store-search/components/StoreServiceFilterCarousel";
-import type { ServiceFilterOption } from "@/features/store/lib/markerColors";
+import type { ServiceFilterOption } from "@/entities/store";
 
 type StorePanelServiceFiltersProps = {
   consultOptions: readonly ServiceFilterOption[];

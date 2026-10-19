@@ -8,8 +8,7 @@ import type { useStoreSearchHistory } from "@/features/store-search/hooks/useSto
 import type { useStoreSearchResults } from "@/features/store-search/hooks/useStoreSearchResults";
 import type { useStoreSearchState } from "@/features/store-search/hooks/useStoreSearchState";
 import type { useStoreSelectionActions } from "@/features/store/hooks/useStoreSelectionActions";
-import type { MapSearchPoint } from "@/features/store/lib/storePanelStores";
-import type { StoreLocation } from "@/features/store/types";
+import type { MapSearchPoint, StoreLocation } from "@/entities/store";
 
 /** 검색 동작 hook(필터·텍스트)이 함께 받는 값. 지도 패널의 상태·다른 hook 결과를 그대로 넘긴다. */
 export type StoreSearchActionsParams = Pick<

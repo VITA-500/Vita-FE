@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 import { CircleX, List, Menu, Search } from "lucide-react";
-import type { MapCategory } from "@/features/store/types";
+import type { MapCategory } from "@/features/store-search/types";
 
 type StorePanelSearchBarProps = {
   activeMapCategory: MapCategory;
