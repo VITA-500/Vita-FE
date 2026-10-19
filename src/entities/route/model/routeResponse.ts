@@ -1,14 +1,17 @@
-import type { StoreRoute, StoreRouteSegment } from "@/features/store/types";
-import {
-  getSegmentColor,
-  getSegmentLineName,
-  normalizeSegmentKind,
-} from "@/features/store/lib/routeSegmentNormalize";
 import type {
   RoutePointResponse,
   RouteResponse,
   RouteSegmentResponse,
-} from "@/features/store/lib/storeRouteResponseTypes";
+} from "@/entities/route/api/routeResponseTypes";
+import {
+  getSegmentColor,
+  getSegmentLineName,
+  normalizeSegmentKind,
+} from "@/entities/route/model/routeSegmentNormalize";
+import type {
+  StoreRoute,
+  StoreRouteSegment,
+} from "@/entities/route/model/types";
 
 /*
  * 길찾기 API(/stores/{id}/directions) 응답 해석.

@@ -1,6 +1,6 @@
-import type { RouteSegmentResponse } from "@/features/store/lib/storeRouteResponseTypes";
-import { subwayLineColors } from "@/features/store/lib/subwayLineColors";
-import type { StoreRouteSegmentKind } from "@/features/store/types";
+import type { RouteSegmentResponse } from "@/entities/route/api/routeResponseTypes";
+import { subwayLineColors } from "@/entities/route/model/subwayLineColors";
+import type { StoreRouteSegmentKind } from "@/entities/route/model/types";
 
 /* 길찾기 응답의 구간 하나를 화면용 값(구간 종류·노선 이름·노선 색)으로 맞춘다. */
 

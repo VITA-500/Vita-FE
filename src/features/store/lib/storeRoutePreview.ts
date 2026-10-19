@@ -6,6 +6,7 @@ import {
   type UserLocation,
 } from "@/features/store/lib/geo";
 import type { RoutePreview } from "@/features/store/lib/mapRoute";
+import type { TransitRouteStep } from "@/entities/route";
 import type {
   StoreLocation,
   StoreRoute,
@@ -25,26 +26,8 @@ type RouteSummaryParams = {
   walkingRoute: StoreRoute | null;
 };
 
-export type TransitRouteStep = {
-  /** 하차역(정류장) 이름 */
-  alightName?: string;
-  /** 승차역(정류장) 이름 */
-  boardName?: string;
-  color?: string;
-  description: string;
-  /** 상세 타임라인용 이동 정보: "약 4분, 220m 이동" */
-  detailMeta: string;
-  /** BE 안내 문구 */
-  guidance?: string;
-  id: string;
-  kind: "walk" | "bus" | "subway" | "transit";
-  lineName: string;
-  meta: string;
-  /** 이 구간의 경로 좌표. 구간을 누르면 지도를 이 구간에 맞춘다. */
-  path: { lat: number; lng: number }[];
-  /** 버스 종류(간선·지선 등) / 지하철 종류(일반·급행) */
-  vehicleType?: string;
-};
+// 대중교통 단계 타입은 entities/route로 옮겼다. 기존 import 경로 호환용 재내보내기.
+export type { TransitRouteStep };
 
 type RouteSegment = NonNullable<StoreRoute["segments"]>[number];
 

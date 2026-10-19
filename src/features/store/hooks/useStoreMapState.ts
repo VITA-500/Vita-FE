@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useUserLocation } from "@/features/store/hooks/useUserLocation";
+import { useUserLocation } from "@/entities/location";
 import { formatDistance, getDistanceMeters } from "@/features/store/lib/geo";
 import type { StoreLocation } from "@/features/store/types";
 

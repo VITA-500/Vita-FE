@@ -7,12 +7,12 @@ import {
   type TransitTimelinePart,
 } from "@/features/store/components/TransitRouteTimeline";
 import { useElementHeight } from "@/shared/hooks/useElementHeight";
-import type { TransitRouteStep } from "@/features/store/lib/storeRoutePreview";
+import type { TransitRouteStep } from "@/entities/route";
 import {
   buildTransitTimeline,
   TRANSIT_DEFAULT_COLOR,
   type TransitTimelineItem,
-} from "@/features/store/lib/transitTimeline";
+} from "@/entities/route";
 import { cn } from "@/shared/lib/cn";
 
 const expandTransition = { duration: 0.28, ease: [0.22, 1, 0.36, 1] } as const;

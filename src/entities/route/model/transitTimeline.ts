@@ -1,4 +1,4 @@
-import type { TransitRouteStep } from "@/features/store/lib/storeRoutePreview";
+import type { TransitRouteStep } from "@/entities/route/model/types";
 
 /* 대중교통 길찾기 상세(출발 → 도보·승차·환승·하차 → 도착) 타임라인을 경로 구간에서 만든다. */
 

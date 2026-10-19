@@ -1,4 +1,4 @@
-import type { StoreRouteMode } from "@/features/store/types";
+import type { StoreRouteMode } from "@/entities/route/model/types";
 
 /** 길찾기 API(/stores/{id}/directions) 응답 형태. 경로 API(TMAP·ODsay 등)마다 다른 필드 이름을 모두 받는다. */
 export type RouteResponse = {

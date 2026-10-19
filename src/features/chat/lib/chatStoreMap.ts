@@ -4,6 +4,7 @@ import { getDistanceMeters } from "@/features/store/lib/geo";
 import { storeService } from "@/features/store/lib/storeService";
 import { findServicesInText } from "@/features/store/lib/serviceKeywords";
 import type { StoreLocation } from "@/features/store/types";
+import { getCurrentPosition, toLatLng } from "@/entities/location";
 
 /** 채팅 카드·핀은 답변 계약에 맞춰 최대 5곳까지 보여준다. */
 const MAX_CHAT_STORE_COUNT = 5;
@@ -13,21 +14,6 @@ export const CHAT_STORE_RADIUS_KM = 3;
 type ChatStorePoint = { lat: number; lng: number };
 
 const CHAT_LOCATION_STORAGE_KEY = "vita-chat-last-location";
-
-const getCurrentPosition = (options: PositionOptions) =>
-  new Promise<GeolocationPosition>((resolve, reject) => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      reject(new Error("GEOLOCATION_UNSUPPORTED"));
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(resolve, reject, options);
-  });
-
-const toChatStorePoint = (position: GeolocationPosition): ChatStorePoint => ({
-  lat: position.coords.latitude,
-  lng: position.coords.longitude,
-});
 
 const readCachedChatLocation = (): ChatStorePoint | null => {
   try {
@@ -62,7 +48,7 @@ export const getCurrentChatLocation = async () => {
 
   for (const options of attempts) {
     try {
-      const location = toChatStorePoint(await getCurrentPosition(options));
+      const location = toLatLng(await getCurrentPosition(options));
 
       saveChatLocation(location);
       return location;
