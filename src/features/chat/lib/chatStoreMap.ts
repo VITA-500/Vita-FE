@@ -1,8 +1,11 @@
 import type { ChatStoreMap } from "@/features/chat/types";
-import { findServicesInText } from "@/features/store/lib/serviceKeywords";
 import { benefitApi } from "@/entities/benefit";
 import { getCurrentPosition, toLatLng } from "@/entities/location";
-import { storeApi, type StoreLocation } from "@/entities/store";
+import {
+  findServicesInText,
+  storeApi,
+  type StoreLocation,
+} from "@/entities/store";
 import { getDistanceMeters } from "@/shared/lib/geo";
 
 /** 채팅 카드·핀은 답변 계약에 맞춰 최대 5곳까지 보여준다. */

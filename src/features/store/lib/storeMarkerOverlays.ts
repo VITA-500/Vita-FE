@@ -9,9 +9,10 @@ import { createClusterListElement } from "@/features/store/lib/mapOverlayElement
 import type { MarkerColorInfo } from "@/features/store/lib/markerColors";
 import { createStoreMarkerElement } from "@/features/store/lib/storeMarkerElement";
 import type { StoreLocation } from "@/features/store/types";
+import { getStoreMarkerLabel } from "@/entities/store";
 
-export const getStoreMarkerLabel = (index: number) =>
-  String.fromCharCode(65 + (index % 26));
+// 핀 글자 규칙은 entities/store로 옮겼다. 기존 import 경로 호환용 재내보내기.
+export { getStoreMarkerLabel };
 
 /** 같은 좌표(소수 5자리, 약 1m)에 있는 매장들을 한 묶음으로 모은다. 묶음 순서는 stores에서 처음 나온 순서를 따른다. */
 export const groupStoresByCoordinate = (stores: StoreLocation[]) => {

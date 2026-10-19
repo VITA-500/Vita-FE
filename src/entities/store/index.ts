@@ -24,6 +24,30 @@ export {
   type StoreOpenStatus,
 } from "@/entities/store/model/storeOpenHours";
 export { matchesStoreSearch } from "@/entities/store/model/storeSearch";
+export {
+  getKakaoDirectionUrl,
+  getStoreMapRouteUrl,
+} from "@/entities/store/model/mapLinks";
+export {
+  buildMarkerLabelById,
+  getStoreMarkerLabel,
+} from "@/entities/store/model/markerLabels";
+export {
+  buildMarkerColorInfoById,
+  buildServiceFilterColorByValue,
+  buildStoreServiceColorByValue,
+  getServiceFilterBadgeStyle,
+  getServiceFilterColor,
+  serviceFilterColors,
+  type MarkerColorInfo,
+  type ServiceFilterOption,
+} from "@/entities/store/model/markerColors";
+export {
+  findServicesInText,
+  KNOWN_CONSULT_SERVICES,
+  KNOWN_PROVIDED_SERVICES,
+} from "@/entities/store/model/serviceKeywords";
+export { StoreOpenStatusBadge } from "@/entities/store/ui/StoreOpenStatusBadge";
 export type {
   AdminStore,
   AdminStoreDetail,

@@ -1,5 +1,5 @@
 import { cn } from "@/shared/lib/cn";
-import { getCurrentOpenState } from "@/features/store/lib/storeOpenHours";
+import { getCurrentOpenState } from "@/entities/store/model/storeOpenHours";
 
 type StoreOpenStatusBadgeProps = {
   businessHours?: string;

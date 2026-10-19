@@ -1,4 +1,5 @@
-import type { StoreLocation, StoreRouteMode } from "@/features/store/types";
+import type { StoreRouteMode } from "@/entities/route/@x/store";
+import type { StoreLocation } from "@/entities/store/model/types";
 import { routes } from "@/shared/constants/routes";
 
 export const getKakaoDirectionUrl = (store: StoreLocation) => {
