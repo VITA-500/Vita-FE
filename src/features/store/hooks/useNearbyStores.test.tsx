@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { useNearbyStores } from "./useNearbyStores";
 import { storeApi } from "@/entities/store";
 import type { StoreMapSnapshot } from "@/features/store/lib/storeMapSnapshot";
-import type { StoreLocation, StoreOpenFilter } from "@/features/store/types";
+import type { StoreLocation, StoreOpenFilter } from "@/entities/store";
 import { showToast } from "@/shared/providers/ToastProvider";
 
 // 공개 API(@/entities/store)가 다시 내보내는 storeApi가 이 모킹 값이 된다.

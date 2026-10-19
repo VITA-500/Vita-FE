@@ -12,7 +12,8 @@ import {
   STORE_CARD_SCROLL_AREA_ATTRIBUTE,
   STORE_CARD_SCROLL_MAX_HEIGHT_VAR,
 } from "@/features/store/lib/storeCardScrollArea";
-import type { StoreLocation, StoreRouteMode } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
+import type { StoreRouteMode } from "@/entities/route";
 import type { Dispatch, SetStateAction } from "react";
 import { cn } from "@/shared/lib/cn";
 

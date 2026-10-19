@@ -5,8 +5,8 @@ import {
   buildServiceFilterColorByValue,
   getServiceFilterColor,
   type MarkerColorInfo,
-} from "@/features/store/lib/markerColors";
-import type { StoreLocation } from "@/features/store/types";
+} from "@/entities/store";
+import type { StoreLocation } from "@/entities/store";
 
 /** 혜택 뱃지가 이 개수 이상이면 처음 조회했을 때 모두 선택(활성) 상태로 보여준다. */
 const DEFAULT_ALL_SELECTED_MIN_COUNT = 2;

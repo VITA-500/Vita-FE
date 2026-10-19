@@ -23,7 +23,8 @@ import {
   getGeolocationPermissionState,
   LOCATION_CONSENT_STORAGE_KEY,
 } from "@/features/store/lib/storePanelStorage";
-import type { MapCategory, StoreLocation } from "@/features/store/types";
+import type { MapCategory } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
 import { readStorage } from "@/shared/lib/browserStorage";
 import { useFetchNearbyStores, useFetchStoreDetail } from "@/entities/store";
 import { showToast } from "@/shared/providers/ToastProvider";

@@ -1,5 +1,5 @@
 import type { RoutePreviewSegment } from "@/features/store/lib/mapRoute";
-import type { StoreRouteMode } from "@/features/store/types";
+import type { StoreRouteMode } from "@/entities/route";
 
 /* 길찾기 경로 선 스타일: 이동 수단별 기본 색·굵기, 구간(도보·지하철·버스·연결선)별 스타일. */
 

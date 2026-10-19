@@ -1,17 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { UserLocation } from "@/features/store/lib/geo";
+import type { UserLocation } from "@/shared/lib/geo";
 import { useBenefitServiceFilters } from "@/features/store/hooks/useBenefitServiceFilters";
 import {
   defaultMapLocation,
   type MapSearchPoint,
 } from "@/features/store/lib/storePanelStores";
-import type {
-  MapCategory,
-  StoreLocation,
-  StoreOpenFilter,
-} from "@/features/store/types";
+import type { MapCategory } from "@/features/store/types";
+import type { StoreLocation, StoreOpenFilter } from "@/entities/store";
 import { useBenefitCategoriesQuery } from "@/entities/benefit";
 import { useBenefitStoresQuery } from "@/entities/store";
 import { showToast } from "@/shared/providers/ToastProvider";

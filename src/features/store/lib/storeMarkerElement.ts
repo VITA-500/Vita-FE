@@ -3,7 +3,7 @@ import {
   createExtraServiceBadgeElement,
   playMarkerEnterAnimation,
 } from "@/features/store/lib/mapOverlayElements";
-import type { MarkerColorInfo } from "@/features/store/lib/markerColors";
+import type { MarkerColorInfo } from "@/entities/store";
 import { STORE_MARKER_DATA_ATTRIBUTE } from "@/features/store/lib/storeMapPreviewTypes";
 import {
   getMarkerGradientId,

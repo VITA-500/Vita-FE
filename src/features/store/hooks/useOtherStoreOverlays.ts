@@ -9,7 +9,7 @@ import {
 } from "react";
 import type { MapOverlayHandle } from "@/features/store/lib/kakaoMapTypes";
 import { createOtherStoreOverlay } from "@/features/store/lib/mapOverlayElements";
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
 
 type UseOtherStoreOverlaysParams = {
   isKakaoMapReady: boolean;

@@ -1,5 +1,5 @@
 /** 지도 미리보기(StoreMapPreview)와 오버레이 helper가 함께 쓰는 카카오맵 관련 타입 */
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
 
 export type KakaoMapEventApi = {
   addListener: (

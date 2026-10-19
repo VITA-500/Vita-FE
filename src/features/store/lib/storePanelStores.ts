@@ -2,8 +2,8 @@ import {
   formatDistance,
   getDistanceMeters,
   type UserLocation,
-} from "@/features/store/lib/geo";
-import type { StoreLocation } from "@/features/store/types";
+} from "@/shared/lib/geo";
+import type { StoreLocation } from "@/entities/store";
 
 export type MapSearchPoint = {
   lat: number;

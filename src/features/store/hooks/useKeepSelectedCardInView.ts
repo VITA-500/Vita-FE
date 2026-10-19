@@ -13,7 +13,7 @@ import {
   STORE_CARD_SCROLL_AREA_ATTRIBUTE,
   STORE_CARD_SCROLL_MAX_HEIGHT_VAR,
 } from "@/features/store/lib/storeCardScrollArea";
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
 
 /** resizeKey는 크기가 멈춘 뒤에 바뀌므로, 렌더가 반영될 만큼만 잠깐 기다린다(ms). */
 const CARD_SETTLE_DELAY_MS = 30;

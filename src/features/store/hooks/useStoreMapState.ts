@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useUserLocation } from "@/entities/location";
-import { formatDistance, getDistanceMeters } from "@/features/store/lib/geo";
-import type { StoreLocation } from "@/features/store/types";
+import { formatDistance, getDistanceMeters } from "@/shared/lib/geo";
+import type { StoreLocation } from "@/entities/store";
 
 export const useStoreMapState = (
   stores: StoreLocation[],

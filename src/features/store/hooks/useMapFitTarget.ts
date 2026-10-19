@@ -9,7 +9,7 @@ import {
   type MapPoint,
   ZOOM_ANIMATION_MS,
 } from "@/features/store/lib/mapFit";
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
 
 /** 새 핀이 꽂히거나 목록을 펼친 뒤 가림 여부를 확인하기까지 기다리는 시간(ms) */
 const PIN_AUTO_FIT_DELAY_MS = 160;

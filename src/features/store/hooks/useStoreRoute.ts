@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { StoreLocation, StoreRouteMode } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
+import type { StoreRouteMode } from "@/entities/route";
 import { useStoreRouteQuery } from "@/entities/route";
 import { getDistanceMeters, type UserLocation } from "@/shared/lib/geo";
 

@@ -10,16 +10,15 @@ import {
 } from "react";
 import type { useStoreMapState } from "@/features/store/hooks/useStoreMapState";
 import type { useStoreSearchState } from "@/features/store/hooks/useStoreSearchState";
-import type { UserLocation } from "@/features/store/lib/geo";
+import type { UserLocation } from "@/shared/lib/geo";
 import type { StoreMapSnapshot } from "@/features/store/lib/storeMapSnapshot";
 import {
   defaultMapLocation,
   SEARCH_RADIUS_KM,
   type MapSearchPoint,
 } from "@/features/store/lib/storePanelStores";
-import { getOpenFilterKey } from "@/features/store/lib/storeOpenHours";
-import type { StoreLocation, StoreOpenFilter } from "@/features/store/types";
-import { useFetchNearbyStores } from "@/entities/store";
+import { getOpenFilterKey, useFetchNearbyStores } from "@/entities/store";
+import type { StoreLocation, StoreOpenFilter } from "@/entities/store";
 import { showToast } from "@/shared/providers/ToastProvider";
 
 /** "이 지역에 매장 없음" 안내 후 직전 지역으로 지도를 되돌리기까지의 지연(ms). */

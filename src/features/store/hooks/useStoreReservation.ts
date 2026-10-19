@@ -7,7 +7,7 @@ import {
   getReservationDateValue,
   reservationApi,
 } from "@/entities/reservation";
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
 import { ApiError } from "@/shared/api/http";
 import { showToast } from "@/shared/providers/ToastProvider";
 

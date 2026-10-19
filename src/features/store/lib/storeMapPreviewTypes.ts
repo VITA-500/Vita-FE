@@ -5,13 +5,12 @@ import type {
   RefObject,
   SetStateAction,
 } from "react";
-import type { UserLocation } from "@/features/store/lib/geo";
+import type { UserLocation } from "@/shared/lib/geo";
 import type { MapOverlayHandle } from "@/features/store/lib/kakaoMapTypes";
 import type { MapFitPadding, MapPoint } from "@/features/store/lib/mapFit";
 import type { RoutePreview } from "@/features/store/lib/mapRoute";
-import type { MarkerColorInfo } from "@/features/store/lib/markerColors";
+import type { MarkerColorInfo, StoreLocation } from "@/entities/store";
 import type { MapViewport } from "@/features/store/lib/storePanelStores";
-import type { StoreLocation } from "@/features/store/types";
 import type { StoreMapCameraOwner } from "@/features/store/hooks/useStoreMapCameraOwner";
 
 export const STORE_MAP_CARD_RESIZE_SETTLE_MS = 80;

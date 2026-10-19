@@ -11,10 +11,11 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { StoreOpenStatusBadge } from "@/features/store/components/StoreOpenStatusBadge";
+import { StoreOpenStatusBadge } from "@/entities/store";
 import { TransitRouteDetails } from "@/features/store/components/TransitRouteDetails";
 import type { TransitRouteStep } from "@/features/store/lib/storeRoutePreview";
-import type { StoreLocation, StoreRouteMode } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
+import type { StoreRouteMode } from "@/entities/route";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/atoms/Button";
 

@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
 
 /** 카카오맵 SDK를 쓸 수 없을 때(대체 지도) 매장 핀·카드를 매장 좌표 범위에 비례해 배치한다. */
 export const clampPercent = (value: number) =>

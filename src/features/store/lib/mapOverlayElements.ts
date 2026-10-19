@@ -1,10 +1,9 @@
-import type { MarkerColorInfo } from "@/features/store/lib/markerColors";
+import type { MarkerColorInfo, StoreLocation } from "@/entities/store";
 import type {
   KakaoMapsApi,
   MapOverlayHandle,
   StoreMarkerGroupEntry,
 } from "@/features/store/lib/kakaoMapTypes";
-import type { StoreLocation } from "@/features/store/types";
 import { cn } from "@/shared/lib/cn";
 
 /** 페이지 전환 등으로 새로 나타나는 핀·원이 서서히 보이는 시간(ms) */

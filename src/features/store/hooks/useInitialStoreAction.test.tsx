@@ -2,7 +2,7 @@ import { renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useInitialStoreAction } from "./useInitialStoreAction";
 
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
 import { showToast } from "@/shared/providers/ToastProvider";
 
 // vi.mock은 파일 맨 위로 끌어올려지므로 모킹 함수도 vi.hoisted로 먼저 만든다.

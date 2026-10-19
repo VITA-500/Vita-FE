@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type RefObject } from "react";
-import type { UserLocation } from "@/features/store/lib/geo";
+import type { UserLocation } from "@/shared/lib/geo";
 import {
   getGeolocationPermissionState,
   LOCATION_CONSENT_STORAGE_KEY,

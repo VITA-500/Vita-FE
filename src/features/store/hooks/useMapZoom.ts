@@ -15,7 +15,7 @@ import {
   ZOOM_ANIMATION_MS,
 } from "@/features/store/lib/mapFit";
 import type { RoutePreview } from "@/features/store/lib/mapRoute";
-import type { StoreLocation } from "@/features/store/types";
+import type { StoreLocation } from "@/entities/store";
 import { isDesktopWidth } from "@/shared/lib/desktopBreakpoint";
 
 /** 길찾기 중 확대/축소 전에 초점 지점으로 지도를 미리 옮기는 시간(ms, 카카오 panTo 애니메이션 여유 포함) */

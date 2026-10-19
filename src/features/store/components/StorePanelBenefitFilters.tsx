@@ -3,7 +3,7 @@ import {
   getServiceFilterBadgeStyle,
   getServiceFilterColor,
   type ServiceFilterOption,
-} from "@/features/store/lib/markerColors";
+} from "@/entities/store";
 import { cn } from "@/shared/lib/cn";
 
 type StorePanelBenefitFiltersProps = {
