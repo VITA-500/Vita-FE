@@ -15,7 +15,8 @@ type ChatStorePoint = { lat: number; lng: number };
 
 const CHAT_LOCATION_STORAGE_KEY = "vita-chat-last-location";
 
-const readCachedChatLocation = (): ChatStorePoint | null => {
+/** 질문을 보낼 때 받아 둔 마지막 위치(이번 탭 세션). 없으면 null. */
+export const readCachedChatLocation = (): ChatStorePoint | null => {
   try {
     const parsed = JSON.parse(
       window.sessionStorage.getItem(CHAT_LOCATION_STORAGE_KEY) ?? "null",

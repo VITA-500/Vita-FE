@@ -20,8 +20,14 @@ import {
   CHAT_STORE_RADIUS_KM,
   findChatStoreMap,
   getMatchedServices,
+  readCachedChatLocation,
 } from "@/features/chat/lib/chatStoreMap";
 import { ChatCardRail } from "@/features/chat/components/ChatCardRail";
+import {
+  getChatStoreDistanceLabel,
+  getChatStoreMapOriginPoint,
+  getChatStoreMapUserLocation,
+} from "@/features/chat/lib/chatStoreMapOrigin";
 import type { ChatStoreMap as ChatStoreMapData } from "@/features/chat/types";
 import { showToast } from "@/shared/providers/ToastProvider";
 
@@ -42,6 +48,18 @@ const toStoreLocation = (
   benefitId: store.benefitId ?? storeMap.benefitId ?? undefined,
   phone: store.phone || "",
   storeType: storeMap.type ?? undefined,
+});
+
+/**
+ * 채팅 답변 안의 낮은 지도(약 300px)용 핀 맞춤 여백.
+ * 매장 지도 화면의 기본 여백(위 120px·오른쪽 96px, 검색창·목록용)을 그대로 쓰면 핀이 들어갈 공간이 좁아
+ * 지도가 크게 축소되고 핀이 작게 보인다. 위는 핀 높이, 오른쪽 아래는 지도 버튼만큼만 남긴다.
+ */
+const getChatMapPinFitPadding = () => ({
+  bottom: 28,
+  left: 28,
+  right: 52,
+  top: 52,
 });
 
 export const ChatStoreMap = ({
@@ -94,8 +112,16 @@ export const ChatStoreMap = ({
   const [currentLocation, setCurrentLocation] = useState<MapPoint | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const reservation = useStoreReservation();
-  const userLocation =
-    currentLocation ?? (isDefaultOrigin ? null : (storeMap.origin ?? null));
+  // BE origin은 현재 위치 기준일 때만 내 위치로 쓴다. 장소 기준이면 내 위치 버튼을 눌렀을 때만 보여준다.
+  const userLocation = getChatStoreMapUserLocation(storeMap, currentLocation);
+  // 장소 기준 검색이면 기준점(예: "왕십리")을 따로 찍고, 카드에 내 위치에서의 거리도 함께 보여준다.
+  // 내 위치는 내 위치 버튼으로 받은 값, 없으면 질문을 보낼 때 받아 둔 위치를 쓴다(파란 점은 버튼을 눌렀을 때만).
+  const originPoint = useMemo(
+    () => getChatStoreMapOriginPoint(storeMap),
+    [storeMap],
+  );
+  const [cachedLocation] = useState(() => readCachedChatLocation());
+  const distanceBaseLocation = currentLocation ?? cachedLocation;
   const cardRefs = useRef(new Map<string, HTMLElement>());
   const selectedStore =
     stores.find((store) => store.id === selectedStoreId) ?? stores[0];
@@ -263,6 +289,7 @@ export const ChatStoreMap = ({
           className="h-full rounded-none border-0 shadow-none"
           fitTarget={fitTarget}
           isCompact
+          getPinFitPadding={getChatMapPinFitPadding}
           isUserLocationLoading={isLocating}
           onFocusUserLocation={handleFocusUserLocation}
           markerLabelById={markerLabelById}
@@ -271,6 +298,7 @@ export const ChatStoreMap = ({
           selectedStoreId={selectedStore?.id ?? ""}
           stores={stores}
           userLocation={userLocation}
+          originPoint={originPoint}
           onSelectStore={handleSelectPin}
         />
       </div>
@@ -299,6 +327,12 @@ export const ChatStoreMap = ({
           renderItem={(store, index) => (
             <ChatStoreResultCard
               activeServices={activeServices}
+              distanceLabel={getChatStoreDistanceLabel({
+                distanceText: store.distanceText,
+                storeMap,
+                storePoint: store,
+                userLocation: distanceBaseLocation,
+              })}
               cardRef={(element) => {
                 if (element) {
                   cardRefs.current.set(store.id, element);

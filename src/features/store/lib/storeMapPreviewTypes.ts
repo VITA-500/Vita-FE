@@ -60,6 +60,8 @@ export type StoreMapPreviewProps = {
   searchPoint?: MapPoint | null;
   routePreview?: RoutePreview | null;
   userLocation?: UserLocation | null;
+  /** 장소 기준 검색의 기준점(예: "왕십리"). 내 위치(파란 점)와 다른 모양의 핀으로 표시한다. */
+  originPoint?: (MapPoint & { label: string }) | null;
   isUserLocationLoading?: boolean;
   /**
    * 사용자가 지도를 끌어 옮긴 직후(dragend). 옮긴 지도 중심과 그때 보이는 영역을 함께 알려준다.
@@ -141,6 +143,7 @@ export type StoreMapEffectContext = Pick<
   | "selectedStoreId"
   | "stores"
   | "userLocation"
+  | "originPoint"
 > & {
   animatedMarkerEnterKeyRef: RefObject<string>;
   autoFitCardAfterZoomRef: RefObject<boolean>;

@@ -70,6 +70,7 @@ export const useStoreMapEffect = ({
   setSelectedStoreCardPosition,
   stores,
   userLocation,
+  originPoint,
 }: UseStoreMapEffectParams) => {
   useEffect(() => {
     const context = {
@@ -120,6 +121,7 @@ export const useStoreMapEffect = ({
       setSelectedStoreCardPosition,
       stores,
       userLocation,
+      originPoint,
     };
     const mapInstance = setupStoreMap(context);
 
@@ -196,6 +198,7 @@ export const useStoreMapEffect = ({
     searchPoint,
     stores,
     userLocation,
+    originPoint,
     animatedMarkerEnterKeyRef,
     autoFitCardAfterZoomRef,
     ensuredCardStoreIdRef,

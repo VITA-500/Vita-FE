@@ -192,6 +192,77 @@ export const createCurrentLocationOverlay = ({
   };
 };
 
+/**
+ * 장소 기준 검색의 기준점 overlay(예: "왕십리역").
+ * 라벨만 있으면 위치를 가리키는지 알기 어려워, 라벨 → 꼬리 → 점 순서의 핀으로 그리고 점이 실제 좌표에 오게 한다.
+ * 매장 핀(노란색)·내 위치(파란 점)보다 눈에 덜 띄게 밝은 회색을 쓴다.
+ */
+export const createOriginPointOverlay = ({
+  kakaoMaps,
+  map,
+  originPoint,
+}: {
+  kakaoMaps: KakaoMapsApi;
+  map: KakaoMap;
+  originPoint: MapPoint & { label: string };
+}): MapOverlayHandle => {
+  const color = "#64748b";
+  const pin = document.createElement("div");
+  pin.setAttribute("role", "img");
+  pin.setAttribute("aria-label", `${originPoint.label} 기준 위치`);
+  Object.assign(pin.style, {
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    pointerEvents: "none",
+  });
+
+  const label = document.createElement("span");
+  label.textContent = `${originPoint.label} 기준`;
+  Object.assign(label.style, {
+    background: color,
+    borderRadius: "9999px",
+    boxShadow: "0 6px 14px rgba(15, 23, 42, 0.22)",
+    color: "#ffffff",
+    fontSize: "11px",
+    fontWeight: "800",
+    lineHeight: "16px",
+    padding: "3px 8px",
+    whiteSpace: "nowrap",
+  });
+
+  const stem = document.createElement("span");
+  Object.assign(stem.style, {
+    background: color,
+    height: "8px",
+    width: "2px",
+  });
+
+  const dot = document.createElement("span");
+  Object.assign(dot.style, {
+    background: color,
+    border: "2px solid #ffffff",
+    borderRadius: "9999px",
+    boxShadow: "0 2px 6px rgba(15, 23, 42, 0.3)",
+    height: "12px",
+    width: "12px",
+  });
+
+  pin.append(label, stem, dot);
+
+  return {
+    overlay: new kakaoMaps.CustomOverlay({
+      content: pin,
+      map,
+      position: new kakaoMaps.LatLng(originPoint.lat, originPoint.lng),
+      xAnchor: 0.5,
+      // 맨 아래 점이 좌표를 가리키도록 아래 끝을 기준으로 둔다.
+      yAnchor: 1,
+      zIndex: 25,
+    }),
+  };
+};
+
 /** 경로 위 한 지점(출발·도착·환승·진행 지점)에 표시 DOM을 올린다. */
 export const createRoutePointOverlay = ({
   content,
