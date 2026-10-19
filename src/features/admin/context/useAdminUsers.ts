@@ -3,8 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { adminQueryKeys } from "@/features/admin/context/adminQueryKeys";
-import { adminUserService } from "@/features/admin/lib/adminUserService";
-import type { AdminUserStatus } from "@/features/admin/types/adminUsers";
+import { adminUserApi, type AdminUserStatus } from "@/entities/user";
 import { showToast } from "@/shared/providers/ToastProvider";
 
 export const useAdminUsers = () => {
@@ -16,7 +15,7 @@ export const useAdminUsers = () => {
   const query = useQuery({
     queryKey: adminQueryKeys.users({ keyword, page, pageSize, status }),
     queryFn: () =>
-      adminUserService.fetchUsers({
+      adminUserApi.fetchUsers({
         keyword,
         page,
         size: pageSize,
@@ -32,7 +31,7 @@ export const useAdminUsers = () => {
       userId: number;
       nextStatus: AdminUserStatus;
       reason: string;
-    }) => adminUserService.updateStatus(userId, nextStatus, reason),
+    }) => adminUserApi.updateStatus(userId, nextStatus, reason),
     onSuccess: async () => {
       showToast("회원 상태를 변경했어요.");
       await Promise.all([

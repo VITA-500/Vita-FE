@@ -1,9 +1,11 @@
-export type AuthUser = {
-  userId: number;
-  email: string | null;
-  name: string;
-  role: string;
-};
+// 사용자 타입은 entities/user로 옮겼다. 기존 import 경로 호환용 재내보내기.
+import type { AuthUser } from "@/entities/user";
+export type {
+  AuthUser,
+  MyPageResponse,
+  MyPageUpdateRequest,
+  MyPageUpdateResponse,
+} from "@/entities/user";
 
 export type LoginRequest = {
   email: string;
@@ -25,21 +27,4 @@ export type SignupResponse = {
   email: string;
   name: string;
   createdAt: string;
-};
-
-export type MyPageResponse = AuthUser & {
-  phone?: string;
-  hasPassword: boolean;
-  linkedProviders: string[];
-};
-
-export type MyPageUpdateRequest = {
-  name?: string;
-  password?: string;
-};
-
-export type MyPageUpdateResponse = {
-  userId: number;
-  name: string;
-  updatedAt: string;
 };

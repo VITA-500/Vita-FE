@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { mockAnswerFeedbackStats } from "@/features/admin/constants/adminData";
 import { adminQueryKeys } from "@/features/admin/context/adminQueryKeys";
-import { adminAnswerFeedbackService } from "@/features/admin/lib/adminAnswerFeedbackService";
+import { adminAnswerFeedbackApi } from "@/entities/feedback";
 import type { AdminAnswerFeedbackStats } from "@/features/admin/types";
 import { ApiError } from "@/shared/api/http";
 import { env } from "@/shared/config/env";
@@ -21,7 +21,7 @@ const toLimitedMock = (limit: number): AdminAnswerFeedbackStats => ({
 export const useAdminAnswerFeedback = (limit: number) => {
   const query = useQuery({
     enabled: Boolean(env.apiBaseUrl),
-    queryFn: () => adminAnswerFeedbackService.fetchStats(limit),
+    queryFn: () => adminAnswerFeedbackApi.fetchStats(limit),
     queryKey: adminQueryKeys.answerFeedback(limit),
   });
 
@@ -51,7 +51,7 @@ export const useAdminAnswerFeedback = (limit: number) => {
 export const useDismissAnswerFeedback = () => {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (id: number) => adminAnswerFeedbackService.dismiss(id),
+    mutationFn: (id: number) => adminAnswerFeedbackApi.dismiss(id),
     onSuccess: async ({ dismissedCount }) => {
       showToast(`아쉬워요 ${dismissedCount}건을 무시 처리했어요.`);
       await queryClient.invalidateQueries({

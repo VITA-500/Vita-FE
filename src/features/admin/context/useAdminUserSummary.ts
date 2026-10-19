@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { adminQueryKeys } from "@/features/admin/context/adminQueryKeys";
-import { adminUserService } from "@/features/admin/lib/adminUserService";
+import { adminUserApi } from "@/entities/user";
 import { env } from "@/shared/config/env";
 
 export const useAdminUserSummary = () => {
@@ -11,18 +11,18 @@ export const useAdminUserSummary = () => {
     queryKey: adminQueryKeys.userSummary,
     queryFn: async () => {
       const [all, active, suspended, admins] = await Promise.all([
-        adminUserService.fetchUsers({ page: 0, size: 1 }),
-        adminUserService.fetchUsers({
+        adminUserApi.fetchUsers({ page: 0, size: 1 }),
+        adminUserApi.fetchUsers({
           page: 0,
           size: 1,
           status: "ACTIVE",
         }),
-        adminUserService.fetchUsers({
+        adminUserApi.fetchUsers({
           page: 0,
           size: 1,
           status: "SUSPENDED",
         }),
-        adminUserService.fetchUsers({ page: 0, size: 1, role: "ADMIN" }),
+        adminUserApi.fetchUsers({ page: 0, size: 1, role: "ADMIN" }),
       ]);
 
       return {
