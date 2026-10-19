@@ -6,7 +6,6 @@ import { ChatStoreResultCard } from "@/features/chat/components/ChatStoreResultC
 import { StoreMapPreview } from "@/features/store/components/StoreMapPreview";
 import { StorePanelModals } from "@/features/store/components/StorePanelModals";
 import { useStoreReservation } from "@/features/store/hooks/useStoreReservation";
-import type { MapPoint } from "@/features/store/lib/mapFit";
 import { buildMarkerLabelById } from "@/features/store/lib/storePanelStores";
 import {
   buildMarkerColorInfoById,
@@ -29,6 +28,7 @@ import {
   getChatStoreMapUserLocation,
 } from "@/features/chat/lib/chatStoreMapOrigin";
 import type { ChatStoreMap as ChatStoreMapData } from "@/features/chat/types";
+import type { LatLng } from "@/shared/lib/geo";
 import { showToast } from "@/shared/providers/ToastProvider";
 
 const MAX_CHAT_STORE_COUNT = 5;
@@ -105,11 +105,11 @@ export const ChatStoreMap = ({
   /** 지도를 특정 지점(카드를 누른 매장 핀·내 위치)으로 옮기는 요청. 같은 곳을 다시 눌러도 옮기도록 횟수를 함께 둔다. */
   const [mapFocusRequest, setMapFocusRequest] = useState<{
     count: number;
-    point: MapPoint;
+    point: LatLng;
   } | null>(null);
   /** 같은 카드를 다시 눌러도 카드 레일 위치를 다시 맞추기 위한 요청 횟수. */
   const [cardFocusSignal, setCardFocusSignal] = useState(0);
-  const [currentLocation, setCurrentLocation] = useState<MapPoint | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<LatLng | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const reservation = useStoreReservation();
   // BE origin은 현재 위치 기준일 때만 내 위치로 쓴다. 장소 기준이면 내 위치 버튼을 눌렀을 때만 보여준다.
@@ -139,7 +139,7 @@ export const ChatStoreMap = ({
     [mapFocusRequest, stores, storesKey],
   );
 
-  const focusMapOn = (point: MapPoint) => {
+  const focusMapOn = (point: LatLng) => {
     setMapFocusRequest((request) => ({
       count: (request?.count ?? 0) + 1,
       point: { lat: point.lat, lng: point.lng },
@@ -158,7 +158,7 @@ export const ChatStoreMap = ({
     if (store) focusMapOn(store);
   };
 
-  const researchStoresAround = async (point: MapPoint) => {
+  const researchStoresAround = async (point: LatLng) => {
     const nextStoreMap = await findChatStoreMap({
       activeServices: storeMap.activeServices,
       origin: point,

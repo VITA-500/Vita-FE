@@ -1,10 +1,9 @@
 import type { ChatStoreMap } from "@/features/chat/types";
-import { benefitService } from "@/features/store/lib/benefitService";
-import { getDistanceMeters } from "@/features/store/lib/geo";
-import { storeService } from "@/features/store/lib/storeService";
 import { findServicesInText } from "@/features/store/lib/serviceKeywords";
-import type { StoreLocation } from "@/features/store/types";
+import { benefitApi } from "@/entities/benefit";
 import { getCurrentPosition, toLatLng } from "@/entities/location";
+import { storeApi, type StoreLocation } from "@/entities/store";
+import { getDistanceMeters } from "@/shared/lib/geo";
 
 /** 채팅 카드·핀은 답변 계약에 맞춰 최대 5곳까지 보여준다. */
 const MAX_CHAT_STORE_COUNT = 5;
@@ -107,7 +106,7 @@ const toPartnerChatStore = (store: StoreLocation) => {
 };
 
 const getMatchingBenefitCategories = (
-  categories: Awaited<ReturnType<typeof benefitService.fetchBenefitCategories>>,
+  categories: Awaited<ReturnType<typeof benefitApi.fetchBenefitCategories>>,
   prompt?: string,
 ) => {
   if (!prompt) return categories;
@@ -139,7 +138,7 @@ const getUniquePartnerStores = (
 const fetchPartnerStoresByCategory = (
   category: string,
   origin: ChatStorePoint,
-) => benefitService.fetchBenefitStores(category, origin, CHAT_STORE_RADIUS_KM);
+) => storeApi.fetchBenefitStores(category, origin, CHAT_STORE_RADIUS_KM);
 
 /** 매장이 제공하는 서비스 중 요청한 서비스(activeServices)에 해당하는 것 */
 export const getMatchedServices = (
@@ -187,7 +186,7 @@ export const findChatStoreMap = async ({
   originSource: NonNullable<ChatStoreMap["originSource"]>;
   prompt?: string;
 }): Promise<ChatStoreMap | undefined> => {
-  const nearbyStores = await storeService.fetchNearbyStores(
+  const nearbyStores = await storeApi.fetchNearbyStores(
     origin,
     CHAT_STORE_RADIUS_KM,
   );
@@ -231,7 +230,7 @@ export const findPartnerChatStoreMap = async ({
   originSource: NonNullable<ChatStoreMap["originSource"]>;
   prompt?: string;
 }): Promise<ChatStoreMap | undefined> => {
-  const categories = await benefitService.fetchBenefitCategories();
+  const categories = await benefitApi.fetchBenefitCategories();
   const targetCategories = getMatchingBenefitCategories(categories, prompt);
   const categoryResults = await Promise.allSettled(
     targetCategories.map((category) =>

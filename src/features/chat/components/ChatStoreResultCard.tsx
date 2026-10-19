@@ -11,9 +11,8 @@ import {
 import { StoreOpenStatusBadge } from "@/features/store/components/StoreOpenStatusBadge";
 import { getStoreMapRouteUrl } from "@/features/store/lib/mapLinks";
 import { getServiceFilterColor } from "@/features/store/lib/markerColors";
-import { getCurrentOpenStatus } from "@/features/store/lib/storeOpenHours";
-import type { StoreLocation } from "@/features/store/types";
 import type { ChatStoreDistanceLabel } from "@/features/chat/lib/chatStoreMapOrigin";
+import { getCurrentOpenStatus, type StoreLocation } from "@/entities/store";
 import { cn } from "@/shared/lib/cn";
 import { buttonClassName } from "@/shared/ui/atoms/Button";
 
