@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getPaginationItems } from "@/features/store/lib/storePanelPagination";
+import { getPaginationItems } from "@/features/store-search/lib/storePanelPagination";
 import { cn } from "@/shared/lib/cn";
 
 type StorePanelPaginationProps = {

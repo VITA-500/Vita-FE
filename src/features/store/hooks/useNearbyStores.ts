@@ -9,7 +9,7 @@ import {
   type SetStateAction,
 } from "react";
 import type { useStoreMapState } from "@/features/store/hooks/useStoreMapState";
-import type { useStoreSearchState } from "@/features/store/hooks/useStoreSearchState";
+import type { useStoreSearchState } from "@/features/store-search/hooks/useStoreSearchState";
 import type { UserLocation } from "@/features/store/lib/geo";
 import type { StoreMapSnapshot } from "@/features/store/lib/storeMapSnapshot";
 import {

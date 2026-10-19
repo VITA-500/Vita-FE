@@ -1,7 +1,7 @@
 import {
   ServiceFilterCarousel,
   ServiceFilterWrapList,
-} from "@/features/store/components/StoreServiceFilterCarousel";
+} from "@/features/store-search/components/StoreServiceFilterCarousel";
 import type { ServiceFilterOption } from "@/features/store/lib/markerColors";
 
 type StorePanelServiceFiltersProps = {

@@ -3,10 +3,10 @@
 import { useEffect, useRef } from "react";
 import { useLocationPermission } from "@/features/store/hooks/useLocationPermission";
 import { useNearbyStores } from "@/features/store/hooks/useNearbyStores";
-import { useStoreFilterSearchActions } from "@/features/store/hooks/useStoreFilterSearchActions";
+import { useStoreFilterSearchActions } from "@/features/store-search/hooks/useStoreFilterSearchActions";
 import type { useStoreMapPanelState } from "@/features/store/hooks/useStoreMapPanelState";
 import { useStoreSelectionActions } from "@/features/store/hooks/useStoreSelectionActions";
-import { useStoreTextSearchActions } from "@/features/store/hooks/useStoreTextSearchActions";
+import { useStoreTextSearchActions } from "@/features/store-search/hooks/useStoreTextSearchActions";
 
 export type StoreMapPanelState = ReturnType<typeof useStoreMapPanelState>;
 
