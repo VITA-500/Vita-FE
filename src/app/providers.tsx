@@ -1,6 +1,6 @@
 "use client";
 
-import { AuthProvider } from "@/features/auth/hooks/useAuthUser";
+import { AuthProvider } from "@/entities/user";
 import { ThemeProvider } from "@/shared/providers/ThemeProvider";
 import { ToastProvider } from "@/shared/providers/ToastProvider";
 import { QueryProvider } from "./query-provider";

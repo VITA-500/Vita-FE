@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { LogOut, UserRound } from "lucide-react";
-import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
+import { useAuthUser } from "@/entities/user";
 import { ThemeToggleButton } from "@/shared/ui/molecules/ThemeToggleButton";
 import { showToast } from "@/shared/providers/ToastProvider";
 import { routes } from "@/shared/constants/routes";

@@ -1,5 +1,5 @@
 import { useRouter } from "next/navigation";
-import { buildLoginHref } from "@/features/auth/lib/loginReturn";
+import { buildLoginHref } from "@/entities/user";
 import { StoreReservationFields } from "@/features/store/components/StoreReservationFields";
 import { useReservationSlots } from "@/features/store/hooks/useReservationSlots";
 import type { StoreLocation } from "@/features/store/types";

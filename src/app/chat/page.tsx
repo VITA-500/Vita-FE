@@ -29,8 +29,7 @@ import type {
 } from "@/features/store/types";
 import { useChatConversationController } from "@/features/chat/hooks/useChatConversationController";
 import { useChatTour } from "@/features/chat/hooks/useChatTour";
-import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
-import { buildLoginHref } from "@/features/auth/lib/loginReturn";
+import { buildLoginHref, useAuthUser } from "@/entities/user";
 import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
 

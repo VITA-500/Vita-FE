@@ -24,11 +24,8 @@ export const authService = {
       method: "POST",
     });
   },
-  logout: () => {
-    return requestJson<void>("/auth/logout", {
-      method: "POST",
-    });
-  },
+  /** 로그아웃은 로그인 상태와 함께 entities/user로 옮겼고 기존 호출부 호환을 위해 남겨 둔다. */
+  logout: userApi.logout,
   signup: (request: SignupRequest) => {
     return requestJson<SignupResponse>("/auth/signup", {
       body: JSON.stringify(request),

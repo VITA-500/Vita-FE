@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import Header from "@/features/home/components/MarketingHeader";
+import Header from "./_components/MarketingHeader";
 import Footer from "@/shared/layout/Footer";
 import ScrollTopButton from "@/shared/layout/ScrollTopButton";
 

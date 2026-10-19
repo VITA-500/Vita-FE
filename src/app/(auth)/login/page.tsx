@@ -11,8 +11,8 @@ import {
 import {
   readLoginReturnToFromLocation,
   rememberLoginReturnTo,
-} from "@/features/auth/lib/loginReturn";
-import { tokenStorage } from "@/features/auth/lib/tokenStorage";
+  tokenStorage,
+} from "@/entities/user";
 import { TextField } from "@/shared/ui/atoms/TextField";
 import { ApiError } from "@/shared/api/http";
 import { Button } from "@/shared/ui/atoms/Button";
