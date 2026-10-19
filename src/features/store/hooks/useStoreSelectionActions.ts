@@ -13,8 +13,8 @@ import type { useStoreMapState } from "@/features/store/hooks/useStoreMapState";
 import type { useStorePanelLayout } from "@/features/store/hooks/useStorePanelLayout";
 import type { useStoreRoute } from "@/features/store/hooks/useStoreRoute";
 import { useStoreRouteReturnActions } from "@/features/store/hooks/useStoreRouteReturnActions";
-import type { useStoreSearchResults } from "@/features/store-search/hooks/useStoreSearchResults";
-import type { useStoreSearchState } from "@/features/store-search/hooks/useStoreSearchState";
+import type { useStoreSearchResults } from "@/features/store/hooks/useStoreSearchResults";
+import type { useStoreSearchState } from "@/features/store/hooks/useStoreSearchState";
 import {
   findStoreById,
   type MapSearchPoint,

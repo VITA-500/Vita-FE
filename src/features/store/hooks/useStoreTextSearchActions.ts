@@ -3,8 +3,8 @@
 import type {
   StoreSearchActionsParams,
   useStoreFilterSearchActions,
-} from "@/features/store-search/hooks/useStoreFilterSearchActions";
-import type { StoreSearchHistoryItem } from "@/features/store-search/hooks/useStoreSearchHistory";
+} from "@/features/store/hooks/useStoreFilterSearchActions";
+import type { StoreSearchHistoryItem } from "@/features/store/hooks/useStoreSearchHistory";
 import { showToast } from "@/shared/providers/ToastProvider";
 import { isDesktopWidth } from "@/shared/lib/desktopBreakpoint";
 

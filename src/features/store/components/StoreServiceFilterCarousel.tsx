@@ -7,7 +7,7 @@ import {
   buildServiceFilterItems,
   toggleServiceFilterItem,
   type ServiceFilterCarouselProps,
-} from "@/features/store-search/lib/serviceFilterItems";
+} from "@/features/store/lib/serviceFilterItems";
 import { cn } from "@/shared/lib/cn";
 
 /** 데스크톱 필터 바에 최대로 노출하는 뱃지 개수. 폭이 좁으면 한 줄에 들어가는 만큼만 보여주고 나머지는 더보기(…) 드롭다운으로 보낸다. */

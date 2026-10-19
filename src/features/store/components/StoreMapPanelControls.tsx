@@ -4,14 +4,14 @@ import { ChevronDown, PanelLeft } from "lucide-react";
 import type { RefObject } from "react";
 import { useState } from "react";
 import { StorePanelBenefitFilters } from "@/features/store/components/StorePanelBenefitFilters";
-import { StorePanelSearchBar } from "@/features/store-search/components/StorePanelSearchBar";
-import { StorePanelSearchDropdown } from "@/features/store-search/components/StorePanelSearchDropdown";
-import { StorePanelServiceFilters } from "@/features/store-search/components/StorePanelServiceFilters";
+import { StorePanelSearchBar } from "@/features/store/components/StorePanelSearchBar";
+import { StorePanelSearchDropdown } from "@/features/store/components/StorePanelSearchDropdown";
+import { StorePanelServiceFilters } from "@/features/store/components/StorePanelServiceFilters";
 import {
   StorePanelBenefitCategories,
   StorePanelStoreItems,
   StorePanelStoreListHeader,
-} from "@/features/store-search/components/StorePanelStoreList";
+} from "@/features/store/components/StorePanelStoreList";
 import type { StoreMapPanelModel } from "@/features/store/hooks/useStoreMapPanel";
 import type { StoreOpenFilter } from "@/features/store/types";
 import { cn } from "@/shared/lib/cn";

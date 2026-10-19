@@ -1,12 +1,12 @@
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { useNearbyStores } from "@/features/store/hooks/useNearbyStores";
-import type { useServiceFilters } from "@/features/store-search/hooks/useServiceFilters";
+import type { useServiceFilters } from "@/features/store/hooks/useServiceFilters";
 import type { useStoreMapState } from "@/features/store/hooks/useStoreMapState";
 import type { useStorePanelLayout } from "@/features/store/hooks/useStorePanelLayout";
 import type { useStoreRoute } from "@/features/store/hooks/useStoreRoute";
-import type { useStoreSearchHistory } from "@/features/store-search/hooks/useStoreSearchHistory";
-import type { useStoreSearchResults } from "@/features/store-search/hooks/useStoreSearchResults";
-import type { useStoreSearchState } from "@/features/store-search/hooks/useStoreSearchState";
+import type { useStoreSearchHistory } from "@/features/store/hooks/useStoreSearchHistory";
+import type { useStoreSearchResults } from "@/features/store/hooks/useStoreSearchResults";
+import type { useStoreSearchState } from "@/features/store/hooks/useStoreSearchState";
 import type { useStoreSelectionActions } from "@/features/store/hooks/useStoreSelectionActions";
 import type { MapSearchPoint } from "@/features/store/lib/storePanelStores";
 import type { StoreLocation } from "@/features/store/types";

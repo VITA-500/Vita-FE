@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import type { useServiceFilters } from "@/features/store-search/hooks/useServiceFilters";
-import type { useStoreSearchState } from "@/features/store-search/hooks/useStoreSearchState";
+import type { useServiceFilters } from "@/features/store/hooks/useServiceFilters";
+import type { useStoreSearchState } from "@/features/store/hooks/useStoreSearchState";
 import {
   matchesStoreSearch,
   type UserLocation,
 } from "@/features/store/lib/geo";
-import { findServicesInText } from "@/features/store-search/lib/serviceKeywords";
+import { findServicesInText } from "@/features/store/lib/serviceKeywords";
 import { filterStoresByOpenFilter } from "@/features/store/lib/storeOpenHours";
 import {
   buildSearchableStores,
