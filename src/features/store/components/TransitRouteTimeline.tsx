@@ -4,7 +4,7 @@ import { TransitStepIcon } from "@/features/store/components/TransitStepIcon";
 import {
   TRANSIT_WALK_LINE_COLOR,
   type TransitTimelineItem,
-} from "@/features/store/lib/transitTimeline";
+} from "@/entities/route";
 import { cn } from "@/shared/lib/cn";
 
 /* 대중교통 길찾기 상세: 출발 → 도보·승차·환승·하차 → 도착을 세로 타임라인으로 보여준다. */

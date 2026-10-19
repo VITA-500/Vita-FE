@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { TransitRouteStep } from "@/features/store/lib/storeRoutePreview";
-import { buildTransitTimeline } from "@/features/store/lib/transitTimeline";
+import type { TransitRouteStep } from "@/entities/route/model/types";
+import { buildTransitTimeline } from "./transitTimeline";
 
 const step = (
   overrides: Partial<TransitRouteStep> & Pick<TransitRouteStep, "id" | "kind">,

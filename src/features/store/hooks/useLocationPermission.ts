@@ -7,7 +7,7 @@ import {
   LOCATION_CONSENT_STORAGE_KEY,
   LOCATION_MODAL_DISMISSED_STORAGE_KEY,
 } from "@/features/store/lib/storePanelStorage";
-import type { UserLocationStatus } from "@/features/store/hooks/useUserLocation";
+import type { UserLocationStatus } from "@/entities/location";
 import { readStorage, writeStorage } from "@/shared/lib/browserStorage";
 import { showToast } from "@/shared/providers/ToastProvider";
 

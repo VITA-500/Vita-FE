@@ -9,7 +9,7 @@ import {
   RefreshCw,
   Search,
 } from "lucide-react";
-import type { UserLocationStatus } from "@/features/store/hooks/useUserLocation";
+import type { UserLocationStatus } from "@/entities/location";
 import { matchesStoreSearch } from "@/features/store/lib/geo";
 import type { StoreLocation } from "@/features/store/types";
 import { getKakaoDirectionUrl } from "@/features/store/lib/mapLinks";

@@ -3,7 +3,7 @@ import {
   getRoutePath,
   getRouteSegments,
   type RouteResponse,
-} from "@/features/store/lib/storeRouteResponse";
+} from "./routeResponse";
 
 const baseResponse = {
   distanceMeters: 1200,
