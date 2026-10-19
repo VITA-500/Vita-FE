@@ -1,8 +1,8 @@
 import { Clock3, X } from "lucide-react";
 import { getServiceFilterIcon } from "@/features/store-search/lib/serviceFilterItems";
-import { MAX_SEARCH_RESULT_COUNT } from "@/features/store-search/constants";
+import { MAX_SEARCH_RESULT_COUNT } from "@/features/store/constants";
 import type { StoreSearchHistoryItem } from "@/features/store-search/hooks/useStoreSearchHistory";
-import type { StoreLocation } from "@/entities/store";
+import type { StoreLocation } from "@/features/store/types";
 
 type StorePanelSearchDropdownProps = {
   isSearchHistoryEnabled: boolean;

@@ -1,7 +1,7 @@
 "use client";
 
 import type { StoreSearchActionsParams } from "@/features/store-search/hooks/storeSearchActionsParams";
-import type { MapViewport } from "@/entities/store";
+import type { MapViewport } from "@/features/store/lib/storePanelStores";
 import { showToast } from "@/shared/providers/ToastProvider";
 import { isDesktopWidth } from "@/shared/lib/desktopBreakpoint";
 

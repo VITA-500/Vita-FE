@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { buildServiceFilterColorByValue } from "@/entities/store";
-import type { StoreLocation } from "@/entities/store";
+import { buildServiceFilterColorByValue } from "@/features/store/lib/markerColors";
+import type { StoreLocation } from "@/features/store/types";
 
 const toStableServiceOptions = (services: string[], selected: string[]) =>
   Array.from(new Set([...services, ...selected]))

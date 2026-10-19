@@ -25,20 +25,6 @@ export {
 } from "@/entities/store/model/storeOpenHours";
 export { matchesStoreSearch } from "@/entities/store/model/storeSearch";
 export {
-  buildSearchableStores,
-  defaultMapLocation,
-  findStoreById,
-  getMapStoreVisibility,
-  getSameLocationStores,
-  getViewportAreaQuery,
-  isStoreInVisibleArea,
-  resolveRouteDestinationStore,
-  SEARCH_RADIUS_KM,
-  sortStoresByDistance,
-  type MapSearchPoint,
-  type MapViewport,
-} from "@/entities/store/model/storePanelStores";
-export {
   getKakaoDirectionUrl,
   getStoreMapRouteUrl,
 } from "@/entities/store/model/mapLinks";

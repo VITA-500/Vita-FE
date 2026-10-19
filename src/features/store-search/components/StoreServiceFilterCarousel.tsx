@@ -2,7 +2,7 @@
 
 import { Check, Ellipsis } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { getServiceFilterBadgeStyle } from "@/entities/store";
+import { getServiceFilterBadgeStyle } from "@/features/store/lib/markerColors";
 import {
   buildServiceFilterItems,
   toggleServiceFilterItem,

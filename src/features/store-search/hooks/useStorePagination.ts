@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { StoreLocation } from "@/entities/store";
+import type { StoreLocation } from "@/features/store/types";
 
 /** 지도 핀(A~L)·매장 목록 한 페이지에 보여줄 매장 수. */
 const STORES_PER_PAGE = 12;

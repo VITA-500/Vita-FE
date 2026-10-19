@@ -19,7 +19,7 @@ import {
 import {
   getServiceFilterColor,
   type ServiceFilterOption,
-} from "@/entities/store";
+} from "@/features/store/lib/markerColors";
 
 /** 서비스 이름의 키워드로 뱃지 아이콘을 고른다. 매칭되지 않으면 기본 태그 아이콘. */
 const serviceFilterIconRules: { icon: LucideIcon; keywords: string[] }[] = [
