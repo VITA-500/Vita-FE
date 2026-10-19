@@ -1,6 +1,9 @@
-import { toAssistantMessage } from "./chatAnswerMessage";
+import { toAssistantMessage } from "@/entities/chat/model/chatAnswerMessage";
+import {
+  toChatPlan,
+  toChatStoreMap,
+} from "@/entities/chat/model/chatResponseAdapters";
 import { requestChatJson } from "./chatApiClient";
-import { toChatPlan, toChatStoreMap } from "./chatResponseAdapters";
 import {
   openAnswerStream,
   pollAssistantAnswer,
@@ -10,13 +13,17 @@ import {
 } from "./chatStreamTransport";
 import { ApiError } from "@/shared/api/http";
 import type {
-  ChatMessage,
+  ChatApiAction,
+  ChatApiPlan,
+  ChatApiStoreMap,
   ChatMessageResponse,
-  ChatProgressStage,
-  ChatStreamEvent,
   ChatSendRequest,
-} from "../types";
-import type { ChatApiStoreMap, ChatApiPlan, ChatApiAction } from "../apiTypes";
+  ChatStreamEvent,
+} from "./apiTypes";
+import type {
+  ChatMessage,
+  ChatProgressStage,
+} from "@/entities/chat/model/types";
 const ANSWER_TIMEOUT_MS = 60000;
 const SEND_TIMEOUT_MS = 15000;
 type StreamOutcome =

@@ -1,5 +1,8 @@
-import type { ChatApiPlan, ChatApiStoreMap } from "../apiTypes";
-import type { ChatPlan, ChatStoreMap } from "../types";
+import type {
+  ChatApiPlan,
+  ChatApiStoreMap,
+} from "@/entities/chat/api/apiTypes";
+import type { ChatPlan, ChatStoreMap } from "@/entities/chat/model/types";
 
 /** JSON의 null을 화면의 선택 필드(undefined)로 바꾼다. 서버 값의 의미는 바꾸지 않는다. */
 const omitNulls = <T extends object>(value: T) =>

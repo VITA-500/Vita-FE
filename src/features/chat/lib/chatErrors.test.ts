@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "@/shared/api/http";
 import { getChatError } from "./chatErrors";
-import { requestGuestChatJson } from "./chatApiClient";
+import { requestGuestChatJson } from "@/entities/chat";
 import { vi, afterEach } from "vitest";
 
 afterEach(() => vi.unstubAllGlobals());

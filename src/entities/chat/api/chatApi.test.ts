@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { FAILED_ANSWER_MESSAGE } from "./chatAnswerMessage";
-import { chatService } from "./chatService";
+import { FAILED_ANSWER_MESSAGE } from "@/entities/chat/model/chatAnswerMessage";
+import { chatApi } from "./chatApi";
 
 const encoder = new TextEncoder();
 
@@ -41,7 +41,7 @@ const pendingResponse = (messageId: number) =>
     { status: 200 },
   );
 
-describe("chatService.sendMessage (SSE)", () => {
+describe("chatApi.sendMessage (SSE)", () => {
   const originalFetch = globalThis.fetch;
 
   afterEach(() => {
@@ -105,7 +105,7 @@ describe("chatService.sendMessage (SSE)", () => {
 
     const onStage = vi.fn();
     const onDelta = vi.fn();
-    const message = await chatService.sendMessage({
+    const message = await chatApi.sendMessage({
       content: "근처 매장 찾아줘",
       guestId: "guest-1",
       location: { lat: 37.5, lng: 127.03 },
@@ -149,7 +149,7 @@ describe("chatService.sendMessage (SSE)", () => {
     }) as typeof fetch;
 
     await expect(
-      chatService.sendMessage({ content: "질문", guestId: "g", sessionId: 1 }),
+      chatApi.sendMessage({ content: "질문", guestId: "g", sessionId: 1 }),
     ).resolves.toMatchObject({ content: FAILED_ANSWER_MESSAGE });
   });
 
@@ -183,7 +183,7 @@ describe("chatService.sendMessage (SSE)", () => {
     }) as typeof fetch;
 
     await expect(
-      chatService.sendMessage({ content: "질문", guestId: "g", sessionId: 1 }),
+      chatApi.sendMessage({ content: "질문", guestId: "g", sessionId: 1 }),
     ).resolves.toMatchObject({ id: "assistant-9", content: "저장된 답변" });
   });
 
@@ -216,7 +216,7 @@ describe("chatService.sendMessage (SSE)", () => {
     }) as typeof fetch;
     const onDelta = vi.fn();
     await expect(
-      chatService.sendMessage({
+      chatApi.sendMessage({
         content: "질문",
         guestId: "g",
         sessionId: 1,
@@ -238,7 +238,7 @@ describe("chatService.sendMessage (SSE)", () => {
       return Promise.resolve(pendingResponse(7));
     }) as typeof fetch;
     await expect(
-      chatService.sendMessage({
+      chatApi.sendMessage({
         content: "질문",
         guestId: "g",
         sessionId: 1,
@@ -258,7 +258,7 @@ describe("chatService.sendMessage (SSE)", () => {
       );
     globalThis.fetch = fetchMock;
     await expect(
-      chatService.sendMessage({ content: "질문", guestId: "g", sessionId: 1 }),
+      chatApi.sendMessage({ content: "질문", guestId: "g", sessionId: 1 }),
     ).rejects.toMatchObject({ status: 401 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -289,7 +289,7 @@ describe("chatService.sendMessage (SSE)", () => {
       );
     }) as typeof fetch;
     try {
-      const answer = chatService.sendMessage({
+      const answer = chatApi.sendMessage({
         content: "질문",
         guestId: "g",
         sessionId: 1,

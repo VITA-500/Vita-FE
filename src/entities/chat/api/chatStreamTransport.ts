@@ -5,12 +5,12 @@ import {
   guestHeaders,
   requestChatJson,
 } from "./chatApiClient";
+import type { ChatStreamEvent } from "./apiTypes";
 import type {
   ChatApiMessageStatus,
   ChatProgressStage,
-  ChatStreamEvent,
   SessionMessagesResponse,
-} from "../types";
+} from "@/entities/chat/model/types";
 import { ApiError } from "@/shared/api/http";
 import { readSseStream } from "@/shared/api/sse";
 /** 구독 후 `connected`를 기다리는 최대 시간. 넘기면 스트리밍 없이 전송하고 재조회로 결과를 받는다. */

@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  FAILED_ANSWER_MESSAGE,
-  toAssistantMessage,
-} from "@/features/chat/lib/chatAnswerMessage";
+import { FAILED_ANSWER_MESSAGE, toAssistantMessage } from "./chatAnswerMessage";
 
 const response = (
   overrides: Partial<Parameters<typeof toAssistantMessage>[0]> = {},

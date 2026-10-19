@@ -1,4 +1,4 @@
-import type { ChatStreamEvent } from "../types";
+import type { ChatStreamEvent } from "@/entities/chat/api/apiTypes";
 import type { SseEvent } from "@/shared/api/sse";
 
 export const parseStreamEvent = (event: SseEvent): ChatStreamEvent | null => {
