@@ -44,6 +44,11 @@ export const ChatSessionMenu = ({
   const normalizedTitle = normalizeTitle(title);
   const titleLength = Array.from(normalizedTitle).length;
   const displayTitleLength = Array.from(title).length;
+  // 입력 그대로의 길이와 저장될 길이(공백 정리 후)가 다르면 저장될 길이를 함께 알려준다.
+  const titleCounterText =
+    displayTitleLength === titleLength
+      ? `${displayTitleLength}/${CHAT_SESSION_TITLE_MAX_LENGTH}`
+      : `${displayTitleLength}/${CHAT_SESSION_TITLE_MAX_LENGTH} · 저장 시 ${titleLength}자`;
   const isTitleInvalid =
     titleLength === 0 || titleLength > CHAT_SESSION_TITLE_MAX_LENGTH;
   const canSave =
@@ -115,7 +120,7 @@ export const ChatSessionMenu = ({
                   : "text-text-secondary shrink-0"
               }
             >
-              {displayTitleLength}/{CHAT_SESSION_TITLE_MAX_LENGTH}
+              {titleCounterText}
             </span>
           </div>
           <div className="grid grid-cols-2 gap-2">
