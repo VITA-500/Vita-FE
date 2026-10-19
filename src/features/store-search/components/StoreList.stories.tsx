@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
-import { StoreList } from "@/features/store/components/StoreList";
+import { StoreList } from "@/features/store-search/components/StoreList";
 import type { StoreLocation } from "@/features/store/types";
 
 const storyStores: StoreLocation[] = [
