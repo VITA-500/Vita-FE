@@ -40,6 +40,39 @@ export const getAnswerFeedbackReasons = (
 };
 
 /**
+ * 목록 항목 + 이 탭에서 걸린 사유. BE 필터는 "묶음 안에 그 사유가 한 번이라도 있으면" 포함하지만
+ * failReason은 가장 최근 발생 1건의 사유라서, 탭의 사유와 다를 수 있다. 화면은 matchedReasons를 배지로 쓴다.
+ */
+export type AnswerFeedbackListItem = AdminAnswerFeedback & {
+  matchedReasons?: readonly AdminAnswerFeedbackReason[];
+};
+
+/**
+ * 사유별로 받은 목록에서 항목마다 어느 사유 목록에 들어 있었는지 붙인다.
+ * reasons[i]가 undefined(전체 탭)면 붙이지 않는다.
+ */
+export const withMatchedReasons = (
+  candidates: readonly AdminAnswerFeedback[],
+  reasons: readonly (AdminAnswerFeedbackReason | undefined)[],
+  lists: readonly (readonly AdminAnswerFeedback[])[],
+): AnswerFeedbackListItem[] => {
+  const matched = new Map<number, AdminAnswerFeedbackReason[]>();
+
+  lists.forEach((list, index) => {
+    const reason = reasons[index];
+    if (!reason) return;
+    list.forEach((candidate) => {
+      matched.set(candidate.id, [...(matched.get(candidate.id) ?? []), reason]);
+    });
+  });
+
+  return candidates.map((candidate) => {
+    const matchedReasons = matched.get(candidate.id);
+    return matchedReasons ? { ...candidate, matchedReasons } : candidate;
+  });
+};
+
+/**
  * 사유별로 받은 목록을 하나로 합친다. 두 사유가 모두 있는 항목은 한 번만 남기고,
  * BE와 같은 순서(발생 횟수 많은 순 → 최근 발생 순)로 정렬한다.
  */

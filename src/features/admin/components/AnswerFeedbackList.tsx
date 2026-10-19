@@ -3,6 +3,7 @@
 import { ChevronDown, MessageSquareWarning } from "lucide-react";
 import { useState } from "react";
 import { AdminEmptyState } from "@/features/admin/components/AdminEmptyState";
+import type { AnswerFeedbackListItem } from "@/features/admin/lib/answerFeedbackFilters";
 import type {
   AdminAnswerFeedback,
   AdminAnswerFeedbackReason,
@@ -46,7 +47,7 @@ export type DismissFeedback = (
 ) => void;
 
 type AnswerFeedbackListProps = {
-  candidates: readonly AdminAnswerFeedback[];
+  candidates: readonly AnswerFeedbackListItem[];
   /** 무시 처리 중인 항목 id */
   dismissingId?: number;
   /** 무시. 없으면 무시 버튼을 비활성으로 둔다. */
@@ -158,7 +159,7 @@ const FeedbackRow = ({
   isDismissing,
   onRequestDismiss,
 }: {
-  candidate: AdminAnswerFeedback;
+  candidate: AnswerFeedbackListItem;
   isDismissing: boolean;
   onRequestDismiss?: (candidate: AdminAnswerFeedback) => void;
 }) => {
@@ -167,6 +168,11 @@ const FeedbackRow = ({
   const canDismiss = Boolean(onRequestDismiss);
   const answer = candidate.answer?.trim();
   const comments = candidate.comments ?? [];
+  // 사유 탭에서는 그 탭에 걸린 사유를 배지로 쓰고, 가장 최근 사유가 다르면 따로 적는다.
+  const badgeReasons: readonly string[] = candidate.matchedReasons?.length
+    ? candidate.matchedReasons
+    : [candidate.failReason];
+  const isLatestReasonDifferent = !badgeReasons.includes(candidate.failReason);
 
   return (
     <div
@@ -216,14 +222,24 @@ const FeedbackRow = ({
           <span className="text-xs font-bold text-gray-400">회</span>
         </div>
 
-        <span
-          className={cn(
-            "flex h-6 w-fit items-center rounded-full px-2.5 text-xs font-extrabold whitespace-nowrap",
-            getFailReasonStyle(candidate.failReason),
+        <div className="flex flex-wrap items-center gap-1 md:flex-col md:items-start">
+          {badgeReasons.map((reason) => (
+            <span
+              key={reason}
+              className={cn(
+                "flex h-6 w-fit items-center rounded-full px-2.5 text-xs font-extrabold whitespace-nowrap",
+                getFailReasonStyle(reason),
+              )}
+            >
+              {getFailReasonLabel(reason)}
+            </span>
+          ))}
+          {isLatestReasonDifferent && (
+            <span className="text-[11px] font-bold whitespace-nowrap text-gray-400">
+              최근: {getFailReasonLabel(candidate.failReason)}
+            </span>
           )}
-        >
-          {getFailReasonLabel(candidate.failReason)}
-        </span>
+        </div>
 
         <span className="flex h-6 items-center text-xs font-bold whitespace-nowrap text-gray-400">
           {formatKoreanMonthDay(candidate.lastOccurredAt)}

@@ -1,22 +1,39 @@
 "use client";
 
 import type { ReactNode } from "react";
+import dynamic from "next/dynamic";
 import {
+  BadgePercent,
+  BookOpen,
   CalendarDays,
   MessagesSquare,
+  Store,
   ThumbsDown,
   ThumbsUp,
+  UserX,
 } from "lucide-react";
-import { AnswerFeedbackContent } from "@/features/admin/components/AnswerFeedbackContent";
 import { useAdminAnswerFeedback } from "@/features/admin/context/useAdminAnswerFeedback";
+import { useAdminOperationsSummary } from "@/features/admin/context/useAdminOperationsSummary";
 import type { AdminAnswerFeedbackReason } from "@/features/admin/types";
 import { routes } from "@/shared/constants/routes";
 import { ButtonLink } from "@/shared/ui/atoms/Button";
-import { Card, CardContent, CardHeader } from "@/shared/ui/atoms/Card";
+import { Card } from "@/shared/ui/atoms/Card";
 import { cn } from "@/shared/lib/cn";
 
-/** 대시보드는 요약만: 많이 나온 답변 피드백 몇 개를 읽기 전용으로 보여주고, 확인·무시는 답변 피드백 페이지에서 한다. */
-const DASHBOARD_FEEDBACK_LIMIT = 5;
+/** 차트 라이브러리는 대시보드에서만 쓰므로 따로 불러온다. */
+const ReasonBarChart = dynamic(
+  () =>
+    import("@/features/admin/components/ReasonBarChart").then(
+      (module) => module.ReasonBarChart,
+    ),
+  {
+    ssr: false,
+    loading: () => <div className="h-40" />,
+  },
+);
+
+/** 대시보드는 summary만 쓴다. 질문 목록은 답변 피드백 페이지에서 본다. */
+const DASHBOARD_FEEDBACK_LIMIT = 1;
 
 export const AdminDashboard = () => {
   const {
@@ -24,6 +41,10 @@ export const AdminDashboard = () => {
     isLoading: isFeedbackLoading,
     stats: feedbackStats,
   } = useAdminAnswerFeedback(DASHBOARD_FEEDBACK_LIMIT);
+  const operations = useAdminOperationsSummary();
+  const hasOperationsError = Boolean(operations.error);
+  const operationsSummary = operations.summary;
+  const emptyBenefits = operationsSummary?.emptyBenefits ?? 0;
   return (
     <div>
       <div className="mb-8">
@@ -31,33 +52,36 @@ export const AdminDashboard = () => {
           대시보드
         </h1>
         <p className="text-text-secondary mt-2 text-sm font-medium">
-          반복되는 문의와 오늘 발생한 답변 피드백을 우선 확인하세요.
+          반복되는 문의와 오늘 발생한 답변 피드백을 우선 확인하고, 운영 현황을
+          함께 살펴보세요.
         </p>
       </div>
 
       <section
         aria-label="운영 주요 지표"
-        className="grid gap-4 sm:grid-cols-3"
+        className="grid gap-4 sm:grid-cols-2"
       >
         <DashboardMetric
-          label="답변 피드백"
+          label="보완 대상"
           value={feedbackStats?.summary.unresolvedCount}
-          isLoading={isFeedbackLoading}
-          hasError={Boolean(feedbackError)}
-          tone="neutral"
-          icon={<MessagesSquare size={18} aria-hidden="true" />}
-          priority="전체 보완 대상"
-          description="같은 질문을 하나로 묶은 보완 대상 항목 수예요."
-        />
-        <DashboardMetric
-          label="반복 문의"
-          value={feedbackStats?.summary.repeatCount}
+          unit="개"
+          extra={
+            feedbackStats ? (
+              <span className="ml-2 text-sm font-semibold text-amber-700 dark:text-amber-300">
+                · 누적{" "}
+                <span className="font-bold">
+                  {feedbackStats.summary.repeatCount.toLocaleString("ko-KR")}
+                </span>
+                회
+              </span>
+            ) : null
+          }
           isLoading={isFeedbackLoading}
           hasError={Boolean(feedbackError)}
           tone="amber"
           icon={<MessagesSquare size={18} aria-hidden="true" />}
           priority="FAQ 보완 우선"
-          description="보완 대상 질문이 누적해서 발생한 횟수예요. 자주 나오는 질문부터 FAQ를 보완하세요."
+          description="같은 질문을 하나로 묶은 항목 수와, 그 질문들이 누적해서 발생한 횟수예요. 자주 나오는 질문부터 FAQ를 보완하세요."
         />
         <DashboardMetric
           label="오늘 발생"
@@ -71,62 +95,80 @@ export const AdminDashboard = () => {
         />
       </section>
 
-      <section
-        aria-label="오늘 사용자 반응과 사유별 발생"
-        className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr_2fr]"
-      >
-        <DashboardMetric
-          label="오늘 좋아요"
-          value={feedbackStats?.summary.todayLikeCount}
+      <section aria-label="오늘 사용자 반응과 사유별 발생" className="mt-4">
+        <FeedbackReactionsCard
           isLoading={isFeedbackLoading}
           hasError={Boolean(feedbackError)}
-          tone="emerald"
-          icon={<ThumbsUp size={18} aria-hidden="true" />}
-          priority="오늘 사용자 반응"
-          description="오늘 전체 답변이 받은 좋아요 수예요."
-        />
-        <DashboardMetric
-          label="오늘 아쉬워요"
-          value={feedbackStats?.summary.todayDislikeCount}
-          isLoading={isFeedbackLoading}
-          hasError={Boolean(feedbackError)}
-          tone="rose"
-          icon={<ThumbsDown size={18} aria-hidden="true" />}
-          priority="오늘 사용자 반응"
-          description="오늘 전체 답변이 받은 아쉬워요 수예요. 이유는 답변 피드백에서 확인하세요."
-        />
-        <ReasonBreakdown
-          isLoading={isFeedbackLoading}
-          hasError={Boolean(feedbackError)}
+          likeCount={feedbackStats?.summary.todayLikeCount}
+          dislikeCount={feedbackStats?.summary.todayDislikeCount}
           reasonCounts={feedbackStats?.summary.reasonCounts}
           todayReasonCounts={feedbackStats?.summary.todayReasonCounts}
         />
       </section>
 
-      <section className="mt-8">
-        <Card>
-          <CardHeader
-            title="챗봇 답변 피드백"
-            description="많이 나온 순 상위 5건이에요. 유형별 확인과 무시 처리는 답변 피드백 페이지에서 하세요."
+      <section aria-label="운영 현황" className="mt-8">
+        <h2 className="mb-3 text-base font-bold text-gray-950 dark:text-white">
+          운영 현황
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <DashboardMetric
+            label="매장"
+            value={
+              operationsSummary
+                ? operationsSummary.phoneStores +
+                  operationsSummary.partnerStores
+                : undefined
+            }
+            unit="곳"
+            isLoading={operations.isLoading}
+            hasError={hasOperationsError}
+            tone="neutral"
+            icon={<Store size={18} aria-hidden="true" />}
+            priority="등록된 매장"
+            description={
+              operationsSummary
+                ? `직영 ${operationsSummary.phoneStores.toLocaleString("ko-KR")}곳 · 제휴 ${operationsSummary.partnerStores.toLocaleString("ko-KR")}곳`
+                : "직영·제휴 매장을 합한 수예요."
+            }
           />
-          <CardContent>
-            <AnswerFeedbackContent
-              allowDismiss={false}
-              error={feedbackError}
-              isLoading={isFeedbackLoading}
-              stats={feedbackStats}
-            />
-            <div className="mt-4 flex justify-end">
-              <ButtonLink
-                href={routes.adminFeedback}
-                variant="secondary"
-                size="xs"
-              >
-                답변 피드백 전체 보기
-              </ButtonLink>
-            </div>
-          </CardContent>
-        </Card>
+          <DashboardMetric
+            label="제휴 혜택"
+            value={operationsSummary?.benefits}
+            unit="개"
+            isLoading={operations.isLoading}
+            hasError={hasOperationsError}
+            tone={emptyBenefits > 0 ? "amber" : "neutral"}
+            icon={<BadgePercent size={18} aria-hidden="true" />}
+            priority={emptyBenefits > 0 ? "매장 연결 필요" : "등록된 혜택"}
+            description={
+              emptyBenefits > 0
+                ? `연결된 매장이 없는 혜택이 ${emptyBenefits.toLocaleString("ko-KR")}개 있어요. 제휴 관리에서 매장을 연결하세요.`
+                : "모든 혜택에 매장이 연결되어 있어요."
+            }
+          />
+          <DashboardMetric
+            label="게시 중 FAQ"
+            value={operationsSummary?.activeFaqs}
+            unit="개"
+            isLoading={operations.isLoading}
+            hasError={hasOperationsError}
+            tone="neutral"
+            icon={<BookOpen size={18} aria-hidden="true" />}
+            priority="챗봇 답변 근거"
+            description="사용자에게 공개되고 챗봇이 참고하는 FAQ 수예요."
+          />
+          <DashboardMetric
+            label="정지 회원"
+            value={operationsSummary?.suspendedUsers}
+            unit="명"
+            isLoading={operations.isLoading}
+            hasError={hasOperationsError}
+            tone="neutral"
+            icon={<UserX size={18} aria-hidden="true" />}
+            priority="회원 관리"
+            description="이용이 정지된 회원 수예요. 해제는 회원 관리에서 하세요."
+          />
+        </div>
       </section>
     </div>
   );
@@ -134,10 +176,12 @@ export const AdminDashboard = () => {
 
 const MetricValue = ({
   value,
+  unit = "건",
   isLoading,
   hasError = false,
 }: {
   value?: number;
+  unit?: string;
   isLoading: boolean;
   hasError?: boolean;
 }) =>
@@ -152,7 +196,7 @@ const MetricValue = ({
   ) : (
     <>
       {value.toLocaleString("ko-KR")}
-      <span className="ml-1 text-sm font-semibold">건</span>
+      <span className="ml-1 text-sm font-semibold">{unit}</span>
     </>
   );
 
@@ -198,6 +242,8 @@ const metricToneStyles: Record<
 const DashboardMetric = ({
   label,
   value,
+  unit,
+  extra,
   isLoading,
   hasError,
   tone,
@@ -207,6 +253,9 @@ const DashboardMetric = ({
 }: {
   label: string;
   value?: number;
+  unit?: string;
+  /** 값 옆에 붙는 보조 숫자(예: 누적 횟수). 로딩·실패 중에는 숨긴다. */
+  extra?: ReactNode;
   isLoading: boolean;
   hasError: boolean;
   tone: MetricTone;
@@ -237,7 +286,13 @@ const DashboardMetric = ({
           styles.value,
         )}
       >
-        <MetricValue value={value} isLoading={isLoading} hasError={hasError} />
+        <MetricValue
+          value={value}
+          unit={unit}
+          isLoading={isLoading}
+          hasError={hasError}
+        />
+        {!isLoading && !hasError && extra}
       </div>
       <p className="mt-2 max-w-md text-xs leading-5 font-medium text-gray-600 dark:text-gray-300">
         {description}
@@ -253,72 +308,137 @@ const reasonRows: { reason: AdminAnswerFeedbackReason; label: string }[] = [
   { reason: "DISLIKED", label: "아쉬워요" },
 ];
 
-/** 사유별 발생 수(오늘 / 누적). 어떤 유형의 보완이 많이 필요한지 한눈에 본다. */
-const ReasonBreakdown = ({
+/**
+ * 오늘 사용자 반응과 사유별 발생을 한 카드에 둔다.
+ * 위는 오늘 좋아요·아쉬워요 한 줄, 아래는 사유별 누적 막대(끝에 오늘 수).
+ */
+const FeedbackReactionsCard = ({
+  dislikeCount,
   hasError,
   isLoading,
+  likeCount,
   reasonCounts,
   todayReasonCounts,
 }: {
+  dislikeCount?: number;
   hasError: boolean;
   isLoading: boolean;
+  likeCount?: number;
   reasonCounts?: Record<AdminAnswerFeedbackReason, number>;
   todayReasonCounts?: Record<AdminAnswerFeedbackReason, number>;
 }) => {
-  const maxCount = Math.max(
-    1,
-    ...reasonRows.map(({ reason }) => reasonCounts?.[reason] ?? 0),
-  );
+  // 많이 나온 사유가 위로 오게 정렬하고, 차트는 맨 위 사유만 강조색으로 칠한다.
+  const rows = reasonRows
+    .map(({ reason, label }) => ({
+      label,
+      today: todayReasonCounts?.[reason] ?? 0,
+      total: reasonCounts?.[reason] ?? 0,
+    }))
+    .sort((a, b) => b.total - a.total);
+  const topReason = rows[0]?.total ? rows[0] : null;
+  const hasReactions = likeCount !== undefined && dislikeCount !== undefined;
+  const reactionTotal = hasReactions ? likeCount + dislikeCount : 0;
+  const likeRate =
+    hasReactions && reactionTotal > 0
+      ? Math.round((likeCount / reactionTotal) * 100)
+      : null;
 
   return (
     <Card className="border-gray-200 bg-white dark:border-white/10 dark:bg-zinc-900">
-      <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-        보완 유형
-      </p>
-      <h2 className="mt-1 text-sm font-bold text-gray-950 dark:text-white">
-        사유별 발생
-      </h2>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+            사용자 반응 · 보완 유형
+          </p>
+          <h2 className="mt-1 text-sm font-bold text-gray-950 dark:text-white">
+            오늘 반응과 사유별 발생
+          </h2>
+        </div>
+        <ButtonLink
+          href={routes.adminFeedback}
+          variant="secondary"
+          size="xs"
+          className="shrink-0"
+        >
+          답변 피드백 보기
+        </ButtonLink>
+      </div>
       {isLoading ? (
         <p
           role="status"
-          aria-label="사유별 발생 조회 중"
-          className="mt-4 h-20 rounded-xl bg-gray-100 motion-safe:animate-pulse dark:bg-white/5"
+          aria-label="통계 조회 중"
+          className="mt-4 h-48 rounded-xl bg-gray-100 motion-safe:animate-pulse dark:bg-white/5"
         />
-      ) : hasError || !reasonCounts ? (
+      ) : hasError || !hasReactions || !reasonCounts ? (
         <p className="mt-4 text-sm font-semibold text-gray-500">조회 실패</p>
       ) : (
-        <ul className="mt-3 space-y-2.5">
-          {reasonRows.map(({ reason, label }) => {
-            const total = reasonCounts[reason] ?? 0;
-            const today = todayReasonCounts?.[reason] ?? 0;
+        <>
+          <dl className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+            <div className="flex items-center gap-1.5">
+              <dt className="flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                <ThumbsUp size={14} aria-hidden="true" />
+                오늘 좋아요
+              </dt>
+              <dd className="text-lg font-bold text-gray-900 dark:text-white">
+                {likeCount.toLocaleString("ko-KR")}
+              </dd>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <dt className="flex items-center gap-1 text-xs font-bold text-rose-700 dark:text-rose-300">
+                <ThumbsDown size={14} aria-hidden="true" />
+                오늘 아쉬워요
+              </dt>
+              <dd className="text-lg font-bold text-gray-900 dark:text-white">
+                {dislikeCount.toLocaleString("ko-KR")}
+              </dd>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <dt className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                좋아요 비율
+              </dt>
+              <dd className="text-lg font-bold text-gray-900 dark:text-white">
+                {likeRate === null ? "-" : `${likeRate}%`}
+              </dd>
+            </div>
+          </dl>
 
-            return (
-              <li key={reason} className="space-y-1">
-                <div className="flex items-baseline justify-between gap-3 text-xs font-bold">
-                  <span className="text-gray-700 dark:text-gray-200">
-                    {label}
-                  </span>
-                  <span className="text-gray-500 dark:text-gray-400">
-                    오늘{" "}
-                    <span className="text-gray-900 dark:text-white">
-                      {today.toLocaleString("ko-KR")}
-                    </span>
-                    {" · "}누적{" "}
-                    <span className="text-gray-900 dark:text-white">
-                      {total.toLocaleString("ko-KR")}
-                    </span>
-                  </span>
-                </div>
-                <div className="h-1.5 rounded-full bg-gray-100 dark:bg-white/10">
-                  <div
-                    className="bg-brand h-1.5 rounded-full"
-                    style={{ width: `${(total / maxCount) * 100}%` }}
+          <div className="mt-4 border-t border-gray-100 pt-4 dark:border-white/10">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <p className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                사유별 누적 발생 · 괄호는 오늘 발생
+              </p>
+              {topReason && (
+                <p className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-200">
+                  <span
+                    aria-hidden="true"
+                    className="bg-brand inline-block h-2 w-2 rounded-full"
                   />
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                  가장 많은 사유: {topReason.label}
+                </p>
+              )}
+            </div>
+            <ReasonBarChart rows={rows} />
+            <table className="sr-only">
+              <caption>사유별 발생 수</caption>
+              <thead>
+                <tr>
+                  <th scope="col">사유</th>
+                  <th scope="col">오늘</th>
+                  <th scope="col">누적</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.label}>
+                    <th scope="row">{row.label}</th>
+                    <td>{row.today.toLocaleString("ko-KR")}</td>
+                    <td>{row.total.toLocaleString("ko-KR")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </Card>
   );

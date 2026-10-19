@@ -33,6 +33,18 @@ type StoreDetailResponse = Omit<AdminStoreDetail, "storeType"> &
   Partial<Pick<AdminStoreDetail, "storeType">>;
 type StoreUpdateResponse = Pick<AdminStore, "storeId" | "updatedAt">;
 export const adminStoreService = {
+  /** 매장 수만 필요할 때. 상세 조회 없이 목록 totalCount만 쓴다. */
+  countStores: async (storeType?: AdminStoreType) => {
+    const response = await fetchStoreListPage({
+      page: 0,
+      size: 1,
+      sortBy: "createdAt,desc",
+      storeType,
+    });
+
+    return response.totalCount;
+  },
+
   fetchStores: async ({
     keyword,
     page,

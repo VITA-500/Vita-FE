@@ -31,6 +31,7 @@ export const adminQueryKeys = {
   answerFeedback: (limit: number, reason?: AdminAnswerFeedbackReason) =>
     ["admin", "answerFeedback", { limit, reason }] as const,
   userSummary: ["admin", "users", "summary"] as const,
+  operationsSummary: ["admin", "operationsSummary"] as const,
   usersAll: ["admin", "users", "list"] as const,
   users: (params: {
     keyword: string;

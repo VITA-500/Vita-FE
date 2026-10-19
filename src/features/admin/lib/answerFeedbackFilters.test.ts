@@ -6,6 +6,7 @@ import {
   getAnswerFeedbackReasons,
   getAnswerFeedbackTabCounts,
   mergeAnswerFeedbackCandidates,
+  withMatchedReasons,
 } from "./answerFeedbackFilters";
 
 const candidate = (
@@ -107,6 +108,32 @@ describe("answer feedback filters", () => {
       failed: 2,
       NO_MATCH: 6,
       LOW_SIMILARITY: 4,
+    });
+  });
+
+  describe("withMatchedReasons", () => {
+    it("tags each item with the reason lists it came from", () => {
+      const shared = candidate(1, "NO_MATCH");
+      const onlyLow = candidate(2, "ANSWER_FAILED");
+      const items = withMatchedReasons(
+        [shared, onlyLow],
+        ["NO_MATCH", "LOW_SIMILARITY"],
+        [[shared], [shared, onlyLow]],
+      );
+
+      expect(items[0].matchedReasons).toEqual(["NO_MATCH", "LOW_SIMILARITY"]);
+      // 최근 사유(ANSWER_FAILED)와 달라도 걸린 사유는 LOW_SIMILARITY다.
+      expect(items[1].matchedReasons).toEqual(["LOW_SIMILARITY"]);
+    });
+
+    it("does not tag items on the all tab", () => {
+      const items = withMatchedReasons(
+        [candidate(1, "NO_MATCH")],
+        [undefined],
+        [[candidate(1, "NO_MATCH")]],
+      );
+
+      expect(items[0].matchedReasons).toBeUndefined();
     });
   });
 });

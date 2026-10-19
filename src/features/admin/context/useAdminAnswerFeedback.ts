@@ -13,6 +13,7 @@ import {
   filterAnswerFeedback,
   getAnswerFeedbackReasons,
   mergeAnswerFeedbackCandidates,
+  withMatchedReasons,
   type AnswerFeedbackFilter,
   type AnswerFeedbackQualityFilter,
 } from "@/features/admin/lib/answerFeedbackFilters";
@@ -84,7 +85,21 @@ export const useAdminAnswerFeedbackList = ({
     const stats = toLimitedMock(limit);
 
     return {
-      candidates: filterAnswerFeedback(stats.candidates, filter, qualityFilter),
+      candidates: (() => {
+        const filtered = filterAnswerFeedback(
+          stats.candidates,
+          filter,
+          qualityFilter,
+        );
+        // 목데이터는 최근 사유로 거르므로 걸린 사유도 최근 사유 하나다.
+        return withMatchedReasons(
+          filtered,
+          reasons,
+          reasons.map((reason) =>
+            filtered.filter((candidate) => candidate.failReason === reason),
+          ),
+        );
+      })(),
       error: null,
       isLoading: false,
       stats,
@@ -100,9 +115,13 @@ export const useAdminAnswerFeedbackList = ({
     candidates:
       isLoading || results.some((result) => !result)
         ? []
-        : mergeAnswerFeedbackCandidates(
+        : withMatchedReasons(
+            mergeAnswerFeedbackCandidates(
+              results.map((result) => result?.candidates ?? []),
+            ).slice(0, limit),
+            reasons,
             results.map((result) => result?.candidates ?? []),
-          ).slice(0, limit),
+          ),
     error: hasError
       ? "답변 피드백을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
       : null,

@@ -5,6 +5,7 @@ import {
   answerFeedbackFilterGuides,
   AnswerFeedbackFilterTabs,
 } from "@/features/admin/components/AnswerFeedbackFilterTabs";
+import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { AnswerFeedbackContent } from "@/features/admin/components/AnswerFeedbackContent";
 import {
   useAdminAnswerFeedback,
@@ -15,10 +16,12 @@ import {
   type AnswerFeedbackFilter,
   type AnswerFeedbackQualityFilter,
 } from "@/features/admin/lib/answerFeedbackFilters";
-import { getAnswerFeedbackStatItems } from "@/features/admin/lib/answerFeedbackStats";
+import { getAnswerFeedbackSummaryText } from "@/features/admin/lib/answerFeedbackStats";
 import { ADMIN_ANSWER_FEEDBACK_MAX_LIMIT } from "@/entities/feedback";
 import { Card, CardContent, CardHeader } from "@/shared/ui/atoms/Card";
-import { StatCard } from "@/shared/ui/organisms/StatCard";
+
+/** 항목 카드가 길어서(답변·사유 펼침) 한 페이지에 10개씩 보여준다. 목록은 최대 200개를 한 번에 받아 화면에서 나눈다. */
+const ANSWER_FEEDBACK_PAGE_SIZE = 10;
 
 const filterTitles: Record<AnswerFeedbackFilter, string> = {
   all: "전체 답변 피드백",
@@ -42,9 +45,16 @@ export const AnswerFeedbackManagement = () => {
     limit: ADMIN_ANSWER_FEEDBACK_MAX_LIMIT,
     qualityFilter,
   });
-  const statItems = getAnswerFeedbackStatItems(
-    overview.stats?.summary,
-    overview.isLoading,
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(list.candidates.length / ANSWER_FEEDBACK_PAGE_SIZE),
+  );
+  // 무시 처리로 항목이 줄어 마지막 페이지가 사라지면 남은 마지막 페이지를 보여준다.
+  const currentPage = Math.min(page, totalPages);
+  const pageCandidates = list.candidates.slice(
+    (currentPage - 1) * ANSWER_FEEDBACK_PAGE_SIZE,
+    currentPage * ANSWER_FEEDBACK_PAGE_SIZE,
   );
   const counts = useMemo(
     () => getAnswerFeedbackTabCounts(overview.stats),
@@ -54,6 +64,7 @@ export const AnswerFeedbackManagement = () => {
   const changeFilter = (nextFilter: AnswerFeedbackFilter) => {
     setFilter(nextFilter);
     setQualityFilter("all");
+    setPage(1);
   };
 
   return (
@@ -66,20 +77,21 @@ export const AnswerFeedbackManagement = () => {
           유형별로 나눠 확인하고, FAQ로 보완했거나 확인이 끝난 피드백은
           무시하세요.
         </p>
+        {/* 숫자는 대시보드와 같아서 카드 대신 한 줄로만 보여준다. */}
+        {overview.isLoading ? (
+          <span
+            role="status"
+            aria-label="요약 조회 중"
+            className="mt-3 inline-block h-5 w-64 max-w-full rounded-md bg-gray-100 motion-safe:animate-pulse dark:bg-white/5"
+          />
+        ) : overview.stats ? (
+          <p className="mt-3 text-sm font-bold text-gray-800 dark:text-gray-100">
+            {getAnswerFeedbackSummaryText(overview.stats.summary)}
+          </p>
+        ) : null}
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-3">
-        {statItems.map((stat) => (
-          <StatCard
-            key={stat.label}
-            label={stat.label}
-            value={stat.value}
-            helper={stat.helper}
-          />
-        ))}
-      </section>
-
-      <section className="mt-8">
+      <section>
         <Card>
           <CardHeader
             title={filterTitles[filter]}
@@ -93,12 +105,15 @@ export const AnswerFeedbackManagement = () => {
                   filter={filter}
                   qualityFilter={qualityFilter}
                   onFilterChange={changeFilter}
-                  onQualityFilterChange={setQualityFilter}
+                  onQualityFilterChange={(nextQualityFilter) => {
+                    setQualityFilter(nextQualityFilter);
+                    setPage(1);
+                  }}
                 />
               </div>
             )}
             <AnswerFeedbackContent
-              candidates={list.candidates}
+              candidates={pageCandidates}
               emptyDescription={answerFeedbackFilterGuides[filter]}
               emptyTitle={
                 filter === "all"
@@ -109,6 +124,15 @@ export const AnswerFeedbackManagement = () => {
               isLoading={list.isLoading}
               stats={list.stats}
             />
+            {!list.isLoading && list.candidates.length > 0 && (
+              <div className="border-border-soft mt-5 flex justify-center border-t pt-4 dark:border-white/10">
+                <AdminPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setPage}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       </section>

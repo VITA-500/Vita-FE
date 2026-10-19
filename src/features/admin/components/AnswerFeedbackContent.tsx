@@ -3,6 +3,7 @@
 import { AdminErrorBanner } from "@/features/admin/components/AdminErrorBanner";
 import { AnswerFeedbackList } from "@/features/admin/components/AnswerFeedbackList";
 import { useDismissAnswerFeedback } from "@/features/admin/context/useAdminAnswerFeedback";
+import type { AnswerFeedbackListItem } from "@/features/admin/lib/answerFeedbackFilters";
 import type {
   AdminAnswerFeedback,
   AdminAnswerFeedbackStats,
@@ -13,7 +14,7 @@ type AnswerFeedbackContentProps = {
   isLoading: boolean;
   stats: AdminAnswerFeedbackStats | null;
   /** 보여줄 항목. 없으면 stats.candidates 전체(답변 피드백 페이지는 필터한 목록을 넘긴다). */
-  candidates?: readonly AdminAnswerFeedback[];
+  candidates?: readonly AnswerFeedbackListItem[];
   /** false면 무시 버튼을 두지 않는다(대시보드는 요약만 보여준다). */
   allowDismiss?: boolean;
   emptyTitle?: string;
