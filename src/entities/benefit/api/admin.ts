@@ -1,9 +1,9 @@
 import type {
   AdminBenefitDetail,
   AdminBenefitRequest,
-  PageResponse,
-} from "@/features/admin/types";
+} from "@/entities/benefit/model/types";
 import { requestJson } from "@/shared/api/http";
+import type { PageResponse } from "@/shared/api/response";
 
 /** BE BenefitService: size는 1~100 */
 export const ADMIN_BENEFIT_MAX_PAGE_SIZE = 100;
@@ -18,7 +18,7 @@ type FetchBenefitsParams = {
 };
 
 /** 관리자 제휴 혜택(브랜드) 관리 API (/admin/benefits) */
-export const adminBenefitService = {
+export const adminBenefitApi = {
   fetchBenefits: ({
     category,
     keyword,

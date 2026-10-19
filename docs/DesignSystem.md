@@ -42,7 +42,7 @@ Feature UI가 두 곳 이상에서 반복되기 전까지는 `shared/ui`로 올�
 
 | 단계        | 기준                                                                                                  | 현재 컴포넌트                                                                                                                    |
 | ----------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `atoms`     | 하나의 요소 수준. 다른 shared UI를 import하지 않고 내부 상태가 없다.                                  | Button, Card, TextField, Select, Logo, UserAvatar, AnimatedLockIcon, BenefitCategoryIcon                                         |
+| `atoms`     | 하나의 요소 수준. 다른 shared UI를 import하지 않고 내부 상태가 없다.                                  | Button, Card, TextField, Select, Logo, UserAvatar, AnimatedLockIcon                                                              |
 | `molecules` | 여러 요소로 된 하나의 조작·표시 단위. 다른 shared UI는 import하지 않고, 상태는 열림 여부 정도만 둔다. | SearchInput, FilterDropdown, CalendarDateField, ConfirmCheckbox, RailTooltip, ThemeToggleButton, WarningNotice                   |
 | `organisms` | 다른 shared UI(atom·organism)를 조합하거나, portal·포커스·단계 진행 같은 동작을 가진다.               | Accordion, ChecklistCard, GuidedStepFlow, InfoTable, Modal, PlanCard, PortalDialog, LogoutConfirmDialog, StatCard, StepGuideCard |
 
@@ -52,6 +52,7 @@ Feature UI가 두 곳 이상에서 반복되기 전까지는 `shared/ui`로 올�
 - 아래 단계는 위 단계를 import하지 않는다(atoms → molecules·organisms import 금지, molecules → organisms import 금지). organism끼리는 import할 수 있다(예: LogoutConfirmDialog → PortalDialog).
 - Storybook title도 같은 구분을 따른다: `Shared/Atoms/Button`, `Shared/Molecules/SearchInput`, `Shared/Organisms/Modal`.
 - 한 feature에서만 쓰는 컴포넌트(예: 채팅 답변 카드)는 단계 분류 대상이 아니며, 해당 feature나 entity로 옮긴다.
+- 특정 데이터를 아는 UI는 shared가 아니라 entity의 `ui`에 둔다(예: 혜택 카테고리 아이콘 → `entities/benefit`).
 
 ## Shared UI Rules
 

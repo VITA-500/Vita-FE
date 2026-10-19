@@ -3,7 +3,7 @@ import { StoreOpenFilterMenu } from "@/features/store/components/StoreOpenFilter
 import { StoreOpenStatusBadge } from "@/features/store/components/StoreOpenStatusBadge";
 import { StorePanelPagination } from "@/features/store/components/StorePanelPagination";
 import { mapCategoryOptions } from "@/features/store/constants";
-import { renderBenefitCategoryIcon } from "@/features/store/lib/benefitCategoryIcons";
+import { renderBenefitCategoryIcon } from "@/entities/benefit";
 import { getStoreMarkerLabel } from "@/features/store/lib/storeMarkerOverlays";
 import type { BenefitCategoryOption } from "@/features/store/lib/benefitService";
 import type {

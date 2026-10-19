@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { adminQueryKeys } from "@/features/admin/context/adminQueryKeys";
 import { invalidateStoreBenefits } from "@/features/admin/context/invalidateStoreBenefits";
-import { adminBenefitService } from "@/features/admin/lib/adminBenefitService";
+import { adminBenefitApi } from "@/entities/benefit";
 import type {
   AdminBenefitCategory,
   AdminBenefitRequest,
@@ -30,7 +30,7 @@ export const useAdminBenefits = () => {
   const query = useQuery({
     enabled: Boolean(env.apiBaseUrl),
     queryFn: () =>
-      adminBenefitService.fetchBenefits({
+      adminBenefitApi.fetchBenefits({
         category: categoryFilter === "ALL" ? undefined : categoryFilter,
         keyword,
         page,
@@ -88,15 +88,15 @@ export const useAdminBenefits = () => {
     setPageSize,
     setSort,
     createBenefit: async (input: AdminBenefitRequest) => {
-      await adminBenefitService.createBenefit(input);
+      await adminBenefitApi.createBenefit(input);
       await refresh();
     },
     updateBenefit: async (benefitId: number, input: AdminBenefitRequest) => {
-      await adminBenefitService.updateBenefit(benefitId, input);
+      await adminBenefitApi.updateBenefit(benefitId, input);
       await refresh();
     },
     deleteBenefit: async (benefitId: number) => {
-      await adminBenefitService.deleteBenefit(benefitId);
+      await adminBenefitApi.deleteBenefit(benefitId);
       await refresh();
     },
   };

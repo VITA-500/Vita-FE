@@ -1,5 +1,13 @@
 import { env } from "@/shared/config/env";
 
+/** 페이지 단위 목록 응답 (BE Page 응답 공통 형식) */
+export type PageResponse<T> = {
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
+  content: T[];
+};
+
 export type ApiErrorDetails = {
   code?: string;
   fieldErrors?: { field: string; message: string }[] | null;

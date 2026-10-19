@@ -1,9 +1,9 @@
 import type {
-  AdminBenefit,
   AdminStore,
   AdminStoreDetail,
   AdminStoreType,
 } from "@/features/admin/types";
+import { benefitApi } from "@/entities/benefit";
 import { requestJson } from "@/shared/api/http";
 
 type AdminStoreRequest = Omit<
@@ -32,10 +32,6 @@ type StoreListItemResponse = Omit<AdminStore, "storeType"> &
 type StoreDetailResponse = Omit<AdminStoreDetail, "storeType"> &
   Partial<Pick<AdminStoreDetail, "storeType">>;
 type StoreUpdateResponse = Pick<AdminStore, "storeId" | "updatedAt">;
-type BenefitListResponse = {
-  benefits: AdminBenefit[];
-};
-
 export const adminStoreService = {
   fetchStores: async ({
     keyword,
@@ -120,23 +116,8 @@ export const adminStoreService = {
     });
   },
 
-  fetchBenefits: async (category?: string) => {
-    const params = new URLSearchParams();
-
-    if (category?.trim()) {
-      params.set("category", category.trim());
-    }
-
-    const query = params.toString();
-    const response = await requestJson<BenefitListResponse>(
-      `/benefits/list${query ? `?${query}` : ""}`,
-      {
-        timeoutMs: 8000,
-      },
-    );
-
-    return response.benefits;
-  },
+  /** 매장 폼의 혜택 선택지. /benefits/list 조회는 entities/benefit 하나로 모았다. */
+  fetchBenefits: (category?: string) => benefitApi.fetchBenefits({ category }),
 };
 
 const fetchStoreListPage = async ({
