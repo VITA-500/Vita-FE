@@ -127,6 +127,7 @@ const StoreMapPanelContent = ({
     searchInputRef,
     searchQuery,
     searchResultStores,
+    selectTransitRoute,
     selectSearchHistory,
     selectedBenefitCategory,
     setBenefitServiceFilters,
@@ -293,6 +294,7 @@ const StoreMapPanelContent = ({
       routeMode={routeMode}
       routeResultMessage={routeResultMessage}
       routeSummary={routeSummary}
+      selectTransitRoute={selectTransitRoute}
       sameLocationStores={sameLocationStores}
       showNearbyStoresAfterRoute={showNearbyStoresAfterRoute}
       soloStoreId={soloStoreId}

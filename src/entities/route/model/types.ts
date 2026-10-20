@@ -32,6 +32,17 @@ export type StoreRoute = {
   mode: StoreRouteMode;
   path: StoreRoutePoint[];
   segments?: StoreRouteSegment[];
+  options?: StoreRouteOption[];
+};
+
+export type StoreRouteOption = {
+  tags: string[];
+  routeType?: string;
+  distanceMeters: number;
+  durationSeconds: number;
+  transfers?: number;
+  path: StoreRoutePoint[];
+  segments?: StoreRouteSegment[];
 };
 
 /** 대중교통 경로의 단계 하나(도보·버스·지하철). 상세 타임라인과 단계 목록이 쓴다. */

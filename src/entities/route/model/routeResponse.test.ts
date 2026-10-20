@@ -12,6 +12,31 @@ const baseResponse = {
 } satisfies Partial<RouteResponse>;
 
 describe("getRoutePath", () => {
+  it("reads a BE transit option path", () => {
+    const option = {
+      path: [
+        { lat: 37.5, lng: 127.0 },
+        { lat: 37.51, lng: 127.01 },
+      ],
+      segments: [
+        {
+          durationSeconds: 300,
+          path: [
+            { lat: 37.5, lng: 127.0 },
+            { lat: 37.51, lng: 127.01 },
+          ],
+          type: "SUBWAY",
+        },
+      ],
+    };
+
+    expect(getRoutePath(option)).toEqual(option.path);
+    expect(getRouteSegments(option)[0]).toMatchObject({
+      durationSeconds: 300,
+      kind: "subway",
+    });
+  });
+
   it("reads points written as lat/lng, latitude/longitude or x/y", () => {
     expect(
       getRoutePath({
