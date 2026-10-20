@@ -3,6 +3,12 @@ import type { ChatStoreMap } from "@/entities/chat";
 
 type Point = { lat: number; lng: number };
 
+/** 사용자의 현재 위치에서 장소/매장까지 탐색하려는 질문인지 판별한다. */
+export const isUserOriginNavigationPrompt = (prompt: string) =>
+  /내\s*위치|여기서|얼마나\s*걸려|가는\s*(?:법|길)|길찾기|어떻게\s*가/.test(
+    prompt,
+  );
+
 /**
  * 채팅 매장 지도의 "내 위치"(파란 점).
  * - 내 위치 버튼으로 받은 실제 위치가 있으면 그 위치
@@ -14,8 +20,12 @@ type Point = { lat: number; lng: number };
 export const getChatStoreMapUserLocation = (
   storeMap: Pick<ChatStoreMap, "origin" | "originSource">,
   currentLocation: Point | null,
+  placeUserLocation: Point | null = null,
 ): Point | null => {
   if (currentLocation) return currentLocation;
+  if (storeMap.originSource === "place" && placeUserLocation) {
+    return placeUserLocation;
+  }
   if (!storeMap.origin) return null;
 
   const isCurrentOrigin =

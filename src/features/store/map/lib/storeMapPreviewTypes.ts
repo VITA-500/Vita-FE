@@ -90,7 +90,13 @@ export type StoreMapPreviewProps = {
   onRouteObstructed?: () => void;
   /** key가 바뀔 때마다 points가 모두 보이도록 지도 범위를 맞춘다(검색 결과 표시용). */
   /** smooth: 순간 이동 대신 부드럽게 이동(panTo)하고, 모자라면 애니메이션으로 축소한다(페이지 전환용). */
-  fitTarget?: { key: string; points: MapPoint[]; smooth?: boolean } | null;
+  fitTarget?: {
+    key: string;
+    points: MapPoint[];
+    smooth?: boolean;
+    zoomLevel?: number;
+    includeUserLocation?: boolean;
+  } | null;
   /** 값이 바뀌면 이번에 그리는 핀·원을 서서히 나타나게 한다(페이지 전환용). */
   markerEnterKey?: string;
   /**
