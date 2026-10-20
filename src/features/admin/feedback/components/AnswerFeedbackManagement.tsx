@@ -19,9 +19,11 @@ import {
 import { getAnswerFeedbackSummaryText } from "@/features/admin/feedback/lib/answerFeedbackStats";
 import { ADMIN_ANSWER_FEEDBACK_MAX_LIMIT } from "@/entities/feedback";
 import { Card, CardContent, CardHeader } from "@/shared/ui/atoms/Card";
+import { FilterDropdown } from "@/features/admin/common/components/FilterDropdown";
 
 /** 항목 카드가 길어서(답변·사유 펼침) 한 페이지에 10개씩 보여준다. 목록은 최대 200개를 한 번에 받아 화면에서 나눈다. */
 const ANSWER_FEEDBACK_PAGE_SIZE = 10;
+type FeedbackSortOrder = "recent" | "oldest";
 
 const filterTitles: Record<AnswerFeedbackFilter, string> = {
   all: "전체 답변 피드백",
@@ -40,19 +42,29 @@ export const AnswerFeedbackManagement = () => {
   const [filter, setFilter] = useState<AnswerFeedbackFilter>("all");
   const [qualityFilter, setQualityFilter] =
     useState<AnswerFeedbackQualityFilter>("all");
+  const [sortOrder, setSortOrder] = useState<FeedbackSortOrder>("recent");
   const list = useAdminAnswerFeedbackList({
     filter,
     limit: ADMIN_ANSWER_FEEDBACK_MAX_LIMIT,
     qualityFilter,
   });
   const [page, setPage] = useState(1);
+  const sortedCandidates = useMemo(
+    () =>
+      [...list.candidates].sort((a, b) => {
+        const difference =
+          Date.parse(b.lastOccurredAt) - Date.parse(a.lastOccurredAt);
+        return sortOrder === "recent" ? difference : -difference;
+      }),
+    [list.candidates, sortOrder],
+  );
   const totalPages = Math.max(
     1,
-    Math.ceil(list.candidates.length / ANSWER_FEEDBACK_PAGE_SIZE),
+    Math.ceil(sortedCandidates.length / ANSWER_FEEDBACK_PAGE_SIZE),
   );
   // 무시 처리로 항목이 줄어 마지막 페이지가 사라지면 남은 마지막 페이지를 보여준다.
   const currentPage = Math.min(page, totalPages);
-  const pageCandidates = list.candidates.slice(
+  const pageCandidates = sortedCandidates.slice(
     (currentPage - 1) * ANSWER_FEEDBACK_PAGE_SIZE,
     currentPage * ANSWER_FEEDBACK_PAGE_SIZE,
   );
@@ -64,6 +76,11 @@ export const AnswerFeedbackManagement = () => {
   const changeFilter = (nextFilter: AnswerFeedbackFilter) => {
     setFilter(nextFilter);
     setQualityFilter("all");
+    setPage(1);
+  };
+
+  const changeSortOrder = (nextSortOrder: FeedbackSortOrder) => {
+    setSortOrder(nextSortOrder);
     setPage(1);
   };
 
@@ -99,16 +116,46 @@ export const AnswerFeedbackManagement = () => {
           />
           <CardContent>
             {overview.stats && (
-              <div className="mb-5">
-                <AnswerFeedbackFilterTabs
-                  counts={counts}
-                  filter={filter}
-                  qualityFilter={qualityFilter}
-                  onFilterChange={changeFilter}
-                  onQualityFilterChange={(nextQualityFilter) => {
-                    setQualityFilter(nextQualityFilter);
-                    setPage(1);
-                  }}
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <AnswerFeedbackFilterTabs
+                    counts={counts}
+                    filter={filter}
+                    qualityFilter={qualityFilter}
+                    onFilterChange={changeFilter}
+                    onQualityFilterChange={(nextQualityFilter) => {
+                      setQualityFilter(nextQualityFilter);
+                      setPage(1);
+                    }}
+                  />
+                </div>
+                <FilterDropdown
+                  aria-label="피드백 정렬"
+                  value={sortOrder}
+                  onChange={(value) =>
+                    changeSortOrder(value as FeedbackSortOrder)
+                  }
+                  options={[
+                    { label: "최근순", value: "recent" },
+                    { label: "오래된 순", value: "oldest" },
+                  ]}
+                  className="w-32 shrink-0"
+                />
+              </div>
+            )}
+            {!overview.stats && (
+              <div className="mb-5 flex justify-end">
+                <FilterDropdown
+                  aria-label="피드백 정렬"
+                  value={sortOrder}
+                  onChange={(value) =>
+                    changeSortOrder(value as FeedbackSortOrder)
+                  }
+                  options={[
+                    { label: "최근순", value: "recent" },
+                    { label: "오래된 순", value: "oldest" },
+                  ]}
+                  className="w-32"
                 />
               </div>
             )}
@@ -124,7 +171,7 @@ export const AnswerFeedbackManagement = () => {
               isLoading={list.isLoading}
               stats={list.stats}
             />
-            {!list.isLoading && list.candidates.length > 0 && (
+            {!list.isLoading && sortedCandidates.length > 0 && (
               <div className="border-border-soft mt-5 flex justify-center border-t pt-4 dark:border-white/10">
                 <AdminPagination
                   currentPage={currentPage}

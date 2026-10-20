@@ -19,6 +19,7 @@ import { ButtonLink } from "@/shared/ui/atoms/Button";
 import { Card } from "@/shared/ui/atoms/Card";
 import { cn } from "@/shared/lib/cn";
 import type { AdminAnswerFeedbackReason } from "@/entities/feedback";
+import { FeedbackReasonDonutChart } from "@/features/admin/dashboard/components/FeedbackReasonDonutChart";
 
 /** 차트 라이브러리는 대시보드에서만 쓰므로 따로 불러온다. */
 const ReasonBarChart = dynamic(
@@ -45,6 +46,26 @@ export const AdminDashboard = () => {
   const hasOperationsError = Boolean(operations.error);
   const operationsSummary = operations.summary;
   const emptyBenefits = operationsSummary?.emptyBenefits ?? 0;
+  const qualityTodayCount = feedbackStats
+    ? (feedbackStats.summary.todayReasonCounts?.NO_MATCH ?? 0) +
+      (feedbackStats.summary.todayReasonCounts?.LOW_SIMILARITY ?? 0)
+    : undefined;
+  const qualityReasonCounts = feedbackStats
+    ? [
+        {
+          label: "검색 결과 없음",
+          count: feedbackStats.summary.reasonCounts?.NO_MATCH ?? 0,
+        },
+        {
+          label: "유사도 낮음",
+          count: feedbackStats.summary.reasonCounts?.LOW_SIMILARITY ?? 0,
+        },
+      ]
+    : [];
+  const topQualityReason = qualityReasonCounts.reduce(
+    (top, current) => (current.count > top.count ? current : top),
+    { label: "-", count: 0 },
+  );
   return (
     <div>
       <div className="mb-8">
@@ -59,7 +80,7 @@ export const AdminDashboard = () => {
 
       <section
         aria-label="운영 주요 지표"
-        className="grid gap-4 sm:grid-cols-2"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
       >
         <DashboardMetric
           label="보완 대상"
@@ -93,6 +114,35 @@ export const AdminDashboard = () => {
           priority="오늘 확인할 항목"
           description="최근 발생일이 오늘인 보완 대상 질문이에요. 새로 들어온 피드백을 확인하세요."
         />
+        <DashboardMetric
+          label="오늘 응답 품질 문제"
+          value={qualityTodayCount}
+          unit="건"
+          isLoading={isFeedbackLoading}
+          hasError={Boolean(feedbackError)}
+          tone="rose"
+          icon={<BookOpen size={18} aria-hidden="true" />}
+          priority="오늘 품질 점검"
+          description="검색 결과 없음과 유사도 낮음으로 분류된 오늘의 응답 품질 문제예요."
+        />
+        <DashboardMetric
+          label="주요 품질 문제"
+          value={topQualityReason.count}
+          unit="건"
+          extra={
+            feedbackStats && topQualityReason.count > 0 ? (
+              <span className="ml-2 max-w-[8rem] truncate text-sm font-semibold text-gray-600 dark:text-gray-300">
+                · {topQualityReason.label}
+              </span>
+            ) : null
+          }
+          isLoading={isFeedbackLoading}
+          hasError={Boolean(feedbackError)}
+          tone="amber"
+          icon={<MessagesSquare size={18} aria-hidden="true" />}
+          priority="누적 최다 품질 문제"
+          description="응답 품질 문제 중 누적 발생이 가장 많은 유형이에요."
+        />
       </section>
 
       <section aria-label="오늘 사용자 반응과 사유별 발생" className="mt-4">
@@ -101,6 +151,8 @@ export const AdminDashboard = () => {
           hasError={Boolean(feedbackError)}
           likeCount={feedbackStats?.summary.todayLikeCount}
           dislikeCount={feedbackStats?.summary.todayDislikeCount}
+          totalLikeCount={feedbackStats?.summary.likeCount}
+          totalDislikeCount={feedbackStats?.summary.dislikeCount}
           reasonCounts={feedbackStats?.summary.reasonCounts}
           todayReasonCounts={feedbackStats?.summary.todayReasonCounts}
         />
@@ -155,7 +207,7 @@ export const AdminDashboard = () => {
             tone="neutral"
             icon={<BookOpen size={18} aria-hidden="true" />}
             priority="챗봇 답변 근거"
-            description="사용자에게 공개되고 챗봇이 참고하는 FAQ 수예요."
+            description="챗봇이 참고하는 FAQ 수예요."
           />
           <DashboardMetric
             label="정지 회원"
@@ -282,7 +334,7 @@ const DashboardMetric = ({
       </div>
       <div
         className={cn(
-          "mt-3 flex min-h-9 items-center text-3xl font-bold tracking-tight",
+          "mt-3 flex min-h-9 items-center text-2xl font-bold tracking-tight",
           styles.value,
         )}
       >
@@ -317,6 +369,8 @@ const FeedbackReactionsCard = ({
   hasError,
   isLoading,
   likeCount,
+  totalDislikeCount,
+  totalLikeCount,
   reasonCounts,
   todayReasonCounts,
 }: {
@@ -324,6 +378,8 @@ const FeedbackReactionsCard = ({
   hasError: boolean;
   isLoading: boolean;
   likeCount?: number;
+  totalDislikeCount?: number;
+  totalLikeCount?: number;
   reasonCounts?: Record<AdminAnswerFeedbackReason, number>;
   todayReasonCounts?: Record<AdminAnswerFeedbackReason, number>;
 }) => {
@@ -341,6 +397,15 @@ const FeedbackReactionsCard = ({
   const likeRate =
     hasReactions && reactionTotal > 0
       ? Math.round((likeCount / reactionTotal) * 100)
+      : null;
+  const hasTotalReactions =
+    totalLikeCount !== undefined && totalDislikeCount !== undefined;
+  const totalReactionCount = hasTotalReactions
+    ? totalLikeCount + totalDislikeCount
+    : 0;
+  const totalLikeRate =
+    hasTotalReactions && totalReactionCount > 0
+      ? Math.round((totalLikeCount / totalReactionCount) * 100)
       : null;
 
   return (
@@ -383,6 +448,18 @@ const FeedbackReactionsCard = ({
                 {likeCount.toLocaleString("ko-KR")}
               </dd>
             </div>
+            {hasTotalReactions && (
+              <div className="flex items-center gap-1.5">
+                <dt className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                  누적 좋아요 / 아쉬워요
+                </dt>
+                <dd className="text-sm font-bold text-gray-900 dark:text-white">
+                  {totalLikeCount.toLocaleString("ko-KR")} /{" "}
+                  {totalDislikeCount.toLocaleString("ko-KR")} · 좋아요{" "}
+                  {totalLikeRate}%
+                </dd>
+              </div>
+            )}
             <div className="flex items-center gap-1.5">
               <dt className="flex items-center gap-1 text-xs font-bold text-rose-700 dark:text-rose-300">
                 <ThumbsDown size={14} aria-hidden="true" />
@@ -404,20 +481,45 @@ const FeedbackReactionsCard = ({
 
           <div className="mt-4 border-t border-gray-100 pt-4 dark:border-white/10">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-              <p className="text-xs font-bold text-gray-500 dark:text-gray-400">
-                사유별 누적 발생 · 괄호는 오늘 발생
-              </p>
+              <p className="text-xs font-bold text-gray-500 dark:text-gray-400"></p>
               {topReason && (
                 <p className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-200">
                   <span
                     aria-hidden="true"
-                    className="bg-brand inline-block h-2 w-2 rounded-full"
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{ backgroundColor: "#218DAE" }}
                   />
                   가장 많은 사유: {topReason.label}
                 </p>
               )}
             </div>
-            <ReasonBarChart rows={rows} />
+            <div className="grid gap-4 lg:grid-cols-[minmax(180px,0.8fr)_minmax(0,1.4fr)] lg:items-center">
+              <div>
+                <p className="mb-1 text-center text-xs font-bold text-gray-500 dark:text-gray-400">
+                  전체 대비 사유 비중
+                </p>
+                <FeedbackReasonDonutChart rows={rows} />
+                <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                  {rows.map((row, index) => (
+                    <span key={row.label} className="flex items-center gap-1">
+                      <span
+                        className="size-2 rounded-full"
+                        style={{
+                          backgroundColor: [
+                            "#218DAE",
+                            "#2BBBD7",
+                            "#FCE59A",
+                            "#FFD758",
+                          ][index % 4],
+                        }}
+                      />
+                      {row.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <ReasonBarChart rows={rows} />
+            </div>
             <table className="sr-only">
               <caption>사유별 발생 수</caption>
               <thead>

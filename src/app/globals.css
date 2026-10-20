@@ -1,4 +1,9 @@
 @import "tailwindcss";
+
+/* Recharts bars are interactive SVG nodes; don't show a browser focus ring after clicking a bar. */
+.recharts-bar-rectangle:focus {
+  outline: none;
+}
 @import "driver.js/dist/driver.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
