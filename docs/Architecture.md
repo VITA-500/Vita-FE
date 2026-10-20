@@ -115,22 +115,22 @@ shared/
 
 ## Migration
 
-| 단계 | 내용                                                                                      | 종류      |
-| ---- | ----------------------------------------------------------------------------------------- | --------- |
-| 0    | 진행 중 리팩토링 브랜치 머지, 이 문서·DesignSystem 갱신, ESLint 경계 규칙(warn)           | 문서·설정 |
-| 1    | `shared` 정리: `shared/ui` atomic 분류, `shared/hooks`, `shared/providers`                | 이동      |
-| 2    | `entities` 생성: entity별 `api`·`model` 이동, 중복 API 통합                               | 이동      |
-| 3    | 조회를 TanStack Query로 통일(지도는 동작 테스트 선행)                                     | 로직      |
-| 4    | 채팅 ↔ 매장 지도 결합 해소(feature 간 직접 import 제거)                                   | 로직      |
-| 5    | `features/store` 안을 하위 폴더(panel·search·benefit·map·route·reservation·detail)로 분리 | 이동      |
-| 6    | `app/{route}/_components`로 화면 조립 분리                                                | 로직      |
-| 7    | 재내보내기 파일 삭제, ESLint 경계 규칙 `error`, 문서 최종 정리                            | 설정      |
+| 단계 | 내용                                                                                                         | 종류      |
+| ---- | ------------------------------------------------------------------------------------------------------------ | --------- |
+| 0    | 진행 중 리팩토링 브랜치 머지, 이 문서·DesignSystem 갱신, ESLint 경계 규칙(warn)                              | 문서·설정 |
+| 1    | `shared` 정리: `shared/ui` atomic 분류, `shared/hooks`, `shared/providers`                                   | 이동      |
+| 2    | `entities` 생성: entity별 `api`·`model` 이동, 중복 API 통합                                                  | 이동      |
+| 3    | 조회를 TanStack Query로 통일(지도는 동작 테스트 선행)                                                        | 로직      |
+| 4    | 채팅 ↔ 매장 지도 결합 해소(feature 간 직접 import 제거)                                                      | 로직      |
+| 5    | features 안을 역할·화면별 하위 폴더로 분리(`store`, `admin`, `chat`), 랜딩 섹션은 `app/(marketing)`으로 이동 | 이동      |
+| 6    | `app/{route}/_components`로 화면 조립 분리                                                                   | 로직      |
+| 7    | 재내보내기 파일 삭제, ESLint 경계 규칙 `error`, 문서 최종 정리                                               | 설정      |
 
 ## Current Slices
 
 현재(이동 전) feature slice:
 
-- `admin`: 관리자 대시보드, 회원·FAQ·매장·제휴처·혜택·답변 피드백 관리 UI와 TanStack Query 기반 데이터 상태
+- `admin`: 관리자 화면. `common`(셸·권한 확인·공통 입력·페이지·데이터 Provider·쿼리 키·폼 스키마), `dashboard`, `partners`(매장+혜택 탭), `stores`, `benefits`, `faq`, `users`, `feedback`(답변 피드백) 하위 폴더로 나뉜다. 화면별 데이터 훅은 각 폴더의 `hooks/`에 둔다.
 - `auth`: 인증 상태, 로그인/회원가입/OAuth service, auth provider
 - `home`: 랜딩 화면 섹션
 - `chat`: 채팅 UI, 스트리밍, 사이드바, 검색, 비로그인 채팅 UX, 채팅 매장 추천

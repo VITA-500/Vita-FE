@@ -1,4 +1,4 @@
-import { AnswerFeedbackManagement } from "@/features/admin/components/AnswerFeedbackManagement";
+import { AnswerFeedbackManagement } from "@/features/admin/feedback/components/AnswerFeedbackManagement";
 
 const AdminFeedbackPage = () => <AnswerFeedbackManagement />;
 
