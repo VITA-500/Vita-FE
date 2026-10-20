@@ -8,11 +8,11 @@ import {
   buildLoginHref,
   LOGIN_RETURN_PARAM,
   takeRememberedLoginReturnTo,
-} from "@/features/auth/lib/loginReturn";
-import { tokenStorage } from "@/features/auth/lib/tokenStorage";
+  tokenStorage,
+} from "@/entities/user";
 import { routes } from "@/shared/constants/routes";
-import { Logo } from "@/shared/ui/Logo";
-import { showToast } from "@/shared/ui/ToastProvider";
+import { Logo } from "@/shared/ui/atoms/Logo";
+import { showToast } from "@/shared/providers/ToastProvider";
 
 const oauthErrorMessages: Record<string, string> = {
   OAUTH_AUTHENTICATION_FAILED: "소셜 로그인에 실패했습니다.",

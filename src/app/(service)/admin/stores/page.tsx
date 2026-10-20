@@ -1,5 +1,5 @@
-import { StoreManagement } from "@/features/admin/components/StoreManagement";
-import { AdminDataProvider } from "@/features/admin/context/AdminDataContext";
+import { StoreManagement } from "@/features/admin/stores/components/StoreManagement";
+import { AdminDataProvider } from "@/features/admin/common/context/AdminDataContext";
 
 const AdminStoresPage = () => (
   <AdminDataProvider>

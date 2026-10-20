@@ -1,145 +1,62 @@
 "use client";
 
-import type { MouseEvent } from "react";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PanelLeft } from "lucide-react";
-import { ChatConversationContent } from "@/features/chat/components/ChatConversationContent";
-import { ChatSidebar } from "@/features/chat/components/ChatSidebar";
-import { ChatSearchDialog } from "@/features/chat/components/ChatSearchDialog";
-import { ChatSettingsPanel } from "@/features/chat/components/ChatSettingsPanel";
-import { GuestNewChatDialog } from "@/features/chat/components/GuestNewChatDialog";
-import { ProfilePanel } from "@/features/auth/components/ProfilePanel";
-import { StoreMapPanel } from "@/features/store/components/StoreMapPanel";
-import { useIsDesktopViewport } from "@/features/store/hooks/useIsDesktopViewport";
-import { RailTooltip, type RailTooltipProps } from "@/shared/ui/RailTooltip";
-import type { ChatMode } from "@/features/chat/types";
-import type {
-  MapCategory,
-  StoreMapInitialAction,
-  StoreRouteMode,
-} from "@/features/store/types";
-import { useChatConversationController } from "@/features/chat/hooks/useChatConversationController";
-import { useChatTour } from "@/features/chat/hooks/useChatTour";
-import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
-import { buildLoginHref } from "@/features/auth/lib/loginReturn";
+import { ChatModeContent } from "./_components/ChatModeContent";
+import { ChatPageDialogs } from "./_components/ChatPageDialogs";
+import { ChatPageSidebar } from "./_components/ChatPageSidebar";
+import { useChatSidebarOpen } from "./_hooks/useChatSidebarOpen";
+import { useRailTooltip } from "./_hooks/useRailTooltip";
+import { getStoreMapInitialAction, toChatMode } from "./_lib/chatPageParams";
+import { useChatConversationController } from "@/features/chat/conversation/hooks/useChatConversationController";
+import { useChatTour } from "@/features/chat/conversation/hooks/useChatTour";
+import { useAuthUser } from "@/entities/user";
 import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
+import { RailTooltip } from "@/shared/ui/molecules/RailTooltip";
 
 const ChatPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const {
-    hasAccessToken,
-    isAuthenticated,
-    isLoading: isAuthLoading,
-    isReady: isAuthReady,
-    user,
-  } = useAuthUser();
-  // 사이드바 열림 상태는 데스크톱·모바일을 따로 둔다.
-  // - 데스크톱: 매장 지도(?mode=store)로 바로 들어오면 닫은(접은) 상태, 그 외에는 펼친 상태로 시작한다.
-  // - 모바일: 사이드바가 화면을 덮는 서랍이라 항상 닫힌 상태로 시작하고, 좌측 상단 버튼으로 연다.
-  const isDesktop = useIsDesktopViewport();
-  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(
-    () => searchParams.get("mode") !== "store",
-  );
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const isSidebarOpen = isDesktop ? isDesktopSidebarOpen : isMobileSidebarOpen;
-  const setIsSidebarOpen = (nextIsOpen: boolean) => {
-    if (isDesktop) {
-      setIsDesktopSidebarOpen(nextIsOpen);
-      return;
-    }
-
-    setIsMobileSidebarOpen(nextIsOpen);
-  };
+  const auth = useAuthUser();
+  const { isAuthenticated, isLoading: isAuthLoading, isReady, user } = auth;
+  const activeMode = toChatMode(searchParams.get("mode"));
+  const storeMapInitialAction = getStoreMapInitialAction(searchParams);
+  const sidebar = useChatSidebarOpen(activeMode);
+  const tooltip = useRailTooltip(sidebar.isOpen);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isGuestNewChatDialogOpen, setIsGuestNewChatDialogOpen] =
     useState(false);
-  const [railTooltip, setRailTooltip] = useState<RailTooltipProps | null>(null);
-  const modeParam = searchParams.get("mode");
-  const routeMode: ChatMode =
-    modeParam === "store" || modeParam === "profile" ? modeParam : "chat";
-  const activeMode: ChatMode = routeMode;
-  const storeMapInitialAction = getStoreMapInitialAction(searchParams);
-  // 채팅 등 다른 화면에서 매장 지도로 전환될 때도 지도를 넓게 보도록 사이드바를 닫는다.
-  const [sidebarModeSnapshot, setSidebarModeSnapshot] = useState(activeMode);
-
-  if (sidebarModeSnapshot !== activeMode) {
-    setSidebarModeSnapshot(activeMode);
-
-    if (activeMode === "store") {
-      setIsSidebarOpen(false);
-    }
-  }
   const startChatTour = useChatTour();
-  const {
-    chatInput,
-    chatInputRef,
-    chatSessions,
-    chatStatus,
-    editAndResubmitPrompt,
-    editHintMessageId,
-    currentChatTitle,
-    currentSessionId,
-    deleteChatSession,
-    handleSelectChat,
-    hasChatStarted,
-    hasLoadedRecentChats,
-    feedbackMessageIds,
-    loadingSessionId,
-    messages,
-    pinnedSessionIds,
-    renameChatSession,
-    scrollContainerRef,
-    sessionTitles,
-    setChatInput,
-    startNewChat,
-    streamingReply,
-    retryAnswer,
-    sendAnswerFeedback,
-    stopChatAnswer,
-    submitChatPrompt,
-    togglePinChatSession,
-  } = useChatConversationController({
+  const conversation = useChatConversationController({
     activeMode,
     currentUserId: user?.userId,
     hasUser: Boolean(user),
     isAuthenticated,
-    isAuthReady,
+    isAuthReady: isReady,
     onRequireChatMode: () => router.replace(routes.chat),
   });
 
-  const showRailTooltip =
-    (label: string, shortcut?: string) => (event: MouseEvent<HTMLElement>) => {
-      if (isSidebarOpen) return;
+  /** 투어는 채팅 화면 기준이라, 다른 화면이면 채팅으로 옮긴 뒤 시작한다. */
+  const startTour = () => {
+    if (activeMode !== "chat") {
+      router.replace(routes.chat);
+    }
 
-      const rect = event.currentTarget.getBoundingClientRect();
-      setRailTooltip({
-        label,
-        shortcut,
-        y: rect.top + rect.height / 2,
-      });
-    };
-  const showHeaderTooltip =
-    (label: string) => (event: MouseEvent<HTMLElement>) => {
-      const rect = event.currentTarget.getBoundingClientRect();
-      setRailTooltip({
-        label,
-        x: rect.left + rect.width / 2,
-        y: rect.bottom + 8,
-        placement: "bottom",
-      });
-    };
+    window.setTimeout(() => {
+      void startChatTour();
+    }, 120);
+  };
 
   const handleNewChat = () => {
-    if (!isAuthenticated && !isAuthLoading && hasChatStarted) {
+    if (!isAuthenticated && !isAuthLoading && conversation.hasChatStarted) {
       setIsGuestNewChatDialogOpen(true);
       return;
     }
 
-    startNewChat();
+    conversation.startNewChat();
   };
 
   return (
@@ -151,90 +68,32 @@ const ChatPageContent = () => {
         type="button"
         className={cn(
           "fixed inset-0 z-[90] bg-gray-950/35 transition-opacity duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] md:hidden",
-          isSidebarOpen
+          sidebar.isOpen
             ? "pointer-events-auto opacity-100"
             : "pointer-events-none opacity-0",
         )}
         aria-label="사이드바 닫기"
-        onClick={() => setIsSidebarOpen(false)}
+        onClick={() => sidebar.setIsOpen(false)}
       />
 
-      <ChatSidebar
-        isAuthenticated={isAuthenticated}
-        isAuthExpired={hasAccessToken && !isAuthenticated && isAuthReady}
-        isAuthLoading={isAuthLoading}
-        isAuthReady={isAuthReady}
-        isOpen={isSidebarOpen}
-        onOpen={() => setIsSidebarOpen(true)}
-        onClose={() => setIsSidebarOpen(false)}
-        onOpenHome={() => router.push(routes.home)}
-        onNewChat={handleNewChat}
-        // 로그인 후 지금 보던 화면(상담·매장 지도·마이페이지)으로 돌아온다.
-        onOpenLogin={() =>
-          router.push(
-            buildLoginHref(
-              `${window.location.pathname}${window.location.search}`,
-            ),
-          )
-        }
-        onOpenSearch={() => {
-          setRailTooltip(null);
-          setIsSearchOpen(true);
-        }}
-        onOpenProfile={() => {
-          setRailTooltip(null);
-          router.push(routes.myPage);
-        }}
-        onOpenSettings={() => {
-          setRailTooltip(null);
-          setIsSettingsOpen(true);
-        }}
-        onStartTour={() => {
-          setRailTooltip(null);
-
-          if (activeMode !== "chat") {
-            router.replace(routes.chat);
-          }
-
-          window.setTimeout(() => {
-            void startChatTour();
-          }, 120);
-        }}
-        onShowRailTooltip={showRailTooltip}
-        onShowHeaderTooltip={showHeaderTooltip}
-        onHideTooltip={() => setRailTooltip(null)}
+      <ChatPageSidebar
         activeMode={activeMode}
-        currentChatTitle={currentChatTitle}
-        chatSessions={chatSessions}
-        pendingSessionId={loadingSessionId}
-        activeSessionId={currentSessionId ?? null}
-        sessionTitles={sessionTitles}
-        isRecentChatsLoading={
-          !isAuthReady || (isAuthenticated && !hasLoadedRecentChats)
-        }
-        onSelectChat={(targetSessionId) => {
-          void handleSelectChat(targetSessionId);
-        }}
-        onOpenCurrentChat={() => {
-          setRailTooltip(null);
-
-          // 길찾기 등 매장 지도에서 돌아올 때. 대화는 화면 상태·저장소에 그대로 있어 다시 불러오지 않는다.
-          if (activeMode !== "chat") {
-            router.replace(routes.chat);
-          }
-        }}
-        isCurrentChatAnswering={chatStatus === "loading"}
-        pinnedSessionIds={pinnedSessionIds}
-        onTogglePinChat={togglePinChatSession}
-        onRenameChat={renameChatSession}
-        onDeleteChat={deleteChatSession}
+        auth={auth}
+        conversation={conversation}
+        isOpen={sidebar.isOpen}
+        onNewChat={handleNewChat}
+        onOpenSearch={() => setIsSearchOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onSetOpen={sidebar.setIsOpen}
+        onStartTour={startTour}
+        tooltip={tooltip}
       />
 
       {/* Main */}
       <section
         className={cn(
           "bg-surface-warm flex h-full min-w-0 flex-col pl-0 transition-[padding-left] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-          isSidebarOpen ? "md:pl-[296px]" : "md:pl-[64px]",
+          sidebar.isOpen ? "md:pl-[296px]" : "md:pl-[64px]",
         )}
       >
         <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -245,126 +104,34 @@ const ChatPageContent = () => {
               activeMode === "store" ? "hidden" : "flex",
             )}
             aria-label="사이드바 열기"
-            onClick={() => setIsSidebarOpen(true)}
+            onClick={() => sidebar.setIsOpen(true)}
           >
             <PanelLeft size={22} />
           </button>
 
-          {activeMode === "store" ? (
-            <div className="min-h-0 flex-1 overflow-hidden">
-              <StoreMapPanel
-                initialAction={storeMapInitialAction}
-                onOpenSidebar={() => setIsSidebarOpen(true)}
-              />
-            </div>
-          ) : activeMode === "profile" ? (
-            <div className="min-h-0 flex-1 overflow-hidden">
-              <ProfilePanel />
-            </div>
-          ) : (
-            <ChatConversationContent
-              chatInput={chatInput}
-              chatInputRef={chatInputRef}
-              chatStatus={chatStatus}
-              editHintMessageId={editHintMessageId}
-              hasChatStarted={hasChatStarted}
-              loadingSessionId={loadingSessionId}
-              messages={messages}
-              onChatInputChange={setChatInput}
-              onEditPrompt={editAndResubmitPrompt}
-              // 답변 피드백은 회원만 남길 수 있다. 비로그인이면 버튼 자체를 보여주지 않는다.
-              onFeedbackAnswer={
-                isAuthenticated
-                  ? (assistantMessageId, feedback) =>
-                      void sendAnswerFeedback(assistantMessageId, feedback)
-                  : undefined
-              }
-              onRetryAnswer={retryAnswer}
-              feedbackMessageIds={feedbackMessageIds}
-              onStopAnswer={stopChatAnswer}
-              onSelectQuickAction={(prompt) => {
-                void submitChatPrompt(prompt);
-              }}
-              onSubmitPrompt={(prompt) => void submitChatPrompt(prompt)}
-              scrollContainerRef={scrollContainerRef}
-              streamingReply={streamingReply}
-            />
-          )}
+          <ChatModeContent
+            activeMode={activeMode}
+            conversation={conversation}
+            isAuthenticated={isAuthenticated}
+            onOpenSidebar={() => sidebar.setIsOpen(true)}
+            storeMapInitialAction={storeMapInitialAction}
+          />
         </div>
       </section>
 
-      {railTooltip && <RailTooltip {...railTooltip} />}
-      <ChatSearchDialog
-        chatSessions={chatSessions}
-        currentChatTitle={currentChatTitle}
-        currentSessionId={currentSessionId ?? null}
-        isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-        onSelectChat={(targetSessionId) => {
-          void handleSelectChat(targetSessionId);
-        }}
+      {tooltip.tooltip && <RailTooltip {...tooltip.tooltip} />}
+      <ChatPageDialogs
+        conversation={conversation}
+        isGuestNewChatOpen={isGuestNewChatDialogOpen}
+        isSearchOpen={isSearchOpen}
+        isSettingsOpen={isSettingsOpen}
+        onCloseGuestNewChat={() => setIsGuestNewChatDialogOpen(false)}
+        onCloseSearch={() => setIsSearchOpen(false)}
+        onCloseSettings={() => setIsSettingsOpen(false)}
+        onStartTour={startTour}
       />
-      <ChatSettingsPanel
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        onStartTour={() => {
-          if (activeMode !== "chat") {
-            router.replace(routes.chat);
-          }
-
-          window.setTimeout(() => {
-            void startChatTour();
-          }, 120);
-        }}
-      />
-      {isGuestNewChatDialogOpen && (
-        <GuestNewChatDialog
-          onCancel={() => setIsGuestNewChatDialogOpen(false)}
-          onConfirm={() => {
-            startNewChat();
-            setIsGuestNewChatDialogOpen(false);
-          }}
-        />
-      )}
     </main>
   );
-};
-
-const storeRouteModes = new Set<StoreRouteMode>([
-  "walk",
-  "car",
-  "bicycle",
-  "transit",
-]);
-
-const getStoreMapInitialAction = (
-  searchParams: ReturnType<typeof useSearchParams>,
-): StoreMapInitialAction | null => {
-  const storeId = searchParams.get("storeId");
-  const actionParam = searchParams.get("action");
-
-  if (!storeId || (actionParam !== "select" && actionParam !== "route")) {
-    return null;
-  }
-
-  const routeModeParam = searchParams.get("routeMode");
-  const routeMode = storeRouteModes.has(routeModeParam as StoreRouteMode)
-    ? (routeModeParam as StoreRouteMode)
-    : undefined;
-  const categoryParam = searchParams.get("category");
-  const category: MapCategory | undefined =
-    categoryParam === "benefit" || categoryParam === "store"
-      ? categoryParam
-      : undefined;
-
-  return {
-    action: actionParam,
-    activeServices: searchParams.getAll("service"),
-    benefitCategory: searchParams.get("benefitCategory") ?? undefined,
-    category,
-    routeMode,
-    storeId,
-  };
 };
 
 const ChatPage = () => (

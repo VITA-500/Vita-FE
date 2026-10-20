@@ -11,13 +11,13 @@ import {
   UserRound,
 } from "lucide-react";
 import { authService } from "@/features/auth/lib/authService";
-import { useAuthUser } from "@/features/auth/hooks/useAuthUser";
+import { useAuthUser } from "@/entities/user";
 import { ApiError } from "@/shared/api/http";
 import { routes } from "@/shared/constants/routes";
-import { Button } from "@/shared/ui/Button";
-import { TextField } from "@/shared/ui/TextField";
-import { showToast } from "@/shared/ui/ToastProvider";
-import { UserAvatar } from "@/shared/ui/UserAvatar";
+import { Button } from "@/shared/ui/atoms/Button";
+import { TextField } from "@/shared/ui/atoms/TextField";
+import { showToast } from "@/shared/providers/ToastProvider";
+import { UserAvatar } from "@/shared/ui/atoms/UserAvatar";
 
 const providerLabels: Record<string, string> = {
   GOOGLE: "Google",

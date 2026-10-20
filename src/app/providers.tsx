@@ -1,8 +1,8 @@
 "use client";
 
-import { AuthProvider } from "@/features/auth/hooks/useAuthUser";
-import { ThemeProvider } from "@/shared/ui/ThemeProvider";
-import { ToastProvider } from "@/shared/ui/ToastProvider";
+import { AuthProvider } from "@/entities/user";
+import { ThemeProvider } from "@/shared/providers/ThemeProvider";
+import { ToastProvider } from "@/shared/providers/ToastProvider";
 import { QueryProvider } from "./query-provider";
 
 const Providers = ({ children }: { children: React.ReactNode }) => {

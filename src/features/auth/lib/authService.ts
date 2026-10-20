@@ -1,9 +1,7 @@
+import { userApi } from "@/entities/user";
 import type {
   LoginRequest,
   LoginResponse,
-  MyPageResponse,
-  MyPageUpdateRequest,
-  MyPageUpdateResponse,
   SignupRequest,
   SignupResponse,
 } from "@/features/auth/types";
@@ -18,30 +16,21 @@ const createOAuthAuthorizationUrl = (provider: OAuthProvider) => {
 
 export const authService = {
   createOAuthAuthorizationUrl,
-  getMe: () => {
-    return requestJson<MyPageResponse>("/users/me");
-  },
+  /** 내 정보 조회·수정은 entities/user로 옮겼고 기존 호출부 호환을 위해 남겨 둔다. */
+  getMe: userApi.getMe,
   login: (request: LoginRequest) => {
     return requestJson<LoginResponse>("/auth/login", {
       body: JSON.stringify(request),
       method: "POST",
     });
   },
-  logout: () => {
-    return requestJson<void>("/auth/logout", {
-      method: "POST",
-    });
-  },
+  /** 로그아웃은 로그인 상태와 함께 entities/user로 옮겼고 기존 호출부 호환을 위해 남겨 둔다. */
+  logout: userApi.logout,
   signup: (request: SignupRequest) => {
     return requestJson<SignupResponse>("/auth/signup", {
       body: JSON.stringify(request),
       method: "POST",
     });
   },
-  updateMe: (request: MyPageUpdateRequest) => {
-    return requestJson<MyPageUpdateResponse>("/users/me", {
-      body: JSON.stringify(request),
-      method: "PATCH",
-    });
-  },
+  updateMe: userApi.updateMe,
 };

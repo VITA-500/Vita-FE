@@ -1,145 +1,17 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
-import { ArrowLeft, LockKeyhole, Mail, UserRound } from "lucide-react";
-import {
-  authService,
-  type OAuthProvider,
-} from "@/features/auth/lib/authService";
-import {
-  readLoginReturnToFromLocation,
-  rememberLoginReturnTo,
-} from "@/features/auth/lib/loginReturn";
-import { tokenStorage } from "@/features/auth/lib/tokenStorage";
-import { TextField } from "@/shared/ui/TextField";
-import { ApiError } from "@/shared/api/http";
-import { Button } from "@/shared/ui/Button";
+import { ArrowLeft } from "lucide-react";
+import { AuthForm } from "./_components/AuthForm";
+import { SocialLoginButtons } from "./_components/SocialLoginButtons";
+import { useAuthForm } from "./_hooks/useAuthForm";
 import { routes } from "@/shared/constants/routes";
-import { Logo } from "@/shared/ui/Logo";
-import { showToast } from "@/shared/ui/ToastProvider";
-
-type AuthMode = "login" | "signup";
-
-const socialProviders = [
-  {
-    id: "google",
-    name: "Google",
-    icon: "/images/icon-google.svg",
-    className:
-      "border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300",
-  },
-  {
-    id: "kakao",
-    name: "Kakao",
-    icon: "/images/icon-kakao.svg",
-    className: "border-[#FEE500] bg-[#FEE500] hover:bg-[#F6DD00]",
-  },
-  {
-    id: "naver",
-    name: "Naver",
-    icon: "/images/icon-naver.svg",
-    className: "border-[#03C75A] bg-[#03C75A] hover:bg-[#02B350]",
-  },
-] as const;
+import { Logo } from "@/shared/ui/atoms/Logo";
 
 const LoginPage = () => {
   const router = useRouter();
-
-  const [mode, setMode] = useState<AuthMode>("login");
-  const [email, setEmail] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [name, setName] = useState("");
-  const [password, setPassword] = useState("");
-  const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-
-  const isLogin = mode === "login";
-
-  const resetFeedback = () => {
-    setErrorMessage("");
-    setSuccessMessage("");
-  };
-
-  const handleModeChange = () => {
-    resetFeedback();
-    setMode(isLogin ? "signup" : "login");
-  };
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    resetFeedback();
-
-    if (!email.trim() || !password) {
-      setErrorMessage("이메일과 비밀번호를 입력해주세요.");
-      return;
-    }
-
-    if (!isLogin) {
-      if (!name.trim()) {
-        setErrorMessage("이름을 입력해주세요.");
-        return;
-      }
-
-      if (password.length < 8) {
-        setErrorMessage("비밀번호는 8자 이상이어야 합니다.");
-        return;
-      }
-
-      if (password !== passwordConfirm) {
-        setErrorMessage("비밀번호 확인이 일치하지 않습니다.");
-        return;
-      }
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      if (isLogin) {
-        await authService.login({
-          email: email.trim(),
-          password,
-        });
-
-        tokenStorage.setAuthHint();
-        await authService.getMe();
-        window.dispatchEvent(new Event("vita-auth-changed"));
-        showToast("로그인되었습니다.");
-        // 지도에서 예약하려다 로그인한 경우 등, 들어오기 전 화면으로 돌아간다.
-        router.push(readLoginReturnToFromLocation() ?? routes.chat);
-        return;
-      }
-
-      await authService.signup({
-        email: email.trim(),
-        name: name.trim(),
-        password,
-      });
-
-      setMode("login");
-      setPassword("");
-      setPasswordConfirm("");
-      setSuccessMessage("회원가입이 완료되었습니다. 로그인해주세요.");
-    } catch (error) {
-      const message =
-        error instanceof ApiError
-          ? error.message
-          : "요청 처리 중 문제가 발생했습니다.";
-
-      setErrorMessage(message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleSocialLogin = (provider: OAuthProvider) => {
-    resetFeedback();
-    // 소셜 로그인은 BE를 거쳐 /oauth/callback으로 돌아오므로, 돌아갈 화면을 미리 보관해 둔다.
-    rememberLoginReturnTo(readLoginReturnToFromLocation());
-    window.location.assign(authService.createOAuthAuthorizationUrl(provider));
-  };
+  const form = useAuthForm();
+  const { isLogin } = form;
 
   return (
     <section className="bg-surface-warm flex min-h-screen items-center justify-center px-6 py-10 text-gray-950 dark:text-white">
@@ -178,71 +50,7 @@ const LoginPage = () => {
             </p>
           </div>
 
-          {/* 폼 */}
-          <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
-            {!isLogin && (
-              <TextField
-                label="이름"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                type="text"
-                placeholder="이름을 입력하세요"
-                icon={<UserRound size={19} />}
-              />
-            )}
-
-            <TextField
-              label="이메일"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              type="email"
-              placeholder="이메일을 입력하세요"
-              icon={<Mail size={19} />}
-            />
-
-            <TextField
-              label="비밀번호"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              type="password"
-              placeholder="비밀번호를 입력하세요"
-              icon={<LockKeyhole size={19} />}
-            />
-
-            {!isLogin && (
-              <TextField
-                label="비밀번호 확인"
-                value={passwordConfirm}
-                onChange={(event) => setPasswordConfirm(event.target.value)}
-                type="password"
-                placeholder="비밀번호를 한 번 더 입력하세요"
-                icon={<LockKeyhole size={19} />}
-              />
-            )}
-
-            {(errorMessage || successMessage) && (
-              <p
-                className={`rounded-2xl px-4 py-3 text-sm font-bold ${
-                  errorMessage
-                    ? "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-300"
-                    : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
-                }`}
-                role="status"
-              >
-                {errorMessage || successMessage}
-              </p>
-            )}
-
-            {/* 로그인 / 회원가입 버튼 */}
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              size="lg"
-              className="shadow-brand/20 mt-2 w-full shadow-lg"
-            >
-              {isSubmitting ? "처리 중..." : isLogin ? "로그인" : "회원가입"}
-            </Button>
-          </form>
+          <AuthForm form={form} />
 
           {/* 로그인 / 회원가입 전환 */}
           <div className="mt-5 text-center text-sm font-semibold text-gray-500 dark:text-gray-400">
@@ -250,7 +58,7 @@ const LoginPage = () => {
 
             <button
               type="button"
-              onClick={handleModeChange}
+              onClick={form.toggleMode}
               className="text-brand hover:text-brand-hover ml-2 cursor-pointer font-extrabold transition"
             >
               {isLogin ? "회원가입" : "로그인"}
@@ -266,31 +74,7 @@ const LoginPage = () => {
             <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
           </div>
 
-          {/* 소셜 로그인 */}
-          <div className="flex items-center justify-center gap-4">
-            {socialProviders.map((provider) => (
-              <button
-                key={provider.name}
-                aria-label={`${provider.name}로 계속하기`}
-                title={`${provider.name}로 계속하기`}
-                type="button"
-                onClick={() => handleSocialLogin(provider.id)}
-                className={`flex h-14 w-14 items-center justify-center rounded-full border transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-95 ${provider.className}`}
-              >
-                <Image
-                  src={provider.icon}
-                  alt=""
-                  width={24}
-                  height={24}
-                  className="h-6 w-6"
-                />
-              </button>
-            ))}
-          </div>
-
-          <p className="mt-4 text-center text-xs font-medium text-gray-400">
-            간편 로그인으로 빠르게 시작할 수 있어요.
-          </p>
+          <SocialLoginButtons onBeforeRedirect={form.resetFeedback} />
         </div>
       </div>
     </section>

@@ -1,9 +1,4 @@
-export type AuthUser = {
-  userId: number;
-  email: string | null;
-  name: string;
-  role: string;
-};
+import type { AuthUser } from "@/entities/user";
 
 export type LoginRequest = {
   email: string;
@@ -25,21 +20,4 @@ export type SignupResponse = {
   email: string;
   name: string;
   createdAt: string;
-};
-
-export type MyPageResponse = AuthUser & {
-  phone?: string;
-  hasPassword: boolean;
-  linkedProviders: string[];
-};
-
-export type MyPageUpdateRequest = {
-  name?: string;
-  password?: string;
-};
-
-export type MyPageUpdateResponse = {
-  userId: number;
-  name: string;
-  updatedAt: string;
 };

@@ -1,10 +1,5 @@
-export type ChatMessageRole = "user" | "assistant";
-export type {
-  ChatSendRequest,
-  ChatMessageResponse,
-  ChatStreamEvent,
-  ChatAssistantStatus,
-} from "./apiTypes";
+import type { ChatAnswerRecovery, ChatProgressStage } from "@/entities/chat";
+
 export type ChatConversationStatus =
   | "idle"
   | "loading"
@@ -15,119 +10,12 @@ export type ChatConversationStatus =
   | "failed"
   | "expired";
 
-/**
- * 답변 메시지의 결과 상태. 응답 중(loading)은 메시지가 아니라 streamingReply로 보여준다.
- * - success: 정상 답변 (없으면 success로 본다. 예전에 저장된 메시지 호환)
- * - error: 답변 생성 실패 · 네트워크 오류
- * - stopped: 사용자가 답변 생성을 중단함
- * - pending: 기록을 열었을 때 아직 BE가 답변을 만들고 있음
- */
-export type ChatAnswerStatus = "success" | "error" | "stopped" | "pending";
-
-export type ChatFeedback = "LIKE" | "DISLIKE";
-
-export type ChatMessage = {
-  id: string;
-  role: ChatMessageRole;
-  content: string;
-  createdAt: string;
-  /** assistant 메시지에서만 쓴다. */
-  status?: ChatAnswerStatus;
-  sources?: readonly ChatAnswerSource[];
-  /** POST가 제공하는 FAQ ID. 제목·본문은 현재 SSE/기록 계약에 없다. */
-  relatedFaqIds?: readonly number[];
-  actions?: readonly ChatAction[];
-  plans?: readonly ChatPlan[];
-  storeMap?: ChatStoreMap;
-  /** BE 메시지 id. 서버에 저장된 답변에만 있고, 피드백 같은 메시지 단위 API에 쓴다. */
-  serverMessageId?: number;
-  /** 답변 도움 여부. 같은 값을 다시 누르면 BE에 null을 보내 취소한다. */
-  feedback?: ChatFeedback | null;
-};
-
-export type ChatPlan = {
-  planId?: number;
-  planCode?: string;
-  name: string;
-  summary?: string;
-  monthlyFee: number;
-  description?: string;
-  networkType?: string;
-  targetGroup?: string;
-  minAge?: number | null;
-  maxAge?: number | null;
-  dataPolicy?: string;
-  baseDataMb?: number | null;
-  exhaustedSpeedKbps?: number | null;
-  voicePolicy?: string;
-  voiceMinutes?: number | null;
-  smsPolicy?: string;
-  smsCount?: number | null;
-};
-
 export type ChatStatus = "idle" | "loading" | "success" | "error";
-
-export type ChatAnswerSource = {
-  id: string;
-  title: string;
-  category: string;
-};
-
-export type ChatAction = {
-  label: string;
-  href: string;
-};
-
-export type ChatStoreType = "PHONE" | "PARTNER";
-
-export type ChatStoreSummary = {
-  id: string;
-  name: string;
-  address: string;
-  businessHours?: string;
-  benefitBrand?: string;
-  benefitCategory?: string;
-  benefitDescription?: string;
-  benefitId?: number;
-  benefitName?: string;
-  consultServices?: string[];
-  /** BE openNow(조회 시점 기준). 예전에 저장된 답변에는 없을 수 있다. */
-  openNow?: boolean;
-  phone: string;
-  providedServices?: string[];
-  lat: number;
-  lng: number;
-  distanceText?: string;
-};
-
-/** 매장을 찾은 기준 위치가 어디서 왔는지. current: 브라우저 현재 위치, place: 질문에 나온 장소 기준, default: 예전 기본 위치 결과 호환. */
-export type ChatStoreOriginSource = "current" | "place" | "default";
-
-export type ChatStoreMap = {
-  type?: ChatStoreType | null;
-  category?: string | null;
-  benefitId?: number | null;
-  activeServices?: string[];
-  origin?: {
-    lat: number;
-    lng: number;
-  };
-  /** 없으면(예전에 저장된 메시지·BE 응답) 실제 위치로 본다. */
-  originSource?: ChatStoreOriginSource;
-  /** place/default 기준일 때 사용자에게 보여줄 기준 이름. */
-  originLabel?: string | null;
-  stores: ChatStoreSummary[];
-};
 
 export type ChatMode = "chat" | "profile" | "store";
 
-export type ChatApiMessageRole = "USER" | "ASSISTANT";
-
-export type ChatApiMessageStatus =
-  "PENDING" | "COMPLETED" | "FAILED" | "RETRYING";
-
-/** 답변 생성 진행 단계. BE SSE의 assistant_status(thinking / retrieving_faq / generating)와 대응한다. */
-export type ChatProgressStage = "understanding" | "retrieving" | "generating";
+/** 매장 질문에서 답변 요청 전에 위치를 확인하는 상태 */
+export type ChatLocationStatus = "locating" | "located" | "unavailable";
 
 /** 스트리밍으로 받고 있는 답변. content가 비어 있으면 아직 진행 단계만 보여준다. */
 export type ChatStreamingReply = {
@@ -135,33 +23,10 @@ export type ChatStreamingReply = {
   content: string;
   /** 목록·표·카드를 받는 중이라 말풍선 안에 로딩 블록을 보여준다. */
   isPreparingBlock?: boolean;
-};
-
-export type ChatSessionSummary = {
-  /** 서버가 상담 고정 상태를 내려주면 사이드바 고정 영역에 반영한다. */
-  pinned?: boolean;
-  sessionId: number;
-  title: string | null;
-  updatedAt: string;
-};
-
-export type ChatSessionListResponse = {
-  sessions: ChatSessionSummary[];
-};
-
-export type SessionMessage = {
-  messageId: number;
-  role: ChatApiMessageRole;
-  content: string | null;
-  createdAt: string;
-  status?: ChatApiMessageStatus;
-  feedback?: ChatFeedback | null;
-  storeMap?: import("./apiTypes").ChatApiStoreMap | null;
-  actions?: readonly import("./apiTypes").ChatApiAction[] | null;
-  plans?: readonly import("./apiTypes").ChatApiPlan[] | null;
-};
-
-export type SessionMessagesResponse = {
-  sessionId: number;
-  messages: SessionMessage[];
+  /** 스트림이 끊기거나 늦어져 저장된 답변을 다시 불러오는 중이면 그 이유 */
+  recovery?: ChatAnswerRecovery;
+  /** 매장 질문이면 true. 검색 단계 문구를 매장 기준으로 바꾼다. */
+  isStorePrompt?: boolean;
+  /** 매장 질문의 위치 확인 상태. 매장 질문이 아니면 없다. */
+  location?: ChatLocationStatus;
 };
