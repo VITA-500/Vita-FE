@@ -128,11 +128,11 @@ shared/
 
 ## Current Slices
 
-현재(이동 전) feature slice:
+현재 feature slice:
 
 - `admin`: 관리자 화면. `common`(셸·권한 확인·공통 입력·페이지·데이터 Provider·쿼리 키·폼 스키마), `dashboard`, `partners`(매장+혜택 탭), `stores`, `benefits`, `faq`, `users`, `feedback`(답변 피드백) 하위 폴더로 나뉜다. 화면별 데이터 훅은 각 폴더의 `hooks/`에 둔다.
 - `auth`: 인증 상태, 로그인/회원가입/OAuth service, auth provider
-- `chat`: 채팅 UI, 스트리밍, 사이드바, 검색, 비로그인 채팅 UX, 채팅 매장 추천
+- `chat`: 채팅 화면. `conversation`(대화 흐름·입력창·전송·스트리밍 표시·투어), `message`(메시지 목록·말풍선·마크다운·진행 단계·답변 피드백), `cards`(요금제 카드·카드 레일), `store`(매장 답변 카드·채팅 지도 슬롯·지도 데이터), `sidebar`(사이드바·상담 목록·메뉴), `search`(상담 검색), `settings`(채팅 설정) 하위 폴더로 나뉜다.
 - `store`: 매장 지도 패널. `panel`(패널 조립·상태), `search`(검색·목록·필터), `benefit`(제휴 혜택), `map`(지도·핀·카메라), `route`(길찾기), `reservation`(예약), `detail`(매장 상세) 하위 폴더로 나뉜다. 카카오맵 로더·타입은 `shared`에 있다.
 
 랜딩 화면 섹션과 헤더는 feature가 아니라 `app/(marketing)/_components`에 둔다(마케팅 레이아웃에서만 쓰는 화면 조립).
