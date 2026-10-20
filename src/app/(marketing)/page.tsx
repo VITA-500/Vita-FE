@@ -1,7 +1,7 @@
-import HeroSection from "@/features/home/components/HeroSection";
-import HomeCtaSection from "@/features/home/components/HomeCtaSection";
-import HomeFeatureSection from "@/features/home/components/HomeFeatureSection";
-import HomeIntroSection from "@/features/home/components/HomeIntroSection";
+import HeroSection from "./_components/HeroSection";
+import HomeCtaSection from "./_components/HomeCtaSection";
+import HomeFeatureSection from "./_components/HomeFeatureSection";
+import HomeIntroSection from "./_components/HomeIntroSection";
 
 const Page = () => {
   return (

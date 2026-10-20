@@ -132,9 +132,10 @@ shared/
 
 - `admin`: 관리자 대시보드, 회원·FAQ·매장·제휴처·혜택·답변 피드백 관리 UI와 TanStack Query 기반 데이터 상태
 - `auth`: 인증 상태, 로그인/회원가입/OAuth service, auth provider
-- `home`: 랜딩 화면 섹션
 - `chat`: 채팅 UI, 스트리밍, 사이드바, 검색, 비로그인 채팅 UX, 채팅 매장 추천
 - `store`: 매장 지도 패널. `panel`(패널 조립·상태), `search`(검색·목록·필터), `benefit`(제휴 혜택), `map`(지도·핀·카메라), `route`(길찾기), `reservation`(예약), `detail`(매장 상세) 하위 폴더로 나뉜다. 카카오맵 로더·타입은 `shared`에 있다.
+
+랜딩 화면 섹션과 헤더는 feature가 아니라 `app/(marketing)/_components`에 둔다(마케팅 레이아웃에서만 쓰는 화면 조립).
 
 ## Current Phase Boundary
 
