@@ -10,6 +10,7 @@ const meta = {
     // 판단하므로, 실제 관리자 경로를 목(pathname)으로 지정해 "대시보드"
     // 메뉴가 활성 상태로 보이도록 했습니다.
     nextjs: {
+      appDirectory: true,
       navigation: { pathname: "/admin" },
     },
   },
