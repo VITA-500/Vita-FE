@@ -1,4 +1,3 @@
-import { ChevronDown } from "lucide-react";
 import { StoreOpenFilterMenu } from "@/features/store/search/components/StoreOpenFilterMenu";
 import { StoreOpenStatusBadge } from "@/entities/store";
 import { StorePanelPagination } from "@/features/store/search/components/StorePanelPagination";
@@ -209,6 +208,7 @@ type StorePanelStoreItemsProps = {
   activeMapCategory: MapCategory;
   activeStorePage: number;
   currentStorePage: number;
+  isDesktop: boolean;
   /** 첫 페이지(처음 보여주는 핀) 매장 수. "더보기"에 남은 개수를 계산한다. */
   firstPageSize: number;
   hasMoreStorePages: boolean;
@@ -224,19 +224,17 @@ type StorePanelStoreItemsProps = {
   storePageCount: number;
 };
 
-/** 매장 리스트: 현재 페이지 매장, 빈 목록·불러오는 중 안내, 더보기·페이지 이동 */
+/** 매장 리스트: 현재 페이지 매장, 빈 목록·불러오는 중 안내, 페이지 이동 */
 export const StorePanelStoreItems = ({
   activeMapCategory,
   activeStorePage,
   currentStorePage,
-  firstPageSize,
+  isDesktop,
   hasMoreStorePages,
-  isStorePaginationOn,
   isBenefitStoreLoading,
   mapSelectedStoreId,
   onPageChange,
   onSelectStore,
-  onShowPagination,
   pagedMapStores,
   storeCount,
   storePageCount,
@@ -244,51 +242,41 @@ export const StorePanelStoreItems = ({
   const isBenefit = activeMapCategory === "benefit";
 
   return (
-    <div className="py-1">
-      {pagedMapStores.map((store, index) => (
-        <StoreRow
-          key={`${currentStorePage}:${store.id}`}
-          index={index}
-          isBenefit={isBenefit}
-          isSelected={mapSelectedStoreId === store.id}
-          onSelect={() => onSelectStore(store.id)}
-          store={store}
-        />
-      ))}
+    <>
+      <div
+        className={cn("py-1", isDesktop && "min-h-0 flex-1 overflow-y-auto")}
+      >
+        {pagedMapStores.map((store, index) => (
+          <StoreRow
+            key={`${currentStorePage}:${store.id}`}
+            index={index}
+            isBenefit={isBenefit}
+            isSelected={mapSelectedStoreId === store.id}
+            onSelect={() => onSelectStore(store.id)}
+            store={store}
+          />
+        ))}
 
-      {isBenefit && isBenefitStoreLoading && (
-        <div className={emptyMessageClassName}>
-          제휴 매장을 불러오는 중이에요.
-        </div>
-      )}
+        {isBenefit && isBenefitStoreLoading && (
+          <div className={emptyMessageClassName}>
+            제휴 매장을 불러오는 중이에요.
+          </div>
+        )}
 
-      {!(isBenefit && isBenefitStoreLoading) && storeCount === 0 && (
-        <div className={emptyMessageClassName}>
-          {isBenefit ? "표시할 제휴 매장이 없어요." : "표시할 매장이 없어요."}
-        </div>
-      )}
+        {!(isBenefit && isBenefitStoreLoading) && storeCount === 0 && (
+          <div className={emptyMessageClassName}>
+            {isBenefit ? "표시할 제휴 매장이 없어요." : "표시할 매장이 없어요."}
+          </div>
+        )}
+      </div>
 
-      {hasMoreStorePages && !isStorePaginationOn && (
-        <button
-          type="button"
-          onClick={onShowPagination}
-          className="text-text-secondary hover:text-text-primary flex h-11 w-full items-center justify-center gap-1 text-xs font-extrabold transition hover:bg-gray-50 dark:hover:bg-white/[0.04]"
-        >
-          더보기
-          <span className="text-gray-400">
-            ({storeCount - firstPageSize}개 더)
-          </span>
-          <ChevronDown size={14} />
-        </button>
-      )}
-
-      {hasMoreStorePages && isStorePaginationOn && (
+      {hasMoreStorePages && (
         <StorePanelPagination
           activePage={activeStorePage}
           onPageChange={onPageChange}
           pageCount={storePageCount}
         />
       )}
-    </div>
+    </>
   );
 };

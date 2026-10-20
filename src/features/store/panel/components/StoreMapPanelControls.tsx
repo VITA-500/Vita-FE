@@ -172,7 +172,12 @@ export const StoreMapPanelStoreListContent = ({
           )}
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div
+        className={cn(
+          "min-h-0 flex-1 overscroll-contain",
+          isDesktop ? "flex flex-col overflow-hidden" : "overflow-y-auto",
+        )}
+      >
         <StorePanelStoreItems
           activeMapCategory={activeMapCategory}
           activeStorePage={activeStorePage}
@@ -180,6 +185,7 @@ export const StoreMapPanelStoreListContent = ({
           firstPageSize={firstPageSize}
           hasMoreStorePages={hasMoreStorePages}
           isBenefitStoreLoading={isBenefitStoreLoading}
+          isDesktop={isDesktop}
           isStorePaginationOn={isStorePaginationOn}
           mapSelectedStoreId={mapSelectedStoreId}
           onPageChange={goToStorePage}

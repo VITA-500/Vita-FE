@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { StoreLocation } from "@/entities/store";
 
-/** 지도 핀(A~L)·매장 목록 한 페이지에 보여줄 매장 수. */
-const STORES_PER_PAGE = 12;
+/** 지도 핀·매장 목록 한 페이지에 보여줄 매장 수. */
+const STORES_PER_PAGE = 10;
 /** 페이지 이동 시 지도가 먼저 움직이기 시작한 뒤 핀·목록을 바꾸기까지의 텀(ms) */
 const STORE_PAGE_SWITCH_DELAY_MS = 260;
 
@@ -21,14 +21,14 @@ type UseStorePaginationParams = {
 
 /**
  * 매장 목록·핀 페이지 나누기.
- * 매장이 12개를 넘으면 12개씩 페이지로 나눈다. 기본은 첫 12개만, "더보기"를 누르면 페이지 이동이 켜진다.
+ * 매장이 10개를 넘으면 10개씩 페이지로 나누고, 페이지네이션은 항상 노출한다.
  */
 export const useStorePagination = ({
   mapStores,
   onPageChangeStart,
 }: UseStorePaginationParams) => {
   const [storePage, setStorePage] = useState(0);
-  const [isStorePaginationOn, setIsStorePaginationOn] = useState(false);
+  const [isStorePaginationOn, setIsStorePaginationOn] = useState(true);
   // 페이지 버튼을 누른 뒤 실제로 핀·목록이 바뀌기 전까지 이동할 페이지(번호 강조는 바로 바꾼다)
   const [pendingStorePage, setPendingStorePage] = useState<number | null>(null);
   const [storePageSourceKey, setStorePageSourceKey] = useState("");
@@ -49,7 +49,7 @@ export const useStorePagination = ({
     setStorePageSourceKey(mapStoresKey);
     setStorePage(0);
     setPendingStorePage(null);
-    setIsStorePaginationOn(false);
+    setIsStorePaginationOn(true);
   }
 
   // 첫 페이지(처음 보여주는 핀)는 기준 지점(중심 좌표)에서 가까운 순 12개. 나머지는 12개씩 다음 페이지.
