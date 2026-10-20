@@ -22,7 +22,6 @@ import {
   buildRouteSummary,
 } from "@/features/store/route/lib/storeRoutePreview";
 import {
-  buildMarkerLabelById,
   defaultMapLocation,
   findStoreById,
   getMapStoreVisibility,
@@ -30,6 +29,7 @@ import {
   resolveRouteDestinationStore,
   type MapSearchPoint,
 } from "@/features/store/search/lib/storePanelStores";
+import { buildMarkerLabelById } from "@/entities/store";
 import type { MapCategory } from "@/features/store/types";
 import type { StoreLocation, StoreOpenFilter } from "@/entities/store";
 

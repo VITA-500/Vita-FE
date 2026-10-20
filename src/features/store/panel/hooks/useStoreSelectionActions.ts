@@ -19,10 +19,8 @@ import {
   findStoreById,
   type MapSearchPoint,
 } from "@/features/store/search/lib/storePanelStores";
-import {
-  getGeolocationPermissionState,
-  LOCATION_CONSENT_STORAGE_KEY,
-} from "@/features/store/panel/lib/storePanelStorage";
+import { LOCATION_CONSENT_STORAGE_KEY } from "@/features/store/panel/lib/storePanelStorage";
+import { getGeolocationPermissionState } from "@/entities/location";
 import type { MapCategory } from "@/features/store/types";
 import type { StoreLocation } from "@/entities/store";
 import { readStorage } from "@/shared/lib/browserStorage";

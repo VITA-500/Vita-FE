@@ -3,10 +3,10 @@
 import { useEffect, useState, type RefObject } from "react";
 import type { UserLocation } from "@/shared/lib/geo";
 import {
-  getGeolocationPermissionState,
   LOCATION_CONSENT_STORAGE_KEY,
   LOCATION_MODAL_DISMISSED_STORAGE_KEY,
 } from "@/features/store/panel/lib/storePanelStorage";
+import { getGeolocationPermissionState } from "@/entities/location";
 import type { UserLocationStatus } from "@/entities/location";
 import { readStorage, writeStorage } from "@/shared/lib/browserStorage";
 import { showToast } from "@/shared/providers/ToastProvider";

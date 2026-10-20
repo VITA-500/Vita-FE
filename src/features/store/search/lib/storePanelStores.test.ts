@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildMarkerLabelById,
   buildSearchableStores,
   findStoreById,
   getMapStoreVisibility,
@@ -11,6 +10,7 @@ import {
   sortStoresByDistance,
   type MapViewport,
 } from "@/features/store/search/lib/storePanelStores";
+import { buildMarkerLabelById } from "@/entities/store";
 import type { StoreLocation } from "@/entities/store";
 
 const center = { lat: 37.5, lng: 127.0 };

@@ -10,9 +10,6 @@ import type { MarkerColorInfo, StoreLocation } from "@/entities/store";
 import { createStoreMarkerElement } from "@/features/store/map/lib/storeMarkerElement";
 import { getStoreMarkerLabel } from "@/entities/store";
 
-// 핀 글자 규칙은 entities/store로 옮겼다. 기존 import 경로 호환용 재내보내기.
-export { getStoreMarkerLabel };
-
 /** 같은 좌표(소수 5자리, 약 1m)에 있는 매장들을 한 묶음으로 모은다. 묶음 순서는 stores에서 처음 나온 순서를 따른다. */
 export const groupStoresByCoordinate = (stores: StoreLocation[]) => {
   const storeGroups = new Map<string, StoreMarkerGroupEntry[]>();

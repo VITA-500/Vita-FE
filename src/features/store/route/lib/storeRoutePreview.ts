@@ -26,9 +26,6 @@ type RouteSummaryParams = {
   walkingRoute: StoreRoute | null;
 };
 
-// 대중교통 단계 타입은 entities/route로 옮겼다. 기존 import 경로 호환용 재내보내기.
-export type { TransitRouteStep };
-
 type RouteSegment = NonNullable<StoreRoute["segments"]>[number];
 
 const getSegmentDistanceMeters = (segment: RouteSegment) => {

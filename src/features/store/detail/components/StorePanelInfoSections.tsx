@@ -13,7 +13,7 @@ import {
 import type { ReactNode } from "react";
 import { StoreOpenStatusBadge } from "@/entities/store";
 import { TransitRouteDetails } from "@/features/store/route/components/TransitRouteDetails";
-import type { TransitRouteStep } from "@/features/store/route/lib/storeRoutePreview";
+import type { TransitRouteStep } from "@/entities/route";
 import type { StoreLocation } from "@/entities/store";
 import type { StoreRouteMode } from "@/entities/route";
 import { cn } from "@/shared/lib/cn";

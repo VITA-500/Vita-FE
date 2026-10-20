@@ -4,7 +4,7 @@ import { StoreOpenStatusBadge } from "@/entities/store";
 import { StorePanelPagination } from "@/features/store/search/components/StorePanelPagination";
 import { mapCategoryOptions } from "@/features/store/constants";
 import { renderBenefitCategoryIcon } from "@/entities/benefit";
-import { getStoreMarkerLabel } from "@/features/store/map/lib/storeMarkerOverlays";
+import { getStoreMarkerLabel } from "@/entities/store";
 import type { BenefitCategoryOption } from "@/features/store/lib/benefitService";
 import type { MapCategory } from "@/features/store/types";
 import type { StoreLocation, StoreOpenFilter } from "@/entities/store";
