@@ -37,6 +37,7 @@ export type {
   ChatMessage,
   ChatMessageRole,
   ChatPlan,
+  ChatAnswerRecovery,
   ChatProgressStage,
   ChatSessionListResponse,
   ChatSessionSummary,
