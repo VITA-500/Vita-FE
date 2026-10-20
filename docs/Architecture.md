@@ -59,6 +59,9 @@ features/{feature}
 
 - 모든 폴더를 기계적으로 만들지 않고, 실제 파일이 필요할 때만 추가한다.
 - API 호출과 응답 변환은 feature가 아니라 entity에 둔다. feature는 entity의 query hook·mutation을 사용한다.
+- feature가 커지면 별도 feature로 쪼개지 않고 feature 안에서 하위 폴더로 나눈다. 하위 폴더끼리는 서로 import할 수 있다(같은 slice).
+  - 예: `features/store/{panel,search,benefit,map,route,reservation,detail}/{components,hooks,lib}`
+  - feature를 둘로 나누면 서로 import할 수 없어서, 함께 움직이는 검색·지도·길찾기를 묶는 조립 코드가 갈 곳이 없어진다. 그래서 feature를 나누는 건 정말 따로 동작하는 기능일 때만 한다.
 
 ### entities
 
@@ -112,16 +115,16 @@ shared/
 
 ## Migration
 
-| 단계 | 내용                                                                              | 종류      |
-| ---- | --------------------------------------------------------------------------------- | --------- |
-| 0    | 진행 중 리팩토링 브랜치 머지, 이 문서·DesignSystem 갱신, ESLint 경계 규칙(warn)   | 문서·설정 |
-| 1    | `shared` 정리: `shared/ui` atomic 분류, `shared/hooks`, `shared/providers`        | 이동      |
-| 2    | `entities` 생성: entity별 `api`·`model` 이동, 중복 API 통합                       | 이동      |
-| 3    | 조회를 TanStack Query로 통일(지도는 동작 테스트 선행)                             | 로직      |
-| 4    | 채팅 ↔ 매장 지도 결합 해소(feature 간 직접 import 제거)                           | 로직      |
-| 5    | features 재구성(`store` → store-search·store-route·reservation·benefit-browse 등) | 이동      |
-| 6    | `app/{route}/_components`로 화면 조립 분리                                        | 로직      |
-| 7    | 재내보내기 파일 삭제, ESLint 경계 규칙 `error`, 문서 최종 정리                    | 설정      |
+| 단계 | 내용                                                                                      | 종류      |
+| ---- | ----------------------------------------------------------------------------------------- | --------- |
+| 0    | 진행 중 리팩토링 브랜치 머지, 이 문서·DesignSystem 갱신, ESLint 경계 규칙(warn)           | 문서·설정 |
+| 1    | `shared` 정리: `shared/ui` atomic 분류, `shared/hooks`, `shared/providers`                | 이동      |
+| 2    | `entities` 생성: entity별 `api`·`model` 이동, 중복 API 통합                               | 이동      |
+| 3    | 조회를 TanStack Query로 통일(지도는 동작 테스트 선행)                                     | 로직      |
+| 4    | 채팅 ↔ 매장 지도 결합 해소(feature 간 직접 import 제거)                                   | 로직      |
+| 5    | `features/store` 안을 하위 폴더(panel·search·benefit·map·route·reservation·detail)로 분리 | 이동      |
+| 6    | `app/{route}/_components`로 화면 조립 분리                                                | 로직      |
+| 7    | 재내보내기 파일 삭제, ESLint 경계 규칙 `error`, 문서 최종 정리                            | 설정      |
 
 ## Current Slices
 
@@ -131,7 +134,7 @@ shared/
 - `auth`: 인증 상태, 로그인/회원가입/OAuth service, auth provider
 - `home`: 랜딩 화면 섹션
 - `chat`: 채팅 UI, 스트리밍, 사이드바, 검색, 비로그인 채팅 UX, 채팅 매장 추천
-- `store`: 매장 지도, 매장 검색·목록, 제휴 혜택, 길찾기, 예약, 카카오맵 로더
+- `store`: 매장 지도 패널. `panel`(패널 조립·상태), `search`(검색·목록·필터), `benefit`(제휴 혜택), `map`(지도·핀·카메라), `route`(길찾기), `reservation`(예약), `detail`(매장 상세) 하위 폴더로 나뉜다. 카카오맵 로더·타입은 `shared`에 있다.
 
 ## Current Phase Boundary
 

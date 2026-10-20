@@ -3,9 +3,9 @@
 import { LocateFixed, Tag } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { ChatStoreResultCard } from "@/features/chat/components/ChatStoreResultCard";
-import { StoreMapPreview } from "@/features/store/components/StoreMapPreview";
-import { StorePanelModals } from "@/features/store/components/StorePanelModals";
-import { useStoreReservation } from "@/features/store/hooks/useStoreReservation";
+import { StoreMapPreview } from "@/features/store/map/components/StoreMapPreview";
+import { StorePanelModals } from "@/features/store/reservation/components/StorePanelModals";
+import { useStoreReservation } from "@/features/store/reservation/hooks/useStoreReservation";
 import {
   CHAT_STORE_RADIUS_KM,
   findChatStoreMap,
