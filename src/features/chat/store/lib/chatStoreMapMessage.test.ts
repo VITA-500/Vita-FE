@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { ChatMessage } from "@/features/chat/types";
 import {
   normalizeStoreMapMessageForPrompt,
   shouldCacheStoreMapForPrompt,
 } from "@/features/chat/store/lib/chatStoreMapMessage";
+import type { ChatMessage } from "@/entities/chat";
 
 const assistantMessage: ChatMessage = {
   id: "assistant-1",

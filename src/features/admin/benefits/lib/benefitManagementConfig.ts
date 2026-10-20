@@ -1,4 +1,4 @@
-import { adminBenefitCategories } from "@/features/admin/types";
+import { adminBenefitCategories } from "@/entities/benefit";
 
 export const benefitCategoryFilterOptions = [
   { label: "전체", value: "ALL" },

@@ -1,5 +1,5 @@
 import { formatSessionTitle } from "@/features/chat/sidebar/lib/chatSidebarItems";
-import type { ChatSessionSummary } from "@/features/chat/types";
+import type { ChatSessionSummary } from "@/entities/chat";
 
 const STORAGE_KEY = "vita-chat-recent-searches";
 

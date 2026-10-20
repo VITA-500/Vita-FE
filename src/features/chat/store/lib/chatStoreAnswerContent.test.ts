@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { ChatStoreMap } from "@/features/chat/types";
 import { stripStoreTablesFromAnswer } from "@/features/chat/store/lib/chatStoreAnswerContent";
+import type { ChatStoreMap } from "@/entities/chat";
 
 const storeMap: ChatStoreMap = {
   stores: [

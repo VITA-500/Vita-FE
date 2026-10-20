@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
-import type { ChatMessage, ChatStoreMap } from "@/features/chat/types";
 import {
   chatStoreMapCache,
   restoreCachedStoreMaps,
 } from "@/features/chat/store/lib/chatStoreMapCache";
+import type { ChatMessage, ChatStoreMap } from "@/entities/chat";
 
 const storeMap: ChatStoreMap = {
   origin: { lat: 37.5, lng: 127.03 },

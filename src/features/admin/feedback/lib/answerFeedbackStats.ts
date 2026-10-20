@@ -1,4 +1,4 @@
-import type { AdminAnswerFeedbackStats } from "@/features/admin/types";
+import type { AdminAnswerFeedbackStats } from "@/entities/feedback";
 
 /**
  * 답변 피드백 페이지 제목 아래 한 줄 요약. 대시보드 지표와 같은 값을 짧게 보여준다.

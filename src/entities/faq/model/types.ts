@@ -75,12 +75,3 @@ export type AdminFaqCreateRequest = {
 export type AdminFaqUpdateRequest = AdminFaqCreateRequest & {
   status: AdminFaqStatus;
 };
-
-/** GET /search/faqs 항목 (사용자용 FAQ 검색) */
-export type FaqSearchResult = {
-  id: number;
-  category: string;
-  subcategory: string | null;
-  question: string;
-  answer: string;
-};

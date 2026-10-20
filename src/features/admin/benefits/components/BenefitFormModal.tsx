@@ -8,17 +8,17 @@ import {
   benefitFormSchema,
   type BenefitFormValues,
 } from "@/features/admin/common/lib/adminFormSchemas";
-import {
-  adminBenefitCategories,
-  type AdminBenefitCategory,
-  type AdminBenefitDetail,
-  type AdminBenefitRequest,
-} from "@/features/admin/types";
 import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/atoms/Button";
 import { Modal } from "@/shared/ui/organisms/Modal";
 import type { SelectOption } from "@/shared/ui/atoms/Select";
 import { showToast } from "@/shared/providers/ToastProvider";
+import {
+  adminBenefitCategories,
+  type AdminBenefitCategory,
+  type AdminBenefitDetail,
+  type AdminBenefitRequest,
+} from "@/entities/benefit";
 
 const benefitCategoryOptions: readonly SelectOption[] =
   adminBenefitCategories.map((category) => ({

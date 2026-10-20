@@ -1,8 +1,8 @@
 "use client";
 
-import type { AdminStore } from "@/features/admin/types";
 import { Button } from "@/shared/ui/atoms/Button";
 import { Modal } from "@/shared/ui/organisms/Modal";
+import type { AdminStore } from "@/entities/store";
 
 type StoreDeleteModalProps = {
   isSubmitting: boolean;

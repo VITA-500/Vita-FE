@@ -1,10 +1,7 @@
-import type {
-  AdminAnswerFeedbackStats,
-  AdminFaq,
-  AdminStore,
-  AdminStoreDetail,
-} from "@/features/admin/types";
-import { adminFaqCategories } from "@/features/admin/types";
+import type { AdminAnswerFeedbackStats } from "@/entities/feedback";
+import type { AdminFaq } from "@/entities/faq";
+import type { AdminStore, AdminStoreDetail } from "@/entities/store";
+import { adminFaqCategories } from "@/entities/faq";
 
 export const popularFaqTags = adminFaqCategories;
 

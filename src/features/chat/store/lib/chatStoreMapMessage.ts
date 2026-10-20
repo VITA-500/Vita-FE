@@ -3,7 +3,7 @@ import {
   hasRequestedServiceStoreMap,
   isPartnerStorePrompt,
 } from "@/features/chat/store/lib/chatStoreMap";
-import type { ChatMessage, ChatStoreMap } from "@/features/chat/types";
+import type { ChatMessage, ChatStoreMap } from "@/entities/chat";
 
 const isMismatchedPartnerStoreMap = (prompt: string, storeMap?: ChatStoreMap) =>
   isPartnerStorePrompt(prompt) &&

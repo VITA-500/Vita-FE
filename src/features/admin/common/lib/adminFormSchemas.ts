@@ -1,8 +1,6 @@
 import { z } from "zod";
-import {
-  adminBenefitCategories,
-  adminFaqCategories,
-} from "@/features/admin/types";
+import { adminBenefitCategories } from "@/entities/benefit";
+import { adminFaqCategories } from "@/entities/faq";
 
 export const faqFormSchema = z.object({
   answer: z.string().trim().min(1, "답변을 입력해 주세요."),

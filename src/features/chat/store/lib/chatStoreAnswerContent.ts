@@ -1,4 +1,4 @@
-import type { ChatStoreMap } from "@/features/chat/types";
+import type { ChatStoreMap } from "@/entities/chat";
 
 // LLM이 마지막 `|`을 생략하는 표도 있어 양쪽 경계를 모두 선택적으로 허용한다.
 const TABLE_ROW = /^\s*\|?[^\n]*\|[^\n]*\|?\s*$/;

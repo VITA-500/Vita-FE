@@ -8,16 +8,16 @@ import {
   storeFormSchema,
   type StoreFormValues,
 } from "@/features/admin/common/lib/adminFormSchemas";
-import type {
-  AdminBenefit,
-  AdminStoreDetail,
-  AdminStoreFormInput,
-  AdminStoreType,
-} from "@/features/admin/types";
 import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/atoms/Button";
 import { Modal } from "@/shared/ui/organisms/Modal";
 import { showToast } from "@/shared/providers/ToastProvider";
+import type { BenefitSummary as AdminBenefit } from "@/entities/benefit";
+import type {
+  AdminStoreDetail,
+  AdminStoreFormInput,
+  AdminStoreType,
+} from "@/entities/store";
 
 export type StoreInput = AdminStoreFormInput;
 

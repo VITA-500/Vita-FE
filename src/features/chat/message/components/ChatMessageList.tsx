@@ -29,13 +29,10 @@ import {
 import { resolveChatActionHref } from "@/features/chat/store/lib/chatStoreActions";
 import { stripStoreTablesFromAnswer } from "@/features/chat/store/lib/chatStoreAnswerContent";
 import { toChatPlanCards } from "@/features/chat/cards/lib/chatPlanCards";
-import type {
-  ChatFeedback,
-  ChatMessage,
-  ChatStreamingReply,
-} from "@/features/chat/types";
+import type { ChatStreamingReply } from "@/features/chat/types";
 import { ButtonLink } from "@/shared/ui/atoms/Button";
 import { cn } from "@/shared/lib/cn";
+import type { ChatFeedback, ChatMessage } from "@/entities/chat";
 
 type ChatMessageListProps = {
   /** 답변을 중단한 직후 "질문 수정" 툴팁을 자동으로 띄울 질문 메시지 id */

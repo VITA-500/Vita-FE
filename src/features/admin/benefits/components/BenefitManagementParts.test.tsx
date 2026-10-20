@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { BenefitStoreCount } from "@/features/admin/benefits/components/BenefitManagementParts";
-import type { AdminBenefitDetail } from "@/features/admin/types";
+import type { AdminBenefitDetail } from "@/entities/benefit";
 
 describe("benefit store count navigation", () => {
   it("opens stores connected to the benefit from its count", () => {

@@ -1,5 +1,4 @@
 // FAQ entity 공개 API. 외부에서는 이 파일로만 import한다(docs/Architecture.md).
-export { faqApi } from "@/entities/faq/api/faqApi";
 export { adminFaqApi } from "@/entities/faq/api/admin";
 export {
   adminFaqCategories,
@@ -9,5 +8,4 @@ export {
   type AdminFaqCreateRequest,
   type AdminFaqStatus,
   type AdminFaqUpdateRequest,
-  type FaqSearchResult,
 } from "@/entities/faq/model/types";

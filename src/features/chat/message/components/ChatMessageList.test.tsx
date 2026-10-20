@@ -1,9 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { ChatMessage } from "@/features/chat/types";
 import { ChatComposer } from "@/features/chat/conversation/components/ChatComposer";
 import { ChatMessageList } from "@/features/chat/message/components/ChatMessageList";
+import type { ChatMessage } from "@/entities/chat";
 
 const userMessage: ChatMessage = {
   id: "user-1",

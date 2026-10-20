@@ -1,4 +1,4 @@
-import type { ChatMessage, ChatStoreMap } from "@/features/chat/types";
+import type { ChatMessage, ChatStoreMap } from "@/entities/chat";
 
 /**
  * 답변에 붙은 매장 지도(storeMap)를 메시지 id별로 브라우저에 보관한다.

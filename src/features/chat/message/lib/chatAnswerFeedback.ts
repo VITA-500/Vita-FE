@@ -1,4 +1,4 @@
-import type { ChatMessage } from "@/features/chat/types";
+import type { ChatMessage } from "@/entities/chat";
 
 /**
  * 피드백(좋아요·아쉬워요)을 남길 수 있는 답변인지. 아쉬워요는 BE가 관리자 답변 피드백 목록에 올린다.

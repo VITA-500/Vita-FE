@@ -11,10 +11,10 @@ import { ChatCardRail } from "@/features/chat/cards/components/ChatCardRail";
 import { ChatStoreResultCard } from "@/features/chat/store/components/ChatStoreResultCard";
 import { CHAT_STORE_RADIUS_KM } from "@/features/chat/store/lib/chatStoreMap";
 import { getChatStoreDistanceLabel } from "@/features/chat/store/lib/chatStoreMapOrigin";
-import type { ChatStoreMap as ChatStoreMapData } from "@/features/chat/types";
 import { StoreMapPreview } from "@/features/store/map/components/StoreMapPreview";
 import { StorePanelModals } from "@/features/store/reservation/components/StorePanelModals";
 import { useStoreReservation } from "@/features/store/reservation/hooks/useStoreReservation";
+import type { ChatStoreMap as ChatStoreMapData } from "@/entities/chat";
 
 type ChatStoreMapProps = {
   storeMap: ChatStoreMapData;

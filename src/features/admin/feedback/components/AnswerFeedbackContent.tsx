@@ -4,7 +4,7 @@ import { AdminErrorBanner } from "@/features/admin/common/components/AdminErrorB
 import { AnswerFeedbackList } from "@/features/admin/feedback/components/AnswerFeedbackList";
 import { useDismissAnswerFeedback } from "@/features/admin/feedback/hooks/useAdminAnswerFeedback";
 import type { AnswerFeedbackListItem } from "@/features/admin/feedback/lib/answerFeedbackFilters";
-import type { AdminAnswerFeedbackStats } from "@/features/admin/types";
+import type { AdminAnswerFeedbackStats } from "@/entities/feedback";
 
 type AnswerFeedbackContentProps = {
   error: string | null;

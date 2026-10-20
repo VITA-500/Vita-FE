@@ -10,13 +10,13 @@ import type {
 } from "@/features/admin/common/context/adminDataTypes";
 import { adminQueryKeys } from "@/features/admin/common/context/adminQueryKeys";
 import { invalidateStoreBenefits } from "@/features/admin/common/lib/invalidateStoreBenefits";
-import { adminStoreService } from "@/features/admin/lib/adminStoreService";
+import { env } from "@/shared/config/env";
+import { adminStoreApi } from "@/entities/store";
 import type {
   AdminStore,
   AdminStoreDetail,
   AdminStoreType,
-} from "@/features/admin/types";
-import { env } from "@/shared/config/env";
+} from "@/entities/store";
 
 export const getInitialStoreType = (
   pathname?: string | null,
@@ -54,7 +54,7 @@ export const useAdminStoreData = (
   const storeQuery = useQuery({
     enabled: Boolean(env.apiBaseUrl),
     queryFn: () =>
-      adminStoreService.fetchStores({
+      adminStoreApi.fetchStores({
         keyword: storeKeyword,
         page: storePage,
         size: storePageSize,
@@ -150,7 +150,7 @@ export const useAdminStoreData = (
     () => ({
       addStore: async (input) => {
         if (env.apiBaseUrl) {
-          await adminStoreService.createStore({
+          await adminStoreApi.createStore({
             ...input,
             storeType: storeTypeFilter,
           });
@@ -196,7 +196,7 @@ export const useAdminStoreData = (
       refreshStores,
       saveStore: async (storeId, input) => {
         if (env.apiBaseUrl) {
-          await adminStoreService.updateStore(storeId, input);
+          await adminStoreApi.updateStore(storeId, input);
           setStoreSortField("updatedAt");
           setStoreSortDirection("desc");
           setStorePage(0);
@@ -251,7 +251,7 @@ export const useAdminStoreData = (
 
         await Promise.all(
           Object.entries(inputs).map(([storeId, input]) =>
-            adminStoreService.updateStore(Number(storeId), input),
+            adminStoreApi.updateStore(Number(storeId), input),
           ),
         );
         await invalidateStoreData();
@@ -273,7 +273,7 @@ export const useAdminStoreData = (
           return;
         }
 
-        await adminStoreService.deleteStore(storeId);
+        await adminStoreApi.deleteStore(storeId);
         await invalidateStoreData();
       },
     }),

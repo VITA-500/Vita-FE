@@ -7,10 +7,10 @@ import {
   type SetStateAction,
 } from "react";
 import { canSendAnswerFeedback } from "@/features/chat/message/lib/chatAnswerFeedback";
-import { chatService } from "@/features/chat/lib/chatService";
-import type { ChatFeedback, ChatMessage } from "@/features/chat/types";
 import { ApiError } from "@/shared/api/http";
 import { showToast } from "@/shared/providers/ToastProvider";
+import { feedbackApi } from "@/entities/feedback";
+import type { ChatFeedback, ChatMessage } from "@/entities/chat";
 
 type SendFeedbackOptions = {
   /** true면 실패 토스트를 띄우지 않는다. 호출하는 쪽이 결과를 한 번에 안내할 때 쓴다. */
@@ -63,7 +63,7 @@ export const useChatAnswerFeedback = ({
       setFeedbackMessageIds((ids) => new Set(ids).add(assistantMessageId));
 
       try {
-        const response = await chatService.sendFeedback(
+        const response = await feedbackApi.sendAnswerFeedback(
           target.serverMessageId,
           nextFeedback,
           comment,

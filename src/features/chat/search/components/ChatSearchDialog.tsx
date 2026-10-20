@@ -12,9 +12,9 @@ import {
   emptySearchPeriod,
   saveRecentSearches,
 } from "@/features/chat/search/lib/chatSearch";
-import type { ChatSessionSummary } from "@/features/chat/types";
 import { cn } from "@/shared/lib/cn";
 import { ChatSearchPeriodFilter } from "@/features/chat/search/components/ChatSearchPeriodFilter";
+import type { ChatSessionSummary } from "@/entities/chat";
 
 type ChatSearchDialogProps = {
   chatSessions: readonly ChatSessionSummary[];

@@ -1,5 +1,5 @@
-import type { ChatStoreMap } from "@/features/chat/types";
 import { formatDistance, getDistanceMeters } from "@/shared/lib/geo";
+import type { ChatStoreMap } from "@/entities/chat";
 
 type Point = { lat: number; lng: number };
 

@@ -8,17 +8,17 @@ import {
   faqFormSchema,
   type FaqFormValues,
 } from "@/features/admin/common/lib/adminFormSchemas";
-import {
-  adminFaqCategories,
-  adminFaqSubcategories,
-  type AdminFaq,
-  type AdminFaqCategory,
-} from "@/features/admin/types";
 import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/atoms/Button";
 import { Modal } from "@/shared/ui/organisms/Modal";
 import { showToast } from "@/shared/providers/ToastProvider";
 import type { SelectOption } from "@/shared/ui/atoms/Select";
+import {
+  adminFaqCategories,
+  adminFaqSubcategories,
+  type AdminFaq,
+  type AdminFaqCategory,
+} from "@/entities/faq";
 
 const faqCategoryOptions: readonly SelectOption[] = adminFaqCategories.map(
   (category) => ({ label: category, value: category }),

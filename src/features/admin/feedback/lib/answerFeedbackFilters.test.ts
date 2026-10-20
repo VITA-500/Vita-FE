@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { AdminAnswerFeedback } from "@/features/admin/types";
 import {
   countAnswerFeedbackByFilter,
   filterAnswerFeedback,
@@ -8,6 +7,7 @@ import {
   mergeAnswerFeedbackCandidates,
   withMatchedReasons,
 } from "@/features/admin/feedback/lib/answerFeedbackFilters";
+import type { AdminAnswerFeedback } from "@/entities/feedback";
 
 const candidate = (
   id: number,

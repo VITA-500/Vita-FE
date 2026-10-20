@@ -1,4 +1,3 @@
-import type { ChatMessage, SessionMessage } from "@/features/chat/types";
 import { isStoreRelatedPrompt } from "@/features/chat/store/lib/chatStoreMap";
 import {
   FAILED_ANSWER_MESSAGE,
@@ -7,6 +6,7 @@ import {
   toChatStoreMap,
 } from "@/entities/chat";
 import { toSafeTitleText } from "@/features/chat/sidebar/lib/chatTitleMask";
+import type { ChatMessage, SessionMessage } from "@/entities/chat";
 
 export const toChatTitle = (prompt: string) => {
   const title = toSafeTitleText(prompt);

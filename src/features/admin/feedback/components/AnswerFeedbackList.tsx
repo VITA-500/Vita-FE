@@ -4,14 +4,14 @@ import { ChevronDown, MessageSquareWarning } from "lucide-react";
 import { useState } from "react";
 import { AdminEmptyState } from "@/features/admin/common/components/AdminEmptyState";
 import type { AnswerFeedbackListItem } from "@/features/admin/feedback/lib/answerFeedbackFilters";
-import type {
-  AdminAnswerFeedback,
-  AdminAnswerFeedbackReason,
-} from "@/features/admin/types";
 import { cn } from "@/shared/lib/cn";
 import { formatKoreanMonthDay } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/atoms/Button";
 import { Modal } from "@/shared/ui/organisms/Modal";
+import type {
+  AdminAnswerFeedback,
+  AdminAnswerFeedbackReason,
+} from "@/entities/feedback";
 
 const failReasonLabels: Record<AdminAnswerFeedbackReason, string> = {
   ANSWER_FAILED: "답변 실패",

@@ -14,11 +14,11 @@ import {
 } from "lucide-react";
 import { useAdminAnswerFeedback } from "@/features/admin/feedback/hooks/useAdminAnswerFeedback";
 import { useAdminOperationsSummary } from "@/features/admin/dashboard/hooks/useAdminOperationsSummary";
-import type { AdminAnswerFeedbackReason } from "@/features/admin/types";
 import { routes } from "@/shared/constants/routes";
 import { ButtonLink } from "@/shared/ui/atoms/Button";
 import { Card } from "@/shared/ui/atoms/Card";
 import { cn } from "@/shared/lib/cn";
+import type { AdminAnswerFeedbackReason } from "@/entities/feedback";
 
 /** 차트 라이브러리는 대시보드에서만 쓰므로 따로 불러온다. */
 const ReasonBarChart = dynamic(

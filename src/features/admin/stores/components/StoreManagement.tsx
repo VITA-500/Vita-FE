@@ -22,8 +22,6 @@ import {
 } from "@/features/admin/stores/components/StoreFormModal";
 import { useActionStatus } from "@/features/admin/common/context/ActionStatusContext";
 import { useAdminData } from "@/features/admin/common/context/AdminDataContext";
-import { adminStoreService } from "@/features/admin/lib/adminStoreService";
-import type { AdminStoreType } from "@/features/admin/types";
 import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/atoms/Button";
 import { Card } from "@/shared/ui/atoms/Card";
@@ -35,6 +33,8 @@ import {
   storeSortOptions,
   storeTypeLabels,
 } from "@/features/admin/stores/lib/storeManagementConfig";
+import { benefitApi } from "@/entities/benefit";
+import type { AdminStoreType } from "@/entities/store";
 
 type StoreManagementProps = {
   storeType?: AdminStoreType;
@@ -84,7 +84,7 @@ export const StoreManagement = ({
   const Heading = embedded ? "h2" : "h1";
   const benefitQuery = useQuery({
     queryKey: [...adminQueryKeys.benefitsAll, "options"],
-    queryFn: () => adminStoreService.fetchBenefits(),
+    queryFn: () => benefitApi.fetchBenefits(),
     enabled: isPartnerStore && Boolean(env.apiBaseUrl),
   });
   const benefits = benefitQuery.data ?? [];

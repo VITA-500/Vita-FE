@@ -12,8 +12,8 @@ import type {
 } from "@/features/admin/common/context/adminDataTypes";
 import { adminQueryKeys } from "@/features/admin/common/context/adminQueryKeys";
 import { adminFaqApi } from "@/entities/faq";
-import type { AdminFaq } from "@/features/admin/types";
 import { env } from "@/shared/config/env";
+import type { AdminFaq } from "@/entities/faq";
 
 export const useAdminFaqData = (): AdminFaqData => {
   const queryClient = useQueryClient();

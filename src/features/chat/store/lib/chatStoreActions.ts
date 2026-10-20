@@ -1,5 +1,5 @@
-import type { ChatAction, ChatStoreMap } from "@/features/chat/types";
 import { routes } from "@/shared/constants/routes";
+import type { ChatAction, ChatStoreMap } from "@/entities/chat";
 
 /** "가까운 매장 보기" 기본 주소(/chat?mode=store)인지. 특정 매장을 가리키는 주소는 그대로 둔다. */
 const isStoreMapHref = (href: string) => {
