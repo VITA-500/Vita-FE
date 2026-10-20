@@ -172,4 +172,44 @@ describe("ChatComposer stop button", () => {
     await user.click(screen.getByRole("button", { name: "답변 중단" }));
     expect(onStop).toHaveBeenCalledTimes(1);
   });
+
+  it("offers follow-up prompts only under the last answer and sends the chosen one", async () => {
+    const onSelectFollowUp = vi.fn();
+    const question: ChatMessage = {
+      id: "user-change",
+      role: "user",
+      content: "요금제 변경하려면 어떻게 해?",
+      createdAt: "2026-10-20T00:00:00.000Z",
+    };
+    const answer: ChatMessage = {
+      id: "assistant-change",
+      role: "assistant",
+      content: "온라인에서 변경할 수 있어요.",
+      status: "success",
+      createdAt: "2026-10-20T00:00:01.000Z",
+    };
+    const { rerender } = render(
+      <ChatMessageList
+        isLoading={false}
+        messages={[question, answer]}
+        onSelectFollowUp={onSelectFollowUp}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "가까운 매장 찾아줘" }),
+    );
+    expect(onSelectFollowUp).toHaveBeenCalledWith("가까운 매장 찾아줘");
+
+    rerender(
+      <ChatMessageList
+        isLoading
+        messages={[question, answer]}
+        onSelectFollowUp={onSelectFollowUp}
+      />,
+    );
+    expect(
+      screen.queryByRole("region", { name: "이어서 물어볼 만한 질문" }),
+    ).toBeNull();
+  });
 });

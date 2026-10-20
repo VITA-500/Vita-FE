@@ -10,11 +10,16 @@ import {
   StreamingAnswer,
 } from "@/features/chat/message/components/ChatAssistantMessageParts";
 import { ChatAnswerFeedback } from "@/features/chat/message/components/ChatAnswerFeedback";
+import { ChatFollowUpSuggestions } from "@/features/chat/message/components/ChatFollowUpSuggestions";
 import { ChatMarkdown } from "@/features/chat/message/components/ChatMarkdown";
 import { ChatPlanCardList } from "@/features/chat/cards/components/ChatPlanCardList";
 import { useChatStoreMapSlot } from "@/features/chat/store/components/ChatStoreMapSlot";
 import { UserMessageBubble } from "@/features/chat/message/components/UserMessageBubble";
 import { canSendAnswerFeedback } from "@/features/chat/message/lib/chatAnswerFeedback";
+import {
+  getChatFollowUp,
+  type ChatFollowUp,
+} from "@/features/chat/message/lib/chatFollowUps";
 import { resolveChatActionHref } from "@/features/chat/store/lib/chatStoreActions";
 import { stripStoreTablesFromAnswer } from "@/features/chat/store/lib/chatStoreAnswerContent";
 import { toChatPlanCards } from "@/features/chat/cards/lib/chatPlanCards";
@@ -41,6 +46,8 @@ type ChatMessageListProps = {
   ) => void;
   /** 실패하거나 중단된 답변을 같은 질문으로 다시 요청한다. */
   onRetryAnswer?: (assistantMessageId: string) => void;
+  /** 마지막 답변 아래 후속 제안을 눌렀을 때 그 문장을 질문으로 보낸다. */
+  onSelectFollowUp?: (prompt: string) => void;
   /** 피드백 저장·관리자 전달 중인 답변 메시지 id. */
   feedbackMessageIds?: ReadonlySet<string>;
   /** SSE로 받고 있는 답변. 글자가 오기 시작하면 진행 단계 대신 답변 말풍선을 바로 보여준다. */
@@ -72,12 +79,16 @@ const AssistantBubble = ({ children }: { children: ReactNode }) => (
 );
 
 const AssistantSuccessMessage = ({
+  followUp,
   isFeedbackSubmitting,
   message,
   onFeedbackAnswer,
+  onSelectFollowUp,
 }: {
+  followUp?: ChatFollowUp | null;
   isFeedbackSubmitting: boolean;
   message: ChatMessage;
+  onSelectFollowUp?: (prompt: string) => void;
   onFeedbackAnswer?: (
     assistantMessageId: string,
     feedback: ChatFeedback,
@@ -135,6 +146,13 @@ const AssistantSuccessMessage = ({
           }
         />
       )}
+
+      {followUp && onSelectFollowUp && (
+        <ChatFollowUpSuggestions
+          followUp={followUp}
+          onSelectPrompt={onSelectFollowUp}
+        />
+      )}
     </AssistantRow>
   );
 };
@@ -149,6 +167,7 @@ const ChatMessageItem = ({
   onEditPrompt,
   onFeedbackAnswer,
   onRetryAnswer,
+  onSelectFollowUp,
   feedbackMessageIds,
 }: {
   feedbackMessageIds?: ReadonlySet<string>;
@@ -165,6 +184,7 @@ const ChatMessageItem = ({
     comment?: string,
   ) => void;
   onRetryAnswer?: (assistantMessageId: string) => void;
+  onSelectFollowUp?: (prompt: string) => void;
 }) => {
   if (message.role === "user") {
     const nextMessage = messages[index + 1];
@@ -218,11 +238,29 @@ const ChatMessageItem = ({
     );
   }
 
+  // 후속 제안은 마지막 답변에만, 다음 답변을 기다리지 않을 때만 보여준다.
+  const followUp =
+    isLastMessage && !isLoading && onSelectFollowUp
+      ? getChatFollowUp({
+          answer: message,
+          askedPrompts: messages
+            .filter(({ role }) => role === "user")
+            .map(({ content }) => content),
+          question:
+            messages
+              .slice(0, index)
+              .reverse()
+              .find(({ role }) => role === "user")?.content ?? "",
+        })
+      : null;
+
   return (
     <AssistantSuccessMessage
+      followUp={followUp}
       isFeedbackSubmitting={feedbackMessageIds?.has(message.id) ?? false}
       message={message}
       onFeedbackAnswer={onFeedbackAnswer}
+      onSelectFollowUp={onSelectFollowUp}
     />
   );
 };
@@ -234,6 +272,7 @@ export const ChatMessageList = ({
   onEditPrompt,
   onFeedbackAnswer,
   onRetryAnswer,
+  onSelectFollowUp,
   feedbackMessageIds,
   streamingReply,
 }: ChatMessageListProps) => (
@@ -250,6 +289,7 @@ export const ChatMessageList = ({
         onEditPrompt={onEditPrompt}
         onFeedbackAnswer={onFeedbackAnswer}
         onRetryAnswer={onRetryAnswer}
+        onSelectFollowUp={onSelectFollowUp}
         feedbackMessageIds={feedbackMessageIds}
       />
     ))}
