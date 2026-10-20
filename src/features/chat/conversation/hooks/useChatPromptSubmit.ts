@@ -14,6 +14,7 @@ import {
 } from "@/features/chat/conversation/lib/chatMessages";
 import { getCurrentChatLocation } from "@/features/chat/store/lib/chatStoreMap";
 import { getChatError } from "@/features/chat/conversation/lib/chatErrors";
+import { dropTrailingFailedAttempts } from "@/features/chat/conversation/lib/chatConversationFlow";
 import { createTextReveal } from "@/features/chat/conversation/lib/chatTextReveal";
 import type {
   ChatMessage,
@@ -111,7 +112,10 @@ export const useChatPromptSubmit = ({
           : -1;
         const baseMessages =
           replaceIndex >= 0
-            ? currentMessages.slice(0, replaceIndex)
+            ? dropTrailingFailedAttempts(
+                currentMessages.slice(0, replaceIndex),
+                trimmedPrompt,
+              )
             : currentMessages;
 
         return [...baseMessages, userMessage];

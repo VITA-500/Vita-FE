@@ -7,6 +7,7 @@ export {
   requestGuestChatJson,
 } from "@/entities/chat/api/chatApiClient";
 export type { SendChatMessageOptions } from "@/entities/chat/api/chatStream";
+export { ChatAnswerTimeoutError } from "@/entities/chat/api/chatStreamTransport";
 export { parseStreamEvent } from "@/entities/chat/api/chatStreamEvent";
 export type {
   ChatApiAction,
