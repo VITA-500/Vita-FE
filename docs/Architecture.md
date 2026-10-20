@@ -40,6 +40,7 @@ app/{route}
   page.tsx        라우트 진입. 화면 분기(mode 등)만 둔다.
   layout.tsx
   _components/    이 라우트의 화면 조립 컴포넌트 (예: ChatScreen, MapScreen, ProfileScreen)
+  _hooks/         이 라우트 화면에서만 쓰는 상태 훅 (예: 로그인 폼 상태 useAuthForm)
 ```
 
 - `_`로 시작하는 폴더는 Next.js 라우트에서 제외된다(private folder).
