@@ -5,7 +5,7 @@ import {
   findUserMessageBeforeAssistant,
   getLastUserMessage,
 } from "@/features/chat/conversation/lib/chatConversationFlow";
-import type { ChatMessage } from "@/features/chat/types";
+import type { ChatMessage } from "@/entities/chat";
 
 const message = (
   id: string,

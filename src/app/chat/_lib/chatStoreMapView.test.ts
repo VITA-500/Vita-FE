@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toStoreLocation } from "./chatStoreMapView";
-import type { ChatStoreMap } from "@/features/chat/types";
+import type { ChatStoreMap } from "@/entities/chat";
 
 const storeMap = {
   type: "PARTNER",

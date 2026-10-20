@@ -1,11 +1,4 @@
-// 사용자 타입은 entities/user로 옮겼다. 기존 import 경로 호환용 재내보내기.
 import type { AuthUser } from "@/entities/user";
-export type {
-  AuthUser,
-  MyPageResponse,
-  MyPageUpdateRequest,
-  MyPageUpdateResponse,
-} from "@/entities/user";
 
 export type LoginRequest = {
   email: string;

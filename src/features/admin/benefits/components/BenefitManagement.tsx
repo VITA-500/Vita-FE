@@ -28,13 +28,13 @@ import {
   type BenefitCategoryFilter,
   type BenefitSort,
 } from "@/features/admin/benefits/hooks/useAdminBenefits";
-import { type AdminBenefitRequest } from "@/features/admin/types";
 import { ApiError } from "@/shared/api/http";
 import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/atoms/Button";
 import { Card } from "@/shared/ui/atoms/Card";
 import { SearchInput } from "@/shared/ui/molecules/SearchInput";
 import { showToast } from "@/shared/providers/ToastProvider";
+import { type AdminBenefitRequest } from "@/entities/benefit";
 
 /** BE 오류 문구(브랜드 중복·연결 매장 있음 등)를 그대로 보여주고, 없으면 기본 문구 */
 const toErrorMessage = (error: unknown, fallback: string) =>

@@ -3,8 +3,8 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { ANSWER_FEEDBACK_COMMENT_MAX_LENGTH } from "@/entities/feedback";
-import type { ChatFeedback, ChatMessage } from "@/features/chat/types";
 import { cn } from "@/shared/lib/cn";
+import type { ChatFeedback, ChatMessage } from "@/entities/chat";
 
 type ChatAnswerFeedbackProps = {
   isFeedbackSubmitting?: boolean;

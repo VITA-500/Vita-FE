@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { chatConversationStorage } from "@/features/chat/conversation/lib/chatConversationStorage";
-import { chatService } from "@/features/chat/lib/chatService";
 import { createStoppedAssistantMessage } from "@/features/chat/conversation/lib/chatMessages";
 import {
   findUserMessageBeforeAssistant,
@@ -16,13 +15,13 @@ import { useChatPromptSubmit } from "@/features/chat/conversation/hooks/useChatP
 import { useChatInputFocus } from "@/features/chat/conversation/hooks/useChatInputFocus";
 import type {
   ChatConversationStatus,
-  ChatFeedback,
-  ChatMessage,
   ChatMode,
   ChatStreamingReply,
 } from "@/features/chat/types";
 import { ApiError } from "@/shared/api/http";
 import { showToast } from "@/shared/providers/ToastProvider";
+import { chatApi } from "@/entities/chat";
+import type { ChatFeedback, ChatMessage } from "@/entities/chat";
 
 type UseChatConversationControllerParams = {
   activeMode: ChatMode;
@@ -300,7 +299,7 @@ export const useChatConversationController = ({
 
   const deleteChatSession = async (targetSessionId: number) => {
     try {
-      await chatService.deleteSession(targetSessionId);
+      await chatApi.deleteSession(targetSessionId);
       removeChatSession(targetSessionId);
 
       // 보고 있거나 불러오는 중인 상담을 지우면 빈 새 상담으로 돌아간다.
@@ -323,7 +322,7 @@ export const useChatConversationController = ({
     setChatSessionPinned(targetSessionId, nextPinned);
 
     try {
-      const response = await chatService.updateSessionPin(
+      const response = await chatApi.updateSessionPin(
         targetSessionId,
         nextPinned,
       );
@@ -337,10 +336,7 @@ export const useChatConversationController = ({
 
   const renameChatSession = async (targetSessionId: number, title: string) => {
     try {
-      const response = await chatService.updateSessionTitle(
-        targetSessionId,
-        title,
-      );
+      const response = await chatApi.updateSessionTitle(targetSessionId, title);
 
       setChatSessionTitle(response.sessionId, response.title);
 
@@ -381,7 +377,7 @@ export const useChatConversationController = ({
     setLoadingSessionId(targetSessionId);
 
     try {
-      const loaded = await chatService.getMessages(targetSessionId);
+      const loaded = await chatApi.getMessages(targetSessionId);
 
       if (latestSelectRequestRef.current !== requestId) return;
 

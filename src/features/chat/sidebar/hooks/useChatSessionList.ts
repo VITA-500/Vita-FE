@@ -1,9 +1,9 @@
 import { useCallback, useRef, useState } from "react";
-import { chatService } from "@/features/chat/lib/chatService";
 import { toChatTitle } from "@/features/chat/conversation/lib/chatMessages";
-import type { ChatSessionSummary } from "@/features/chat/types";
 import { ApiError } from "@/shared/api/http";
 import { showToast } from "@/shared/providers/ToastProvider";
+import { chatApi } from "@/entities/chat";
+import type { ChatSessionSummary } from "@/entities/chat";
 
 /** 사이드바 제목을 채우려고 상담 메시지를 동시에 조회하는 최대 개수. */
 const TITLE_FETCH_CONCURRENCY = 4;
@@ -34,9 +34,7 @@ export const useChatSessionList = (isAuthenticated: boolean) => {
       const worker = async () => {
         for (let session = queue.shift(); session; session = queue.shift()) {
           try {
-            const { messages } = await chatService.getMessages(
-              session.sessionId,
-            );
+            const { messages } = await chatApi.getMessages(session.sessionId);
             const firstPrompt = messages.find(
               (message) => message.role === "USER" && message.content,
             )?.content;
@@ -72,7 +70,7 @@ export const useChatSessionList = (isAuthenticated: boolean) => {
     }
 
     try {
-      const { sessions } = await chatService.getSessions();
+      const { sessions } = await chatApi.getSessions();
       setChatSessions(sessions);
       await Promise.race([
         fillMissingSessionTitles(sessions),

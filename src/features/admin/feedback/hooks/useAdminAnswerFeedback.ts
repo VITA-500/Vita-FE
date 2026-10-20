@@ -17,10 +17,10 @@ import {
   type AnswerFeedbackFilter,
   type AnswerFeedbackQualityFilter,
 } from "@/features/admin/feedback/lib/answerFeedbackFilters";
-import type { AdminAnswerFeedbackStats } from "@/features/admin/types";
 import { ApiError } from "@/shared/api/http";
 import { env } from "@/shared/config/env";
 import { showToast } from "@/shared/providers/ToastProvider";
+import type { AdminAnswerFeedbackStats } from "@/entities/feedback";
 
 const toLimitedMock = (limit: number): AdminAnswerFeedbackStats => ({
   ...mockAnswerFeedbackStats,

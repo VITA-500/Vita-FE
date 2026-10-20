@@ -5,12 +5,10 @@ import type { ChatConversation } from "./chatPageTypes";
 import { ProfilePanel } from "@/features/auth/components/ProfilePanel";
 import { ChatConversationContent } from "@/features/chat/conversation/components/ChatConversationContent";
 import { ChatStoreMapSlotProvider } from "@/features/chat/store/components/ChatStoreMapSlot";
-import type {
-  ChatMode,
-  ChatStoreMap as ChatStoreMapData,
-} from "@/features/chat/types";
+import type { ChatMode } from "@/features/chat/types";
 import { StoreMapPanel } from "@/features/store/panel/components/StoreMapPanel";
 import type { StoreMapInitialAction } from "@/features/store/types";
+import type { ChatStoreMap as ChatStoreMapData } from "@/entities/chat";
 
 /** 답변 속 매장 지도 블록. 채팅(feature)과 매장 지도(feature)를 여기서 조립한다. */
 const renderChatStoreMap = (storeMap: ChatStoreMapData) => (

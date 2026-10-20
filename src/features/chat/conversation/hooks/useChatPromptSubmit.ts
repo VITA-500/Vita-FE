@@ -6,7 +6,6 @@ import {
   type RefObject,
   type SetStateAction,
 } from "react";
-import { chatService } from "@/features/chat/lib/chatService";
 import { createGuestId } from "@/features/chat/conversation/lib/chatConversationStorage";
 import { toChatTitle } from "@/features/chat/conversation/lib/chatMessages";
 import {
@@ -17,12 +16,13 @@ import { getChatError } from "@/features/chat/conversation/lib/chatErrors";
 import { dropTrailingFailedAttempts } from "@/features/chat/conversation/lib/chatConversationFlow";
 import { createTextReveal } from "@/features/chat/conversation/lib/chatTextReveal";
 import type {
-  ChatMessage,
   ChatStreamingReply,
   ChatConversationStatus,
 } from "@/features/chat/types";
 import { ApiError } from "@/shared/api/http";
 import { showToast } from "@/shared/providers/ToastProvider";
+import { chatApi } from "@/entities/chat";
+import type { ChatMessage } from "@/entities/chat";
 
 type SubmitChatPromptOptions = {
   /** 이 메시지부터 뒤를 지우고 새 질문으로 다시 묻는다(질문 수정 · 다시 시도). */
@@ -142,7 +142,7 @@ export const useChatPromptSubmit = ({
             : (currentGuestId ?? createGuestId());
         const nextSessionId =
           currentSessionId ??
-          (await chatService.createSession(nextGuestId, signal)).sessionId;
+          (await chatApi.createSession(nextGuestId, signal)).sessionId;
 
         if (signal.aborted) return;
 
@@ -178,7 +178,7 @@ export const useChatPromptSubmit = ({
 
         if (signal.aborted) return;
 
-        const assistantMessage = await chatService.sendMessage({
+        const assistantMessage = await chatApi.sendMessage({
           content: trimmedPrompt,
           guestId: nextGuestId,
           location,

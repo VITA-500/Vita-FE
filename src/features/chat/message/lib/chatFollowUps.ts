@@ -2,7 +2,7 @@ import {
   isPartnerStorePrompt,
   isStoreFindingPrompt,
 } from "@/features/chat/store/lib/chatStoreMap";
-import type { ChatMessage } from "@/features/chat/types";
+import type { ChatMessage } from "@/entities/chat";
 
 /** 답변 아래에 보여주는 후속 제안. 버튼을 누르면 prompt를 그대로 질문으로 보낸다. */
 export type ChatFollowUp = {

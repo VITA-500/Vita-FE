@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
-import type { ChatStoreMap } from "@/features/chat/types";
+import type { ChatStoreMap } from "@/entities/chat";
 
 type RenderChatStoreMap = (storeMap: ChatStoreMap) => ReactNode;
 

@@ -1,30 +1,4 @@
-// 상담 메시지·세션 타입은 entities/chat으로 옮겼다. 기존 import 경로 호환용 재내보내기.
 import type { ChatAnswerRecovery, ChatProgressStage } from "@/entities/chat";
-export type {
-  ChatAction,
-  ChatAnswerRecovery,
-  ChatAnswerSource,
-  ChatAnswerStatus,
-  ChatApiMessageRole,
-  ChatApiMessageStatus,
-  ChatAssistantStatus,
-  ChatFeedback,
-  ChatMessage,
-  ChatMessageResponse,
-  ChatMessageRole,
-  ChatPlan,
-  ChatProgressStage,
-  ChatSendRequest,
-  ChatSessionListResponse,
-  ChatSessionSummary,
-  ChatStoreMap,
-  ChatStoreOriginSource,
-  ChatStoreSummary,
-  ChatStoreType,
-  ChatStreamEvent,
-  SessionMessage,
-  SessionMessagesResponse,
-} from "@/entities/chat";
 
 export type ChatConversationStatus =
   | "idle"

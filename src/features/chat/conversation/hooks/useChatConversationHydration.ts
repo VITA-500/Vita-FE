@@ -12,21 +12,15 @@ import {
   getGuestChatConversationOwnerKey,
 } from "@/features/chat/conversation/lib/chatConversationStorage";
 import {
-  chatService,
-  isPermanentClaimError,
-} from "@/features/chat/lib/chatService";
-import {
   toChatMessage,
   toChatTitle,
 } from "@/features/chat/conversation/lib/chatMessages";
 import { collapseRetriedFailures } from "@/features/chat/conversation/lib/chatConversationFlow";
 import { toSafeTitleText } from "@/features/chat/sidebar/lib/chatTitleMask";
-import type {
-  ChatMessage,
-  SessionMessagesResponse,
-} from "@/features/chat/types";
 import { ApiError } from "@/shared/api/http";
 import { showToast } from "@/shared/providers/ToastProvider";
+import { chatApi, isPermanentClaimError } from "@/entities/chat";
+import type { ChatMessage, SessionMessagesResponse } from "@/entities/chat";
 
 type MutableRef<T> = { current: T };
 
@@ -123,7 +117,7 @@ export const useChatConversationHydration = ({
         }
 
         if (guestConversation?.sessionId && guestConversation.guestId) {
-          await chatService
+          await chatApi
             .claimGuestSession(
               guestConversation.sessionId,
               guestConversation.guestId,
@@ -177,7 +171,7 @@ export const useChatConversationHydration = ({
       // 현재 세션을 서버에서 다시 읽어 PENDING/COMPLETED 상태와 답변 내용을 복원한다.
       if (nextConversation?.sessionId) {
         try {
-          const serverConversation = await chatService.getMessages(
+          const serverConversation = await chatApi.getMessages(
             nextConversation.sessionId,
             nextConversation.guestId,
           );

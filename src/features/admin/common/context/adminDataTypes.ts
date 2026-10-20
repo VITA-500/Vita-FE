@@ -2,11 +2,13 @@ import type {
   AdminFaq,
   AdminFaqCategory,
   AdminFaqStatus,
+} from "@/entities/faq";
+import type {
   AdminStore,
   AdminStoreDetail,
   AdminStoreType,
   AdminStoreFormInput,
-} from "@/features/admin/types";
+} from "@/entities/store";
 
 export type FaqSaveInput = Pick<AdminFaq, "category" | "question"> & {
   answer: string;

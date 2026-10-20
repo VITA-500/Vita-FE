@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { mockOperationsSummary } from "@/features/admin/common/lib/adminData";
 import { adminQueryKeys } from "@/features/admin/common/context/adminQueryKeys";
-import { adminStoreService } from "@/features/admin/lib/adminStoreService";
 import {
   ADMIN_BENEFIT_MAX_PAGE_SIZE,
   adminBenefitApi,
@@ -11,6 +10,7 @@ import {
 import { adminFaqApi } from "@/entities/faq";
 import { adminUserApi } from "@/entities/user";
 import { env } from "@/shared/config/env";
+import { adminStoreApi } from "@/entities/store";
 
 export type AdminOperationsSummary = typeof mockOperationsSummary;
 
@@ -48,8 +48,8 @@ export const useAdminOperationsSummary = () => {
     queryFn: async (): Promise<AdminOperationsSummary> => {
       const [phoneStores, partnerStores, benefitCounts, faqs, suspended] =
         await Promise.all([
-          adminStoreService.countStores("PHONE"),
-          adminStoreService.countStores("PARTNER"),
+          adminStoreApi.countStores("PHONE"),
+          adminStoreApi.countStores("PARTNER"),
           fetchBenefitCounts(),
           adminFaqApi.fetchFaqs({ page: 0, size: 1, status: "ACTIVE" }),
           adminUserApi.fetchUsers({ page: 0, size: 1, status: "SUSPENDED" }),

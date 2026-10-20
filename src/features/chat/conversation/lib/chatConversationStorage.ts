@@ -1,4 +1,4 @@
-import type { ChatMessage } from "@/features/chat/types";
+import type { ChatMessage } from "@/entities/chat";
 
 export type StoredChatConversation = {
   guestId?: string;

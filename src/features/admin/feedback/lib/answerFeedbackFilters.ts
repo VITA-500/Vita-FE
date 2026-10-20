@@ -2,7 +2,7 @@ import type {
   AdminAnswerFeedback,
   AdminAnswerFeedbackReason,
   AdminAnswerFeedbackStats,
-} from "@/features/admin/types";
+} from "@/entities/feedback";
 
 /**
  * 답변 피드백 페이지의 필터.

@@ -1,4 +1,4 @@
-import type { ChatStoreMap as ChatStoreMapData } from "@/features/chat/types";
+import type { ChatStoreMap as ChatStoreMapData } from "@/entities/chat";
 
 /** 답변 속 매장 지도에 보여줄 최대 매장 수 */
 export const MAX_CHAT_STORE_COUNT = 5;

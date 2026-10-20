@@ -3,12 +3,9 @@
 import { useEffect, useState } from "react";
 import { Check, RotateCw } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import type {
-  ChatAnswerRecovery,
-  ChatLocationStatus,
-  ChatProgressStage,
-} from "@/features/chat/types";
+import type { ChatLocationStatus } from "@/features/chat/types";
 import { cn } from "@/shared/lib/cn";
+import type { ChatAnswerRecovery, ChatProgressStage } from "@/entities/chat";
 
 /**
  * 답변을 기다리는 동안 보여주는 진행 단계.

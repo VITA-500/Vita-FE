@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { adminStoreService } from "@/features/admin/lib/adminStoreService";
+import { adminStoreApi } from "@/entities/store";
 import { useAdminStoreData } from "@/features/admin/stores/hooks/useAdminStoreData";
 import { storeDetails } from "@/features/admin/common/lib/adminData";
 import { adminQueryKeys } from "@/features/admin/common/context/adminQueryKeys";
@@ -10,8 +10,9 @@ import { adminQueryKeys } from "@/features/admin/common/context/adminQueryKeys";
 vi.mock("@/shared/config/env", () => ({
   env: { apiBaseUrl: "https://api.vita.test" },
 }));
-vi.mock("@/features/admin/lib/adminStoreService", () => ({
-  adminStoreService: { fetchStores: vi.fn(), updateStore: vi.fn() },
+vi.mock("@/entities/store", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/entities/store")>()),
+  adminStoreApi: { fetchStores: vi.fn(), updateStore: vi.fn() },
 }));
 const clients: QueryClient[] = [];
 afterEach(() => {
@@ -25,15 +26,13 @@ const setup = () => {
     },
   });
   clients.push(client);
-  vi.mocked(adminStoreService.fetchStores).mockImplementation(
-    async ({ page }) => ({
-      stores: [],
-      details: [],
-      totalPages: 5,
-      totalCount: 100,
-      currentPage: page,
-    }),
-  );
+  vi.mocked(adminStoreApi.fetchStores).mockImplementation(async ({ page }) => ({
+    stores: [],
+    details: [],
+    totalPages: 5,
+    totalCount: 100,
+    currentPage: page,
+  }));
   return {
     client,
     ...renderHook(() => useAdminStoreData("PARTNER"), {
@@ -49,13 +48,13 @@ describe("partner store filters", () => {
     await waitFor(() => expect(result.current.isStoreLoading).toBe(false));
     act(() => result.current.setStorePage(3));
     await waitFor(() =>
-      expect(adminStoreService.fetchStores).toHaveBeenLastCalledWith(
+      expect(adminStoreApi.fetchStores).toHaveBeenLastCalledWith(
         expect.objectContaining({ page: 3 }),
       ),
     );
     act(() => result.current.setStoreCategory("자동차"));
     await waitFor(() =>
-      expect(adminStoreService.fetchStores).toHaveBeenLastCalledWith(
+      expect(adminStoreApi.fetchStores).toHaveBeenLastCalledWith(
         expect.objectContaining({
           page: 0,
           storeType: "PARTNER",
@@ -66,7 +65,7 @@ describe("partner store filters", () => {
     expect(result.current.storeCategory).toBe("자동차");
     act(() => result.current.setStoreTypeFilter("PHONE"));
     await waitFor(() =>
-      expect(adminStoreService.fetchStores).toHaveBeenLastCalledWith(
+      expect(adminStoreApi.fetchStores).toHaveBeenLastCalledWith(
         expect.objectContaining({ storeType: "PHONE", category: undefined }),
       ),
     );
@@ -76,7 +75,7 @@ describe("partner store filters", () => {
     const { result, client } = setup();
     const invalidate = vi.spyOn(client, "invalidateQueries");
     await waitFor(() => expect(result.current.isStoreLoading).toBe(false));
-    vi.mocked(adminStoreService.updateStore).mockResolvedValue({
+    vi.mocked(adminStoreApi.updateStore).mockResolvedValue({
       storeId: 1,
       updatedAt: "now",
     });
@@ -93,14 +92,14 @@ describe("partner store filters", () => {
 
     act(() => result.current.setStoreBenefitId(17));
     await waitFor(() =>
-      expect(adminStoreService.fetchStores).toHaveBeenLastCalledWith(
+      expect(adminStoreApi.fetchStores).toHaveBeenLastCalledWith(
         expect.objectContaining({ benefitId: 17, category: undefined }),
       ),
     );
 
     act(() => result.current.setStoreCategory("여가"));
     await waitFor(() =>
-      expect(adminStoreService.fetchStores).toHaveBeenLastCalledWith(
+      expect(adminStoreApi.fetchStores).toHaveBeenLastCalledWith(
         expect.objectContaining({ benefitId: undefined, category: "여가" }),
       ),
     );

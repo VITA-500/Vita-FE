@@ -1,5 +1,5 @@
 import { toSafeTitleText } from "@/features/chat/sidebar/lib/chatTitleMask";
-import type { ChatSessionSummary } from "@/features/chat/types";
+import type { ChatSessionSummary } from "@/entities/chat";
 
 export type SidebarChatItem = {
   active: boolean;

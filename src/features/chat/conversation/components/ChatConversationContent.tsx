@@ -4,12 +4,9 @@ import type { RefObject } from "react";
 import { ChatComposer } from "@/features/chat/conversation/components/ChatComposer";
 import { ChatMessageList } from "@/features/chat/message/components/ChatMessageList";
 import { PromptSuggestions } from "@/features/chat/conversation/components/PromptSuggestions";
-import type {
-  ChatFeedback,
-  ChatMessage,
-  ChatStreamingReply,
-} from "@/features/chat/types";
+import type { ChatStreamingReply } from "@/features/chat/types";
 import { cn } from "@/shared/lib/cn";
+import type { ChatFeedback, ChatMessage } from "@/entities/chat";
 
 type ChatConversationContentProps = {
   chatInput: string;

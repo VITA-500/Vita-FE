@@ -5,11 +5,11 @@ import { useCallback, useState } from "react";
 import { adminQueryKeys } from "@/features/admin/common/context/adminQueryKeys";
 import { invalidateStoreBenefits } from "@/features/admin/common/lib/invalidateStoreBenefits";
 import { adminBenefitApi } from "@/entities/benefit";
+import { env } from "@/shared/config/env";
 import type {
   AdminBenefitCategory,
   AdminBenefitRequest,
-} from "@/features/admin/types";
-import { env } from "@/shared/config/env";
+} from "@/entities/benefit";
 
 export type BenefitCategoryFilter = "ALL" | AdminBenefitCategory;
 export type BenefitSort = "createdAt,desc" | "updatedAt,desc" | "brand,asc";

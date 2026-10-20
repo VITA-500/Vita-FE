@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getChatFollowUp } from "@/features/chat/message/lib/chatFollowUps";
-import type { ChatMessage, ChatStoreMap } from "@/features/chat/types";
+import type { ChatMessage, ChatStoreMap } from "@/entities/chat";
 
 const answer = (extra: Partial<ChatMessage> = {}): ChatMessage => ({
   id: "assistant-1",

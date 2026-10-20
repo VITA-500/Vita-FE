@@ -1,4 +1,3 @@
-import type { AdminStore } from "@/features/admin/types";
 import { AdminEmptyState } from "@/features/admin/common/components/AdminEmptyState";
 import { AdminPagination } from "@/features/admin/common/components/AdminPagination";
 import { formatKoreanDate } from "@/shared/lib/date";
@@ -6,6 +5,7 @@ import { Edit2, Trash2 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/atoms/Button";
 import { Card } from "@/shared/ui/atoms/Card";
+import type { AdminStore } from "@/entities/store";
 
 export type StoreRowActionsProps = {
   compact?: boolean;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canSendAnswerFeedback } from "@/features/chat/message/lib/chatAnswerFeedback";
-import type { ChatMessage } from "@/features/chat/types";
+import type { ChatMessage } from "@/entities/chat";
 
 const answer = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   id: "assistant-10",

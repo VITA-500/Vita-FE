@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveChatActionHref } from "@/features/chat/store/lib/chatStoreActions";
-import type { ChatStoreMap } from "@/features/chat/types";
+import type { ChatStoreMap } from "@/entities/chat";
 
 const storeMapAction = { label: "가까운 매장 보기", href: "/chat?mode=store" };
 const store = {

@@ -14,7 +14,6 @@ import {
   getChatStoreMapOriginPoint,
   getChatStoreMapUserLocation,
 } from "@/features/chat/store/lib/chatStoreMapOrigin";
-import type { ChatStoreMap as ChatStoreMapData } from "@/features/chat/types";
 import {
   buildMarkerColorInfoById,
   buildMarkerLabelById,
@@ -24,6 +23,7 @@ import {
 } from "@/entities/store";
 import type { LatLng } from "@/shared/lib/geo";
 import { showToast } from "@/shared/providers/ToastProvider";
+import type { ChatStoreMap as ChatStoreMapData } from "@/entities/chat";
 
 /**
  * 답변 속 매장 지도의 상태: 보여줄 매장, 선택한 매장, 지도·카드 맞춤 요청, 내 위치, 핀 색·글자.

@@ -5,10 +5,10 @@ import { StorePanelPagination } from "@/features/store/search/components/StorePa
 import { mapCategoryOptions } from "@/features/store/constants";
 import { renderBenefitCategoryIcon } from "@/entities/benefit";
 import { getStoreMarkerLabel } from "@/entities/store";
-import type { BenefitCategoryOption } from "@/features/store/lib/benefitService";
 import type { MapCategory } from "@/features/store/types";
 import type { StoreLocation, StoreOpenFilter } from "@/entities/store";
 import { cn } from "@/shared/lib/cn";
+import type { BenefitCategoryOption } from "@/entities/benefit";
 
 const getListTitle = (category: MapCategory) =>
   category === "store" ? "매장 목록" : "제휴 혜택/서비스 목록";

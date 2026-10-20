@@ -3,7 +3,7 @@ import type {
   ChatMarkdownListItem,
 } from "@/features/chat/message/components/ChatMarkdown";
 import type { PlanCardProps } from "@/shared/ui/organisms/PlanCard";
-import type { ChatPlan } from "@/features/chat/types";
+import type { ChatPlan } from "@/entities/chat";
 
 /**
  * 챗봇 답변의 요금제 표·목록을 요금제 카드(PlanCard) 데이터로 바꾼다.

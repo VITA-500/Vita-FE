@@ -1,11 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import type {
-  ChatMessage,
-  ChatMode,
-  ChatStreamingReply,
-} from "@/features/chat/types";
+import type { ChatMode, ChatStreamingReply } from "@/features/chat/types";
+import type { ChatMessage } from "@/entities/chat";
 
 type UseChatAutoScrollParams = {
   activeMode: ChatMode;

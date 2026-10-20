@@ -1,4 +1,4 @@
-import type { AdminStoreType } from "@/features/admin/types";
+import type { AdminStoreType } from "@/entities/store";
 
 export const STORE_PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
 export const STORE_MIN_TABLE_ROWS = 8;
