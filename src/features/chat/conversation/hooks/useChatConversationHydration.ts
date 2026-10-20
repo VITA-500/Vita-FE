@@ -19,6 +19,7 @@ import {
   toChatMessage,
   toChatTitle,
 } from "@/features/chat/conversation/lib/chatMessages";
+import { collapseRetriedFailures } from "@/features/chat/conversation/lib/chatConversationFlow";
 import { toSafeTitleText } from "@/features/chat/sidebar/lib/chatTitleMask";
 import type {
   ChatMessage,
@@ -70,7 +71,9 @@ export const useChatConversationHydration = ({
 }: UseChatConversationHydrationParams) => {
   const applyChatSession = useCallback(
     (response: SessionMessagesResponse) => {
-      const nextMessages = response.messages.map(toChatMessage);
+      const nextMessages = collapseRetriedFailures(
+        response.messages.map(toChatMessage),
+      );
       const firstPrompt = response.messages.find(
         (message) => message.role === "USER" && message.content,
       )?.content;
@@ -182,7 +185,9 @@ export const useChatConversationHydration = ({
           if (!isCancelled) {
             nextConversation = {
               ...nextConversation,
-              messages: serverConversation.messages.map(toChatMessage),
+              messages: collapseRetriedFailures(
+                serverConversation.messages.map(toChatMessage),
+              ),
             };
           }
         } catch (error) {

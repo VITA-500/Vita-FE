@@ -26,6 +26,14 @@ export const STAGE_BY_STATUS: Record<string, ChatProgressStage> = {
 
 export const createAbortError = () => new DOMException("Aborted", "AbortError");
 
+/** 정해 둔 시간(ANSWER_TIMEOUT_MS) 안에 답변이 끝나지 않아 기다리기를 멈췄을 때 */
+export class ChatAnswerTimeoutError extends Error {
+  constructor() {
+    super("Chat answer timed out");
+    this.name = "ChatAnswerTimeoutError";
+  }
+}
+
 const wait = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     if (signal?.aborted) {
@@ -161,7 +169,7 @@ export const pollAssistantAnswer = async ({
     await wait(POLL_INTERVAL_MS, signal);
   }
 
-  throw new Error("Chat answer timed out");
+  throw new ChatAnswerTimeoutError();
 };
 
 export const isTerminalStatus = (status: ChatApiMessageStatus) =>

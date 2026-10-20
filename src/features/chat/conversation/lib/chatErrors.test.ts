@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "@/shared/api/http";
 import { getChatError } from "@/features/chat/conversation/lib/chatErrors";
-import { requestGuestChatJson } from "@/entities/chat";
+import { ChatAnswerTimeoutError, requestGuestChatJson } from "@/entities/chat";
 import { vi, afterEach } from "vitest";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -47,5 +47,19 @@ describe("chat errors", () => {
       status: "failed",
       resetSession: false,
     });
+  });
+  it("separates server errors and timeouts from the generic failure", () => {
+    expect(getChatError(new ApiError("", 503)).message).toBe(
+      "서버에 일시적인 문제가 있어요. 잠시 후 다시 시도해 주세요.",
+    );
+    expect(getChatError(new ChatAnswerTimeoutError()).message).toBe(
+      "답변이 너무 오래 걸려 기다리기를 멈췄어요. 다시 시도해 주세요.",
+    );
+    expect(
+      getChatError(new DOMException("Aborted", "AbortError")).message,
+    ).toBe("답변이 너무 오래 걸려 기다리기를 멈췄어요. 다시 시도해 주세요.");
+    expect(getChatError(new TypeError("network")).message).toBe(
+      "답변을 받지 못했어요. 잠시 후 다시 시도해 주세요.",
+    );
   });
 });
