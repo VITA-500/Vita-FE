@@ -42,6 +42,16 @@ describe("chatStoreMap", () => {
     expect(isStoreRelatedPrompt("근처 제휴 서비스 매장 찾아줘")).toBe(true);
   });
 
+  it("recognizes partner brand and nearby expressions that need a location", () => {
+    expect(isStoreRelatedPrompt("루나빈 어디 있어?")).toBe(true);
+    expect(isStoreRelatedPrompt("가까이에 있는 카페 찾아줘")).toBe(true);
+    expect(isStoreRelatedPrompt("인근 카페")).toBe(true);
+  });
+
+  it("does not request a location for a general benefit question", () => {
+    expect(isStoreRelatedPrompt("제휴 혜택 뭐 있어?")).toBe(false);
+  });
+
   it("does not create a local phone-store fallback for partner prompts", () => {
     expect(shouldUseLocalStoreFallback("근처 제휴 서비스 매장 찾아줘")).toBe(
       false,
@@ -95,6 +105,8 @@ describe("isStoreFindingPrompt", () => {
     expect(isStoreFindingPrompt("가까운 대리점 어디야?")).toBe(true);
     expect(isStoreFindingPrompt("강남 지점 몇 시까지 해?")).toBe(true);
     expect(isStoreFindingPrompt("매장 추천해줘")).toBe(true);
+    expect(isStoreFindingPrompt("인근 카페")).toBe(true);
+    expect(isStoreFindingPrompt("부근 제휴 매장 알려줘")).toBe(true);
   });
 
   it("매장 관련 정보를 묻는 질문은 매장 찾기가 아니다", () => {

@@ -179,13 +179,24 @@ export const StoreMapPanelShells = ({
   );
   const desktopReservationContent = reservationStore ? (
     <div className="border-border mt-5 border-t pt-5 break-keep">
-      <div className="mb-4">
-        <p className="text-sm font-extrabold text-gray-950 dark:text-white">
-          방문 예약
-        </p>
-        <p className="text-text-secondary mt-1 text-xs leading-5 font-semibold">
-          {reservationStore.name} 방문 시간을 선택해 주세요.
-        </p>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-extrabold text-gray-950 dark:text-white">
+            방문 예약
+          </p>
+          <p className="text-text-secondary mt-1 text-xs leading-5 font-semibold">
+            {reservationStore.name} 방문 시간을 선택해 주세요.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={cancelReservation}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:outline-none dark:hover:bg-white/10 dark:hover:text-gray-200"
+          aria-label="예약 닫기"
+          title="예약 닫기"
+        >
+          <X size={16} />
+        </button>
       </div>
       <StoreReservationFields
         maxReservationDate={maxReservationDate}
@@ -220,6 +231,11 @@ export const StoreMapPanelShells = ({
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-4 pb-8">
         {storeInfoContent}
       </div>
+      {desktopReservationContent && (
+        <div className="max-h-[46%] min-h-0 shrink-0 overflow-y-auto px-5 pb-5">
+          {desktopReservationContent}
+        </div>
+      )}
     </div>
   );
 
