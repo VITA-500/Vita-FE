@@ -66,6 +66,18 @@ export const getCurrentChatLocation = async () => {
 export const isStoreRelatedPrompt = (prompt: string) =>
   /매장|대리점|지점|방문|길찾기|가까운\s*곳|근처|오프라인/.test(prompt);
 
+/** 매장 위치를 찾는 말. 이 말이 있어야 위치를 요청하고 "주변 매장" 진행 문구를 쓴다. */
+const STORE_FINDING_PATTERN =
+  /근처|가까운|주변|어디|찾아|찾기|찾을|위치|길찾기|지도|영업\s*중|지금\s*(열|문\s*연)|몇\s*시까지|매장\s*(알려|보여|추천|목록)/;
+
+/**
+ * 매장을 찾는 질문인지. 매장이 나오는 질문 중에서도 위치를 찾는 말이 있을 때만 true다.
+ * "기기변경 목적으로 매장 방문", "매장 갈 때 준비물"처럼 매장 관련 정보를 묻는 질문은 false다.
+ * 위치 권한 요청, 위치 확인 단계, "주변 매장 정보를 찾고 있어요" 문구에 쓴다.
+ */
+export const isStoreFindingPrompt = (prompt: string) =>
+  isStoreRelatedPrompt(prompt) && STORE_FINDING_PATTERN.test(prompt);
+
 export const isPartnerStorePrompt = (prompt: string) =>
   /제휴|혜택|할인|멤버십|서비스\s*매장|카페|영화관|편의점|베이커리|외식|쇼핑/.test(
     prompt,

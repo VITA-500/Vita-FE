@@ -65,7 +65,7 @@ const steps: Array<
   },
 ];
 
-/** 매장 질문의 검색 단계 문구. 위치를 요청하는 기준(isStoreRelatedPrompt)과 같은 판단을 쓴다. */
+/** 매장 찾기 질문의 검색 단계 문구. 위치를 요청하는 기준(isStoreFindingPrompt)과 같은 판단을 쓴다. */
 const storeRetrievingLabels: StepLabels = {
   activeLabel: "주변 매장 정보를 찾고 있어요",
   doneLabel: "주변 매장 정보를 찾았어요",

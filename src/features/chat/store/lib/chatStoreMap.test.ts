@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getMatchedServices,
+  isStoreFindingPrompt,
   isStoreRelatedPrompt,
   rankStoresByServices,
   shouldUsePartnerStoreFallback,
@@ -85,5 +86,22 @@ describe("chatStoreMap", () => {
     expect(shouldUseLocalStoreFallback("근처 휴대폰 상담 매장 찾아줘")).toBe(
       true,
     );
+  });
+});
+
+describe("isStoreFindingPrompt", () => {
+  it("매장 위치를 찾는 질문만 매장 찾기로 본다", () => {
+    expect(isStoreFindingPrompt("근처 매장 알려줘")).toBe(true);
+    expect(isStoreFindingPrompt("가까운 대리점 어디야?")).toBe(true);
+    expect(isStoreFindingPrompt("강남 지점 몇 시까지 해?")).toBe(true);
+    expect(isStoreFindingPrompt("매장 추천해줘")).toBe(true);
+  });
+
+  it("매장 관련 정보를 묻는 질문은 매장 찾기가 아니다", () => {
+    expect(isStoreFindingPrompt("기기 변경 목적으로 매장 방문")).toBe(false);
+    expect(isStoreFindingPrompt("매장 방문할 때 필요한 준비물 알려줘")).toBe(
+      false,
+    );
+    expect(isStoreFindingPrompt("요금제 추천해줘")).toBe(false);
   });
 });

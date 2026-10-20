@@ -8,11 +8,11 @@ import {
 } from "react";
 import { chatService } from "@/features/chat/lib/chatService";
 import { createGuestId } from "@/features/chat/conversation/lib/chatConversationStorage";
+import { toChatTitle } from "@/features/chat/conversation/lib/chatMessages";
 import {
-  isStoreRelatedPrompt,
-  toChatTitle,
-} from "@/features/chat/conversation/lib/chatMessages";
-import { getCurrentChatLocation } from "@/features/chat/store/lib/chatStoreMap";
+  getCurrentChatLocation,
+  isStoreFindingPrompt,
+} from "@/features/chat/store/lib/chatStoreMap";
 import { getChatError } from "@/features/chat/conversation/lib/chatErrors";
 import { dropTrailingFailedAttempts } from "@/features/chat/conversation/lib/chatConversationFlow";
 import { createTextReveal } from "@/features/chat/conversation/lib/chatTextReveal";
@@ -156,7 +156,8 @@ export const useChatPromptSubmit = ({
 
         if (signal.aborted) return;
 
-        const isStorePrompt = isStoreRelatedPrompt(trimmedPrompt);
+        // 매장을 찾는 질문만 위치를 요청한다. 매장 관련 정보(준비물 등)를 묻는 질문은 요청하지 않는다.
+        const isStorePrompt = isStoreFindingPrompt(trimmedPrompt);
         if (isStorePrompt) {
           setStreamingReply((reply) => ({
             content: "",

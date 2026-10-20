@@ -10,12 +10,18 @@ import {
   StreamingAnswer,
 } from "@/features/chat/message/components/ChatAssistantMessageParts";
 import { ChatAnswerFeedback } from "@/features/chat/message/components/ChatAnswerFeedback";
+import { ChatClarifyChoices } from "@/features/chat/message/components/ChatClarifyChoices";
 import { ChatFollowUpSuggestions } from "@/features/chat/message/components/ChatFollowUpSuggestions";
 import { ChatMarkdown } from "@/features/chat/message/components/ChatMarkdown";
 import { ChatPlanCardList } from "@/features/chat/cards/components/ChatPlanCardList";
 import { useChatStoreMapSlot } from "@/features/chat/store/components/ChatStoreMapSlot";
 import { UserMessageBubble } from "@/features/chat/message/components/UserMessageBubble";
 import { canSendAnswerFeedback } from "@/features/chat/message/lib/chatAnswerFeedback";
+import {
+  findClarifyChoices,
+  toClarifiedPrompt,
+  type ChatClarifyChoices as ChatClarifyChoicesData,
+} from "@/features/chat/message/lib/chatClarifyChoices";
 import {
   getChatFollowUp,
   type ChatFollowUp,
@@ -79,12 +85,18 @@ const AssistantBubble = ({ children }: { children: ReactNode }) => (
 );
 
 const AssistantSuccessMessage = ({
+  clarify,
+  question = "",
   followUp,
   isFeedbackSubmitting,
   message,
   onFeedbackAnswer,
   onSelectFollowUp,
 }: {
+  /** 되묻는 질문의 선택지. 있으면 목록 대신 버튼으로 보여준다. */
+  clarify?: ChatClarifyChoicesData | null;
+  /** 이 답변을 만든 질문. 선택지를 누르면 이 질문과 합쳐 보낸다. */
+  question?: string;
   followUp?: ChatFollowUp | null;
   isFeedbackSubmitting: boolean;
   message: ChatMessage;
@@ -96,10 +108,9 @@ const AssistantSuccessMessage = ({
   ) => void;
 }) => {
   const renderStoreMap = useChatStoreMapSlot();
-  const answerContent = stripStoreTablesFromAnswer(
-    message.content ?? "",
-    message.storeMap,
-  );
+  const answerContent = clarify
+    ? clarify.contentWithoutChoices
+    : stripStoreTablesFromAnswer(message.content ?? "", message.storeMap);
 
   return (
     <AssistantRow hasStoreMap={Boolean(message.storeMap)}>
@@ -108,6 +119,14 @@ const AssistantSuccessMessage = ({
           <ChatMarkdown
             content={answerContent}
             renderPlanCards={!message.plans?.length}
+          />
+        )}
+        {clarify && onSelectFollowUp && (
+          <ChatClarifyChoices
+            clarify={clarify}
+            onSelectChoice={(choice) =>
+              onSelectFollowUp(toClarifiedPrompt(choice, question))
+            }
           />
         )}
         {message.plans && message.plans.length > 0 && (
@@ -238,24 +257,34 @@ const ChatMessageItem = ({
     );
   }
 
-  // 후속 제안은 마지막 답변에만, 다음 답변을 기다리지 않을 때만 보여준다.
+  const question =
+    messages
+      .slice(0, index)
+      .reverse()
+      .find(({ role }) => role === "user")?.content ?? "";
+  // 되묻기 선택지·후속 제안은 마지막 답변에만, 다음 답변을 기다리지 않을 때만 보여준다.
+  const canOfferNext = isLastMessage && !isLoading && Boolean(onSelectFollowUp);
+  // 매장 지도·요금제 카드가 있는 답변은 되묻는 답변이 아니라서 선택지를 찾지 않는다.
+  const clarify =
+    canOfferNext && !message.storeMap && !message.plans?.length
+      ? findClarifyChoices(message.content ?? "")
+      : null;
+  // 되묻는 중이면 후속 제안은 보여주지 않는다(버튼 묶음이 두 개가 되지 않게).
   const followUp =
-    isLastMessage && !isLoading && onSelectFollowUp
+    canOfferNext && !clarify
       ? getChatFollowUp({
           answer: message,
           askedPrompts: messages
             .filter(({ role }) => role === "user")
             .map(({ content }) => content),
-          question:
-            messages
-              .slice(0, index)
-              .reverse()
-              .find(({ role }) => role === "user")?.content ?? "",
+          question,
         })
       : null;
 
   return (
     <AssistantSuccessMessage
+      clarify={clarify}
+      question={question}
       followUp={followUp}
       isFeedbackSubmitting={feedbackMessageIds?.has(message.id) ?? false}
       message={message}

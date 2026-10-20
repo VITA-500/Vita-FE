@@ -1,6 +1,6 @@
 import {
   isPartnerStorePrompt,
-  isStoreRelatedPrompt,
+  isStoreFindingPrompt,
 } from "@/features/chat/store/lib/chatStoreMap";
 import type { ChatMessage } from "@/features/chat/types";
 
@@ -12,6 +12,13 @@ export type ChatFollowUp = {
 };
 
 const MAX_PROMPTS = 3;
+
+/**
+ * 챗봇이 자료가 없어 답하지 못했다고 말한 문장.
+ * BE는 미해결 여부를 채팅 응답에 보내지 않아 답변 글로 판단한다.
+ */
+const NO_INFO_PATTERN =
+  /정보에\s*없어|확인할\s*수\s*있는\s*정보에\s*없|정확히\s*안내(드리|해\s*드리)기\s*어렵|안내(드리|해\s*드리)기\s*어렵|답변(드리|해\s*드리)기\s*어렵/;
 
 /** 요금제 변경·가입처럼 매장에서도 처리할 수 있는 질문 */
 const ACCOUNT_CHANGE_PATTERN =
@@ -59,8 +66,17 @@ const followUpRules: FollowUpRule[] = [
     },
   },
   {
+    // 자료가 없어 답하지 못했으면, 매장에서 직접 확인하도록 이어 준다(매장 질문이어도 적용).
+    matches: ({ answer }) => NO_INFO_PATTERN.test(answer.content ?? ""),
+    build: () => ({
+      intro:
+        "이 내용은 정확히 안내드리기 어렵지만, 가까운 매장에서 직접 확인하실 수 있어요. 근처 매장을 찾아드릴까요?",
+      prompts: ["근처 매장 찾아줘"],
+    }),
+  },
+  {
     matches: ({ question }) =>
-      ACCOUNT_CHANGE_PATTERN.test(question) && !isStoreRelatedPrompt(question),
+      ACCOUNT_CHANGE_PATTERN.test(question) && !isStoreFindingPrompt(question),
     build: () => ({
       intro:
         "온라인 말고 매장에서 바로 처리할 수도 있어요. 가까운 매장도 찾아드릴까요?",
@@ -69,7 +85,7 @@ const followUpRules: FollowUpRule[] = [
   },
   {
     matches: ({ question }) =>
-      isPartnerStorePrompt(question) && !isStoreRelatedPrompt(question),
+      isPartnerStorePrompt(question) && !isStoreFindingPrompt(question),
     build: () => ({
       intro: "이 혜택을 쓸 수 있는 매장도 있어요. 함께 찾아드릴까요?",
       prompts: ["근처 제휴 매장 찾아줘"],

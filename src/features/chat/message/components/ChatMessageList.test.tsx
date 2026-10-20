@@ -212,4 +212,51 @@ describe("ChatComposer stop button", () => {
       screen.queryByRole("region", { name: "이어서 물어볼 만한 질문" }),
     ).toBeNull();
   });
+
+  it("turns the choices of a clarifying question into buttons and sends the picked item with the question", async () => {
+    const onSelectFollowUp = vi.fn();
+    const question: ChatMessage = {
+      id: "user-visit",
+      role: "user",
+      content: "매장 방문할 때 필요한 준비물 알려줘",
+      createdAt: "2026-10-20T00:00:00.000Z",
+    };
+    const answer: ChatMessage = {
+      id: "assistant-visit",
+      role: "assistant",
+      content: [
+        "어떤 목적으로 매장을 방문하실 예정인지 알려주시면 필요한 준비물을 안내드릴게요!",
+        "",
+        "* 기기변경",
+        "* 해지",
+        "* 기타 문의",
+      ].join("\n"),
+      status: "success",
+      createdAt: "2026-10-20T00:00:01.000Z",
+    };
+    render(
+      <ChatMessageList
+        isLoading={false}
+        messages={[question, answer]}
+        onSelectFollowUp={onSelectFollowUp}
+      />,
+    );
+
+    const choices = screen.getByRole("group", { name: "답변을 이어갈 선택지" });
+    expect(choices.textContent).toContain(
+      "그 밖의 내용은 아래 입력창에 적어 주세요.",
+    );
+    // 목록 글은 버튼으로 바뀌어 한 번만 보인다.
+    expect(screen.getAllByText("기기변경")).toHaveLength(1);
+    // 되묻는 중에는 후속 제안을 같이 보여주지 않는다.
+    expect(
+      screen.queryByRole("region", { name: "이어서 물어볼 만한 질문" }),
+    ).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "기기변경" }));
+    // 원래 질문과 합쳐 보내 BE가 자료를 찾기 쉽게 한다.
+    expect(onSelectFollowUp).toHaveBeenCalledWith(
+      "기기변경의 경우, 매장 방문할 때 필요한 준비물 알려줘",
+    );
+  });
 });
