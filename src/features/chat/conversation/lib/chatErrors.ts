@@ -4,8 +4,11 @@ import { ApiError } from "@/shared/api/http";
 /** 답변 대기 시간 초과, 또는 요청 시간 초과(timeoutMs로 끊긴 요청). 사용자가 직접 멈춘 경우는 호출 전에 걸러진다. */
 const isTimeoutError = (error: unknown) =>
   error instanceof ChatAnswerTimeoutError ||
-  (error instanceof Error &&
-    ["AbortError", "TimeoutError"].includes(error.name));
+  // DOMException은 환경(jsdom 등)에 따라 Error를 상속하지 않아 name으로만 확인한다.
+  (typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error.name === "AbortError" || error.name === "TimeoutError"));
 
 export const getChatError = (error: unknown) => {
   if (error instanceof ApiError) {
