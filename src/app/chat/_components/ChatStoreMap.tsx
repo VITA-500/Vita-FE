@@ -2,7 +2,7 @@
 
 import { LocateFixed, Tag } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
-import { ChatStoreResultCard } from "@/features/chat/components/ChatStoreResultCard";
+import { ChatStoreResultCard } from "@/features/chat/store/components/ChatStoreResultCard";
 import { StoreMapPreview } from "@/features/store/map/components/StoreMapPreview";
 import { StorePanelModals } from "@/features/store/reservation/components/StorePanelModals";
 import { useStoreReservation } from "@/features/store/reservation/hooks/useStoreReservation";
@@ -11,13 +11,13 @@ import {
   findChatStoreMap,
   getMatchedServices,
   readCachedChatLocation,
-} from "@/features/chat/lib/chatStoreMap";
-import { ChatCardRail } from "@/features/chat/components/ChatCardRail";
+} from "@/features/chat/store/lib/chatStoreMap";
+import { ChatCardRail } from "@/features/chat/cards/components/ChatCardRail";
 import {
   getChatStoreDistanceLabel,
   getChatStoreMapOriginPoint,
   getChatStoreMapUserLocation,
-} from "@/features/chat/lib/chatStoreMapOrigin";
+} from "@/features/chat/store/lib/chatStoreMapOrigin";
 import type { ChatStoreMap as ChatStoreMapData } from "@/features/chat/types";
 import {
   buildMarkerColorInfoById,
