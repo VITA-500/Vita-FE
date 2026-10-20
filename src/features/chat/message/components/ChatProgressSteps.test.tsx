@@ -85,4 +85,10 @@ describe("ChatProgressSteps", () => {
     );
     expect(screen.getByText("답변을 정리했어요")).toBeTruthy();
   });
+
+  it("BE 재시도 중이면 한 번 더 시도하고 있다고 알린다", () => {
+    render(<ChatProgressSteps stage="generating" recovery="retrying" />);
+
+    expect(currentStatus()).toBe("응답을 찾지 못해 한 번 더 시도하고 있어요");
+  });
 });

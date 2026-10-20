@@ -80,6 +80,7 @@ const locationLabels = {
 export const answerRecoveryLabels: Record<ChatAnswerRecovery, string> = {
   disconnected: "연결이 잠시 끊겨 답변을 다시 불러오고 있어요",
   timeout: "답변이 늦어져 저장된 답변을 다시 확인하고 있어요",
+  retrying: "응답을 찾지 못해 한 번 더 시도하고 있어요",
 };
 
 /** 한 단계에 이 시간(ms) 넘게 머물면 다음 줄(보조 문구)을 덧붙인다. */
