@@ -49,6 +49,9 @@ export type AdminAnswerFeedbackStats = {
     todayLikeCount?: number;
     /** 오늘(KST) 전체 답변이 받은 아쉬워요 수. 미해결 목록과 관계없음 */
     todayDislikeCount?: number;
+    /** 전체 기간 좋아요·아쉬워요 수(응답에 포함되는 경우). */
+    likeCount?: number;
+    dislikeCount?: number;
     /** 사유별 발생 수(무시한 것 제외). 자동 감지 답변에 아쉬워요까지 받으면 두 사유에 하나씩 센다 */
     reasonCounts?: Record<AdminAnswerFeedbackReason, number>;
     /** 사유별 오늘 발생 수 */

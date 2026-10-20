@@ -134,7 +134,7 @@ export const AnswerFeedbackList = ({
         <span className="text-center">질문</span>
         <span>횟수</span>
         <span>피드백 유형</span>
-        <span>최근 발생</span>
+        <span>발생 일자</span>
         <span className="text-center">{onDismiss ? "관리" : ""}</span>
       </div>
       <div className="space-y-3">
