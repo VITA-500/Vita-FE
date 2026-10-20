@@ -10,6 +10,11 @@ export type {
   AdminAnswerFeedbackDismissResponse,
   AdminAnswerFeedbackReason,
   AdminAnswerFeedbackStats,
+  AdminTraceDetail,
+  AdminTraceFlag,
+  AdminTraceListItem,
+  AdminTraceListResponse,
+  AdminTraceSpan,
   AnswerFeedback,
   AnswerFeedbackResponse,
 } from "@/entities/feedback/model/types";

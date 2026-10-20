@@ -2,6 +2,8 @@ import type {
   AdminAnswerFeedbackDismissResponse,
   AdminAnswerFeedbackReason,
   AdminAnswerFeedbackStats,
+  AdminTraceDetail,
+  AdminTraceListResponse,
 } from "@/entities/feedback/model/types";
 import { requestJson } from "@/shared/api/http";
 
@@ -35,4 +37,13 @@ export const adminAnswerFeedbackApi = {
         method: "PATCH",
       },
     ),
+  findTraceByMessageId: (messageId: number) =>
+    requestJson<AdminTraceListResponse>(
+      `/admin/traces?messageId=${messageId}&sortBy=id,desc&size=1`,
+      { timeoutMs: 10000 },
+    ),
+  getTrace: (traceId: number) =>
+    requestJson<AdminTraceDetail>(`/admin/traces/${traceId}`, {
+      timeoutMs: 10000,
+    }),
 };
