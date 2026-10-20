@@ -1,5 +1,5 @@
 import { Bus, SportShoe, TrainFront } from "lucide-react";
-import type { TransitRouteStep } from "@/features/store/route/lib/storeRoutePreview";
+import type { TransitRouteStep } from "@/entities/route";
 
 /**
  * 대중교통 구간 종류별 아이콘(버스·지하철·그 외 도보).

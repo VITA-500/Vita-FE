@@ -116,9 +116,6 @@ export const sortStoresByDistance = (
       distanceText: formatDistance(distanceMeters),
     }));
 
-// 핀 글자 규칙은 entities/store로 옮겼다. 기존 import 경로 호환용 재내보내기.
-export { buildMarkerLabelById } from "@/entities/store";
-
 type MapStoreVisibilityParams = {
   mapStores: StoreLocation[];
   pagedMapStores: StoreLocation[];

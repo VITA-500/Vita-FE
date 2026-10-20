@@ -5,7 +5,7 @@ import {
 import type { MarkerColorInfo, StoreLocation } from "@/entities/store";
 import { getFallbackMarkerStyle } from "@/features/store/map/lib/storeMapFallbackLayout";
 import { STORE_MARKER_DATA_ATTRIBUTE } from "@/features/store/map/lib/storeMapPreviewTypes";
-import { getStoreMarkerLabel } from "@/features/store/map/lib/storeMarkerOverlays";
+import { getStoreMarkerLabel } from "@/entities/store";
 import {
   getMarkerGradientId,
   getStorePinSvgMarkup,
