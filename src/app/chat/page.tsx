@@ -12,7 +12,7 @@ import { ChatSearchDialog } from "@/features/chat/components/ChatSearchDialog";
 import { ChatSettingsPanel } from "@/features/chat/components/ChatSettingsPanel";
 import { GuestNewChatDialog } from "@/features/chat/components/GuestNewChatDialog";
 import { ProfilePanel } from "@/features/auth/components/ProfilePanel";
-import { StoreMapPanel } from "@/features/store/components/StoreMapPanel";
+import { StoreMapPanel } from "@/features/store/panel/components/StoreMapPanel";
 import { useIsDesktopViewport } from "@/shared/hooks/useIsDesktopViewport";
 import {
   RailTooltip,
