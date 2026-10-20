@@ -74,6 +74,7 @@ export const ChatConversationContent = ({
                 onEditPrompt={onEditPrompt}
                 onFeedbackAnswer={onFeedbackAnswer}
                 onRetryAnswer={onRetryAnswer}
+                onSelectFollowUp={(prompt) => onSubmitPrompt(prompt)}
                 feedbackMessageIds={feedbackMessageIds}
                 streamingReply={streamingReply}
               />

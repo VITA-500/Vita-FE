@@ -296,3 +296,18 @@ export const StatusPending: Story = {
     </StoryFrame>
   ),
 };
+
+/** 마지막 답변 아래 후속 제안. 매장 지도가 있는 답변이라 방문 관련 제안이 나온다. */
+export const WithFollowUp: Story = {
+  name: "후속 제안",
+  args: {
+    isLoading: false,
+    messages: storeMessages,
+    onSelectFollowUp: noop,
+  },
+  render: (args) => (
+    <StoryFrame>
+      <ChatMessageList {...args} />
+    </StoryFrame>
+  ),
+};
