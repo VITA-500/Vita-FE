@@ -138,13 +138,16 @@ export const pollAssistantAnswer = async ({
   messageId,
   sessionId,
   signal,
+  onRetrying,
 }: {
   deadline: number;
   guestId?: string;
   messageId: number;
   sessionId: number;
   signal: AbortSignal;
+  onRetrying?: () => void;
 }) => {
+  let hasReportedRetrying = false;
   while (Date.now() < deadline) {
     const response = await requestChatJson<SessionMessagesResponse>(
       `/chat/sessions/${sessionId}/messages`,
@@ -161,6 +164,11 @@ export const pollAssistantAnswer = async ({
     const message = response?.messages.find(
       (item) => item.messageId === messageId,
     );
+
+    if (message?.status === "RETRYING" && !hasReportedRetrying) {
+      hasReportedRetrying = true;
+      onRetrying?.();
+    }
 
     if (message?.status && isTerminalStatus(message.status)) {
       return message;

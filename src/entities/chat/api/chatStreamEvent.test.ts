@@ -47,4 +47,20 @@ describe("chat completion event boundary", () => {
       }),
     ).toMatchObject({ name: "assistant_error", payload: { code: "FAILED" } });
   });
+
+  it("accepts the retrying assistant status", () => {
+    expect(
+      parseStreamEvent({
+        event: "assistant_status",
+        data: JSON.stringify({
+          sessionId: 1,
+          messageId: 2,
+          status: "retrying",
+        }),
+      }),
+    ).toMatchObject({
+      name: "assistant_status",
+      payload: { status: "retrying" },
+    });
+  });
 });

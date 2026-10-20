@@ -177,6 +177,10 @@ export const sendMessageWithStream = async ({
 
     const deadline = Date.now() + ANSWER_TIMEOUT_MS;
 
+    if (response.status === "RETRYING") {
+      onRecovering?.("retrying");
+    }
+
     targetMessageId = response.messageId;
     earlyEvents.splice(0).forEach(handleEvent);
 
@@ -226,6 +230,7 @@ export const sendMessageWithStream = async ({
       messageId: response.messageId,
       sessionId,
       signal: streamController.signal,
+      onRetrying: () => onRecovering?.("retrying"),
     });
 
     return toAssistantMessage({

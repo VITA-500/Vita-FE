@@ -12,7 +12,11 @@ export const parseStreamEvent = (event: SseEvent): ChatStreamEvent | null => {
       return null;
     switch (event.event) {
       case "assistant_status":
-        if (!["thinking", "retrieving_faq", "generating"].includes(p.status))
+        if (
+          !["thinking", "retrieving_faq", "generating", "retrying"].includes(
+            p.status,
+          )
+        )
           return null;
         break;
       case "assistant_delta":

@@ -1,6 +1,7 @@
 /** Vita-BE DTO/ChatEvents 계약. 화면 표시 타입과 별도로 관리한다. */
 export type ChatSendRequest = { content: string; lat?: number; lng?: number };
-export type ChatAssistantStatus = "thinking" | "retrieving_faq" | "generating";
+export type ChatAssistantStatus =
+  "thinking" | "retrieving_faq" | "generating" | "retrying";
 export type ChatApiAction = { label: string; href: string };
 export type ChatApiPlan = {
   planId: number;

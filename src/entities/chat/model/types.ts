@@ -124,7 +124,7 @@ export type ChatProgressStage = "understanding" | "retrieving" | "generating";
  * - disconnected: 답변 도중 스트림 연결이 끊김
  * - timeout: 연결은 살아 있지만 일정 시간 동안 답변이 끝나지 않음
  */
-export type ChatAnswerRecovery = "disconnected" | "timeout";
+export type ChatAnswerRecovery = "disconnected" | "timeout" | "retrying";
 
 export type ChatSessionSummary = {
   /** 서버가 상담 고정 상태를 내려주면 사이드바 고정 영역에 반영한다. */
