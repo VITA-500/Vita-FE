@@ -65,3 +65,48 @@ export type AdminAnswerFeedbackDismissResponse = {
   /** 목록에서 내린 답변 수. 자동 감지와 아쉬워요를 합친 수로 항목의 count와 같다. */
   dismissedCount: number;
 };
+
+export type AdminTraceListItem = {
+  id: number;
+  messageId: number;
+  createdAt: string;
+  appVersion?: string | null;
+  question: string;
+  unresolvedReason?: string | null;
+  totalMs: number;
+  hasError: boolean;
+};
+export type AdminTraceFlag = {
+  code: string;
+  message: string;
+  spanId?: number | string | null;
+};
+export type AdminTraceError = { type?: string | null; message?: string | null };
+export type AdminTraceSpan = {
+  id?: number | string;
+  type: string;
+  startedAt?: string | null;
+  endedAt?: string | null;
+  tookMs?: number | null;
+  skipped?: string | null;
+  error?: AdminTraceError | null;
+  history?: unknown;
+};
+export type AdminTraceDetail = {
+  id?: number;
+  messageId?: number;
+  createdAt?: string;
+  appVersion?: string | null;
+  question?: string;
+  config?: unknown;
+  totalMs: number;
+  flags: AdminTraceFlag[];
+  spans: AdminTraceSpan[];
+};
+export type AdminTraceListResponse = {
+  content: AdminTraceListItem[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+};
