@@ -2,8 +2,6 @@
 
 VITA FE는 Next.js App Router 기반이며, Feature-Sliced Design(FSD)을 참고한 `app / features / entities / shared` 4계층의 FSD-lite 구조를 사용한다. 정석 FSD의 `pages`, `widgets` 계층은 두지 않고, 화면 조립은 `app`이 맡는다. 공용 UI(`shared/ui`)는 Atomic Design의 `atoms / molecules / organisms`로 나눈다.
 
-> 2026-10 구조 리팩토링 진행 중. `entities`와 `shared/ui` 하위 구분은 단계적으로 옮기며, 옮기기 전 코드는 기존 위치(`features/*/lib` 등)에 남아 있다. 진행 순서는 아래 "Migration" 절을 따른다.
-
 ## Layer Responsibilities
 
 | Layer          | Responsibility                                                                                                        |
@@ -29,7 +27,8 @@ app  →  features  →  entities  →  shared
   - entity 간 import는 기본적으로 금지한다. 꼭 필요하면 FSD의 `@x` 공개 API를 사용한다: 예약이 매장 타입을 써야 하면 `entities/store/@x/reservation.ts`에서 필요한 것만 export하고, 예약 쪽은 `@/entities/store/@x/reservation`만 import한다.
 - slice 외부에서는 공개 API(`index.ts`)로만 import한다. `@/entities/store`는 허용, `@/entities/store/model/storeMappers` 같은 내부 경로 import는 금지.
 - route path, UI text, env 접근은 문자열을 흩뿌리지 않고 `shared/constants`, `shared/config`를 우선 사용한다.
-- 위 규칙은 `eslint.config.mjs`의 `no-restricted-imports`로 검사한다. 리팩토링 기간에는 `warn`으로 두고, 마무리 단계에서 `error`로 올린다. 상대 경로(`../../`)로 계층을 넘는 import는 검사되지 않으므로 계층 밖은 `@/` 경로로 import한다.
+- 위 규칙은 `eslint.config.mjs`의 `no-restricted-imports`로 검사한다. 현재 단계는 `warn`이라 커밋·빌드를 막지 않으므로, PR 전에 `npm run lint` 경고를 0으로 맞춘다. `error` 전환은 팀 합의 후 진행한다.
+- 상대 경로(`../../`)로 계층을 넘는 import는 검사되지 않으므로 계층 밖은 `@/` 경로로 import한다. 상대 경로는 같은 라우트 안(`./_components` 등)에서만 쓴다.
 
 ## Folder Structure
 
@@ -37,11 +36,14 @@ app  →  features  →  entities  →  shared
 
 ```text
 app/{route}
-  page.tsx        라우트 진입. 화면 분기(mode 등)만 둔다.
+  page.tsx        라우트 진입. 화면 틀과 조립만 둔다.
   layout.tsx
-  _components/    이 라우트의 화면 조립 컴포넌트 (예: ChatScreen, MapScreen, ProfileScreen)
-  _hooks/         이 라우트 화면에서만 쓰는 상태 훅 (예: 로그인 폼 상태 useAuthForm)
+  _components/    이 라우트의 화면 조립 컴포넌트 (예: chat의 ChatPageSidebar, ChatModeContent, ChatStoreMap)
+  _hooks/         이 라우트 화면에서만 쓰는 상태 훅 (예: login의 useAuthForm, chat의 useChatSidebarOpen)
+  _lib/           이 라우트에서만 쓰는 순수 함수 (예: chat의 chatPageParams — 주소 파라미터 해석)
 ```
+
+- 여러 feature를 합치는 조립은 app이 맡는다. 예: 채팅 답변 속 매장 지도(`app/chat/_components/ChatStoreMap`)는 `features/chat`과 `features/store`를 함께 쓰므로 app에 둔다.
 
 - `_`로 시작하는 폴더는 Next.js 라우트에서 제외된다(private folder).
 - 같은 화면 조립을 여러 라우트에서 쓰게 되면 그때 별도 계층(FSD의 widgets) 도입을 검토한다.
@@ -76,7 +78,7 @@ entities/{entity}
   index.ts      외부 공개 API
 ```
 
-예정 entity: `store`, `benefit`, `reservation`, `location`, `route`, `chat`, `faq`, `feedback`, `user`, `plan`
+현재 entity: `store`, `benefit`, `reservation`, `location`, `route`, `chat`, `faq`, `feedback`, `user`. `@x` 공개 API는 `store/@x/route`, `route/@x/store`, `feedback/@x/chat`이 있다. 요금제(`plan`)는 BE 관리자 API만 있어 FE entity는 아직 없다.
 
 ### shared
 
@@ -89,12 +91,12 @@ shared/
   providers/    ThemeProvider, ToastProvider 등 앱 전역 provider
   hooks/        범용 hook (요소 크기, 뷰포트, 바깥 클릭 등)
   api/          requestJson, 스트리밍, 응답·에러 처리
-  lib/          cn, date, browserStorage, kakao-map(SDK 로더·타입·카메라·범위 맞춤)
+  lib/          cn, date, geo(좌표·거리), browserStorage, desktopBreakpoint, kakaoMapScript·kakaoMapTypes(카카오맵 SDK 로더·타입)
   config/  constants/  layout/
 ```
 
 - `shared`에는 도메인을 모르는 코드만 둔다. 매장·요금제·상담처럼 특정 데이터에 묶인 UI는 `entities/*/ui` 또는 `features/*/components`에 둔다.
-- 카카오 지도 엔진(SDK 로더, 카메라, 범위 맞춤)은 매장을 모르는 지도 기능이므로 `shared/lib/kakao-map`에 두고, 매장 핀처럼 매장에 묶인 지도 UI는 `entities/store/ui`에 둔다.
+- 카카오맵 SDK 로더·타입·준비 훅(`shared/hooks/useKakaoMapReady`)은 매장을 모르는 코드라 `shared`에 둔다. 매장 핀·카메라·범위 맞춤처럼 매장 지도 화면에 묶인 코드는 `features/store/map`에 둔다.
 - `shared/ui` 하위 분류 기준은 [DesignSystem](./DesignSystem.md)을 따른다.
 
 ## Refactoring Rules
@@ -105,38 +107,51 @@ shared/
 - 서버 데이터 조회는 TanStack Query로 통일한다. 같은 데이터는 같은 쿼리 키를 써서 화면이 달라도 캐시를 공유한다. 직접 만든 요청 순서 관리(request id, `isCurrentRequest` 등)는 새로 추가하지 않는다.
 - 대시보드 집계는 현재 화면 목록을 재사용하지 않고 별도 집계 query를 사용한다.
 - 파일 이동 PR과 로직 변경 PR은 분리한다. 이동 PR은 `git mv`와 import 경로 수정만 포함한다.
-- 이동한 파일의 옛 경로에는 리팩토링 기간 동안 `export * from "새 경로"` 재내보내기 파일을 남겨 진행 중인 브랜치가 깨지지 않게 하고, 마무리 단계에서 일괄 삭제한다.
+- 파일을 옮길 때는 사용처의 import를 모두 새 경로로 바꾸고, 옛 경로에 재내보내기 파일을 남기지 않는다. 진행 중인 다른 브랜치가 그 경로를 쓰고 있을 때만 예외로 두고, 그 브랜치가 머지되면 바로 지운다.
 
 ## API Boundary
 
 - 모든 fetch는 `shared/api`의 `requestJson`(스트리밍은 shared 스트리밍 transport)을 사용한다. feature·entity에서 `fetch`를 직접 호출하지 않는다.
 - 인증 쿠키 기반 요청을 위해 `credentials: "include"`를 공통으로 적용한다. 게스트 채팅처럼 예외가 필요하면 공통 함수의 옵션으로 처리한다.
-- API별 함수는 entity의 `api/`에 둔다(이동 전 코드는 `features/*/lib/*Service.ts`).
+- API별 함수는 entity의 `api/`에 둔다. feature에 `*Service` 같은 별칭 객체를 따로 만들지 않고 entity API(`chatApi`, `adminStoreApi` 등)를 그대로 쓴다.
+- FE가 부르는 API 경로는 BE 컨트롤러에 실제로 있는 것만 둔다. BE에 아직 없는 API는 mock adapter로 두고, 호출 코드를 미리 만들지 않는다.
 - 백엔드 미구현 기능은 mock adapter를 유지하되, 실제 API가 확정되면 entity의 `api/` 안에서만 교체한다.
 
-## Migration
+## Migration (2026-10 구조 리팩토링, 완료)
 
-| 단계 | 내용                                                                                                         | 종류      |
-| ---- | ------------------------------------------------------------------------------------------------------------ | --------- |
-| 0    | 진행 중 리팩토링 브랜치 머지, 이 문서·DesignSystem 갱신, ESLint 경계 규칙(warn)                              | 문서·설정 |
-| 1    | `shared` 정리: `shared/ui` atomic 분류, `shared/hooks`, `shared/providers`                                   | 이동      |
-| 2    | `entities` 생성: entity별 `api`·`model` 이동, 중복 API 통합                                                  | 이동      |
-| 3    | 조회를 TanStack Query로 통일(지도는 동작 테스트 선행)                                                        | 로직      |
-| 4    | 채팅 ↔ 매장 지도 결합 해소(feature 간 직접 import 제거)                                                      | 로직      |
-| 5    | features 안을 역할·화면별 하위 폴더로 분리(`store`, `admin`, `chat`), 랜딩 섹션은 `app/(marketing)`으로 이동 | 이동      |
-| 6    | `app/{route}/_components`로 화면 조립 분리                                                                   | 로직      |
-| 7    | 재내보내기 파일 삭제, ESLint 경계 규칙 `error`, 문서 최종 정리                                               | 설정      |
+| 단계 | 내용                                                                                                         | 상태 |
+| ---- | ------------------------------------------------------------------------------------------------------------ | ---- |
+| 0    | 진행 중 리팩토링 브랜치 머지, 이 문서·DesignSystem 갱신, ESLint 경계 규칙(warn)                              | 완료 |
+| 1    | `shared` 정리: `shared/ui` atomic 분류, `shared/hooks`, `shared/providers`                                   | 완료 |
+| 2    | `entities` 생성: entity별 `api`·`model` 이동, 중복 API 통합                                                  | 완료 |
+| 3    | 조회를 TanStack Query로 통일(지도는 동작 테스트 선행)                                                        | 완료 |
+| 4    | 채팅 ↔ 매장 지도 결합 해소(feature 간 직접 import 제거)                                                      | 완료 |
+| 5    | features 안을 역할·화면별 하위 폴더로 분리(`store`, `admin`, `chat`), 랜딩 섹션은 `app/(marketing)`으로 이동 | 완료 |
+| 6    | `app/{route}/_components`·`_hooks`·`_lib`로 화면 조립 분리(로그인, 채팅, 채팅 답변 속 매장 지도)             | 완료 |
+| 7    | 재내보내기 파일 삭제, 쓰지 않는 API 호출 코드 삭제, 문서 정리                                                | 완료 |
+| 7    | ESLint 경계 규칙 `error` 전환                                                                                | 보류 |
+
+- 5단계는 처음에 `store`를 별도 feature(store-search·store-map 등)로 나누려 했으나, feature끼리 서로 import하는 구조가 되어 되돌리고 feature 안 하위 폴더 방식으로 바꿨다.
+- ESLint 경계 규칙은 팀 합의 전까지 `warn`으로 두고, PR마다 경고 0을 확인한다.
 
 ## Current Slices
 
 현재 feature slice:
 
 - `admin`: 관리자 화면. `common`(셸·권한 확인·공통 입력·페이지·데이터 Provider·쿼리 키·폼 스키마), `dashboard`, `partners`(매장+혜택 탭), `stores`, `benefits`, `faq`, `users`, `feedback`(답변 피드백) 하위 폴더로 나뉜다. 화면별 데이터 훅은 각 폴더의 `hooks/`에 둔다.
-- `auth`: 인증 상태, 로그인/회원가입/OAuth service, auth provider
+- `auth`: 로그인·회원가입·OAuth 요청(`authService`), 헤더 로그인 버튼(`HeaderControls`), 마이페이지(`ProfilePanel`). 로그인 상태(`AuthProvider`, `useAuthUser`)·토큰·로그인 복귀 경로는 `entities/user`에 있다.
 - `chat`: 채팅 화면. `conversation`(대화 흐름·입력창·전송·스트리밍 표시·투어), `message`(메시지 목록·말풍선·마크다운·진행 단계·답변 피드백), `cards`(요금제 카드·카드 레일), `store`(매장 답변 카드·채팅 지도 슬롯·지도 데이터), `sidebar`(사이드바·상담 목록·메뉴), `search`(상담 검색), `settings`(채팅 설정) 하위 폴더로 나뉜다.
 - `store`: 매장 지도 패널. `panel`(패널 조립·상태), `search`(검색·목록·필터), `benefit`(제휴 혜택), `map`(지도·핀·카메라), `route`(길찾기), `reservation`(예약), `detail`(매장 상세) 하위 폴더로 나뉜다. 카카오맵 로더·타입은 `shared`에 있다.
 
 랜딩 화면 섹션과 헤더는 feature가 아니라 `app/(marketing)/_components`에 둔다(마케팅 레이아웃에서만 쓰는 화면 조립).
+
+현재 app 라우트:
+
+- `(marketing)`: 랜딩(`_components`: 섹션 4개, 헤더)
+- `(auth)/login`: 로그인·회원가입(`_components`: AuthForm, SocialLoginButtons / `_hooks`: useAuthForm)
+- `oauth/callback`: OAuth 콜백
+- `(service)/admin/*`: 관리자 화면 배치(`features/admin` 사용)
+- `chat`: 채팅·매장 지도·마이페이지(`_components`: ChatPageSidebar, ChatModeContent, ChatPageDialogs, ChatStoreMap / `_hooks`: useChatSidebarOpen, useRailTooltip, useChatStoreMapState / `_lib`: chatPageParams, chatStoreMapView)
 
 ## Current Phase Boundary
 
