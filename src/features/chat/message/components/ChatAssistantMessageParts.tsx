@@ -7,11 +7,7 @@ import {
   answerRecoveryLabels,
   ChatProgressSteps,
 } from "@/features/chat/message/components/ChatProgressSteps";
-import type {
-  ChatAnswerRecovery,
-  ChatProgressStage,
-  ChatStreamingReply,
-} from "@/features/chat/types";
+import type { ChatStreamingReply } from "@/features/chat/types";
 import { cn } from "@/shared/lib/cn";
 
 const ASSISTANT_PROFILE_IMAGE = "/images/chatbot/profile-robot.png";
@@ -160,14 +156,20 @@ export const PendingAnswer = ({ content }: { content: string }) => (
 );
 
 export const LoadingAnswer = ({
-  recovery,
-  stage,
+  reply,
 }: {
-  recovery?: ChatAnswerRecovery;
-  stage?: ChatProgressStage;
+  reply?: Pick<
+    ChatStreamingReply,
+    "isStorePrompt" | "location" | "recovery" | "stage"
+  > | null;
 }) => (
   <div className="min-w-0">
-    <ChatProgressSteps stage={stage} recovery={recovery} />
+    <ChatProgressSteps
+      stage={reply?.stage}
+      recovery={reply?.recovery}
+      location={reply?.location}
+      isStorePrompt={reply?.isStorePrompt}
+    />
     <div
       aria-hidden="true"
       className="text-text-secondary mt-3 flex items-center gap-2 pl-7 text-sm font-medium dark:text-gray-400"

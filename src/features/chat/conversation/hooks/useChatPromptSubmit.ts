@@ -153,7 +153,23 @@ export const useChatPromptSubmit = ({
         if (signal.aborted) return;
 
         const isStorePrompt = isStoreRelatedPrompt(trimmedPrompt);
+        if (isStorePrompt) {
+          setStreamingReply((reply) => ({
+            content: "",
+            ...reply,
+            isStorePrompt: true,
+            location: "locating",
+          }));
+        }
         const location = isStorePrompt ? await getCurrentChatLocation() : null;
+
+        if (isStorePrompt && !signal.aborted) {
+          setStreamingReply((reply) => ({
+            content: "",
+            ...reply,
+            location: location ? "located" : "unavailable",
+          }));
+        }
 
         if (signal.aborted) return;
 
