@@ -179,6 +179,10 @@ export const useChatPromptSubmit = ({
             setConversationStatus("generating");
             textReveal.push(content);
           },
+          onRecovering: (recovery) => {
+            if (signal.aborted) return;
+            setStreamingReply((reply) => ({ content: "", ...reply, recovery }));
+          },
         });
         if (signal.aborted) return;
         const nextAssistantMessage = assistantMessage;

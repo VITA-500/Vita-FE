@@ -119,6 +119,13 @@ export type ChatApiMessageStatus =
 /** 답변 생성 진행 단계. BE SSE의 assistant_status(thinking / retrieving_faq / generating)와 대응한다. */
 export type ChatProgressStage = "understanding" | "retrieving" | "generating";
 
+/**
+ * 실시간 스트림으로 답변을 끝까지 받지 못해, 저장된 답변을 다시 조회(polling)하는 이유.
+ * - disconnected: 답변 도중 스트림 연결이 끊김
+ * - timeout: 연결은 살아 있지만 일정 시간 동안 답변이 끝나지 않음
+ */
+export type ChatAnswerRecovery = "disconnected" | "timeout";
+
 export type ChatSessionSummary = {
   /** 서버가 상담 고정 상태를 내려주면 사이드바 고정 영역에 반영한다. */
   pinned?: boolean;

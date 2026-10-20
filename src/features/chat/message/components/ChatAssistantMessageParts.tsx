@@ -3,8 +3,12 @@
 import Image from "next/image";
 import { CircleAlert, CircleStop, Clock3, RotateCw } from "lucide-react";
 import { ChatMarkdown } from "@/features/chat/message/components/ChatMarkdown";
-import { ChatProgressSteps } from "@/features/chat/message/components/ChatProgressSteps";
+import {
+  answerRecoveryLabels,
+  ChatProgressSteps,
+} from "@/features/chat/message/components/ChatProgressSteps";
 import type {
+  ChatAnswerRecovery,
   ChatProgressStage,
   ChatStreamingReply,
 } from "@/features/chat/types";
@@ -57,6 +61,19 @@ export const StreamingAnswer = ({ reply }: { reply: ChatStreamingReply }) => (
       />
     )}
     {reply.isPreparingBlock && <PreparingBlock />}
+    {reply.recovery && (
+      <p
+        role="status"
+        className="text-text-secondary mt-2 flex items-center gap-1.5 text-xs font-medium dark:text-gray-400"
+      >
+        <RotateCw
+          size={12}
+          className="text-brand animate-spin"
+          aria-hidden="true"
+        />
+        {answerRecoveryLabels[reply.recovery]}
+      </p>
+    )}
   </>
 );
 
@@ -142,9 +159,15 @@ export const PendingAnswer = ({ content }: { content: string }) => (
   </article>
 );
 
-export const LoadingAnswer = ({ stage }: { stage?: ChatProgressStage }) => (
+export const LoadingAnswer = ({
+  recovery,
+  stage,
+}: {
+  recovery?: ChatAnswerRecovery;
+  stage?: ChatProgressStage;
+}) => (
   <div className="min-w-0">
-    <ChatProgressSteps stage={stage} />
+    <ChatProgressSteps stage={stage} recovery={recovery} />
     <div
       aria-hidden="true"
       className="text-text-secondary mt-3 flex items-center gap-2 pl-7 text-sm font-medium dark:text-gray-400"

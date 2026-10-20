@@ -272,7 +272,10 @@ export const ChatMessageList = ({
           className="mr-auto flex max-w-[76%] items-start gap-3"
         >
           <AssistantProfile />
-          <LoadingAnswer stage={streamingReply?.stage} />
+          <LoadingAnswer
+            stage={streamingReply?.stage}
+            recovery={streamingReply?.recovery}
+          />
         </div>
       )}
   </div>

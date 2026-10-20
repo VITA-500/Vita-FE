@@ -288,16 +288,99 @@ describe("chatApi.sendMessage (SSE)", () => {
         ),
       );
     }) as typeof fetch;
+    const onRecovering = vi.fn();
     try {
       const answer = chatApi.sendMessage({
         content: "질문",
         guestId: "g",
         sessionId: 1,
+        onRecovering,
       });
       await vi.advanceTimersByTimeAsync(30001);
       await expect(answer).resolves.toMatchObject({ content: "복구된 답변" });
+      expect(onRecovering).toHaveBeenCalledExactlyOnceWith("timeout");
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("tells the caller when the stream drops mid-answer and recovers the saved answer", async () => {
+    const sse = createSseResponse();
+    globalThis.fetch = vi.fn((url: string, init?: RequestInit) => {
+      if (url.endsWith("/events")) {
+        queueMicrotask(() => sse.send("connected", "ok"));
+        return Promise.resolve(sse.response);
+      }
+      if (init?.method === "POST") {
+        setTimeout(() => {
+          sse.send("assistant_delta", {
+            sessionId: 1,
+            messageId: 7,
+            delta: "답변 앞부분",
+          });
+          sse.close();
+        }, 0);
+        return Promise.resolve(pendingResponse(7));
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            sessionId: 1,
+            messages: [
+              {
+                messageId: 7,
+                status: "COMPLETED",
+                content: "답변 앞부분과 나머지",
+                createdAt: "2026-10-20T10:00:00",
+              },
+            ],
+          }),
+        ),
+      );
+    }) as typeof fetch;
+    const onRecovering = vi.fn();
+
+    await expect(
+      chatApi.sendMessage({
+        content: "질문",
+        guestId: "g",
+        sessionId: 1,
+        onRecovering,
+      }),
+    ).resolves.toMatchObject({ content: "답변 앞부분과 나머지" });
+    expect(onRecovering).toHaveBeenCalledExactlyOnceWith("disconnected");
+  });
+
+  it("does not report recovery when the stream was never available", async () => {
+    globalThis.fetch = vi.fn((url: string, init?: RequestInit) => {
+      if (url.endsWith("/events")) {
+        return Promise.resolve(new Response(null, { status: 404 }));
+      }
+      if (init?.method === "POST") return Promise.resolve(pendingResponse(9));
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            sessionId: 1,
+            messages: [
+              {
+                messageId: 9,
+                status: "COMPLETED",
+                content: "저장된 답변",
+                createdAt: "2026-10-20T10:00:00",
+              },
+            ],
+          }),
+        ),
+      );
+    }) as typeof fetch;
+    const onRecovering = vi.fn();
+
+    await chatApi.sendMessage({
+      content: "질문",
+      guestId: "g",
+      sessionId: 1,
+      onRecovering,
+    });
+    expect(onRecovering).not.toHaveBeenCalled();
   });
 });

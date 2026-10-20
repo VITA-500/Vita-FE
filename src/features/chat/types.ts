@@ -1,7 +1,8 @@
 // 상담 메시지·세션 타입은 entities/chat으로 옮겼다. 기존 import 경로 호환용 재내보내기.
-import type { ChatProgressStage } from "@/entities/chat";
+import type { ChatAnswerRecovery, ChatProgressStage } from "@/entities/chat";
 export type {
   ChatAction,
+  ChatAnswerRecovery,
   ChatAnswerSource,
   ChatAnswerStatus,
   ChatApiMessageRole,
@@ -45,4 +46,6 @@ export type ChatStreamingReply = {
   content: string;
   /** 목록·표·카드를 받는 중이라 말풍선 안에 로딩 블록을 보여준다. */
   isPreparingBlock?: boolean;
+  /** 스트림이 끊기거나 늦어져 저장된 답변을 다시 불러오는 중이면 그 이유 */
+  recovery?: ChatAnswerRecovery;
 };

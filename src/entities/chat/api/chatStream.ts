@@ -22,6 +22,7 @@ import type {
 } from "./apiTypes";
 import type {
   ChatMessage,
+  ChatAnswerRecovery,
   ChatProgressStage,
 } from "@/entities/chat/model/types";
 const ANSWER_TIMEOUT_MS = 60000;
@@ -35,7 +36,8 @@ type StreamOutcome =
       plans?: readonly ChatApiPlan[] | null;
     }
   | { type: "error"; code: string }
-  | { type: "lost" };
+  | { type: "lost" }
+  | { type: "timeout" };
 export type SendChatMessageOptions = {
   content: string;
   guestId?: string;
@@ -50,6 +52,8 @@ export type SendChatMessageOptions = {
   onStage?: (stage: ChatProgressStage) => void;
   /** 지금까지 받은 답변 전체(assistant_delta를 이어 붙인 값) */
   onDelta?: (content: string) => void;
+  /** 스트림이 끊기거나 늦어져 저장된 답변을 다시 조회하기 시작할 때 */
+  onRecovering?: (reason: ChatAnswerRecovery) => void;
 };
 
 export const sendMessageWithStream = async ({
@@ -57,6 +61,7 @@ export const sendMessageWithStream = async ({
   guestId,
   location,
   onDelta,
+  onRecovering,
   onStage,
   sessionId,
   signal,
@@ -180,7 +185,7 @@ export const sendMessageWithStream = async ({
           outcome,
           new Promise<StreamOutcome>((resolve) => {
             answerTimeoutId = globalThis.setTimeout(
-              () => resolve({ type: "lost" }),
+              () => resolve({ type: "timeout" }),
               ANSWER_TIMEOUT_MS / 2,
             );
           }),
@@ -209,6 +214,11 @@ export const sendMessageWithStream = async ({
     }
 
     if (signal?.aborted) throw createAbortError();
+
+    // 처음부터 스트림이 없던 경우는 원래 저장된 답변을 기다리는 흐름이라 알리지 않는다.
+    if (isStreaming) {
+      onRecovering?.(result.type === "timeout" ? "timeout" : "disconnected");
+    }
 
     const saved = await pollAssistantAnswer({
       deadline,
