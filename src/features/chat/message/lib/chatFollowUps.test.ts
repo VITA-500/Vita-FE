@@ -85,4 +85,19 @@ describe("getChatFollowUp", () => {
       }),
     ).toBeNull();
   });
+
+  it("자료가 없어 답하지 못한 답변에는 근처 매장 찾기를 제안한다", () => {
+    const followUp = getChatFollowUp({
+      answer: answer({
+        content:
+          "방문 시 필요한 준비물은 제가 확인할 수 있는 정보에 없어 정확히 안내드리기 어렵습니다.",
+      }),
+      askedPrompts: ["기기 변경 목적으로 매장 방문"],
+      // 매장 질문이어도 적용한다.
+      question: "기기 변경 목적으로 매장 방문",
+    });
+
+    expect(followUp?.intro).toContain("근처 매장을 찾아드릴까요?");
+    expect(followUp?.prompts).toEqual(["근처 매장 찾아줘"]);
+  });
 });
