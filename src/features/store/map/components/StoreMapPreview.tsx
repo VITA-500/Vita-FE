@@ -301,6 +301,7 @@ export const StoreMapPreview = ({
     routeLeftInsetRef,
     shouldSkipPinAutoFitRef,
     storesRef,
+    userLocation,
   });
 
   useRouteOverlays({

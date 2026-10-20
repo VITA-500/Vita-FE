@@ -29,7 +29,14 @@ type UseMapFitTargetParams = {
   routeLeftInsetRef: RefObject<number>;
   shouldSkipPinAutoFitRef: RefObject<(() => boolean) | undefined>;
   storesRef: RefObject<StoreLocation[]>;
+  userLocation?: MapPoint | null;
 };
+
+/** 지도 범위 계산에 현재 위치와 현재 페이지 매장 좌표를 함께 사용한다. */
+export const buildMapFitPoints = (
+  storePoints: MapPoint[],
+  userLocation?: MapPoint | null,
+) => (userLocation ? [userLocation, ...storePoints] : storePoints);
 
 /**
  * 지도 범위 맞춤: 검색 결과·페이지 전환 때 지정한 지점들이 모두 보이게 하고(fitTarget),
@@ -47,6 +54,7 @@ export const useMapFitTarget = ({
   routeLeftInsetRef,
   shouldSkipPinAutoFitRef,
   storesRef,
+  userLocation,
 }: UseMapFitTargetParams) => {
   const fitZoomTimeoutRef = useRef<number | undefined>(undefined);
   const fittedTargetKeyRef = useRef("");
@@ -74,6 +82,7 @@ export const useMapFitTarget = ({
 
     fittedTargetKeyRef.current = fitTarget.key;
     window.clearTimeout(fitZoomTimeoutRef.current);
+    const fitPoints = buildMapFitPoints(fitTarget.points, userLocation);
 
     const containerRect = mapContainerRef.current?.getBoundingClientRect();
     const container = {
@@ -89,7 +98,7 @@ export const useMapFitTarget = ({
       fitTarget.smooth &&
       fitPointsSmoothlyOnMap(
         map,
-        fitTarget.points,
+        fitPoints,
         container,
         padding,
         ZOOM_ANIMATION_MS,
@@ -101,8 +110,8 @@ export const useMapFitTarget = ({
       return;
     }
 
-    if (fitTarget.points.length === 1) {
-      const [point] = fitTarget.points;
+    if (fitPoints.length === 1) {
+      const [point] = fitPoints;
 
       map.setCenter(new kakaoMaps.LatLng(point.lat, point.lng));
       map.setLevel(4);
@@ -111,7 +120,7 @@ export const useMapFitTarget = ({
 
     const bounds = new kakaoMaps.LatLngBounds();
 
-    fitTarget.points.forEach((point) => {
+    fitPoints.forEach((point) => {
       bounds.extend(new kakaoMaps.LatLng(point.lat, point.lng));
     });
     // 검색창·매장 목록(펼친 경우)·지도 컨트롤에 가리지 않도록 여백을 둔다.
@@ -130,6 +139,7 @@ export const useMapFitTarget = ({
     mapContainerRef,
     mapRef,
     routeLeftInset,
+    userLocation,
   ]);
 
   /**
@@ -146,10 +156,11 @@ export const useMapFitTarget = ({
     const timeoutId = window.setTimeout(() => {
       const map = mapRef.current;
       const containerRect = mapContainerRef.current?.getBoundingClientRect();
-      const points = storesRef.current.map((store) => ({
+      const storePoints = storesRef.current.map((store) => ({
         lat: store.lat,
         lng: store.lng,
       }));
+      const points = buildMapFitPoints(storePoints, userLocation);
 
       if (
         !map ||
@@ -200,5 +211,6 @@ export const useMapFitTarget = ({
     routeLeftInsetRef,
     shouldSkipPinAutoFitRef,
     storesRef,
+    userLocation,
   ]);
 };
