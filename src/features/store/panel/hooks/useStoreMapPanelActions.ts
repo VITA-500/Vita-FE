@@ -103,6 +103,22 @@ export const useStoreMapPanelActions = (state: StoreMapPanelState) => {
     ...locationPermission,
     ...filterSearch,
     ...textSearch,
+    changeRouteMode: (mode: Parameters<typeof state.changeRouteMode>[0]) => {
+      state.cancelReservation();
+      state.changeRouteMode(mode);
+    },
+    // 예약 화면이 열린 상태에서 길찾기로 전환하면 이전 예약 상태가
+    // 데스크톱 길찾기 하단에 다시 표시되지 않도록 닫는다.
+    handleRouteStart: (
+      store: Parameters<typeof selection.handleRouteStart>[0],
+    ) => {
+      state.cancelReservation();
+      selection.handleRouteStart(store);
+    },
+    selectTransitRoute: (index: number) => {
+      state.cancelReservation();
+      state.selectTransitRoute(index);
+    },
     showNearbyStoresAfterRoute,
     focusUserLocation: () => {
       state.setCameraOwner("auto");

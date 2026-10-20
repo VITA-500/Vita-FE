@@ -206,6 +206,7 @@ const StoreMapPanelContent = ({
   /** 길찾기 정보 닫기(X): 길찾기를 끝내고, A 뒤로 접혀 있던 매장 정보(B)를 다시 펼친다. */
   const closeRouteView = () => {
     resetRouteState();
+    cancelReservation();
     setIsStoreListCollapsed(false);
     // 모바일: 매장 정보 시트를 기본(절반 정도) 높이로 내린다.
     setIsSheetExpanded(false);
