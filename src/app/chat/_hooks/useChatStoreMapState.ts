@@ -10,10 +10,7 @@ import {
   getMatchedServices,
   readCachedChatLocation,
 } from "@/features/chat/store/lib/chatStoreMap";
-import {
-  getChatStoreMapOriginPoint,
-  getChatStoreMapUserLocation,
-} from "@/features/chat/store/lib/chatStoreMapOrigin";
+import { getChatStoreMapUserLocation } from "@/features/chat/store/lib/chatStoreMapOrigin";
 import {
   buildMarkerColorInfoById,
   buildMarkerLabelById,
@@ -29,7 +26,10 @@ import type { ChatStoreMap as ChatStoreMapData } from "@/entities/chat";
  * 답변 속 매장 지도의 상태: 보여줄 매장, 선택한 매장, 지도·카드 맞춤 요청, 내 위치, 핀 색·글자.
  * 화면은 ChatStoreMap이 그린다.
  */
-export const useChatStoreMapState = (initialStoreMap: ChatStoreMapData) => {
+export const useChatStoreMapState = (
+  initialStoreMap: ChatStoreMapData,
+  showUserOriginForPlace = false,
+) => {
   /** 기본 위치로 찾은 뒤 내 위치로 다시 찾으면 그 결과로 바꿔 보여준다. */
   const [researchedStoreMap, setResearchedStoreMap] =
     useState<ChatStoreMapData | null>(null);
@@ -76,30 +76,46 @@ export const useChatStoreMapState = (initialStoreMap: ChatStoreMapData) => {
   const [cardFocusSignal, setCardFocusSignal] = useState(0);
   const [currentLocation, setCurrentLocation] = useState<LatLng | null>(null);
   const [isLocating, setIsLocating] = useState(false);
-  // BE origin은 현재 위치 기준일 때만 내 위치로 쓴다. 장소 기준이면 내 위치 버튼을 눌렀을 때만 보여준다.
-  const userLocation = getChatStoreMapUserLocation(storeMap, currentLocation);
-  // 장소 기준 검색이면 기준점(예: "왕십리")을 따로 찍고, 카드에 내 위치에서의 거리도 함께 보여준다.
-  // 내 위치는 내 위치 버튼으로 받은 값, 없으면 질문을 보낼 때 받아 둔 위치를 쓴다(파란 점은 버튼을 눌렀을 때만).
-  const originPoint = useMemo(
-    () => getChatStoreMapOriginPoint(storeMap),
-    [storeMap],
-  );
   const [cachedLocation] = useState(() => readCachedChatLocation());
-  const distanceBaseLocation = currentLocation ?? cachedLocation;
+  // BE origin은 현재 위치 기준일 때만 내 위치로 쓴다. 장소 기준이면 내 위치 버튼을 눌렀을 때만 보여준다.
+  const userLocation = getChatStoreMapUserLocation(
+    storeMap,
+    currentLocation,
+    showUserOriginForPlace ? cachedLocation : null,
+  );
+  // 장소 기준 검색은 그 장소를 별도 기준 핀으로 다시 표시하지 않는다.
+  // 사용자 현재 위치 탐색/길찾기일 때만 userLocation(파란 핀)을 표시한다.
+  const distanceBaseLocation =
+    currentLocation ||
+    (storeMap.originSource === "current" || showUserOriginForPlace
+      ? cachedLocation
+      : null);
   const selectedStore =
     stores.find((store) => store.id === selectedStoreId) ?? stores[0];
   const storesKey = stores.map((store) => store.id).join(":");
-  // 처음에는 모든 매장 핀이 보이게 맞추고, 카드·내 위치를 누르면 그 지점으로 부드럽게 옮긴다.
+  const initialFitPoints = useMemo(
+    () =>
+      showUserOriginForPlace && userLocation
+        ? [...stores, userLocation]
+        : stores,
+    [showUserOriginForPlace, stores, userLocation],
+  );
+  // 처음에는 필요한 기준점 전체를 보이고, 카드 클릭 시 해당 매장으로 확대한다.
   const fitTarget = useMemo(
     () =>
       mapFocusRequest
         ? {
             key: `${storesKey}:focus:${mapFocusRequest.count}`,
             points: [mapFocusRequest.point],
-            smooth: true,
+            smooth: false,
+            zoomLevel: 2,
+            includeUserLocation: false,
           }
-        : { key: storesKey, points: stores },
-    [mapFocusRequest, stores, storesKey],
+        : {
+            key: `${storesKey}:${userLocation?.lat ?? ""}:${userLocation?.lng ?? ""}`,
+            points: initialFitPoints,
+          },
+    [initialFitPoints, mapFocusRequest, storesKey, userLocation],
   );
 
   const focusMapOn = (point: LatLng) => {
@@ -163,7 +179,12 @@ export const useChatStoreMapState = (initialStoreMap: ChatStoreMapData) => {
 
         if (!isDefaultOrigin) {
           setIsLocating(false);
-          focusMapOn(point);
+          // 장소 기준 + 현재 위치 탐색 의도에서는 매장과 사용자 위치를 함께 다시 맞춘다.
+          if (showUserOriginForPlace) {
+            setMapFocusRequest(null);
+          } else {
+            focusMapOn(point);
+          }
           return;
         }
 
@@ -233,7 +254,6 @@ export const useChatStoreMapState = (initialStoreMap: ChatStoreMapData) => {
     markerColorInfoById,
     markerLabelById,
     matchedServicesById,
-    originPoint,
     selectedStore,
     serviceColorByValue,
     storeMap,

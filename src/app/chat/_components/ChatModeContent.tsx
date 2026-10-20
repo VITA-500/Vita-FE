@@ -11,8 +11,8 @@ import type { StoreMapInitialAction } from "@/features/store/types";
 import type { ChatStoreMap as ChatStoreMapData } from "@/entities/chat";
 
 /** 답변 속 매장 지도 블록. 채팅(feature)과 매장 지도(feature)를 여기서 조립한다. */
-const renderChatStoreMap = (storeMap: ChatStoreMapData) => (
-  <ChatStoreMap storeMap={storeMap} />
+const renderChatStoreMap = (storeMap: ChatStoreMapData, question?: string) => (
+  <ChatStoreMap storeMap={storeMap} question={question} />
 );
 
 type ChatModeContentProps = {

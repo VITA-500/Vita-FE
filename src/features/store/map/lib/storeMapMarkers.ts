@@ -20,8 +20,6 @@ export const drawStoreMarkers = ({
   markerLabelById,
   onSelectStore,
   overlayRefs,
-  selectedStore,
-  selectedStoreCard,
   selectedStoreId,
   setRevealedCardStoreId,
   stores,
@@ -36,7 +34,6 @@ export const drawStoreMarkers = ({
   // 핀을 누르면 묶인 매장 목록이 떠서 그중 하나를 고를 수 있다.
   const storeGroups = groupStoresByCoordinate(stores);
 
-  const isStoreCardShown = Boolean(selectedStore && selectedStoreCard);
   // 페이지가 바뀐 뒤 처음 그릴 때만 핀이 서서히 나타나게 한다(매장 선택 등으로 다시 그릴 때는 그대로).
   const shouldAnimateMarkerEnter =
     Boolean(markerEnterKey) &&
@@ -47,7 +44,6 @@ export const drawStoreMarkers = ({
   overlayRefs.current = storeGroups.map((group) =>
     createStoreMarkerOverlay({
       group,
-      isStoreCardShown,
       kakaoMaps,
       map,
       markerColorInfoById,

@@ -3,12 +3,22 @@ import {
   getChatStoreDistanceLabel,
   getChatStoreMapOriginPoint,
   getChatStoreMapUserLocation,
+  isUserOriginNavigationPrompt,
 } from "@/features/chat/store/lib/chatStoreMapOrigin";
 
 const origin = { lat: 37.65, lng: 127.04 };
 const current = { lat: 37.5, lng: 127.0 };
 
 describe("getChatStoreMapUserLocation", () => {
+  it("장소 기준이어도 현재 위치 탐색 질문의 캐시 위치를 내 위치로 쓴다", () => {
+    expect(
+      getChatStoreMapUserLocation(
+        { origin, originSource: "place" },
+        null,
+        current,
+      ),
+    ).toEqual(current);
+  });
   it("현재 위치 기준(current)이면 BE origin을 내 위치로 쓴다", () => {
     expect(
       getChatStoreMapUserLocation({ origin, originSource: "current" }, null),
@@ -42,6 +52,23 @@ describe("getChatStoreMapUserLocation", () => {
   it("originSource가 없는 예전 저장 답변은 origin을 실제 위치로 본다", () => {
     expect(getChatStoreMapUserLocation({ origin }, null)).toEqual(origin);
   });
+});
+
+describe("isUserOriginNavigationPrompt", () => {
+  it.each([
+    "내 위치에서 건대입구역까지 얼마나 걸려?",
+    "여기서 강남역 매장까지 가는 법 알려줘",
+    "VITA 강남점 길찾기 해줘",
+  ])("%s를 현재 위치 탐색으로 인식한다", (prompt) => {
+    expect(isUserOriginNavigationPrompt(prompt)).toBe(true);
+  });
+
+  it.each(["건대입구역 근처 매장 보여줘", "강남역 주변 제휴 카페 찾아줘"])(
+    "%s는 장소 기준 검색으로 남긴다",
+    (prompt) => {
+      expect(isUserOriginNavigationPrompt(prompt)).toBe(false);
+    },
+  );
 });
 
 describe("getChatStoreMapOriginPoint", () => {

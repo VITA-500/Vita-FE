@@ -132,7 +132,7 @@ const AssistantSuccessMessage = ({
             className="py-1"
           />
         )}
-        {message.storeMap && renderStoreMap?.(message.storeMap)}
+        {message.storeMap && renderStoreMap?.(message.storeMap, question)}
 
         {message.actions && message.actions.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
