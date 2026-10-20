@@ -87,15 +87,17 @@ const SummaryRowContent = ({ step }: { step: TransitRouteStep }) => (
  * onFocusPoints가 있으면 구간(요약 줄·상세의 도보/승차/하차)을 눌러 지도를 그 구간에 맞춘다.
  */
 export const TransitRouteDetails = ({
+  defaultExpanded = false,
   destinationName,
   onFocusPoints,
   steps,
 }: {
+  defaultExpanded?: boolean;
   destinationName: string;
   onFocusPoints?: (points: RoutePoint[]) => void;
   steps: TransitRouteStep[];
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const shouldReduceMotion = useReducedMotion();
   const contentRef = useRef<HTMLDivElement>(null);
   const contentHeight = useElementHeight(contentRef, steps.length > 0);

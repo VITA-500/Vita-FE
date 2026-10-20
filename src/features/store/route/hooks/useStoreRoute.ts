@@ -33,6 +33,7 @@ export const useStoreRoute = (userLocation: UserLocation | null) => {
   const [routeDestinationSnapshot, setRouteDestinationSnapshot] =
     useState<StoreLocation | null>(null);
   const [routeMode, setRouteMode] = useState<StoreRouteMode>("walk");
+  const [selectedTransitRouteIndex, setSelectedTransitRouteIndex] = useState(0);
   // 출발-경로-도착이 보이도록 지도 범위 맞춤이 끝난 경로 key(이 전까지는 탐색 중 모달을 유지)
   const [routeMapReadyKey, setRouteMapReadyKey] = useState("");
   // 경로 조회에 쓰는 출발 위치. 내 위치가 이동수단별 기준 거리 이상 움직였을 때만 바꾼다.
@@ -57,6 +58,25 @@ export const useStoreRoute = (userLocation: UserLocation | null) => {
   const walkingRoute = routeDestinationStoreId
     ? (routeQuery.data ?? null)
     : null;
+  const selectedRoute =
+    routeMode === "transit" && walkingRoute?.options?.length
+      ? (() => {
+          const option =
+            walkingRoute.options[
+              Math.min(
+                selectedTransitRouteIndex,
+                walkingRoute.options.length - 1,
+              )
+            ];
+          return {
+            ...walkingRoute,
+            distanceMeters: option.distanceMeters,
+            durationSeconds: option.durationSeconds,
+            path: option.path,
+            segments: option.segments,
+          };
+        })()
+      : walkingRoute;
   const routeResultMessage =
     routeDestinationStoreId && routeQuery.isError ? noRouteResultMessage : null;
   // 위치를 아직 못 받았으면(권한 확인·위치 조회 중) 경로를 기다리는 중으로 본다.
@@ -69,10 +89,15 @@ export const useStoreRoute = (userLocation: UserLocation | null) => {
     setRouteMapReadyKey("");
     setRouteDestinationStoreId(store.id);
     setRouteDestinationSnapshot(store);
+    setSelectedTransitRouteIndex(0);
   };
   const changeRouteMode = (nextMode: StoreRouteMode) => {
     setRouteMapReadyKey("");
     setRouteMode(nextMode);
+    setSelectedTransitRouteIndex(0);
+  };
+  const selectTransitRoute = (index: number) => {
+    setSelectedTransitRouteIndex(Math.max(0, index));
   };
   const resetRouteState = () => {
     setRouteMapReadyKey("");
@@ -91,6 +116,8 @@ export const useStoreRoute = (userLocation: UserLocation | null) => {
     routeResultMessage,
     setRouteMapReadyKey,
     startRoute,
-    walkingRoute,
+    walkingRoute: selectedRoute,
+    selectTransitRoute,
+    selectedTransitRouteIndex,
   };
 };

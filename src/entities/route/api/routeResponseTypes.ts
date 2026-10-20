@@ -11,6 +11,20 @@ export type RouteResponse = {
   legs?: RouteSegmentResponse[];
   sections?: RouteSegmentResponse[];
   segments?: RouteSegmentResponse[];
+  routes?: RouteOptionResponse[];
+};
+
+export type RouteOptionResponse = {
+  tags?: string[] | null;
+  routeType?: string | null;
+  distanceMeters?: number;
+  durationSeconds?: number;
+  fare?: number | null;
+  transfers?: number | null;
+  taxiFare?: number | null;
+  toll?: number | null;
+  path?: RoutePointResponse[] | RouteSegmentResponse[];
+  segments?: RouteSegmentResponse[];
 };
 
 export type RoutePointResponse = {

@@ -1,5 +1,6 @@
 import type {
   RoutePointResponse,
+  RouteOptionResponse,
   RouteResponse,
   RouteSegmentResponse,
 } from "@/entities/route/api/routeResponseTypes";
@@ -128,28 +129,32 @@ const isSegmentArray = (
 ): source is RouteSegmentResponse[] =>
   Boolean(source?.some((item) => !isRoutePointLike(item)));
 
-export const getRoutePath = (response: RouteResponse) => {
+export const getRoutePath = (response: RouteResponse | RouteOptionResponse) => {
   const routeSource =
     response.path ??
-    response.paths ??
-    response.routePath ??
-    response.legs ??
-    response.sections ??
+    ("paths" in response ? response.paths : undefined) ??
+    ("routePath" in response ? response.routePath : undefined) ??
+    ("legs" in response ? response.legs : undefined) ??
+    ("sections" in response ? response.sections : undefined) ??
     [];
 
   return routeSource.flatMap(getRouteSegmentPath);
 };
 
-const getRouteSegmentSources = (response: RouteResponse) => {
+const getRouteSegmentSources = (
+  response: RouteResponse | RouteOptionResponse,
+) => {
   const pathSegments = isSegmentArray(response.path) ? response.path : [];
-  const pathsSegments = isSegmentArray(response.paths) ? response.paths : [];
-  const routePathSegments = isSegmentArray(response.routePath)
-    ? response.routePath
-    : [];
+  const pathsSegments =
+    "paths" in response && isSegmentArray(response.paths) ? response.paths : [];
+  const routePathSegments =
+    "routePath" in response && isSegmentArray(response.routePath)
+      ? response.routePath
+      : [];
 
   return [
-    ...(response.legs ?? []),
-    ...(response.sections ?? []),
+    ...("legs" in response ? (response.legs ?? []) : []),
+    ...("sections" in response ? (response.sections ?? []) : []),
     ...(response.segments ?? []),
     ...pathSegments,
     ...pathsSegments,
@@ -158,7 +163,7 @@ const getRouteSegmentSources = (response: RouteResponse) => {
 };
 
 export const getRouteSegments = (
-  response: RouteResponse,
+  response: RouteResponse | RouteOptionResponse,
 ): StoreRouteSegment[] => {
   const routeSource = getRouteSegmentSources(response).flatMap((segment) => {
     return segment.steps ?? segment.subPath ?? segment.subPaths ?? [segment];

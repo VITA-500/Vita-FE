@@ -136,6 +136,7 @@ export const useStoreMapPanelState = (
     routeMapReadyKey,
     routeMode,
     routeResultMessage,
+    selectedTransitRouteIndex,
     walkingRoute,
   } = route;
   const filters = useServiceFilters({
@@ -256,6 +257,7 @@ export const useStoreMapPanelState = (
     routeDestinationStoreId,
     routeMode,
     routeResultMessage,
+    selectedTransitRouteIndex,
     userLocation,
     walkingRoute,
   });

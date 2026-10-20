@@ -47,6 +47,7 @@ type StoreMapPanelInfoContentProps = Pick<
   | "routeMode"
   | "routeResultMessage"
   | "routeSummary"
+  | "selectTransitRoute"
   | "sameLocationStores"
   | "showNearbyStoresAfterRoute"
   | "soloStoreId"
@@ -74,6 +75,7 @@ export const StoreMapPanelInfoContent = ({
   routeMode,
   routeResultMessage,
   routeSummary,
+  selectTransitRoute,
   sameLocationStores,
   showNearbyStoresAfterRoute,
   soloStoreId,
@@ -102,6 +104,7 @@ export const StoreMapPanelInfoContent = ({
         points,
       }))
     }
+    onTransitRouteSelect={selectTransitRoute}
     onRouteModeChange={(mode: StoreRouteMode) => {
       changeRouteMode(mode);
       if (!isDesktop) onSheetExpandedChange(false);
@@ -114,6 +117,7 @@ export const StorePanelInfoBubble = ({
   variant = "bubble",
   canReserve = true,
   onFocusRoutePoints,
+  onTransitRouteSelect,
   isLoading,
   isWaitingForPinSelection,
   isRouteDestination,
@@ -137,6 +141,7 @@ export const StorePanelInfoBubble = ({
   canReserve?: boolean;
   /** 대중교통 경로의 구간을 눌렀을 때 지도를 그 좌표에 맞춘다. */
   onFocusRoutePoints?: (points: { lat: number; lng: number }[]) => void;
+  onTransitRouteSelect?: (index: number) => void;
   isLoading: boolean;
   isWaitingForPinSelection: boolean;
   isRouteDestination: boolean;
@@ -272,6 +277,7 @@ export const StorePanelInfoBubble = ({
           <StoreRouteSummarySection
             onFocusRoutePoints={onFocusRoutePoints}
             onRouteModeChange={onRouteModeChange}
+            onTransitRouteSelect={onTransitRouteSelect}
             routeResultMessage={routeResultMessage}
             routeSummary={routeSummary}
             selectedRouteMode={selectedRouteMode}
