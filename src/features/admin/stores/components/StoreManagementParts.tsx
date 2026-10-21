@@ -1,5 +1,6 @@
 import { AdminEmptyState } from "@/features/admin/common/components/AdminEmptyState";
 import { AdminPagination } from "@/features/admin/common/components/AdminPagination";
+import { AdminTableShell } from "@/features/admin/common/components/AdminTableShell";
 import { formatKoreanDate } from "@/shared/lib/date";
 import { Edit2, Trash2 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
@@ -119,115 +120,115 @@ export const StoreManagementTable = ({
   onEdit: (id: number) => void;
   onDelete: (id: number) => void;
 }) => (
-  <Card padding="none" className="hidden overflow-hidden md:block">
-    <div className="overflow-x-auto">
-      <table
-        className={cn(
-          "w-full table-fixed border-collapse text-sm",
-          isPartnerStore ? "min-w-[1040px]" : "min-w-[860px]",
-        )}
-      >
-        <thead className="bg-surface-muted text-xs font-extrabold text-gray-400 dark:bg-white/5">
-          <tr>
-            <th className="w-[88px] px-5 py-4 text-left">ID</th>
-            <th className="w-[22%] px-4 py-4 text-left">매장명</th>
-            <th className="px-4 py-4 text-left">주소</th>
-            {isPartnerStore && (
-              <th className="w-[180px] px-4 py-4 text-left">제휴 브랜드</th>
-            )}
-            <th className="w-[128px] px-4 py-4 text-center">등록일</th>
-            <th className="w-[160px] px-5 py-4 text-center">관리</th>
-          </tr>
-        </thead>
-        <tbody className="divide-border-soft divide-y dark:divide-white/10">
-          {shouldShowSkeletonRows ? (
-            Array.from({ length: visibleSkeletonRows }, (_, index) => (
-              <StoreSkeletonRow
-                key={`store-skeleton-${index}`}
-                showPartnerColumn={isPartnerStore}
-              />
-            ))
-          ) : stores.length === 0 ? (
-            <tr>
-              <td
-                colSpan={isPartnerStore ? 6 : 5}
-                className="h-[640px] px-5 py-0"
-              >
-                <AdminEmptyState
-                  title="조건에 맞는 매장이 없습니다."
-                  description={`검색어를 조정하거나 새 ${emptyName}을 추가해 주세요.`}
-                />
-              </td>
-            </tr>
-          ) : (
-            <>
-              {stores.map((store) => (
-                <tr
-                  key={store.storeId}
-                  className={cn(
-                    "hover:bg-surface-muted/70 h-20 transition dark:hover:bg-white/5",
-                  )}
-                >
-                  <td className="px-5 py-4 font-bold text-gray-400">
-                    #{store.storeId}
-                  </td>
-                  <td className="truncate px-4 py-4 font-extrabold text-gray-800 dark:text-gray-100">
-                    {store.name}
-                  </td>
-                  <td className="truncate px-4 py-4 font-semibold text-gray-500">
-                    {store.address}
-                  </td>
-                  {isPartnerStore && (
-                    <td className="truncate px-4 py-4 font-semibold text-gray-500">
-                      {store.brand ? (
-                        <>
-                          <span className="font-extrabold text-gray-700 dark:text-gray-200">
-                            {store.brand}
-                          </span>
-                          <span className="ml-2 text-gray-400">
-                            {store.category ?? "-"}
-                          </span>
-                        </>
-                      ) : (
-                        "-"
-                      )}
-                    </td>
-                  )}
-                  <td className="px-4 py-4 text-center font-semibold text-gray-400">
-                    {formatKoreanDate(store.createdAt)}
-                  </td>
-                  <td className="px-5 py-4 text-center">
-                    <StoreRowActions
-                      onDelete={() => onDelete(store.storeId)}
-                      onEdit={() => onEdit(store.storeId)}
-                    />
-                  </td>
-                </tr>
-              ))}
-              {Array.from({ length: fillerRowCount }, (_, index) => (
-                <tr
-                  key={`store-filler-${index}`}
-                  aria-hidden="true"
-                  className="h-20"
-                >
-                  <td colSpan={isPartnerStore ? 6 : 5} />
-                </tr>
-              ))}
-            </>
-          )}
-        </tbody>
-      </table>
-    </div>
-
-    <div className="border-border-soft flex min-h-[65px] items-center justify-center gap-1 border-t px-5 py-4 dark:border-white/10">
-      {!shouldShowSkeletonRows && stores.length > 0 && (
+  <AdminTableShell
+    className="hidden md:block"
+    paginationClassName="min-h-[65px]"
+    pagination={
+      !shouldShowSkeletonRows && stores.length > 0 ? (
         <AdminPagination
           currentPage={storePage + 1}
           disabled={isStoreLoading}
           totalPages={storeTotalPages}
           onPageChange={(page) => onPageChange(page - 1)}
         />
+      ) : null
+    }
+  >
+    <table
+      className={cn(
+        "w-full table-fixed border-collapse text-sm",
+        isPartnerStore ? "min-w-[1040px]" : "min-w-[860px]",
       )}
-    </div>
-  </Card>
+    >
+      <thead className="bg-surface-muted text-xs font-extrabold text-gray-400 dark:bg-white/5">
+        <tr>
+          <th className="w-[88px] px-5 py-4 text-left">ID</th>
+          <th className="w-[22%] px-4 py-4 text-left">매장명</th>
+          <th className="px-4 py-4 text-left">주소</th>
+          {isPartnerStore && (
+            <th className="w-[180px] px-4 py-4 text-left">제휴 브랜드</th>
+          )}
+          <th className="w-[128px] px-4 py-4 text-center">등록일</th>
+          <th className="w-[160px] px-5 py-4 text-center">관리</th>
+        </tr>
+      </thead>
+      <tbody className="divide-border-soft divide-y dark:divide-white/10">
+        {shouldShowSkeletonRows ? (
+          Array.from({ length: visibleSkeletonRows }, (_, index) => (
+            <StoreSkeletonRow
+              key={`store-skeleton-${index}`}
+              showPartnerColumn={isPartnerStore}
+            />
+          ))
+        ) : stores.length === 0 ? (
+          <tr>
+            <td
+              colSpan={isPartnerStore ? 6 : 5}
+              className="h-[640px] px-5 py-0"
+            >
+              <AdminEmptyState
+                title="조건에 맞는 매장이 없습니다."
+                description={`검색어를 조정하거나 새 ${emptyName}을 추가해 주세요.`}
+              />
+            </td>
+          </tr>
+        ) : (
+          <>
+            {stores.map((store) => (
+              <tr
+                key={store.storeId}
+                className={cn(
+                  "hover:bg-surface-muted/70 h-20 transition dark:hover:bg-white/5",
+                )}
+              >
+                <td className="px-5 py-4 font-bold text-gray-400">
+                  #{store.storeId}
+                </td>
+                <td className="truncate px-4 py-4 font-extrabold text-gray-800 dark:text-gray-100">
+                  {store.name}
+                </td>
+                <td className="truncate px-4 py-4 font-semibold text-gray-500">
+                  {store.address}
+                </td>
+                {isPartnerStore && (
+                  <td className="truncate px-4 py-4 font-semibold text-gray-500">
+                    {store.brand ? (
+                      <>
+                        <span className="font-extrabold text-gray-700 dark:text-gray-200">
+                          {store.brand}
+                        </span>
+                        <span className="ml-2 text-gray-400">
+                          {store.category ?? "-"}
+                        </span>
+                      </>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+                )}
+                <td className="px-4 py-4 text-center font-semibold text-gray-400">
+                  {formatKoreanDate(store.createdAt)}
+                </td>
+                <td className="px-5 py-4 text-center">
+                  <StoreRowActions
+                    onDelete={() => onDelete(store.storeId)}
+                    onEdit={() => onEdit(store.storeId)}
+                  />
+                </td>
+              </tr>
+            ))}
+            {Array.from({ length: fillerRowCount }, (_, index) => (
+              <tr
+                key={`store-filler-${index}`}
+                aria-hidden="true"
+                className="h-20"
+              >
+                <td colSpan={isPartnerStore ? 6 : 5} />
+              </tr>
+            ))}
+          </>
+        )}
+      </tbody>
+    </table>
+  </AdminTableShell>
 );
