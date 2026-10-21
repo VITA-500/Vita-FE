@@ -3,6 +3,7 @@ import { useState } from "react";
 import type {
   StoreRouteMode,
   StoreRouteOption,
+  StoreRouteGuide,
   TransitRouteStep,
 } from "@/entities/route";
 import { TransitRouteDetails } from "@/features/store/route/components/TransitRouteDetails";
@@ -19,6 +20,31 @@ export type RouteSummary = {
   transitWalkTimeText?: string;
   transitSteps?: TransitRouteStep[];
   transitOptions?: StoreRouteOption[];
+  guides?: StoreRouteGuide[];
+};
+
+const RouteGuides = ({ guides }: { guides: StoreRouteGuide[] }) => {
+  if (guides.length === 0) return null;
+
+  return (
+    <ol
+      aria-label="길 안내"
+      className="mt-2 space-y-1.5 rounded-sm border border-gray-200 bg-white/80 p-2.5 dark:border-white/10 dark:bg-white/5"
+    >
+      {guides.map((guide, index) => (
+        <li
+          key={`${index}-${guide.lat}-${guide.lng}`}
+          className="flex min-w-0 items-start gap-2 text-xs font-bold text-gray-700 dark:text-gray-200"
+        >
+          <span className="shrink-0 text-gray-400">{index + 1}</span>
+          <span className="min-w-0 [overflow-wrap:anywhere] break-keep">
+            {guide.guidance}
+            {guide.name ? ` · ${guide.name}` : ""}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
 };
 
 export const StoreRouteSummarySection = ({
@@ -181,6 +207,9 @@ export const StoreRouteSummarySection = ({
             />
           )}
         </div>
+      )}
+      {!routeSummary.isLoading && selectedRouteMode !== "transit" && (
+        <RouteGuides guides={routeSummary.guides ?? []} />
       )}
       {!routeSummary.isLoading && routeSummary.isWalkRecommended && (
         <div className="text-text-secondary mt-2 flex flex-col items-stretch gap-2 rounded-sm bg-gray-100 px-3 py-2 text-[11px] leading-4 font-bold break-keep sm:flex-row sm:items-center sm:justify-between sm:pr-1.5 dark:bg-white/10 dark:text-gray-300">

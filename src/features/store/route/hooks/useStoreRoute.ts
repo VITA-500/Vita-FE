@@ -74,6 +74,7 @@ export const useStoreRoute = (userLocation: UserLocation | null) => {
             durationSeconds: option.durationSeconds,
             path: option.path,
             segments: option.segments,
+            guides: option.guides,
           };
         })()
       : walkingRoute;

@@ -189,3 +189,12 @@ export const getRouteSegments = (
     }))
     .filter((segment) => segment.path.length > 0);
 };
+
+export const getRouteGuides = (response: RouteResponse | RouteOptionResponse) =>
+  (response.guides ?? []).map((guide) => ({
+    guidance: guide.guidance,
+    name: guide.name ?? undefined,
+    distanceMeters: guide.distanceMeters,
+    lat: Number(guide.lat),
+    lng: Number(guide.lng),
+  }));

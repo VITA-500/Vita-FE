@@ -182,6 +182,7 @@ export const buildRouteSummary = ({
         ? buildTransitSteps(walkingRoute)
         : [],
     transitOptions,
+    guides: routeMode === "transit" ? [] : (walkingRoute?.guides ?? []),
   };
 };
 
