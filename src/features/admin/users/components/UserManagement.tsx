@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import {
+  Ban,
+  CheckCircle2,
   ShieldCheck,
   UserRound,
   UsersRound,
@@ -14,6 +16,7 @@ import { Card } from "@/shared/ui/atoms/Card";
 import { Select } from "@/shared/ui/atoms/Select";
 import { SearchInput } from "@/shared/ui/molecules/SearchInput";
 import { Button } from "@/shared/ui/atoms/Button";
+import { AdminStatusBadge } from "@/features/admin/common/components/AdminStatusBadge";
 
 const UserManagement = () => {
   const [selected, setSelected] = useState<AdminUserListItem | null>(null);
@@ -172,16 +175,30 @@ const UserManagement = () => {
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-600 dark:bg-white/10 dark:text-gray-300">
-                        {user.role === "ADMIN" ? "관리자" : "회원"}
-                      </span>
+                      <AdminStatusBadge
+                        label={user.role === "ADMIN" ? "관리자" : "회원"}
+                        tone={user.role === "ADMIN" ? "admin" : "neutral"}
+                        icon={user.role === "ADMIN" ? "admin" : undefined}
+                      />
                     </td>
                     <td className="px-5 py-4">
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-bold ${user.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : user.status === "SUSPENDED" ? "bg-rose-50 text-rose-700" : "bg-gray-100 text-gray-500"}`}
-                      >
-                        {statusLabel[user.status]}
-                      </span>
+                      <AdminStatusBadge
+                        label={statusLabel[user.status]}
+                        tone={
+                          user.status === "ACTIVE"
+                            ? "active"
+                            : user.status === "SUSPENDED"
+                              ? "warning"
+                              : "inactive"
+                        }
+                        icon={
+                          user.status === "ACTIVE"
+                            ? "active"
+                            : user.status === "SUSPENDED"
+                              ? "warning"
+                              : "inactive"
+                        }
+                      />
                     </td>
                     <td className="px-5 py-4 text-gray-500">
                       {new Date(user.createdAt).toLocaleDateString("ko-KR")}
@@ -192,6 +209,13 @@ const UserManagement = () => {
                           size="sm"
                           variant="secondary"
                           onClick={() => void changeStatus(user)}
+                          leftIcon={
+                            user.status === "SUSPENDED" ? (
+                              <CheckCircle2 size={14} />
+                            ) : (
+                              <Ban size={14} />
+                            )
+                          }
                         >
                           {user.status === "SUSPENDED" ? "정지 해제" : "정지"}
                         </Button>
