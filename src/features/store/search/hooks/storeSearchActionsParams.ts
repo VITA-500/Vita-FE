@@ -3,6 +3,7 @@ import type { useNearbyStores } from "@/features/store/search/hooks/useNearbySto
 import type { useServiceFilters } from "@/features/store/search/hooks/useServiceFilters";
 import type { useStoreMapState } from "@/features/store/panel/hooks/useStoreMapState";
 import type { useStorePanelLayout } from "@/features/store/panel/hooks/useStorePanelLayout";
+import type { useStoreMapPanelState } from "@/features/store/panel/hooks/useStoreMapPanelState";
 import type { useStoreRoute } from "@/features/store/route/hooks/useStoreRoute";
 import type { useStoreSearchHistory } from "@/features/store/search/hooks/useStoreSearchHistory";
 import type { useStoreSearchResults } from "@/features/store/search/hooks/useStoreSearchResults";
@@ -52,6 +53,7 @@ export type StoreSearchActionsParams = Pick<
     "nearbyLookup" | "updateStoresByLocation"
   > &
   Pick<ReturnType<typeof useStoreSelectionActions>, "handleStoreSelect"> &
+  Pick<ReturnType<typeof useStoreMapPanelState>, "setFocusPoint"> &
   Pick<
     ReturnType<typeof useStoreRoute>,
     "resetRouteState" | "routeDestinationStoreId"

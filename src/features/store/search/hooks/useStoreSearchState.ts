@@ -147,10 +147,12 @@ export const useStoreSearchState = ({
       anchorSource = searchAnchorSource,
       query = searchQuery,
       viewport: requestedViewport,
+      center: requestedCenter,
     }: {
       anchorSource?: "user" | "map";
       query?: string;
       viewport?: MapViewport | null;
+      center?: MapSearchPoint;
     } = {},
   ) => {
     const viewport =
@@ -163,11 +165,12 @@ export const useStoreSearchState = ({
       tagSearchAreaRef.current = viewport;
     }
 
-    const { center, radiusKm } = getVisibleAreaQuery(viewport);
+    const queryCenter = requestedCenter ?? searchCenter;
+    const { radiusKm } = getViewportAreaQuery(viewport, queryCenter);
     const requestId = ++areaSearchRequestIdRef.current;
 
     try {
-      const areaStores = await fetchNearbyStores(center, { radiusKm });
+      const areaStores = await fetchNearbyStores(queryCenter, { radiusKm });
 
       // 그 사이 새 검색이 시작됐거나 결과가 해제됐으면 늦게 도착한 이 응답은 버린다.
       if (requestId !== areaSearchRequestIdRef.current) {
@@ -177,9 +180,12 @@ export const useStoreSearchState = ({
       // 입력 중 드롭다운 검색에도 쓰도록 검색용 매장 풀에 합쳐 둔다.
       mergeSearchStores(areaStores);
 
-      const visibleStores = areaStores.filter((store) =>
-        isInVisibleArea(store, viewport),
-      );
+      // 텍스트 검색은 viewport 밖의 매장도 결과로 유지한다.
+      // 태그 검색은 현재 화면의 영역을 기준으로 동작한다.
+      const visibleStores =
+        mode === "text"
+          ? areaStores
+          : areaStores.filter((store) => isInVisibleArea(store, viewport));
       const results =
         mode === "text"
           ? visibleStores.filter((store) => matchesStoreSearch(store, query))
@@ -188,7 +194,7 @@ export const useStoreSearchState = ({
       setSubmittedSearchOrigin(
         mode === "text"
           ? getTextSearchSortCenter(viewport, anchorSource)
-          : center,
+          : queryCenter,
       );
       setSubmittedSearchStores(results);
 

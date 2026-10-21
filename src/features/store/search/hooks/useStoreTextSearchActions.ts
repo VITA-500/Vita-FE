@@ -7,6 +7,7 @@ import type {
 import type { StoreSearchHistoryItem } from "@/features/store/search/hooks/useStoreSearchHistory";
 import { showToast } from "@/shared/providers/ToastProvider";
 import { isDesktopWidth } from "@/shared/lib/desktopBreakpoint";
+import { resolveStoreSearchPlace } from "@/features/store/search/lib/storeSearchPlace";
 
 type UseStoreTextSearchActionsParams = StoreSearchActionsParams &
   Pick<
@@ -38,6 +39,7 @@ export const useStoreTextSearchActions = ({
   searchVisibleArea,
   setCameraOwner,
   setConsultServiceFilters,
+  setFocusPoint,
   setHasSelectedStoreInfo,
   setIsSearchHistoryOpen,
   setIsStoreListCollapsed,
@@ -47,6 +49,7 @@ export const useStoreTextSearchActions = ({
   setSoloStoreId,
   setSubmittedSearchStores,
   updateStoresByLocation,
+  updateMapCenter,
 }: UseStoreTextSearchActionsParams) => {
   /**
    * "이 위치에서 검색" 버튼: 지금 보이는 지도 영역에서 다시 찾는다.
@@ -127,7 +130,22 @@ export const useStoreTextSearchActions = ({
     setSearchPoint(null);
 
     // 텍스트 검색: 지금 보이는 지도 영역에서 찾고, 중심 좌표(내 위치 또는 지도 중심)에서 가까운 순으로 보여준다.
-    const results = await searchVisibleArea("text");
+    let results = await searchVisibleArea("text");
+
+    // 현재 nearby 응답에 없으면 지역·주소 검색어를 좌표로 변환해 nearby를 다시 조회한다.
+    if (results?.length === 0) {
+      const place = await resolveStoreSearchPlace(searchQuery);
+
+      if (place) {
+        setFocusPoint(place);
+        updateMapCenter(place);
+        results = await searchVisibleArea("text", {
+          anchorSource: "map",
+          center: place,
+          viewport: null,
+        });
+      }
+    }
 
     if (results && results.length === 0) {
       showToast("지금 보이는 지도 영역에 검색 결과가 없어요.");

@@ -119,7 +119,6 @@ export const useStoreMapPanelState = (
   const {
     allStores,
     getTextSearchSortCenter,
-    isInVisibleArea,
     submittedSearchOrigin,
     submittedSearchStores,
   } = searchState;
@@ -164,7 +163,6 @@ export const useStoreMapPanelState = (
     filterStoresByServices,
     getTextSearchSortCenter,
     hasActiveServiceFilter,
-    isInVisibleArea,
     openFilter,
     providedServiceFilterOptions,
     searchQuery,
