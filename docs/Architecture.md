@@ -1,12 +1,13 @@
 # Frontend Architecture
 
-VITA FE는 Next.js App Router 기반이며, Feature-Sliced Design(FSD)을 참고한 `app / features / entities / shared` 4계층의 FSD-lite 구조를 사용한다. 정석 FSD의 `pages`, `widgets` 계층은 두지 않고, 화면 조립은 `app`이 맡는다. 공용 UI(`shared/ui`)는 Atomic Design의 `atoms / molecules / organisms`로 나눈다.
+VITA FE는 Next.js App Router 기반이며, Feature-Sliced Design(FSD)을 참고한 `app / widgets / features / entities / shared` 구조를 사용한다. `app`은 라우트와 페이지 조립을, `widgets`는 여러 feature를 화면 영역으로 조립하는 책임을 맡는다. 공용 UI(`shared/ui`)는 Atomic Design의 `atoms / molecules / organisms`로 나눈다.
 
 ## Layer Responsibilities
 
 | Layer          | Responsibility                                                                                                        |
 | -------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `src/app`      | 라우트, 레이아웃, provider 조립, 페이지 단위 화면 조립(여러 feature를 한 화면에 합치는 곳)                            |
+| `src/app`      | 라우트, 레이아웃, provider 조립, 페이지 단위 화면 조립                                                                |
+| `src/widgets`  | 여러 feature를 화면의 독립 영역으로 조립: 채팅 사이드바, 매장 지도 패널 등                                            |
 | `src/features` | 사용자 동작 단위 기능: 채팅 대화, 매장 검색, 길찾기, 예약하기, 로그인, 관리자 화면별 관리 기능 등                     |
 | `src/entities` | 데이터(도메인) 단위: 매장, 제휴 혜택, 예약, 위치, 경로, 상담, FAQ, 피드백, 사용자, 요금제의 API·모델·작은 UI          |
 | `src/shared`   | 도메인을 모르는 재사용 코드: API client, config, constants, layout, 범용 hook, utility, UI(atoms/molecules/organisms) |
@@ -16,12 +17,13 @@ VITA FE는 Next.js App Router 기반이며, Feature-Sliced Design(FSD)을 참고
 ## Import Rules
 
 ```text
-app  →  features  →  entities  →  shared
+app  →  widgets  →  features  →  entities  →  shared
 ```
 
 - 위 계층은 아래 계층만 import할 수 있다. 아래 계층은 위 계층을 import하지 않는다.
   - `shared`는 `entities`, `features`, `app`을 import하지 않는다.
-  - `entities`는 `features`, `app`을 import하지 않는다.
+  - `entities`는 `features`, `widgets`, `app`을 import하지 않는다.
+  - `features`는 `widgets`, `app`을 import하지 않는다.
 - 같은 계층의 다른 slice는 직접 import하지 않는다.
   - feature 간 직접 import 금지(예: `features/chat` → `features/store`). 여러 feature를 합쳐야 하면 `app`에서 조립하거나, 공통 데이터는 `entities`로 내린다.
   - entity 간 import는 기본적으로 금지한다. 꼭 필요하면 FSD의 `@x` 공개 API를 사용한다: 예약이 매장 타입을 써야 하면 `entities/store/@x/reservation.ts`에서 필요한 것만 export하고, 예약 쪽은 `@/entities/store/@x/reservation`만 import한다.
@@ -43,11 +45,23 @@ app/{route}
   _lib/           이 라우트에서만 쓰는 순수 함수 (예: chat의 chatPageParams — 주소 파라미터 해석)
 ```
 
-- 여러 feature를 합치는 조립은 app이 맡는다. 예: 채팅 답변 속 매장 지도(`app/chat/_components/ChatStoreMap`)는 `features/chat`과 `features/store`를 함께 쓰므로 app에 둔다.
+- 페이지 전체 조립과 라우트에 종속된 조립은 app이 맡는다. 여러 feature를 하나의 독립적인 화면 영역으로 묶는 경우에는 widget을 사용한다.
 
 - `_`로 시작하는 폴더는 Next.js 라우트에서 제외된다(private folder).
-- 같은 화면 조립을 여러 라우트에서 쓰게 되면 그때 별도 계층(FSD의 widgets) 도입을 검토한다.
 - 라우트별 데이터 Provider는 해당 페이지 또는 레이아웃에서 조립하며, 전역 관리자 레이아웃에서 모든 도메인 데이터를 선조회하지 않는다.
+
+### widgets
+
+```text
+widgets/{widget}
+  *.tsx          여러 feature를 화면 영역으로 조립하는 UI
+  *.stories.tsx  위젯 단위 시각적 검증
+```
+
+- widget은 반드시 여러 라우트에서 재사용되어야 하는 공통 컴포넌트가 아니다. 화면에서 독립적인 영역을 형성하고 여러 feature를 연결하면 widget으로 둔다.
+- feature는 사용자 액션·업무 흐름을 완성하고, widget은 그 feature들을 화면 영역으로 배치한다.
+- widget은 feature와 entity를 import할 수 있지만, feature가 widget을 import하거나 widget끼리 서로 import하지 않는다.
+- 현재 widget: `chat-sidebar`, `store-map-panel`.
 
 ### features
 
@@ -127,9 +141,10 @@ shared/
 | 3    | 조회를 TanStack Query로 통일(지도는 동작 테스트 선행)                                                        | 완료 |
 | 4    | 채팅 ↔ 매장 지도 결합 해소(feature 간 직접 import 제거)                                                      | 완료 |
 | 5    | features 안을 역할·화면별 하위 폴더로 분리(`store`, `admin`, `chat`), 랜딩 섹션은 `app/(marketing)`으로 이동 | 완료 |
-| 6    | `app/{route}/_components`·`_hooks`·`_lib`로 화면 조립 분리(로그인, 채팅, 채팅 답변 속 매장 지도)             | 완료 |
-| 7    | 재내보내기 파일 삭제, 쓰지 않는 API 호출 코드 삭제, 문서 정리                                                | 완료 |
-| 7    | ESLint 경계 규칙 `error` 전환                                                                                | 보류 |
+| 6    | `app/{route}/_components`·`_hooks`·`_lib`로 라우트 조립 분리(로그인, 채팅)                                   | 완료 |
+| 7    | 화면 영역 조립을 `widgets`로 분리(`chat-sidebar`, `store-map-panel`)                                         | 완료 |
+| 8    | 재내보내기 파일 삭제, 쓰지 않는 API 호출 코드 삭제, 문서 정리                                                | 완료 |
+| 9    | ESLint 경계 규칙 `error` 전환                                                                                | 보류 |
 
 - 5단계는 처음에 `store`를 별도 feature(store-search·store-map 등)로 나누려 했으나, feature끼리 서로 import하는 구조가 되어 되돌리고 feature 안 하위 폴더 방식으로 바꿨다.
 - ESLint 경계 규칙은 팀 합의 전까지 `warn`으로 두고, PR마다 경고 0을 확인한다.
@@ -140,8 +155,8 @@ shared/
 
 - `admin`: 관리자 화면. `common`(셸·권한 확인·공통 입력·페이지·데이터 Provider·쿼리 키·폼 스키마), `dashboard`, `partners`(매장+혜택 탭), `stores`, `benefits`, `faq`, `users`, `feedback`(답변 피드백) 하위 폴더로 나뉜다. 화면별 데이터 훅은 각 폴더의 `hooks/`에 둔다.
 - `auth`: 로그인·회원가입·OAuth 요청(`authService`), 헤더 로그인 버튼(`HeaderControls`), 마이페이지(`ProfilePanel`). 로그인 상태(`AuthProvider`, `useAuthUser`)·토큰·로그인 복귀 경로는 `entities/user`에 있다.
-- `chat`: 채팅 화면. `conversation`(대화 흐름·입력창·전송·스트리밍 표시·투어), `message`(메시지 목록·말풍선·마크다운·진행 단계·답변 피드백), `cards`(요금제 카드·카드 레일), `store`(매장 답변 카드·채팅 지도 슬롯·지도 데이터), `sidebar`(사이드바·상담 목록·메뉴), `search`(상담 검색), `settings`(채팅 설정) 하위 폴더로 나뉜다.
-- `store`: 매장 지도 패널. `panel`(패널 조립·상태), `search`(검색·목록·필터), `benefit`(제휴 혜택), `map`(지도·핀·카메라), `route`(길찾기), `reservation`(예약), `detail`(매장 상세) 하위 폴더로 나뉜다. 카카오맵 로더·타입은 `shared`에 있다.
+- `chat`: 채팅 기능. `conversation`(대화 흐름·입력창·전송·스트리밍 표시·투어), `message`(메시지 목록·말풍선·마크다운·진행 단계·답변 피드백), `cards`(요금제 카드·카드 레일), `store`(매장 답변 카드·채팅 지도 슬롯·지도 데이터), `sidebar`(사이드바 내부 기능·상담 목록·메뉴), `search`(상담 검색), `settings`(채팅 설정) 하위 폴더로 나뉜다. 화면 영역 조립체 `ChatSidebar`는 `widgets/chat-sidebar`에 둔다.
+- `store`: 매장 기능. `panel`(패널 상태·하위 조립), `search`(검색·목록·필터), `benefit`(제휴 혜택), `map`(지도·핀·카메라), `route`(길찾기), `reservation`(예약), `detail`(매장 상세) 하위 폴더로 나뉜다. 화면 영역 조립체 `StoreMapPanel`은 `widgets/store-map-panel`에 두며, 카카오맵 로더·타입은 `shared`에 있다.
 
 랜딩 화면 섹션과 헤더는 feature가 아니라 `app/(marketing)/_components`에 둔다(마케팅 레이아웃에서만 쓰는 화면 조립).
 
