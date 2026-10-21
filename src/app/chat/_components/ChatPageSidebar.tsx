@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import type { ChatConversation } from "./chatPageTypes";
 import type { useRailTooltip } from "../_hooks/useRailTooltip";
-import { ChatSidebar } from "@/features/chat/sidebar/components/ChatSidebar";
+import { ChatSidebar } from "@/widgets/chat-sidebar/ChatSidebar";
 import type { ChatMode } from "@/features/chat/types";
 import { buildLoginHref, type useAuthUser } from "@/entities/user";
 import { routes } from "@/shared/constants/routes";

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { ChatSidebar } from "@/features/chat/sidebar/components/ChatSidebar";
+import { ChatSidebar } from "@/widgets/chat-sidebar/ChatSidebar";
 import { AuthProvider } from "@/entities/user";
 import { ThemeProvider } from "@/shared/providers/ThemeProvider";
 
