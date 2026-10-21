@@ -141,7 +141,12 @@ export const useChatConversationController = ({
         : "의견을 전달하지 못했어요. 잠시 후 다시 시도해 주세요.",
     );
   };
-  const { scrollContainerRef, shouldJumpToBottomRef } = useChatAutoScroll({
+  const {
+    isAwayFromLatest,
+    scrollContainerRef,
+    scrollToLatest,
+    shouldJumpToBottomRef,
+  } = useChatAutoScroll({
     activeMode,
     chatStatus,
     messages,
@@ -418,6 +423,8 @@ export const useChatConversationController = ({
     renameChatSession,
     retryAnswer,
     scrollContainerRef,
+    isAwayFromLatest,
+    scrollToLatest,
     sessionTitles,
     sendAnswerFeedback: submitAnswerFeedback,
     setChatInput,

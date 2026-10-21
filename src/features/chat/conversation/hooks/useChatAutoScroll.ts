@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChatMode, ChatStreamingReply } from "@/features/chat/types";
 import type { ChatMessage } from "@/entities/chat";
 
@@ -33,6 +33,8 @@ export const useChatAutoScroll = ({
 }: UseChatAutoScrollParams) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const shouldJumpToBottomRef = useRef(false);
+  const isAtLatestRef = useRef(true);
+  const [isAwayFromLatest, setIsAwayFromLatest] = useState(false);
   const isStreamingAnswer = Boolean(streamingReply?.content);
   const messageScrollKey = useMemo(
     () => getMessageScrollKey(messages),
@@ -43,16 +45,31 @@ export const useChatAutoScroll = ({
   }`;
 
   useEffect(() => {
-    if (activeMode !== "chat" || messages.length === 0) return;
-
     const container = scrollContainerRef.current;
 
-    if (
-      isStreamingAnswer &&
-      container &&
-      container.scrollHeight - container.scrollTop - container.clientHeight >
-        160
-    ) {
+    if (!container) return;
+
+    const handleScroll = () => {
+      const isAtLatest =
+        container.scrollHeight - container.scrollTop - container.clientHeight <=
+        32;
+
+      isAtLatestRef.current = isAtLatest;
+      setIsAwayFromLatest((previous) =>
+        previous === !isAtLatest ? previous : !isAtLatest,
+      );
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [activeMode, messages.length]);
+
+  useEffect(() => {
+    if (activeMode !== "chat" || messages.length === 0) return;
+
+    if (!shouldJumpToBottomRef.current && !isAtLatestRef.current) {
       return;
     }
 
@@ -81,5 +98,19 @@ export const useChatAutoScroll = ({
     streamingScrollKey,
   ]);
 
-  return { scrollContainerRef, shouldJumpToBottomRef };
+  const scrollToLatest = () => {
+    isAtLatestRef.current = true;
+    setIsAwayFromLatest(false);
+    scrollContainerRef.current?.scrollTo({
+      top: scrollContainerRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  };
+
+  return {
+    isAwayFromLatest,
+    scrollContainerRef,
+    scrollToLatest,
+    shouldJumpToBottomRef,
+  };
 };

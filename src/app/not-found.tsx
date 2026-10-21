@@ -1,11 +1,19 @@
+import Image from "next/image";
 import { routes } from "@/shared/constants/routes";
 import { ButtonLink } from "@/shared/ui/atoms/Button";
 
 const NotFound = () => {
   return (
     <main className="bg-background flex min-h-[calc(100vh-64px)] items-center justify-center px-6 text-gray-950 transition-colors dark:bg-black dark:text-white">
-      <section className="text-center">
-        <p className="text-brand text-8xl font-extrabold sm:text-9xl">404</p>
+      <section className="flex max-w-xl flex-col items-center text-center">
+        <Image
+          src="/images/404-vita.png"
+          alt="페이지를 찾을 수 없어요"
+          width={360}
+          height={360}
+          priority
+          className="h-auto w-64 object-contain sm:w-80"
+        />
 
         <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
           페이지를 찾을 수 없습니다
