@@ -45,6 +45,9 @@ declare global {
           /** mousedown/touchstart 핸들러 안에서 부르면 지도가 그 입력으로 드래그·클릭을 시작하지 않는다. */
           preventMap?: () => void;
         };
+        services?: {
+          Geocoder: new () => KakaoGeocoder;
+        };
       };
     };
   }
@@ -59,6 +62,16 @@ declare global {
     extend: (latLng: KakaoLatLng) => void;
     getSouthWest?: () => KakaoLatLng;
     getNorthEast?: () => KakaoLatLng;
+  }
+
+  interface KakaoGeocoder {
+    addressSearch: (
+      query: string,
+      callback: (
+        results: Array<{ x: string; y: string }>,
+        status: string,
+      ) => void,
+    ) => void;
   }
 
   interface KakaoMap {
@@ -127,7 +140,7 @@ export const loadKakaoMapScript = () => {
     const script = document.createElement("script");
     script.id = KAKAO_MAP_SCRIPT_ID;
     script.async = true;
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${env.kakaoMapAppKey}&autoload=false`;
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${env.kakaoMapAppKey}&autoload=false&libraries=services`;
     script.onload = () => {
       window.kakao?.maps?.load(() => resolve(true));
     };
