@@ -19,10 +19,11 @@ const coordinateSchema = z
   .min(1, "좌표를 입력해 주세요.")
   .refine((value) => Number.isFinite(Number(value)), {
     message: "좌표는 숫자로 입력해 주세요.",
-  })
-  .refine((value) => Number(value) >= -90 && Number(value) <= 90, {
-    message: "위도는 -90에서 90 사이로 입력해 주세요.",
   });
+const latitudeSchema = coordinateSchema.refine(
+  (value) => Number(value) >= -90 && Number(value) <= 90,
+  { message: "위도는 -90에서 90 사이로 입력해 주세요." },
+);
 const longitudeSchema = coordinateSchema.refine(
   (value) => Number(value) >= -180 && Number(value) <= 180,
   { message: "경도는 -180에서 180 사이로 입력해 주세요." },
@@ -36,9 +37,17 @@ const optionalPattern = (pattern: RegExp, message: string) =>
 const businessHoursSchema = optionalPattern(
   /^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$/,
   "운영시간은 09:00-18:00 형식으로 입력해 주세요.",
-).refine((value) => !value || value.slice(0, 5) !== value.slice(6), {
-  message: "여는 시각과 닫는 시각은 다르게 입력해 주세요.",
-});
+).refine(
+  (value) => {
+    if (!value) return true;
+    const opening = Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5));
+    const closing = Number(value.slice(6, 8)) * 60 + Number(value.slice(9, 11));
+    return opening < closing;
+  },
+  {
+    message: "종료 시간은 시작 시간보다 늦게 입력해 주세요.",
+  },
+);
 const phoneSchema = optionalPattern(
   /^0\d{1,2}-\d{3,4}-\d{4}$/,
   "전화번호는 02-1234-5678 형식으로 입력해 주세요.",
@@ -49,7 +58,7 @@ export const storeFormSchema = z.object({
   benefitId: z.string().optional(),
   businessHours: businessHoursSchema,
   consultServices: z.string().optional(),
-  lat: coordinateSchema,
+  lat: latitudeSchema,
   lng: longitudeSchema,
   name: z.string().trim().min(1, "이름을 입력해 주세요."),
   phone: phoneSchema,

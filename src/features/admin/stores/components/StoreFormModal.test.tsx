@@ -4,37 +4,29 @@ import { StoreFormModal } from "@/features/admin/stores/components/StoreFormModa
 import { storeDetails } from "@/features/admin/common/lib/adminData";
 
 describe("store business hours request", () => {
-  it.each([
-    { input: "", expected: null },
-    { input: " 22:00-02:00 ", expected: "22:00-02:00" },
-  ])(
-    "sends $expected when editing hours to '$input'",
-    async ({ input, expected }) => {
-      const onSave = vi.fn().mockResolvedValue(undefined);
-      render(
-        <StoreFormModal
-          isOpen
-          mode="edit"
-          store={storeDetails[0]}
-          storeType="PHONE"
-          storeLabel="대리점"
-          benefits={[]}
-          onClose={vi.fn()}
-          onSave={onSave}
-        />,
-      );
-      const hours = screen.getByRole("textbox", { name: "운영시간" });
-      fireEvent.change(hours, { target: { value: input } });
-      fireEvent.submit(hours.closest("form")!);
-      await waitFor(() =>
-        expect(onSave).toHaveBeenCalledWith(
-          expect.objectContaining({ businessHours: expected }),
-        ),
-      );
-    },
-  );
+  it("sends the existing formatted hours when the form is submitted", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <StoreFormModal
+        isOpen
+        mode="edit"
+        store={storeDetails[0]}
+        storeType="PHONE"
+        storeLabel="대리점"
+        benefits={[]}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+    fireEvent.submit(document.getElementById("store-edit-form")!);
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ businessHours: "09:00-21:00" }),
+      ),
+    );
+  });
 
-  it("blocks the old tilde format before sending a request", async () => {
+  it("blocks a closing time earlier than the opening time", async () => {
     const onSave = vi.fn();
     render(
       <StoreFormModal
@@ -48,12 +40,13 @@ describe("store business hours request", () => {
         onSave={onSave}
       />,
     );
-    const hours = screen.getByRole("textbox", { name: "운영시간" });
-    fireEvent.change(hours, { target: { value: "09:00~18:00" } });
-    fireEvent.submit(hours.closest("form")!);
+    fireEvent.click(screen.getByRole("button", { name: "21:00" }));
+    fireEvent.click(screen.getByRole("button", { name: "08시" }));
+    fireEvent.click(screen.getByRole("button", { name: "00분" }));
+    fireEvent.submit(document.getElementById("store-edit-form")!);
     await waitFor(() =>
       expect(
-        screen.getByText("운영시간은 09:00-18:00 형식으로 입력해 주세요."),
+        screen.getByText("종료 시간은 시작 시간보다 늦게 입력해 주세요."),
       ).toBeInTheDocument(),
     );
     expect(onSave).not.toHaveBeenCalled();

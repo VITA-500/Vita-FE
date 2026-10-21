@@ -17,9 +17,16 @@ import { Select } from "@/shared/ui/atoms/Select";
 import { SearchInput } from "@/shared/ui/molecules/SearchInput";
 import { Button } from "@/shared/ui/atoms/Button";
 import { AdminStatusBadge } from "@/features/admin/common/components/AdminStatusBadge";
+import { AdminField } from "@/features/admin/common/components/AdminField";
+import { Modal } from "@/shared/ui/organisms/Modal";
 
 const UserManagement = () => {
   const [selected, setSelected] = useState<AdminUserListItem | null>(null);
+  const [statusTarget, setStatusTarget] = useState<AdminUserListItem | null>(
+    null,
+  );
+  const [reason, setReason] = useState("");
+  const [reasonError, setReasonError] = useState("");
   const {
     users,
     totalCount,
@@ -33,12 +40,23 @@ const UserManagement = () => {
   } = useAdminUsers();
   const { summary } = useAdminUserSummary();
 
-  const changeStatus = async (user: AdminUserListItem) => {
+  const openStatusDialog = (user: AdminUserListItem) => {
+    setStatusTarget(user);
+    setReason("");
+    setReasonError("");
+  };
+
+  const changeStatus = async () => {
+    if (!statusTarget) return;
+    if (!reason.trim()) {
+      setReasonError("변경 사유를 입력해야 처리할 수 있어요.");
+      return;
+    }
+
     const nextStatus: AdminUserStatus =
-      user.status === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
-    const reason = window.prompt("변경 사유를 입력해 주세요.");
-    if (!reason?.trim()) return;
-    await changeUserStatus(user.userId, nextStatus, reason);
+      statusTarget.status === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
+    await changeUserStatus(statusTarget.userId, nextStatus, reason.trim());
+    setStatusTarget(null);
   };
 
   const statusLabel: Record<AdminUserStatus, string> = {
@@ -207,8 +225,17 @@ const UserManagement = () => {
                       {user.status !== "DELETED" && (
                         <Button
                           size="sm"
-                          variant="secondary"
-                          onClick={() => void changeStatus(user)}
+                          variant={
+                            user.status === "SUSPENDED"
+                              ? "outline"
+                              : "dangerGhost"
+                          }
+                          className={
+                            user.status === "SUSPENDED"
+                              ? "border-emerald-500 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-400 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-300"
+                              : undefined
+                          }
+                          onClick={() => openStatusDialog(user)}
                           leftIcon={
                             user.status === "SUSPENDED" ? (
                               <CheckCircle2 size={14} />
@@ -234,6 +261,53 @@ const UserManagement = () => {
           </div>
         )}
       </Card>
+      <Modal
+        isOpen={Boolean(statusTarget)}
+        onClose={() => setStatusTarget(null)}
+        title={
+          statusTarget?.status === "SUSPENDED" ? "회원 정지 해제" : "회원 정지"
+        }
+        description="변경 사유는 관리자 감사 기록에 저장됩니다."
+        size="sm"
+        actions={
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setStatusTarget(null)}
+            >
+              취소
+            </Button>
+            <Button
+              size="sm"
+              variant={
+                statusTarget?.status === "SUSPENDED" ? "outline" : "danger"
+              }
+              onClick={() => void changeStatus()}
+            >
+              {statusTarget?.status === "SUSPENDED" ? "정지 해제" : "정지 처리"}
+            </Button>
+          </>
+        }
+      >
+        <AdminField
+          label="변경 사유"
+          multiline
+          rows={4}
+          placeholder={
+            statusTarget?.status === "SUSPENDED"
+              ? "예: 이용 제한 사유가 해소되어 정지를 해제합니다."
+              : "예: 운영 정책 위반으로 계정을 정지합니다."
+          }
+          value={reason}
+          error={reasonError}
+          onChange={(event) => {
+            setReason(event.target.value);
+            if (event.target.value.trim()) setReasonError("");
+          }}
+          required
+        />
+      </Modal>
     </section>
   );
 };

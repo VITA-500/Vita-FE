@@ -1,10 +1,9 @@
 "use client";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Modal } from "@/shared/ui/organisms/Modal";
 import { Button } from "@/shared/ui/atoms/Button";
 import { AdminField } from "@/features/admin/common/components/AdminField";
 import type { SelectOption } from "@/shared/ui/atoms/Select";
-import { showToast } from "@/shared/providers/ToastProvider";
 import type { AdminPlan, AdminPlanRequest } from "@/entities/plan";
 import {
   planDataPolicies,
@@ -37,6 +36,26 @@ const targetAgeRanges = {
   YOUTH: { label: "청년", min: 19, max: 34 },
   SENIOR: { label: "시니어", min: 65, max: 150 },
 } as const;
+
+const getAgeValidationMessage = (plan: AdminPlanRequest) => {
+  if (
+    plan.minAge !== null &&
+    plan.maxAge !== null &&
+    plan.minAge > plan.maxAge
+  ) {
+    return "최소 연령은 최대 연령보다 클 수 없습니다.";
+  }
+  const range =
+    targetAgeRanges[plan.targetGroup as keyof typeof targetAgeRanges];
+  if (
+    range &&
+    ((plan.minAge !== null && plan.minAge < range.min) ||
+      (plan.maxAge !== null && plan.maxAge > range.max))
+  ) {
+    return `${range.label} 대상은 만 ${range.min}~${range.max}세 범위로 입력해 주세요.`;
+  }
+  return null;
+};
 export const PlanFormModal = ({
   isOpen,
   mode,
@@ -64,13 +83,33 @@ export const PlanFormModal = ({
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
   );
+  const validationRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (validationMessage) {
+      window.requestAnimationFrame(() => {
+        validationRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    }
+  }, [validationMessage]);
   const closeModal = () => {
     setValidationMessage(null);
     onClose();
   };
-  const set = (key: keyof AdminPlanRequest, next: string) =>
-    setValue((old) => ({
-      ...old,
+  const showValidation = (message: string) => {
+    setValidationMessage(message);
+    window.requestAnimationFrame(() => {
+      validationRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  };
+  const set = (key: keyof AdminPlanRequest, next: string) => {
+    const nextValue = {
+      ...value,
       [key]: [
         "price",
         "minAge",
@@ -84,7 +123,13 @@ export const PlanFormModal = ({
           ? null
           : Number(next)
         : next,
-    }));
+    } as AdminPlanRequest;
+    setValue(nextValue);
+    if (["targetGroup", "minAge", "maxAge"].includes(key)) {
+      const ageMessage = getAgeValidationMessage(nextValue);
+      setValidationMessage(ageMessage);
+    }
+  };
   const setPolicy = (
     key: "dataPolicy" | "voicePolicy" | "smsPolicy",
     next: string,
@@ -109,43 +154,32 @@ export const PlanFormModal = ({
       !value.summary.trim() ||
       !value.description.trim()
     ) {
-      showToast("필수 항목을 모두 입력해 주세요.");
+      showValidation("필수 항목을 모두 입력해 주세요.");
       return;
     }
-    if (
-      value.minAge !== null &&
-      value.maxAge !== null &&
-      value.minAge > value.maxAge
-    ) {
-      setValidationMessage("최소 연령은 최대 연령보다 클 수 없습니다.");
-      return;
-    }
-    const ageRange =
-      value.targetGroup in targetAgeRanges
-        ? targetAgeRanges[value.targetGroup as keyof typeof targetAgeRanges]
-        : null;
-    if (
-      ageRange &&
-      ((value.minAge !== null && value.minAge < ageRange.min) ||
-        (value.maxAge !== null && value.maxAge > ageRange.max))
-    ) {
-      setValidationMessage(
-        `${ageRange.label} 대상은 만 ${ageRange.min}~${ageRange.max}세 범위로 입력해 주세요.`,
-      );
+    const ageMessage = getAgeValidationMessage(value);
+    if (ageMessage) {
+      setValidationMessage(ageMessage);
+      window.requestAnimationFrame(() => {
+        validationRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
       return;
     }
     if (
       value.dataPolicy === "LIMITED" &&
       (!value.baseDataMb || value.baseDataMb < 1)
     ) {
-      showToast("데이터 제공량 제한을 입력해 주세요.");
+      showValidation("데이터 제공량 제한을 입력해 주세요.");
       return;
     }
     if (
       value.dataPolicy === "UNLIMITED" &&
       (value.baseDataMb !== null || value.exhaustedSpeedKbps !== null)
     ) {
-      showToast(
+      showValidation(
         "무제한 데이터 정책에서는 데이터 제한 값을 입력할 수 없습니다.",
       );
       return;
@@ -154,22 +188,22 @@ export const PlanFormModal = ({
       value.voicePolicy === "LIMITED" &&
       (!value.voiceMinutes || value.voiceMinutes < 1)
     ) {
-      showToast("통화 제공량은 1분 이상 입력해 주세요.");
+      showValidation("통화 제공량은 1분 이상 입력해 주세요.");
       return;
     }
     if (value.voicePolicy !== "LIMITED" && value.voiceMinutes !== null) {
-      showToast("통화 제공량은 제한 정책에서만 입력할 수 있습니다.");
+      showValidation("통화 제공량은 제한 정책에서만 입력할 수 있습니다.");
       return;
     }
     if (
       value.smsPolicy === "LIMITED" &&
       (!value.smsCount || value.smsCount < 1)
     ) {
-      showToast("문자 제공량은 1건 이상 입력해 주세요.");
+      showValidation("문자 제공량은 1건 이상 입력해 주세요.");
       return;
     }
     if (value.smsPolicy !== "LIMITED" && value.smsCount !== null) {
-      showToast("문자 제공량은 제한 정책에서만 입력할 수 있습니다.");
+      showValidation("문자 제공량은 제한 정책에서만 입력할 수 있습니다.");
       return;
     }
     await onSave(mode === "edit" ? value : value);
@@ -284,7 +318,10 @@ export const PlanFormModal = ({
       }
     >
       {validationMessage && (
-        <p className="mt-5 mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+        <p
+          ref={validationRef}
+          className="mt-5 mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300"
+        >
           {validationMessage}
         </p>
       )}
@@ -299,25 +336,29 @@ export const PlanFormModal = ({
         {field("price", "월 요금", "number")}
         {selectField("networkType", "네트워크", networkOptions)}
         {selectField("targetGroup", "대상 그룹", targetOptions)}
-        {selectField("dataPolicy", "데이터 정책", policyOptions, (next) =>
-          setPolicy("dataPolicy", next),
-        )}
-        {value.dataPolicy === "LIMITED" && (
-          <>
-            {field("baseDataMb", "기본 데이터(MB)", "number")}
-            {field("exhaustedSpeedKbps", "소진 후 속도(Kbps)", "number")}
-          </>
-        )}
-        {selectField("voicePolicy", "음성 정책", usageOptions, (next) =>
-          setPolicy("voicePolicy", next),
-        )}
-        {value.voicePolicy === "LIMITED" &&
-          field("voiceMinutes", "통화 제공량(분)", "number")}
-        {selectField("smsPolicy", "문자 정책", usageOptions, (next) =>
-          setPolicy("smsPolicy", next),
-        )}
-        {value.smsPolicy === "LIMITED" &&
-          field("smsCount", "문자 제공량", "number")}
+        <div className="grid gap-4 sm:col-span-2 sm:grid-cols-3">
+          {selectField("dataPolicy", "데이터 정책", policyOptions, (next) =>
+            setPolicy("dataPolicy", next),
+          )}
+          {value.dataPolicy === "LIMITED" &&
+            field("baseDataMb", "기본 데이터(MB)", "number")}
+          {value.dataPolicy === "LIMITED" &&
+            field("exhaustedSpeedKbps", "소진 후 속도(Kbps)", "number")}
+        </div>
+        <div className="grid gap-4 sm:col-span-2 sm:grid-cols-2">
+          {selectField("voicePolicy", "음성 정책", usageOptions, (next) =>
+            setPolicy("voicePolicy", next),
+          )}
+          {value.voicePolicy === "LIMITED" &&
+            field("voiceMinutes", "통화 제공량(분)", "number")}
+        </div>
+        <div className="grid gap-4 sm:col-span-2 sm:grid-cols-2">
+          {selectField("smsPolicy", "문자 정책", usageOptions, (next) =>
+            setPolicy("smsPolicy", next),
+          )}
+          {value.smsPolicy === "LIMITED" &&
+            field("smsCount", "문자 제공량", "number")}
+        </div>
         {field("minAge", "최소 연령", "number")}
         {field("maxAge", "최대 연령", "number")}
         <AdminField
