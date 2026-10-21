@@ -66,6 +66,8 @@ type UseStoreSelectionActionsParams = Pick<
   > &
   Pick<ReturnType<typeof useStorePanelLayout>, "setIsSearchHistoryOpen"> & {
     activeMapCategory: MapCategory;
+    cancelReservation: () => void;
+    reservationStore?: StoreLocation | null;
     routeDestinationStore?: StoreLocation;
     setActiveMapCategory: Dispatch<SetStateAction<MapCategory>>;
     setSelectedBenefitCategory: Dispatch<SetStateAction<string>>;
@@ -83,6 +85,7 @@ type UseStoreSelectionActionsParams = Pick<
 
 export const useStoreSelectionActions = ({
   activeMapCategory,
+  cancelReservation,
   categoryDisplayStores,
   categoryStores,
   changeRouteMode,
@@ -91,6 +94,7 @@ export const useStoreSelectionActions = ({
   isTagSearchQuery,
   openLocationPermissionModal,
   requestLocation,
+  reservationStore,
   resetRouteState,
   routeDestinationStore,
   routeDestinationStoreId,
@@ -149,6 +153,11 @@ export const useStoreSelectionActions = ({
     storeId: string,
     options?: { focusMap?: boolean; showOnlySelected?: boolean },
   ) => {
+    // 예약 화면을 닫지 않고 다른 매장을 선택하면 예약 대상도 새 매장 기준으로 초기화한다.
+    if (reservationStore && reservationStore.id !== storeId) {
+      cancelReservation();
+    }
+
     setSoloStoreId(options?.showOnlySelected ? storeId : "");
 
     if (routeDestinationStoreId && routeDestinationStoreId !== storeId) {
