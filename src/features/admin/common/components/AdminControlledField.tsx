@@ -27,12 +27,16 @@ export const AdminControlledField = <TFieldValues extends FieldValues>({
   <Controller
     control={control}
     name={name}
-    render={({ field }) => {
+    render={({ field, fieldState }) => {
       const fieldProps = {
         ...props,
         name: field.name,
         value: value ?? formatValue?.(field.value) ?? field.value ?? "",
         onChange: field.onChange,
+        error:
+          typeof fieldState.error?.message === "string"
+            ? fieldState.error.message
+            : undefined,
       } as AdminFieldProps;
 
       return <AdminField {...fieldProps} />;
