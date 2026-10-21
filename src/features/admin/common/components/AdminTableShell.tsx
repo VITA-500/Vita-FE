@@ -6,6 +6,7 @@ type AdminTableShellProps = {
   children: ReactNode;
   className?: string;
   pagination?: ReactNode;
+  paginationClassName?: string;
   tableWrapperClassName?: string;
 };
 
@@ -14,6 +15,7 @@ export const AdminTableShell = ({
   children,
   className,
   pagination,
+  paginationClassName,
   tableWrapperClassName,
 }: AdminTableShellProps) => (
   <Card padding="none" className={cn("overflow-hidden", className)}>
@@ -21,7 +23,12 @@ export const AdminTableShell = ({
       {children}
     </div>
     {pagination && (
-      <div className="border-border-soft flex items-center justify-center gap-1 border-t px-5 py-4 dark:border-white/10">
+      <div
+        className={cn(
+          "border-border-soft flex items-center justify-center gap-1 border-t px-5 py-4 dark:border-white/10",
+          paginationClassName,
+        )}
+      >
         {pagination}
       </div>
     )}
