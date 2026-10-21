@@ -6,7 +6,7 @@ import { ProfilePanel } from "@/features/auth/components/ProfilePanel";
 import { ChatConversationContent } from "@/features/chat/conversation/components/ChatConversationContent";
 import { ChatStoreMapSlotProvider } from "@/features/chat/store/components/ChatStoreMapSlot";
 import type { ChatMode } from "@/features/chat/types";
-import { StoreMapPanel } from "@/features/store/panel/components/StoreMapPanel";
+import { StoreMapPanel } from "@/widgets/store-map-panel/StoreMapPanel";
 import type { StoreMapInitialAction } from "@/features/store/types";
 import type { ChatStoreMap as ChatStoreMapData } from "@/entities/chat";
 

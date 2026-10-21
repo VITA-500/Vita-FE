@@ -1,7 +1,7 @@
 "use client";
 
 import { useSavedStoreMapSnapshot } from "@/features/store/panel/hooks/useSavedStoreMapSnapshot";
-import { StoreMapPanelContent } from "@/features/store/panel/components/StoreMapPanelContent";
+import { StoreMapPanelContent } from "@/widgets/store-map-panel/StoreMapPanelContent";
 import type { StoreMapPanelProps } from "@/features/store/panel/lib/storeMapPanelTypes";
 
 /**
