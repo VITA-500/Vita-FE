@@ -203,7 +203,9 @@ export const StoreFormModal = ({
     if (!element) return;
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (typeof element.scrollIntoView === "function") {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
       });
     });
   }, []);
