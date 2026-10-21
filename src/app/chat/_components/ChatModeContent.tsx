@@ -58,6 +58,7 @@ export const ChatModeContent = ({
         chatInput={conversation.chatInput}
         chatInputRef={conversation.chatInputRef}
         chatStatus={conversation.chatStatus}
+        isAwayFromLatest={conversation.isAwayFromLatest}
         editHintMessageId={conversation.editHintMessageId}
         hasChatStarted={conversation.hasChatStarted}
         loadingSessionId={conversation.loadingSessionId}
@@ -77,6 +78,7 @@ export const ChatModeContent = ({
         onSelectQuickAction={(prompt) => {
           void submitChatPrompt(prompt);
         }}
+        onScrollToLatest={conversation.scrollToLatest}
         onSubmitPrompt={(prompt) => void submitChatPrompt(prompt)}
         scrollContainerRef={conversation.scrollContainerRef}
         streamingReply={conversation.streamingReply}
