@@ -6,6 +6,7 @@ import { AdminEmptyState } from "@/features/admin/common/components/AdminEmptySt
 import { AdminErrorBanner } from "@/features/admin/common/components/AdminErrorBanner";
 import { FaqFormModal } from "@/features/admin/faq/components/FaqFormModal";
 import { AdminPagination } from "@/features/admin/common/components/AdminPagination";
+import { AdminTableShell } from "@/features/admin/common/components/AdminTableShell";
 import { AdminResultSummary } from "@/features/admin/common/components/AdminResultSummary";
 import { FilterDropdown } from "@/features/admin/common/components/FilterDropdown";
 import { FaqStatusModal } from "@/features/admin/faq/components/FaqStatusModal";
@@ -233,88 +234,88 @@ export const FaqManagement = () => {
         )}
       </div>
 
-      <Card padding="none" className="hidden overflow-hidden md:block">
-        <div>
-          <table className="w-full table-fixed border-collapse text-sm">
-            <thead className="bg-surface-muted text-xs font-extrabold text-gray-400 dark:bg-white/5">
-              <tr>
-                <th className="w-[88px] px-5 py-4 text-left">ID</th>
-                <th className="px-4 py-4 text-left">질문</th>
-                <th className="w-[22%] px-4 py-4 text-left">카테고리</th>
-                <th className="w-[128px] px-4 py-4 text-center">등록일</th>
-                <th className="w-[180px] px-5 py-4 text-center">관리</th>
-              </tr>
-            </thead>
-            <tbody className="divide-border-soft divide-y dark:divide-white/10">
-              {shouldShowSkeletonRows ? (
-                Array.from({ length: visibleSkeletonRows }, (_, index) => (
-                  <FaqSkeletonRow key={`faq-skeleton-${index}`} />
-                ))
-              ) : faqs.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="h-[640px] px-5 py-0">
-                    <AdminEmptyState
-                      title="조건에 맞는 FAQ가 없습니다."
-                      description="검색어와 카테고리 필터를 조정하거나 새 FAQ를 등록해 주세요."
-                    />
-                  </td>
-                </tr>
-              ) : (
-                <>
-                  {faqs.map((faq) => (
-                    <tr
-                      key={faq.faqId}
-                      className="hover:bg-surface-muted/70 min-h-20 transition dark:hover:bg-white/5"
-                    >
-                      <td className="px-5 py-4 font-bold text-gray-400">
-                        #{faq.faqId}
-                      </td>
-                      <td className="px-4 py-4 font-extrabold break-keep whitespace-normal text-gray-800 dark:text-gray-100">
-                        {faq.question}
-                      </td>
-                      <td className="truncate px-4 py-4 font-semibold text-gray-500">
-                        {faq.category}
-                      </td>
-                      <td className="px-4 py-4 text-center font-semibold text-gray-400">
-                        {formatKoreanDate(faq.createdAt)}
-                      </td>
-                      <td className="px-5 py-4 text-center">
-                        <FaqRowActions
-                          isActive={faq.status === "ACTIVE"}
-                          onEdit={() => setEditingFaqId(faq.faqId)}
-                          onDelete={() => setDeletingFaqId(faq.faqId)}
-                          onActivate={() => setActivatingFaqId(faq.faqId)}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                  {Array.from({
-                    length: fillerRowCount,
-                  }).map((_, index) => (
-                    <tr
-                      key={`filler-${index}`}
-                      aria-hidden="true"
-                      className="h-20"
-                    >
-                      <td colSpan={5} />
-                    </tr>
-                  ))}
-                </>
-              )}
-            </tbody>
-          </table>
-        </div>
-        {!shouldShowSkeletonRows && faqs.length > 0 && (
-          <div className="border-border-soft flex items-center justify-center gap-1 border-t px-5 py-4 dark:border-white/10">
+      <AdminTableShell
+        className="hidden md:block"
+        pagination={
+          !shouldShowSkeletonRows && faqs.length > 0 ? (
             <AdminPagination
               currentPage={faqPage + 1}
               disabled={isFaqLoading}
               totalPages={faqTotalPages}
               onPageChange={(page) => setFaqPage(page - 1)}
             />
-          </div>
-        )}
-      </Card>
+          ) : null
+        }
+      >
+        <table className="w-full table-fixed border-collapse text-sm">
+          <thead className="bg-surface-muted text-xs font-extrabold text-gray-400 dark:bg-white/5">
+            <tr>
+              <th className="w-[88px] px-5 py-4 text-left">ID</th>
+              <th className="px-4 py-4 text-left">질문</th>
+              <th className="w-[22%] px-4 py-4 text-left">카테고리</th>
+              <th className="w-[128px] px-4 py-4 text-center">등록일</th>
+              <th className="w-[180px] px-5 py-4 text-center">관리</th>
+            </tr>
+          </thead>
+          <tbody className="divide-border-soft divide-y dark:divide-white/10">
+            {shouldShowSkeletonRows ? (
+              Array.from({ length: visibleSkeletonRows }, (_, index) => (
+                <FaqSkeletonRow key={`faq-skeleton-${index}`} />
+              ))
+            ) : faqs.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="h-[640px] px-5 py-0">
+                  <AdminEmptyState
+                    title="조건에 맞는 FAQ가 없습니다."
+                    description="검색어와 카테고리 필터를 조정하거나 새 FAQ를 등록해 주세요."
+                  />
+                </td>
+              </tr>
+            ) : (
+              <>
+                {faqs.map((faq) => (
+                  <tr
+                    key={faq.faqId}
+                    className="hover:bg-surface-muted/70 min-h-20 transition dark:hover:bg-white/5"
+                  >
+                    <td className="px-5 py-4 font-bold text-gray-400">
+                      #{faq.faqId}
+                    </td>
+                    <td className="px-4 py-4 font-extrabold break-keep whitespace-normal text-gray-800 dark:text-gray-100">
+                      {faq.question}
+                    </td>
+                    <td className="truncate px-4 py-4 font-semibold text-gray-500">
+                      {faq.category}
+                    </td>
+                    <td className="px-4 py-4 text-center font-semibold text-gray-400">
+                      {formatKoreanDate(faq.createdAt)}
+                    </td>
+                    <td className="px-5 py-4 text-center">
+                      <FaqRowActions
+                        isActive={faq.status === "ACTIVE"}
+                        onEdit={() => setEditingFaqId(faq.faqId)}
+                        onDelete={() => setDeletingFaqId(faq.faqId)}
+                        onActivate={() => setActivatingFaqId(faq.faqId)}
+                      />
+                    </td>
+                  </tr>
+                ))}
+                {Array.from({
+                  length: fillerRowCount,
+                }).map((_, index) => (
+                  <tr
+                    key={`filler-${index}`}
+                    aria-hidden="true"
+                    className="h-20"
+                  >
+                    <td colSpan={5} />
+                  </tr>
+                ))}
+              </>
+            )}
+          </tbody>
+        </table>
+      </AdminTableShell>
 
       <AdminResultSummary
         keyword={hasSearchKeyword ? faqKeyword : ""}
