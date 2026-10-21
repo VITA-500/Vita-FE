@@ -168,7 +168,8 @@ shared/
 - `(service)/admin/*`: 관리자 화면 배치(`features/admin` 사용)
 - `chat`: 채팅·매장 지도·마이페이지(`_components`: ChatPageSidebar, ChatModeContent, ChatPageDialogs, ChatStoreMap / `_hooks`: useChatSidebarOpen, useRailTooltip, useChatStoreMapState / `_lib`: chatPageParams, chatStoreMapView)
 
-## Current Phase Boundary
+## Current Integration Boundary
 
-- Phase 1: 인증, OAuth, 비로그인 UX, 핵심 화면 UI, 관리자 화면 뼈대, mock 기반 동작, 자동화 테스트 기반
-- Phase 2: 채팅 세션, 메시지, AI 응답, 매장, FAQ 등 실제 백엔드 기능 API 연동
+- 실제 BE 연동: 인증/OAuth, 채팅 세션·메시지·SSE, 매장·혜택·예약·길찾기, FAQ·매장·혜택·사용자 관리자 API, 답변 피드백 및 trace
+- fallback mock: API base URL이 없는 Storybook·로컬 목업 환경의 관리자 요약/피드백 데이터
+- BE에는 `/admin/plans`가 있지만 FE 요금제 관리자 UI는 아직 없으며 별도 검토 대상이다.

@@ -21,6 +21,7 @@ export {
 } from "@/entities/route/model/transitTimeline";
 export type {
   StoreRoute,
+  StoreRouteGuide,
   StoreRouteMode,
   StoreRoutePoint,
   StoreRouteSegment,

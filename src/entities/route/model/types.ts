@@ -33,6 +33,15 @@ export type StoreRoute = {
   path: StoreRoutePoint[];
   segments?: StoreRouteSegment[];
   options?: StoreRouteOption[];
+  guides?: StoreRouteGuide[];
+};
+
+export type StoreRouteGuide = {
+  guidance: string;
+  name?: string;
+  distanceMeters: number;
+  lat: number;
+  lng: number;
 };
 
 export type StoreRouteOption = {
@@ -43,6 +52,7 @@ export type StoreRouteOption = {
   transfers?: number;
   path: StoreRoutePoint[];
   segments?: StoreRouteSegment[];
+  guides?: StoreRouteGuide[];
 };
 
 /** 대중교통 경로의 단계 하나(도보·버스·지하철). 상세 타임라인과 단계 목록이 쓴다. */

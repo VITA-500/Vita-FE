@@ -1,89 +1,83 @@
 # VITA Frontend API Contract
 
-백엔드 구현 전 프론트 mock 화면과 맞춘 1차 계약입니다. 실제 경로명은 백엔드 라우팅 정책에 맞춰 조정할 수 있지만, 응답 필드는 이 구조를 기준으로 협의합니다.
+이 문서는 `C:\Vita-BE`의 현재 컨트롤러와 DTO를 기준으로 작성한 FE 계약 문서다. 과거 mock 계약(`/api/chat`, `/api/stores`)은 현재 계약이 아니다.
+
+## 공통 규칙
+
+- API base URL은 `NEXT_PUBLIC_API_BASE_URL`이다.
+- 회원 요청은 `credentials: include`와 HttpOnly access-token cookie를 사용한다.
+- 비회원 채팅은 `X-Guest-Id` UUID 헤더와 `credentials: omit`을 사용한다.
+- 쓰기 요청은 `GET /auth/csrf` 응답의 `headerName`, `token`을 CSRF 헤더로 보낸다.
+- 오류 응답은 BE `ErrorResponse`를 FE `ApiError`로 변환한다.
+- 관리자 API 권한 검증은 BE가 담당한다.
+
+## Auth
+
+| Method | Path           | 설명                             |
+| ------ | -------------- | -------------------------------- |
+| POST   | `/auth/signup` | 회원가입                         |
+| POST   | `/auth/login`  | 로그인, access token cookie 발급 |
+| POST   | `/auth/logout` | 로그아웃                         |
+| GET    | `/auth/csrf`   | CSRF token 발급                  |
+| GET    | `/users/me`    | 현재 사용자 조회                 |
+| PATCH  | `/users/me`    | 마이페이지 수정                  |
+
+OAuth 시작 경로는 `{API_BASE_URL}/oauth2/authorization/{provider}`이며 provider는 `google`, `kakao`, `naver`다.
 
 ## Chat
 
-### `POST /api/chat`
+세션 API:
 
-사용자 질문을 보내고 FAQ 기반 답변을 받습니다.
+- `POST /chat/sessions`: 회원 또는 게스트 세션 생성
+- `GET /chat/sessions`: 회원 세션 목록
+- `POST /chat/sessions/{sessionId}/claim`: 게스트 세션을 회원 계정으로 이전
+- `PATCH /chat/sessions/{sessionId}/pin`: 회원 세션 고정
+- `PATCH /chat/sessions/{sessionId}/title`: 회원 세션 이름 변경(1~30자)
+- `DELETE /chat/sessions/{sessionId}`: 회원 세션 소프트 삭제
 
-Request:
-
-```json
-{
-  "message": "요금제를 변경하고 싶어요.",
-  "sessionId": "optional-session-id"
-}
-```
-
-Response:
+질문 전송:
 
 ```json
-{
-  "answer": "요금제 변경은 현재 약정, 결합 할인, 데이터 사용량을 함께 확인한 뒤 선택하는 것이 좋아요.",
-  "status": "done",
-  "sources": [
-    {
-      "id": "faq-plan-001",
-      "title": "요금제 변경 가능 시점과 유의사항",
-      "category": "요금제"
-    }
-  ],
-  "actions": [
-    {
-      "label": "가까운 매장 보기",
-      "type": "store_map"
-    }
-  ]
-}
+POST /chat/sessions/{sessionId}/messages
+{"content":"가까운 매장을 알려줘","lat":37.5,"lng":127.0}
 ```
 
-Status values:
+응답은 `messageId`, `status`, `answer`, `relatedFaqIds`, `plans`, `createAt`, `latencyMs`를 가진다. `status`는 `PENDING`, `COMPLETED`, `FAILED`, `RETRYING`이다.
 
-- `generating`
-- `done`
-- `failed`
+`PENDING`인 경우 `GET /chat/sessions/{sessionId}/events`를 `text/event-stream`으로 구독한다. 이벤트는 `connected`, `assistant_status`, `assistant_delta`, `assistant_done`, `assistant_error`이며, status 단계는 `thinking`, `retrieving_faq`, `generating`, `retrying`이다. 스트림이 끊기면 `GET /chat/sessions/{sessionId}/messages`로 저장된 답변을 polling한다.
 
-## Stores
+피드백은 `POST /chat/messages/{messageId}/feedback`으로 보내며 body는 `{ "feedback": "LIKE" | "DISLIKE" | null, "comment": "..." }`다.
 
-### `GET /api/stores/nearby?lat={lat}&lng={lng}`
+## Stores, directions, reservations
 
-사용자 위치 기준 가까운 매장 목록을 받습니다.
+| Method | Path                             | 주요 계약                                                                                   |
+| ------ | -------------------------------- | ------------------------------------------------------------------------------------------- |
+| GET    | `/stores/nearest`                | `lat`, `lng` 필수                                                                           |
+| GET    | `/stores/nearby`                 | `lat`, `lng`, `radius` 필수; `storeType`, `category`, `benefitId`, `openNow`, `openAt` 선택 |
+| GET    | `/stores/{storeId}`              | 매장 상세                                                                                   |
+| GET    | `/stores/{storeId}/directions`   | `fromLat`, `fromLng`, `mode` 필수                                                           |
+| POST   | `/stores/{storeId}/reservations` | 회원·통신 매장만 예약, `date`, `time` 요청                                                  |
+| GET    | `/benefits/list`                 | 제휴 혜택 목록                                                                              |
+| GET    | `/benefits/{category}/stores`    | 제휴 매장 목록                                                                              |
 
-Response:
+directions의 `mode`는 `car`, `walk`, `bicycle`, `transit`이다. 응답은 `path`, `segments`, `routes`를 가지며, 경로 후보는 `tags`, `routeType`, `distanceMeters`, `durationSeconds`, `fare`, `transfers`, `taxiFare`, `toll`, `segments`, `guides`를 포함할 수 있다. `guides`는 `guidance`, `name`, `distanceMeters`, `lat`, `lng`으로 구성되는 회전/진행 안내이며 FE가 표시한다.
+
+예약 응답은 `reservationId`, `storeId`, `storeName`, `date`, `time`, `status`(`CONFIRMED`)다.
+
+## Admin
+
+현재 FE가 사용하는 관리자 API는 `/admin/stores`, `/admin/benefits`, `/admin/faqs`, `/admin/users`, `/admin/stats/chat`, `/admin/traces`다.
+
+BE에는 `/admin/plans` 요금제 CRUD도 존재하지만 현재 FE에는 대응 UI/entity가 없다. 관리자 요금제 화면 추가 여부는 별도 검토 대상으로 둔다.
+
+목록 응답은 다음 `PageResponse` 형태다.
 
 ```json
-{
-  "stores": [
-    {
-      "id": "gangnam-001",
-      "name": "VITA 강남역점",
-      "address": "서울 강남구 강남대로 396",
-      "phone": "02-0000-0001",
-      "lat": 37.498095,
-      "lng": 127.02761,
-      "distanceText": "약 320m"
-    }
-  ]
-}
+{ "content": [], "totalCount": 0, "totalPages": 0, "currentPage": 0 }
 ```
 
-Frontend behavior:
+## 계약 변경 원칙
 
-- 프론트는 응답의 `lat`, `lng`로 지도 마커를 표시합니다.
-- 길찾기는 프론트에서 카카오맵 링크를 엽니다.
-- 카카오 REST/Admin 키는 프론트에 넣지 않습니다.
-- 백엔드 연동 전에는 mock 매장 데이터를 사용합니다.
-- 사용자가 위치 권한을 허용하면 프론트에서 haversine 거리 계산 후 거리순으로 정렬합니다.
-- 위치 권한 거부/실패 시 mock 데이터의 기본 `distanceText`를 유지합니다.
-- 매장 검색은 `name`, `address`, `phone`을 대상으로 우선 프론트에서 필터링합니다.
-
-Frontend states:
-
-- `idle`: 위치 요청 전 기본 매장 목록 표시
-- `requesting`: 현재 위치 요청 중
-- `granted`: 현재 위치 기준 거리 계산 및 정렬
-- `denied`: 위치 권한 거부, 기본 거리 기준 표시
-- `unsupported`: 브라우저 위치 API 미지원
-- `error`: 위치 확인 실패
+- BE DTO/컨트롤러가 변경되면 이 문서와 `src/entities/*/api` 타입을 함께 갱신한다.
+- FE에서 아직 사용하지 않는 BE 필드도 계약 타입에는 가능한 한 보존한다.
+- mock은 API 계약을 대체하지 않으며 Storybook·API 미설정 환경의 fallback으로만 사용한다.

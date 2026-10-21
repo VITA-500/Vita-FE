@@ -54,7 +54,8 @@ OAuth provider는 외부 화면과 배포 redirect URI에 의존하므로, 자�
 - `requestJson`은 모든 요청에 `credentials: "include"`를 적용한다.
 - API 에러는 `ApiError`로 변환한다.
 - 비로그인 상태의 `/users/me` 401은 정상적인 인증 확인 실패로 취급한다.
-- 향후 백엔드 CSRF가 인증 후 쓰기 API에 요구되면 `requestJson` 또는 별도 auth layer에서 공통 처리한다.
+- 쓰기 API는 `GET /auth/csrf`로 받은 `headerName`과 `token`을 공통 `requestJson`에서 첨부한다.
+- CSRF 응답이 403이면 token을 폐기하고 다시 발급받아 요청을 한 번 재시도한다.
 
 ## Deployment QA
 
