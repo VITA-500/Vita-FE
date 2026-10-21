@@ -4,6 +4,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { ANSWER_FEEDBACK_COMMENT_MAX_LENGTH } from "@/entities/feedback";
 import { cn } from "@/shared/lib/cn";
+import { TextAreaField } from "@/shared/ui/atoms/TextAreaField";
 import type { ChatFeedback, ChatMessage } from "@/entities/chat";
 
 type ChatAnswerFeedbackProps = {
@@ -80,20 +81,20 @@ export const ChatAnswerFeedback = ({
           onSubmit={submitReason}
           className="border-border-soft mt-2 w-full max-w-md space-y-2 rounded-2xl border bg-white p-3 dark:border-white/10 dark:bg-zinc-950"
         >
-          <label
-            htmlFor={`answer-feedback-reason-${message.id}`}
-            className="block text-xs font-bold text-gray-600 dark:text-gray-300"
-          >
-            어떤 점이 아쉬웠나요? <span className="text-gray-400">(선택)</span>
-          </label>
-          <textarea
+          <TextAreaField
             id={`answer-feedback-reason-${message.id}`}
+            label={
+              <>
+                어떤 점이 아쉬웠나요?{" "}
+                <span className="text-gray-400">(선택)</span>
+              </>
+            }
             value={reason}
             maxLength={ANSWER_FEEDBACK_COMMENT_MAX_LENGTH}
             rows={2}
             placeholder="예: 요금제 가격이 실제와 달라요"
             onChange={(event) => setReason(event.target.value)}
-            className="focus:border-brand focus:ring-brand/15 w-full resize-none rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm leading-5 text-gray-900 outline-none focus:ring-2 dark:border-white/15 dark:bg-zinc-900 dark:text-white"
+            textareaClassName="min-h-0 resize-none border-gray-200 leading-5 dark:border-white/15 dark:bg-zinc-900"
           />
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] font-semibold text-gray-400">

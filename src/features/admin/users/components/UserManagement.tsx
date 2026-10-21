@@ -11,6 +11,7 @@ import { useAdminUsers } from "@/features/admin/users/hooks/useAdminUsers";
 import { useAdminUserSummary } from "@/features/admin/users/hooks/useAdminUserSummary";
 import type { AdminUserListItem, AdminUserStatus } from "@/entities/user";
 import { Card } from "@/shared/ui/atoms/Card";
+import { Select } from "@/shared/ui/atoms/Select";
 import { SearchInput } from "@/shared/ui/molecules/SearchInput";
 import { Button } from "@/shared/ui/atoms/Button";
 
@@ -111,18 +112,20 @@ const UserManagement = () => {
             onChange={(event) => setKeyword(event.target.value)}
             placeholder="이메일 또는 이름으로 검색"
           />
-          <select
-            className="h-11 rounded-xl border-gray-200 bg-white px-3 text-sm font-semibold dark:border-white/10 dark:bg-zinc-950"
+          <Select
+            className="h-11 w-auto min-w-32 rounded-xl"
+            aria-label="회원 상태 필터"
             value={status}
             onChange={(event) =>
               setStatus(event.target.value as AdminUserStatus | "")
             }
-          >
-            <option value="">전체 상태</option>
-            <option value="ACTIVE">활성</option>
-            <option value="SUSPENDED">정지</option>
-            <option value="DELETED">탈퇴</option>
-          </select>
+            options={[
+              { value: "", label: "전체 상태" },
+              { value: "ACTIVE", label: "활성" },
+              { value: "SUSPENDED", label: "정지" },
+              { value: "DELETED", label: "탈퇴" },
+            ]}
+          />
           <Button
             size="sm"
             className="h-11 px-5"
