@@ -17,6 +17,7 @@ const fieldClassName =
 type AdminFieldBaseProps = {
   className?: string;
   description?: string;
+  error?: string;
   label: string;
 };
 
@@ -49,6 +50,7 @@ export type AdminFieldProps =
 export const AdminField = ({
   className,
   description,
+  error,
   label,
   ...props
 }: AdminFieldProps) => {
@@ -89,6 +91,11 @@ export const AdminField = ({
       {description && (
         <span className="mt-2 block text-xs leading-5 font-semibold text-gray-400">
           {description}
+        </span>
+      )}
+      {error && (
+        <span className="mt-2 block text-xs leading-5 font-bold text-red-600 dark:text-red-300">
+          {error}
         </span>
       )}
     </label>

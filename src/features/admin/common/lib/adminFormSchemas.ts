@@ -19,7 +19,14 @@ const coordinateSchema = z
   .min(1, "좌표를 입력해 주세요.")
   .refine((value) => Number.isFinite(Number(value)), {
     message: "좌표는 숫자로 입력해 주세요.",
+  })
+  .refine((value) => Number(value) >= -90 && Number(value) <= 90, {
+    message: "위도는 -90에서 90 사이로 입력해 주세요.",
   });
+const longitudeSchema = coordinateSchema.refine(
+  (value) => Number(value) >= -180 && Number(value) <= 180,
+  { message: "경도는 -180에서 180 사이로 입력해 주세요." },
+);
 const optionalPattern = (pattern: RegExp, message: string) =>
   z
     .string()
@@ -43,7 +50,7 @@ export const storeFormSchema = z.object({
   businessHours: businessHoursSchema,
   consultServices: z.string().optional(),
   lat: coordinateSchema,
-  lng: coordinateSchema,
+  lng: longitudeSchema,
   name: z.string().trim().min(1, "이름을 입력해 주세요."),
   phone: phoneSchema,
   providedServices: z.string().optional(),

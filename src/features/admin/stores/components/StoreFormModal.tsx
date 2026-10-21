@@ -101,10 +101,12 @@ export const StoreFormModal = ({
   const selectedBenefitId = useWatch({ control, name: "benefitId" });
   const canSubmit = isValid && (!isPartnerStore || Boolean(selectedBenefitId));
   const validationMessage =
-    errorMessage ??
+    errors.lat?.message ??
+    errors.lng?.message ??
     errors.benefitId?.message ??
     errors.businessHours?.message ??
-    errors.phone?.message;
+    errors.phone?.message ??
+    errorMessage;
 
   useEffect(() => {
     reset({
@@ -157,12 +159,16 @@ export const StoreFormModal = ({
   };
 
   const handleInvalidSubmit = (formErrors: FieldErrors<StoreFormValues>) => {
+    const coordinateMessage =
+      formErrors.lat?.message ?? formErrors.lng?.message;
     const firstMessage = Object.values(formErrors)[0]?.message;
 
     showToast(
-      typeof firstMessage === "string"
-        ? firstMessage
-        : `${storeLabel} 정보를 다시 확인해 주세요.`,
+      typeof coordinateMessage === "string"
+        ? coordinateMessage
+        : typeof firstMessage === "string"
+          ? firstMessage
+          : `${storeLabel} 정보를 다시 확인해 주세요.`,
     );
   };
 
@@ -191,6 +197,12 @@ export const StoreFormModal = ({
         </div>
       )}
 
+      {validationMessage && (
+        <p className="mt-5 mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+          {validationMessage}
+        </p>
+      )}
+
       <form
         id={formId}
         className="grid gap-5 sm:grid-cols-2"
@@ -217,8 +229,12 @@ export const StoreFormModal = ({
           name="lat"
           label="위도"
           inputMode="decimal"
-          placeholder="37.2660"
+          placeholder="예: 37.2660"
+          description="-90부터 90 사이의 위도입니다."
+          error={errors.lat?.message}
           required
+          min={-90}
+          max={90}
           step="any"
           type="number"
         />
@@ -227,8 +243,12 @@ export const StoreFormModal = ({
           name="lng"
           label="경도"
           inputMode="decimal"
-          placeholder="127.0000"
+          placeholder="예: 127.0000"
+          description="-180부터 180 사이의 경도입니다."
+          error={errors.lng?.message}
           required
+          min={-180}
+          max={180}
           step="any"
           type="number"
         />
@@ -237,6 +257,8 @@ export const StoreFormModal = ({
           name="businessHours"
           label="운영시간"
           placeholder={placeholders.businessHours}
+          description="예: 09:00-18:00 형식으로 입력해 주세요."
+          error={errors.businessHours?.message}
         />
         <AdminControlledField
           control={control}
@@ -271,12 +293,6 @@ export const StoreFormModal = ({
           className="sm:col-span-2"
         />
       </form>
-
-      {validationMessage && (
-        <p className="mt-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
-          {validationMessage}
-        </p>
-      )}
 
       <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button
