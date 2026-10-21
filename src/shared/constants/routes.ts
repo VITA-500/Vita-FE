@@ -10,5 +10,6 @@ export const routes = {
   adminStores: "/admin/stores",
   adminFeedback: "/admin/feedback",
   adminUsers: "/admin/users",
+  adminPlans: "/admin/plans",
   oauthCallback: "/oauth/callback",
 } as const;
