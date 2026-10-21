@@ -15,7 +15,13 @@ import type { StoreLocation } from "@/entities/store";
 const PIN_AUTO_FIT_DELAY_MS = 160;
 
 type UseMapFitTargetParams = {
-  fitTarget?: { key: string; points: MapPoint[]; smooth?: boolean } | null;
+  fitTarget?: {
+    key: string;
+    points: MapPoint[];
+    smooth?: boolean;
+    zoomLevel?: number;
+    includeUserLocation?: boolean;
+  } | null;
   getPinFitPaddingRef: RefObject<
     | ((container: { height: number; width: number }) => MapFitPadding | null)
     | undefined
@@ -82,7 +88,10 @@ export const useMapFitTarget = ({
 
     fittedTargetKeyRef.current = fitTarget.key;
     window.clearTimeout(fitZoomTimeoutRef.current);
-    const fitPoints = buildMapFitPoints(fitTarget.points, userLocation);
+    const fitPoints =
+      fitTarget.includeUserLocation === false
+        ? fitTarget.points
+        : buildMapFitPoints(fitTarget.points, userLocation);
 
     const containerRect = mapContainerRef.current?.getBoundingClientRect();
     const container = {
@@ -114,7 +123,7 @@ export const useMapFitTarget = ({
       const [point] = fitPoints;
 
       map.setCenter(new kakaoMaps.LatLng(point.lat, point.lng));
-      map.setLevel(4);
+      map.setLevel(fitTarget.zoomLevel ?? 4);
       return;
     }
 

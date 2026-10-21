@@ -31,7 +31,6 @@ export const groupStoresByCoordinate = (stores: StoreLocation[]) => {
  */
 export const createStoreMarkerOverlay = ({
   group,
-  isStoreCardShown,
   kakaoMaps,
   map,
   markerColorInfoById,
@@ -43,7 +42,6 @@ export const createStoreMarkerOverlay = ({
   onSelectStore,
 }: {
   group: StoreMarkerGroupEntry[];
-  isStoreCardShown: boolean;
   kakaoMaps: KakaoMapsApi;
   map: KakaoMap;
   markerColorInfoById?: Record<string, MarkerColorInfo>;
@@ -67,7 +65,6 @@ export const createStoreMarkerOverlay = ({
   const { container, marker } = createStoreMarkerElement({
     getLabel,
     group,
-    isStoreCardShown,
     markerColorInfo: markerColorInfoById?.[colorTargetStore.id],
     selectedEntry,
     shouldAnimateEnter,

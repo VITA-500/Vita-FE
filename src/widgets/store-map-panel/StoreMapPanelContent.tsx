@@ -1,49 +1,22 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { StoreMapPanelInfoContent } from "@/features/store/detail/components/StorePanelInfoBubble";
 import { StoreMapPanelMap } from "@/features/store/map/components/StoreMapPanelMap";
 import { StoreMapPanelShells } from "@/features/store/panel/components/StoreMapPanelShells";
 import {
   StoreMapPanelStoreListContent,
   StoreMapPanelTopBar,
 } from "@/features/store/panel/components/StoreMapPanelControls";
-import { StoreMapPanelInfoContent } from "@/features/store/detail/components/StorePanelInfoBubble";
 import { useCloseOnOutsideTap } from "@/features/store/panel/hooks/useCloseOnOutsideTap";
+import { useStoreMapPanel } from "@/features/store/panel/hooks/useStoreMapPanel";
 import { useElementHeight } from "@/shared/hooks/useElementHeight";
 import { useElementWidth } from "@/shared/hooks/useElementWidth";
 import { useIsDesktopViewport } from "@/shared/hooks/useIsDesktopViewport";
-import { useSavedStoreMapSnapshot } from "@/features/store/panel/hooks/useSavedStoreMapSnapshot";
-import { useStoreMapPanel } from "@/features/store/panel/hooks/useStoreMapPanel";
 import type { MapFitPadding } from "@/features/store/map/lib/mapFit";
-import type {
-  StoreMapPanelContentProps,
-  StoreMapPanelProps,
-} from "@/features/store/panel/lib/storeMapPanelTypes";
+import type { StoreMapPanelContentProps } from "@/features/store/panel/lib/storeMapPanelTypes";
 
-/**
- * 매장 지도 화면.
- * 로그인하러 가기 전에 보던 지도 화면이 보관돼 있으면, 화면을 띄운 뒤 읽어 그 상태로 다시 그린다.
- * (서버에서 그린 HTML과 첫 화면이 달라지지 않도록 저장소는 화면을 띄운 뒤에 읽는다)
- * 채팅 등에서 특정 매장을 열며 들어온 경우(initialAction)는 그 동작을 우선하고 되살리지 않는다.
- */
-export const StoreMapPanel = ({
-  initialAction,
-  onOpenSidebar,
-}: StoreMapPanelProps) => {
-  const restoredSnapshot = useSavedStoreMapSnapshot(!initialAction);
-
-  return (
-    <StoreMapPanelContent
-      // 보관한 화면을 읽으면 처음 값부터 다시 시작하도록 새로 그린다.
-      key={restoredSnapshot ? `restored:${restoredSnapshot.savedAt}` : "fresh"}
-      initialAction={initialAction}
-      onOpenSidebar={onOpenSidebar}
-      restoredSnapshot={restoredSnapshot}
-    />
-  );
-};
-
-const StoreMapPanelContent = ({
+export const StoreMapPanelContent = ({
   initialAction,
   onOpenSidebar,
   restoredSnapshot,
@@ -127,6 +100,7 @@ const StoreMapPanelContent = ({
     searchInputRef,
     searchQuery,
     searchResultStores,
+    selectTransitRoute,
     selectSearchHistory,
     selectedBenefitCategory,
     setBenefitServiceFilters,
@@ -205,6 +179,7 @@ const StoreMapPanelContent = ({
   /** 길찾기 정보 닫기(X): 길찾기를 끝내고, A 뒤로 접혀 있던 매장 정보(B)를 다시 펼친다. */
   const closeRouteView = () => {
     resetRouteState();
+    cancelReservation();
     setIsStoreListCollapsed(false);
     // 모바일: 매장 정보 시트를 기본(절반 정도) 높이로 내린다.
     setIsSheetExpanded(false);
@@ -293,6 +268,7 @@ const StoreMapPanelContent = ({
       routeMode={routeMode}
       routeResultMessage={routeResultMessage}
       routeSummary={routeSummary}
+      selectTransitRoute={selectTransitRoute}
       sameLocationStores={sameLocationStores}
       showNearbyStoresAfterRoute={showNearbyStoresAfterRoute}
       soloStoreId={soloStoreId}

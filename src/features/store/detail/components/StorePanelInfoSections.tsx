@@ -7,15 +7,11 @@ import {
   MapPin,
   MapPinned,
   Phone,
-  SportShoe,
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { StoreOpenStatusBadge } from "@/entities/store";
-import { TransitRouteDetails } from "@/features/store/route/components/TransitRouteDetails";
-import type { TransitRouteStep } from "@/entities/route";
 import type { StoreLocation } from "@/entities/store";
-import type { StoreRouteMode } from "@/entities/route";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/atoms/Button";
 
@@ -24,15 +20,8 @@ const serviceBadgeClassName =
 const compactActionButtonClassName =
   "rounded-sm shadow-sm transition-shadow hover:shadow-md";
 
-export type RouteSummary = {
-  isLoading?: boolean;
-  /** 가까운 매장인데 차량·자전거 경로가 크게 돌아가 도보를 추천하는지 */
-  isWalkRecommended?: boolean;
-  remainingDistanceText: string;
-  travelTimeText: string;
-  transitWalkTimeText?: string;
-  transitSteps?: TransitRouteStep[];
-};
+export type { RouteSummary } from "@/features/store/detail/components/StoreRouteSummarySection";
+export { StoreRouteSummarySection } from "@/features/store/detail/components/StoreRouteSummarySection";
 
 const StoreInfoRow = ({
   children,
@@ -189,72 +178,6 @@ export const StoreInfoTitle = ({ store }: { store: StoreLocation }) => (
     />
   </div>
 );
-
-export const StoreRouteSummarySection = ({
-  onFocusRoutePoints,
-  onRouteModeChange,
-  routeResultMessage,
-  routeSummary,
-  selectedRouteMode,
-  storeName,
-}: {
-  onFocusRoutePoints?: (points: { lat: number; lng: number }[]) => void;
-  onRouteModeChange: (mode: StoreRouteMode) => void;
-  routeResultMessage?: string | null;
-  routeSummary?: RouteSummary | null;
-  selectedRouteMode: StoreRouteMode;
-  storeName: string;
-}) => {
-  if (routeResultMessage) {
-    return (
-      <div className="bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand mt-3 rounded-sm px-3 py-2.5 text-xs leading-5 font-extrabold whitespace-pre-line">
-        {routeResultMessage}
-      </div>
-    );
-  }
-
-  if (!routeSummary) return null;
-
-  return (
-    <>
-      <div className="bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand mt-3 rounded-sm px-3 py-2.5">
-        <div className="flex min-w-0 flex-wrap items-end gap-x-2 gap-y-1">
-          <strong className="text-xl leading-none font-extrabold">
-            {routeSummary.isLoading ? "계산 중" : routeSummary.travelTimeText}
-          </strong>
-          {!routeSummary.isLoading && (
-            <span className="pb-0.5 text-[11px] leading-4 font-extrabold text-current/75">
-              {selectedRouteMode === "transit" &&
-              routeSummary.transitWalkTimeText
-                ? `도보 ${routeSummary.transitWalkTimeText} · 총 ${routeSummary.remainingDistanceText}`
-                : `총 ${routeSummary.remainingDistanceText}`}
-            </span>
-          )}
-        </div>
-      </div>
-      {!routeSummary.isLoading && selectedRouteMode === "transit" && (
-        <TransitRouteDetails
-          destinationName={storeName}
-          onFocusPoints={onFocusRoutePoints}
-          steps={routeSummary.transitSteps ?? []}
-        />
-      )}
-      {!routeSummary.isLoading && routeSummary.isWalkRecommended && (
-        <div className="text-text-secondary mt-2 flex flex-col items-stretch gap-2 rounded-sm bg-gray-100 px-3 py-2 text-[11px] leading-4 font-bold break-keep sm:flex-row sm:items-center sm:justify-between sm:pr-1.5 dark:bg-white/10 dark:text-gray-300">
-          <span className="min-w-0">가까운 거리라 도보 이동을 추천해요</span>
-          <button
-            type="button"
-            onClick={() => onRouteModeChange("walk")}
-            className="text-brand-hover dark:text-brand flex h-7 shrink-0 items-center justify-center gap-1 rounded-sm bg-white px-2 font-extrabold whitespace-nowrap shadow-sm transition hover:shadow-md dark:bg-zinc-950"
-          >
-            <SportShoe size={12} />
-            도보로 보기
-          </button>
-        </div>
-      )}
-    </>
-  );
-};
 
 export const StoreInfoActions = ({
   canReserve,

@@ -190,7 +190,7 @@ src/
 
 - 관리자 대시보드, 회원·FAQ·매장·제휴 혜택 관리 화면을 구현했습니다.
 - 필터, 정렬, 빈 상태, 입력 필드, 위험 액션 확인 등 운영 화면에서 반복되는 UI를 컴포넌트화했습니다.
-- 관리자 데이터는 페이지별 query hook과 service adapter로 분리하고, 백엔드 API가 없는 환경에서는 필요한 화면에 한해 mock 상태를 사용합니다.
+- 관리자 데이터는 페이지별 query hook과 entity API로 분리합니다. API base URL이 없는 Storybook·로컬 목업 환경에서만 mock fallback을 사용합니다.
 - FAQ/매장 데이터의 CRUD 화면 구조를 미리 잡아 백엔드 관리자 API 연동 시 UI 변경을 최소화할 수 있도록 했습니다.
 
 ---
@@ -213,18 +213,18 @@ npm run storybook
 
 ## 9. 프론트엔드 역할 및 기여
 
-| 영역             | 기여 내용                                                                        |
-| ---------------- | -------------------------------------------------------------------------------- |
-| 서비스 구조 설계 | Next.js App Router 기반 라우트 그룹과 도메인 중심 feature 구조 구성              |
-| 인증 화면        | 로그인, 회원가입, OAuth 콜백, 인증 상태 관리 흐름 구현                           |
-| AI 상담 UI       | 채팅 화면, 메시지 리스트, 입력창, 사이드바, 검색 다이얼로그, 게스트 채팅 UX 구현 |
-| 매장 지도        | Kakao Maps SDK 연동, 매장 Marker/Overlay/Polyline 렌더링 구현                    |
-| 길찾기           | 이동수단별 경로 요청, 경로 애니메이션, 거리/시간 정보, 결과 없음 상태 처리       |
-| 지도 UX          | 내 위치 이동, 줌인/줌아웃, 지도 재검색, 정보 카드 위치 보정 구현                 |
-| 관리자 UI        | 관리자 대시보드, FAQ 관리, 매장 관리 화면 및 mock 상태 관리 구현                 |
-| 공통 UI          | Button, Modal, Card, SearchInput 등 재사용 컴포넌트와 Storybook 구성             |
-| 반응형 대응      | 모바일/태블릿/데스크톱 레이아웃 및 다크 모드 대응                                |
-| API 연동 기반    | 백엔드 API 연결을 고려한 service adapter, type, 상태 구조 분리                   |
+| 영역             | 기여 내용                                                                                 |
+| ---------------- | ----------------------------------------------------------------------------------------- |
+| 서비스 구조 설계 | Next.js App Router 기반 라우트 그룹과 도메인 중심 feature 구조 구성                       |
+| 인증 화면        | 로그인, 회원가입, OAuth 콜백, 인증 상태 관리 흐름 구현                                    |
+| AI 상담 UI       | 채팅 화면, 메시지 리스트, 입력창, 사이드바, 검색 다이얼로그, 게스트 채팅 UX 구현          |
+| 매장 지도        | Kakao Maps SDK 연동, 매장 Marker/Overlay/Polyline 렌더링 구현                             |
+| 길찾기           | 이동수단별 경로 요청, 경로 애니메이션, 거리/시간 정보, 결과 없음 상태 처리                |
+| 지도 UX          | 내 위치 이동, 줌인/줌아웃, 지도 재검색, 정보 카드 위치 보정 구현                          |
+| 관리자 UI        | 관리자 대시보드, FAQ·매장·혜택·사용자·답변 피드백 관리 및 API 미설정 환경의 mock fallback |
+| 공통 UI          | Button, Modal, Card, SearchInput 등 재사용 컴포넌트와 Storybook 구성                      |
+| 반응형 대응      | 모바일/태블릿/데스크톱 레이아웃 및 다크 모드 대응                                         |
+| API 연동 기반    | 백엔드 API 연결을 고려한 service adapter, type, 상태 구조 분리                            |
 
 ---
 
@@ -297,7 +297,7 @@ flowchart TD
 - [Auth](./docs/Auth.md): 자체 로그인, OAuth, 로그아웃, 인증 상태 관리 흐름
 - [Design System](./docs/DesignSystem.md): 토큰, 공통 UI, 상태 UI 사용 기준
 - [Testing](./docs/Testing.md): 테스트 실행 명령과 자동화/수동 QA 기준
-- [API Contract](./docs/api-contract.md): 백엔드 기능 API 연동 전 계약 메모
+- [API Contract](./docs/api-contract.md): 최신 Vita-BE 컨트롤러·DTO 기준 FE API 계약
 - [Git 브랜치 전략](./docs/Git브랜치전략.md): 브랜치, 커밋, PR 규칙
 
 ---

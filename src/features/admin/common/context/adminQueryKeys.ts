@@ -15,11 +15,19 @@ type AdminUserStatusFilter = AdminUserStatus | "";
 const faqsAll = ["admin", "faqs"] as const;
 const storesAll = ["admin", "stores"] as const;
 const benefitsAll = ["admin", "benefits"] as const;
+const plansAll = ["admin", "plans"] as const;
 
 export const adminQueryKeys = {
   faqsAll,
   storesAll,
   benefitsAll,
+  plansAll,
+  plans: (params: {
+    keyword: string;
+    page: number;
+    pageSize: number;
+    sortBy: string;
+  }) => [...plansAll, params] as const,
   benefits: (params: {
     category: string;
     keyword: string;

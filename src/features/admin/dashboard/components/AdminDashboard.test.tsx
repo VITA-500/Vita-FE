@@ -62,12 +62,18 @@ describe("AdminDashboard", () => {
     const metrics = within(
       screen.getByRole("region", { name: "운영 주요 지표" }),
     );
-    expect(metrics.getAllByRole("heading")).toHaveLength(2);
+    expect(metrics.getAllByRole("heading")).toHaveLength(4);
     expect(
       metrics.getByRole("heading", { name: "보완 대상" }),
     ).toBeInTheDocument();
     expect(
       metrics.getByRole("heading", { name: "오늘 발생" }),
+    ).toBeInTheDocument();
+    expect(
+      metrics.getByRole("heading", { name: "오늘 응답 품질 문제" }),
+    ).toBeInTheDocument();
+    expect(
+      metrics.getByRole("heading", { name: "주요 품질 문제" }),
     ).toBeInTheDocument();
     expect(
       metrics.queryByRole("heading", { name: "반복 문의" }),
@@ -92,7 +98,7 @@ describe("AdminDashboard", () => {
     expect(section.getByText("31")).toBeInTheDocument();
     expect(section.getByText("5")).toBeInTheDocument();
     expect(section.getByText("86%")).toBeInTheDocument();
-    expect(section.getByText("검색 결과 없음")).toBeInTheDocument();
+    expect(section.getAllByText("검색 결과 없음").length).toBeGreaterThan(0);
     expect(section.getByText("40")).toBeInTheDocument();
   });
 
@@ -147,7 +153,7 @@ describe("AdminDashboard", () => {
     render(<AdminDashboard />);
     expect(
       screen.getAllByRole("status", { name: "통계 조회 중" }),
-    ).toHaveLength(3);
+    ).toHaveLength(5);
     expect(screen.queryByText("-")).not.toBeInTheDocument();
     expect(
       screen.queryByText("점검할 누락 항목이 없습니다."),
@@ -162,7 +168,7 @@ describe("AdminDashboard", () => {
       refetch: vi.fn(),
     } as unknown as ReturnType<typeof useAdminAnswerFeedback>);
     render(<AdminDashboard />);
-    expect(screen.getAllByText("조회 실패")).toHaveLength(3);
+    expect(screen.getAllByText("조회 실패")).toHaveLength(5);
     expect(
       screen.queryByText("점검할 누락 항목이 없습니다."),
     ).not.toBeInTheDocument();

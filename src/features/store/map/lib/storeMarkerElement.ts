@@ -16,14 +16,12 @@ import { cn } from "@/shared/lib/cn";
 export const createStoreMarkerElement = ({
   getLabel,
   group,
-  isStoreCardShown,
   markerColorInfo,
   selectedEntry,
   shouldAnimateEnter,
 }: {
   getLabel: (entry: StoreMarkerGroupEntry) => string;
   group: StoreMarkerGroupEntry[];
-  isStoreCardShown: boolean;
   markerColorInfo?: MarkerColorInfo;
   selectedEntry?: StoreMarkerGroupEntry;
   shouldAnimateEnter: boolean;
@@ -77,8 +75,6 @@ export const createStoreMarkerElement = ({
   markerTooltip.className = cn(
     "pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-[2] max-w-[180px] -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-sm bg-slate-950/90 px-2.5 py-1.5 text-xs leading-tight font-extrabold text-white opacity-0 shadow-lg transition group-hover:translate-y-0 group-hover:opacity-100",
     isSelected && "translate-y-0 opacity-100",
-    // 정보 카드가 떠 있으면 카드에 매장명이 있으므로 선택 핀의 이름 툴팁은 숨긴다.
-    isSelected && isStoreCardShown && "hidden",
   );
   markerTooltip.textContent = selectedEntry
     ? selectedEntry.store.name

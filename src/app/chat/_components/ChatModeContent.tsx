@@ -6,13 +6,13 @@ import { ProfilePanel } from "@/features/auth/components/ProfilePanel";
 import { ChatConversationContent } from "@/features/chat/conversation/components/ChatConversationContent";
 import { ChatStoreMapSlotProvider } from "@/features/chat/store/components/ChatStoreMapSlot";
 import type { ChatMode } from "@/features/chat/types";
-import { StoreMapPanel } from "@/features/store/panel/components/StoreMapPanel";
+import { StoreMapPanel } from "@/widgets/store-map-panel/StoreMapPanel";
 import type { StoreMapInitialAction } from "@/features/store/types";
 import type { ChatStoreMap as ChatStoreMapData } from "@/entities/chat";
 
 /** 답변 속 매장 지도 블록. 채팅(feature)과 매장 지도(feature)를 여기서 조립한다. */
-const renderChatStoreMap = (storeMap: ChatStoreMapData) => (
-  <ChatStoreMap storeMap={storeMap} />
+const renderChatStoreMap = (storeMap: ChatStoreMapData, question?: string) => (
+  <ChatStoreMap storeMap={storeMap} question={question} />
 );
 
 type ChatModeContentProps = {
@@ -58,6 +58,7 @@ export const ChatModeContent = ({
         chatInput={conversation.chatInput}
         chatInputRef={conversation.chatInputRef}
         chatStatus={conversation.chatStatus}
+        isAwayFromLatest={conversation.isAwayFromLatest}
         editHintMessageId={conversation.editHintMessageId}
         hasChatStarted={conversation.hasChatStarted}
         loadingSessionId={conversation.loadingSessionId}
@@ -77,6 +78,7 @@ export const ChatModeContent = ({
         onSelectQuickAction={(prompt) => {
           void submitChatPrompt(prompt);
         }}
+        onScrollToLatest={conversation.scrollToLatest}
         onSubmitPrompt={(prompt) => void submitChatPrompt(prompt)}
         scrollContainerRef={conversation.scrollContainerRef}
         streamingReply={conversation.streamingReply}

@@ -3,7 +3,10 @@
 import { createContext, useContext, type ReactNode } from "react";
 import type { ChatStoreMap } from "@/entities/chat";
 
-type RenderChatStoreMap = (storeMap: ChatStoreMap) => ReactNode;
+type RenderChatStoreMap = (
+  storeMap: ChatStoreMap,
+  question?: string,
+) => ReactNode;
 
 const ChatStoreMapSlotContext = createContext<RenderChatStoreMap | null>(null);
 

@@ -17,6 +17,7 @@ const fieldClassName =
 type AdminFieldBaseProps = {
   className?: string;
   description?: string;
+  error?: string;
   label: string;
 };
 
@@ -49,6 +50,7 @@ export type AdminFieldProps =
 export const AdminField = ({
   className,
   description,
+  error,
   label,
   ...props
 }: AdminFieldProps) => {
@@ -70,7 +72,18 @@ export const AdminField = ({
   } else {
     const { multiline, ...inputProps } = props;
     void multiline;
-    field = <input {...inputProps} className={cn("h-10", fieldClassName)} />;
+    const isTimeInput = inputProps.type === "time";
+    field = (
+      <input
+        {...inputProps}
+        className={cn(
+          fieldClassName,
+          isTimeInput
+            ? "hover:border-brand/40 h-12 rounded-2xl bg-white px-4 text-sm font-extrabold text-gray-700 shadow-sm hover:text-gray-950 dark:bg-white/5 dark:text-gray-200 dark:hover:text-white [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-60"
+            : "h-10",
+        )}
+      />
+    );
   }
 
   return (
@@ -86,9 +99,14 @@ export const AdminField = ({
 
       {field}
 
-      {description && (
-        <span className="mt-2 block text-xs leading-5 font-semibold text-gray-400">
-          {description}
+      {(description || error) && (
+        <span
+          className={cn(
+            "mt-2 block text-xs leading-5 font-semibold",
+            error ? "text-red-600 dark:text-red-300" : "text-gray-400",
+          )}
+        >
+          {error ?? description}
         </span>
       )}
     </label>

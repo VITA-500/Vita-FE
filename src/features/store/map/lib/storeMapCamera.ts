@@ -132,16 +132,19 @@ export const setupStoreMap = ({
     const recenterPoint =
       shouldRecenterByFocusPoint && focusPoint ? focusPoint : null;
 
+    const isRecenteringToSelectedStore =
+      Boolean(selectedStore && selectedStoreCard) &&
+      selectedStore?.lat === recenterPoint?.lat &&
+      selectedStore?.lng === recenterPoint?.lng;
+
     if (recenterPoint) {
       map.setCenter(new kakaoMaps.LatLng(recenterPoint.lat, recenterPoint.lng));
-      map.setLevel(isNewMap ? startLevel : 4);
+      map.setLevel(
+        isNewMap ? startLevel : isRecenteringToSelectedStore ? 2 : 4,
+      );
 
       // 선택 매장으로 이동할 때는 핀과 정보 카드가 왼쪽 패널에 가리지 않는 영역
       // (패널 오른쪽)의 가운데에 함께 보이도록 지도 중심을 보정한다.
-      const isRecenteringToSelectedStore =
-        Boolean(selectedStore && selectedStoreCard) &&
-        selectedStore?.lat === recenterPoint.lat &&
-        selectedStore?.lng === recenterPoint.lng;
       const projection = (map as KakaoMapWithProjection).getProjection?.();
       const containerRect = mapContainerRef.current?.getBoundingClientRect();
 

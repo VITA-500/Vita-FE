@@ -1,7 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Check, ChevronDown } from "lucide-react";
 import { type FieldErrors, useForm, useWatch } from "react-hook-form";
 import { AdminControlledField } from "@/features/admin/common/components/AdminControlledField";
 import {
@@ -20,6 +21,95 @@ import type {
 } from "@/entities/store";
 
 export type StoreInput = AdminStoreFormInput;
+
+const hours = Array.from({ length: 24 }, (_, value) =>
+  String(value).padStart(2, "0"),
+);
+const minutes = Array.from({ length: 12 }, (_, index) =>
+  String(index * 5).padStart(2, "0"),
+);
+
+const TimePicker = ({
+  label,
+  value,
+  isOpen,
+  onToggle,
+  onClose,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  onChange: (value: string) => void;
+}) => {
+  const [hour, minute] = value.split(":");
+  const selectHour = (nextHour: string) =>
+    onChange(`${nextHour}:${minute || "00"}`);
+  const selectMinute = (nextMinute: string) => {
+    onChange(`${hour || "00"}:${nextMinute}`);
+    onClose();
+  };
+
+  return (
+    <div className="relative min-w-0 flex-1">
+      <span className="mb-2 block text-xs font-extrabold text-gray-500">
+        {label}
+      </span>
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
+        onClick={onToggle}
+        className="border-border hover:border-brand/40 focus-visible:ring-brand/30 flex h-12 w-full items-center justify-between gap-2 rounded-2xl border bg-white px-4 text-sm font-extrabold text-gray-700 shadow-sm transition hover:text-gray-950 focus-visible:ring-2 focus-visible:outline-none dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:text-white"
+      >
+        <span>{value || "시간 선택"}</span>
+        <ChevronDown
+          size={16}
+          className={`text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+      {isOpen && (
+        <div className="border-border-soft absolute top-full left-0 z-30 mt-2 grid w-full min-w-[240px] grid-cols-2 gap-2 rounded-2xl border bg-white p-2 shadow-lg dark:border-white/10 dark:bg-zinc-950">
+          <div className="bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand col-span-2 rounded-xl px-3 py-2 text-center text-sm font-black">
+            {value || "시간을 선택해 주세요"}
+          </div>
+          <div className="max-h-56 space-y-1 overflow-y-auto">
+            <p className="px-2 py-1 text-xs font-extrabold text-gray-400">시</p>
+            {hours.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => selectHour(option)}
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${hour === option ? "bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand" : "text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-white/10"}`}
+              >
+                {option}시
+                {hour === option && <Check size={14} className="text-brand" />}
+              </button>
+            ))}
+          </div>
+          <div className="max-h-56 space-y-1 overflow-y-auto">
+            <p className="px-2 py-1 text-xs font-extrabold text-gray-400">분</p>
+            {minutes.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => selectMinute(option)}
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${minute === option ? "bg-brand-soft text-brand-hover dark:bg-brand/10 dark:text-brand" : "text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-white/10"}`}
+              >
+                {option}분
+                {minute === option && (
+                  <Check size={14} className="text-brand" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 type StoreFormModalProps = {
   benefits: AdminBenefit[];
@@ -45,6 +135,10 @@ export const StoreFormModal = ({
   const formId = mode === "create" ? "store-create-form" : "store-edit-form";
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const validationRef = useRef<HTMLParagraphElement>(null);
+  const [openTimePicker, setOpenTimePicker] = useState<
+    "opening" | "closing" | null
+  >(null);
   const isPartnerStore = storeType === "PARTNER";
   const benefitOptions = benefits.map((benefit) => ({
     label: `${benefit.brand} · ${benefit.name}`,
@@ -80,6 +174,7 @@ export const StoreFormModal = ({
     control,
     handleSubmit,
     reset,
+    setValue,
     setError,
     clearErrors,
     formState: { errors, isValid },
@@ -99,12 +194,27 @@ export const StoreFormModal = ({
     resolver: zodResolver(storeFormSchema),
   });
   const selectedBenefitId = useWatch({ control, name: "benefitId" });
+  const businessHours = useWatch({ control, name: "businessHours" }) ?? "";
+  const [openingTime, closingTime] = businessHours.split("-");
   const canSubmit = isValid && (!isPartnerStore || Boolean(selectedBenefitId));
-  const validationMessage =
-    errorMessage ??
-    errors.benefitId?.message ??
-    errors.businessHours?.message ??
-    errors.phone?.message;
+  const validationMessage = errorMessage;
+
+  const scrollToError = useCallback((element: HTMLElement | null) => {
+    if (!element) return;
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (typeof element.scrollIntoView === "function") {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    if (validationMessage) {
+      scrollToError(validationRef.current);
+    }
+  }, [scrollToError, validationMessage]);
 
   useEffect(() => {
     reset({
@@ -157,12 +267,38 @@ export const StoreFormModal = ({
   };
 
   const handleInvalidSubmit = (formErrors: FieldErrors<StoreFormValues>) => {
+    const firstErrorName = Object.keys(formErrors)[0];
+    const firstErrorElement = firstErrorName
+      ? document.querySelector<HTMLElement>(`[name="${firstErrorName}"]`)
+      : null;
+    if (formErrors.businessHours) {
+      setOpenTimePicker(null);
+      scrollToError(
+        document.querySelector<HTMLElement>("[data-business-hours-anchor]"),
+      );
+    } else {
+      scrollToError(firstErrorElement);
+    }
+    const coordinateMessage =
+      formErrors.lat?.message ?? formErrors.lng?.message;
     const firstMessage = Object.values(formErrors)[0]?.message;
 
     showToast(
-      typeof firstMessage === "string"
-        ? firstMessage
-        : `${storeLabel} 정보를 다시 확인해 주세요.`,
+      typeof coordinateMessage === "string"
+        ? coordinateMessage
+        : typeof firstMessage === "string"
+          ? firstMessage
+          : `${storeLabel} 정보를 다시 확인해 주세요.`,
+    );
+  };
+
+  const setBusinessHour = (part: "opening" | "closing", next: string) => {
+    const nextOpening = part === "opening" ? next : openingTime;
+    const nextClosing = part === "closing" ? next : closingTime;
+    setValue(
+      "businessHours",
+      nextOpening || nextClosing ? `${nextOpening}-${nextClosing}` : "",
+      { shouldDirty: true, shouldValidate: true },
     );
   };
 
@@ -191,6 +327,15 @@ export const StoreFormModal = ({
         </div>
       )}
 
+      {validationMessage && (
+        <p
+          ref={validationRef}
+          className="mt-5 mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300"
+        >
+          {validationMessage}
+        </p>
+      )}
+
       <form
         id={formId}
         className="grid gap-5 sm:grid-cols-2"
@@ -217,8 +362,12 @@ export const StoreFormModal = ({
           name="lat"
           label="위도"
           inputMode="decimal"
-          placeholder="37.2660"
+          placeholder="예: 37.2660"
+          description="-90부터 90 사이의 위도입니다."
+          error={errors.lat?.message}
           required
+          min={-90}
+          max={90}
           step="any"
           type="number"
         />
@@ -227,17 +376,58 @@ export const StoreFormModal = ({
           name="lng"
           label="경도"
           inputMode="decimal"
-          placeholder="127.0000"
+          placeholder="예: 127.0000"
+          description="-180부터 180 사이의 경도입니다."
+          error={errors.lng?.message}
           required
+          min={-180}
+          max={180}
           step="any"
           type="number"
         />
-        <AdminControlledField
-          control={control}
-          name="businessHours"
-          label="운영시간"
-          placeholder={placeholders.businessHours}
-        />
+        <div data-business-hours-anchor className="sm:col-span-2">
+          <span className="mb-2 block text-xs font-extrabold text-gray-500">
+            운영시간
+          </span>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-2">
+            <TimePicker
+              label="시작 시간"
+              value={openingTime ?? ""}
+              isOpen={openTimePicker === "opening"}
+              onToggle={() =>
+                setOpenTimePicker((current) =>
+                  current === "opening" ? null : "opening",
+                )
+              }
+              onClose={() => setOpenTimePicker(null)}
+              onChange={(next) => setBusinessHour("opening", next)}
+            />
+            <span className="self-center text-sm font-extrabold text-gray-400 sm:pb-3">
+              -
+            </span>
+            <TimePicker
+              label="종료 시간"
+              value={closingTime ?? ""}
+              isOpen={openTimePicker === "closing"}
+              onToggle={() =>
+                setOpenTimePicker((current) =>
+                  current === "closing" ? null : "closing",
+                )
+              }
+              onClose={() => setOpenTimePicker(null)}
+              onChange={(next) => setBusinessHour("closing", next)}
+            />
+          </div>
+          {errors.businessHours ? (
+            <p className="mt-2 text-xs leading-5 font-bold text-red-600 dark:text-red-300">
+              {errors.businessHours.message}
+            </p>
+          ) : (
+            <p className="mt-2 text-xs leading-5 font-semibold text-gray-400">
+              {placeholders.businessHours} 형식으로 입력해 주세요.
+            </p>
+          )}
+        </div>
         <AdminControlledField
           control={control}
           name="phone"
@@ -271,12 +461,6 @@ export const StoreFormModal = ({
           className="sm:col-span-2"
         />
       </form>
-
-      {validationMessage && (
-        <p className="mt-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
-          {validationMessage}
-        </p>
-      )}
 
       <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button

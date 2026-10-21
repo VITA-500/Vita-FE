@@ -10,7 +10,7 @@ import {
 import type { ChatStreamingReply } from "@/features/chat/types";
 import { cn } from "@/shared/lib/cn";
 
-const ASSISTANT_PROFILE_IMAGE = "/images/chatbot/profile-robot.png";
+const ASSISTANT_PROFILE_IMAGE = "/images/chatbot/profile-vita.png";
 
 export const AssistantProfile = () => (
   <span className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fffbdc]">
@@ -19,7 +19,7 @@ export const AssistantProfile = () => (
       alt="VITA 상담사"
       width={28}
       height={28}
-      className="h-7 w-7 object-contain"
+      className="h-8 w-8 object-contain"
     />
   </span>
 );

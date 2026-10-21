@@ -2,6 +2,7 @@
 
 import type { RefObject } from "react";
 import { ChatComposer } from "@/features/chat/conversation/components/ChatComposer";
+import { ChatLatestScrollButton } from "@/features/chat/conversation/components/ChatLatestScrollButton";
 import { ChatMessageList } from "@/features/chat/message/components/ChatMessageList";
 import { PromptSuggestions } from "@/features/chat/conversation/components/PromptSuggestions";
 import type { ChatStreamingReply } from "@/features/chat/types";
@@ -12,6 +13,7 @@ type ChatConversationContentProps = {
   chatInput: string;
   chatInputRef: RefObject<HTMLTextAreaElement | null>;
   chatStatus: "idle" | "loading";
+  isAwayFromLatest: boolean;
   editHintMessageId?: string | null;
   hasChatStarted: boolean;
   loadingSessionId: number | null;
@@ -29,6 +31,7 @@ type ChatConversationContentProps = {
   onStopAnswer: () => void;
   onSubmitPrompt: (prompt?: string) => void;
   onSelectQuickAction: (prompt: string) => void;
+  onScrollToLatest: () => void;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
   streamingReply?: ChatStreamingReply | null;
 };
@@ -37,6 +40,7 @@ export const ChatConversationContent = ({
   chatInput,
   chatInputRef,
   chatStatus,
+  isAwayFromLatest,
   editHintMessageId,
   hasChatStarted,
   loadingSessionId,
@@ -46,6 +50,7 @@ export const ChatConversationContent = ({
   onFeedbackAnswer,
   onRetryAnswer,
   onSelectQuickAction,
+  onScrollToLatest,
   feedbackMessageIds,
   onStopAnswer,
   onSubmitPrompt,
@@ -78,6 +83,12 @@ export const ChatConversationContent = ({
             </div>
           </div>
         </div>
+
+        <ChatLatestScrollButton
+          isLoading={chatStatus === "loading"}
+          isVisible={isAwayFromLatest}
+          onClick={onScrollToLatest}
+        />
 
         <div className="bg-surface-warm/95 pointer-events-none absolute inset-x-0 bottom-0 z-20 px-6 pt-4 pb-6 backdrop-blur">
           <div className="pointer-events-auto mx-auto w-full max-w-[860px]">

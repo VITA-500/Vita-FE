@@ -1,5 +1,6 @@
 import type { RouteResponse } from "@/entities/route/api/routeResponseTypes";
 import {
+  getRouteGuides,
   getRoutePath,
   getRouteSegments,
 } from "@/entities/route/model/routeResponse";
@@ -38,6 +39,17 @@ export const routeApi = {
       mode: response.mode,
       path: getRoutePath(response),
       segments: getRouteSegments(response),
+      guides: getRouteGuides(response),
+      options: response.routes?.map((option) => ({
+        tags: option.tags ?? [],
+        routeType: option.routeType ?? undefined,
+        distanceMeters: option.distanceMeters ?? 0,
+        durationSeconds: option.durationSeconds ?? 0,
+        transfers: option.transfers ?? undefined,
+        path: getRoutePath(option),
+        segments: getRouteSegments(option),
+        guides: getRouteGuides(option),
+      })),
     };
   },
 };

@@ -9,6 +9,7 @@ import type { RoutePreview } from "@/features/store/route/lib/mapRoute";
 import type {
   TransitRouteStep,
   StoreRoute,
+  StoreRouteOption,
   StoreRouteMode,
 } from "@/entities/route";
 import type { StoreLocation } from "@/entities/store";
@@ -83,7 +84,9 @@ const getTransitStepDescription = (segment: RouteSegment) => {
   return `${moveText} 이동`;
 };
 
-const getTransitSteps = (route: StoreRoute | null): TransitRouteStep[] =>
+export const buildTransitSteps = (
+  route: StoreRoute | null,
+): TransitRouteStep[] =>
   route?.segments
     ?.filter((segment) =>
       ["walk", "bus", "subway", "transit"].includes(segment.kind),
@@ -161,6 +164,8 @@ export const buildRouteSummary = ({
     remainingDistanceMeters >=
       straightDistanceMeters * WALK_RECOMMEND_DETOUR_RATIO;
 
+  const transitOptions: StoreRouteOption[] = walkingRoute?.options ?? [];
+
   return {
     isLoading: isRouteLoading,
     isWalkRecommended,
@@ -174,14 +179,17 @@ export const buildRouteSummary = ({
         : undefined,
     transitSteps:
       routeMode === "transit" && walkingRoute
-        ? getTransitSteps(walkingRoute)
+        ? buildTransitSteps(walkingRoute)
         : [],
+    transitOptions,
+    guides: routeMode === "transit" ? [] : (walkingRoute?.guides ?? []),
   };
 };
 
 type RoutePreviewParams = RouteSummaryParams & {
   routeDestinationStoreId: string;
   routeResultMessage: string | null;
+  selectedTransitRouteIndex?: number;
 };
 
 /** 지도에 그릴 길찾기 경로(출발지·API 경로·도착지). 그릴 경로가 없으면 null */
@@ -191,6 +199,7 @@ export const buildRoutePreview = ({
   routeDestinationStoreId,
   routeMode,
   routeResultMessage,
+  selectedTransitRouteIndex = 0,
   userLocation,
   walkingRoute,
 }: RoutePreviewParams): RoutePreview | null => {
@@ -214,7 +223,7 @@ export const buildRoutePreview = ({
     ? [userLocation, ...walkingRoute.path, destination]
     : fallbackPath;
   const routeKey = walkingRoute?.path.length
-    ? `route:${routeDestinationStoreId}:${walkingRoute.mode}`
+    ? `route:${routeDestinationStoreId}:${walkingRoute.mode}:${selectedTransitRouteIndex}`
     : `fallback:${routeDestinationStoreId}:${routeMode}`;
 
   return {

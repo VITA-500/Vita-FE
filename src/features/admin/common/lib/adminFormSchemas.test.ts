@@ -96,22 +96,18 @@ describe("admin form schemas", () => {
     ).toBe(false);
   });
 
-  it.each([
-    "22:00-02:00",
-    "00:00-23:59",
-    " 09:00-18:00 ",
-    "",
-    "   ",
-    undefined,
-  ])("allows overnight hours and optional values: %s", (businessHours) => {
-    expect(
-      storeFormSchema.safeParse({
-        name: "매장",
-        address: "서울",
-        lat: "37.5",
-        lng: "127",
-        businessHours,
-      }).success,
-    ).toBe(true);
-  });
+  it.each(["00:00-23:59", " 09:00-18:00 ", "", "   ", undefined])(
+    "allows valid and optional operation values: %s",
+    (businessHours) => {
+      expect(
+        storeFormSchema.safeParse({
+          name: "매장",
+          address: "서울",
+          lat: "37.5",
+          lng: "127",
+          businessHours,
+        }).success,
+      ).toBe(true);
+    },
+  );
 });

@@ -26,7 +26,6 @@ type UseStoreSearchResultsParams = Pick<
   SearchState,
   | "allStores"
   | "getTextSearchSortCenter"
-  | "isInVisibleArea"
   | "submittedSearchOrigin"
   | "submittedSearchStores"
 > &
@@ -65,7 +64,6 @@ export const useStoreSearchResults = ({
   filterStoresByServices,
   getTextSearchSortCenter,
   hasActiveServiceFilter,
-  isInVisibleArea,
   openFilter,
   providedServiceFilterOptions,
   searchQuery,
@@ -111,12 +109,11 @@ export const useStoreSearchResults = ({
         : searchableStores.filter((store) =>
             matchesStoreSearch(store, searchQuery),
           );
+  // 텍스트 검색은 현재 지도 viewport가 아니라 검색 풀 전체를 대상으로 한다.
+  // viewport 밖 매장도 검색 결과로 선택할 수 있어야 지도·목록이 해당 매장으로 이동할 수 있다.
   const getTextSearchResults = (pool: StoreLocation[]) =>
     sortStoresByDistance(
-      pool.filter(
-        (store) =>
-          matchesStoreSearch(store, searchQuery) && isInVisibleArea(store),
-      ),
+      pool.filter((store) => matchesStoreSearch(store, searchQuery)),
       getTextSearchSortCenter(),
     );
   // 텍스트 검색 결과(서비스 필터 적용 전). Enter 검색 시 이 목록을 저장해 두고 뱃지로 다시 거른다.

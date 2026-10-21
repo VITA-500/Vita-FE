@@ -10,7 +10,10 @@ import {
 import { ChatCardRail } from "@/features/chat/cards/components/ChatCardRail";
 import { ChatStoreResultCard } from "@/features/chat/store/components/ChatStoreResultCard";
 import { CHAT_STORE_RADIUS_KM } from "@/features/chat/store/lib/chatStoreMap";
-import { getChatStoreDistanceLabel } from "@/features/chat/store/lib/chatStoreMapOrigin";
+import {
+  getChatStoreDistanceLabel,
+  isUserOriginNavigationPrompt,
+} from "@/features/chat/store/lib/chatStoreMapOrigin";
 import { StoreMapPreview } from "@/features/store/map/components/StoreMapPreview";
 import { StorePanelModals } from "@/features/store/reservation/components/StorePanelModals";
 import { useStoreReservation } from "@/features/store/reservation/hooks/useStoreReservation";
@@ -18,11 +21,13 @@ import type { ChatStoreMap as ChatStoreMapData } from "@/entities/chat";
 
 type ChatStoreMapProps = {
   storeMap: ChatStoreMapData;
+  question?: string;
 };
 
 /** 채팅 답변 속 매장 지도 블록: 기준 위치 안내, 지도, 매장 카드 레일, 예약 모달 */
 export const ChatStoreMap = ({
   storeMap: initialStoreMap,
+  question = "",
 }: ChatStoreMapProps) => {
   const {
     activeServices,
@@ -39,13 +44,15 @@ export const ChatStoreMap = ({
     markerColorInfoById,
     markerLabelById,
     matchedServicesById,
-    originPoint,
     selectedStore,
     serviceColorByValue,
     storeMap,
     stores,
     userLocation,
-  } = useChatStoreMapState(initialStoreMap);
+  } = useChatStoreMapState(
+    initialStoreMap,
+    isUserOriginNavigationPrompt(question),
+  );
   const reservation = useStoreReservation();
   const cardRefs = useRef(new Map<string, HTMLElement>());
 
@@ -92,7 +99,6 @@ export const ChatStoreMap = ({
           selectedStoreId={selectedStore?.id ?? ""}
           stores={stores}
           userLocation={userLocation}
-          originPoint={originPoint}
           onSelectStore={handleSelectPin}
         />
       </div>

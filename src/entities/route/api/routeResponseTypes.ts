@@ -11,6 +11,31 @@ export type RouteResponse = {
   legs?: RouteSegmentResponse[];
   sections?: RouteSegmentResponse[];
   segments?: RouteSegmentResponse[];
+  routes?: RouteOptionResponse[];
+  guides?: RouteGuideResponse[] | null;
+};
+
+export type RouteOptionResponse = {
+  tags?: string[] | null;
+  routeType?: string | null;
+  distanceMeters?: number;
+  durationSeconds?: number;
+  fare?: number | null;
+  transfers?: number | null;
+  taxiFare?: number | null;
+  toll?: number | null;
+  path?: RoutePointResponse[] | RouteSegmentResponse[];
+  segments?: RouteSegmentResponse[];
+  guides?: RouteGuideResponse[] | null;
+};
+
+/** BE RouteGuide: 자동차·도보·자전거 경로의 회전/진행 안내 */
+export type RouteGuideResponse = {
+  guidance: string;
+  name?: string | null;
+  distanceMeters: number;
+  lat: number;
+  lng: number;
 };
 
 export type RoutePointResponse = {

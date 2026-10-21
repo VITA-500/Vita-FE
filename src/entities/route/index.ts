@@ -4,7 +4,10 @@ export {
   routeQueryKeys,
   useStoreRouteQuery,
 } from "@/entities/route/model/queries";
-export type { RouteResponse } from "@/entities/route/api/routeResponseTypes";
+export type {
+  RouteOptionResponse,
+  RouteResponse,
+} from "@/entities/route/api/routeResponseTypes";
 export {
   getRoutePath,
   getRouteSegments,
@@ -18,9 +21,11 @@ export {
 } from "@/entities/route/model/transitTimeline";
 export type {
   StoreRoute,
+  StoreRouteGuide,
   StoreRouteMode,
   StoreRoutePoint,
   StoreRouteSegment,
   StoreRouteSegmentKind,
+  StoreRouteOption,
   TransitRouteStep,
 } from "@/entities/route/model/types";

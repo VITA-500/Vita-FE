@@ -119,7 +119,6 @@ export const useStoreMapPanelState = (
   const {
     allStores,
     getTextSearchSortCenter,
-    isInVisibleArea,
     submittedSearchOrigin,
     submittedSearchStores,
   } = searchState;
@@ -136,6 +135,7 @@ export const useStoreMapPanelState = (
     routeMapReadyKey,
     routeMode,
     routeResultMessage,
+    selectedTransitRouteIndex,
     walkingRoute,
   } = route;
   const filters = useServiceFilters({
@@ -163,7 +163,6 @@ export const useStoreMapPanelState = (
     filterStoresByServices,
     getTextSearchSortCenter,
     hasActiveServiceFilter,
-    isInVisibleArea,
     openFilter,
     providedServiceFilterOptions,
     searchQuery,
@@ -256,6 +255,7 @@ export const useStoreMapPanelState = (
     routeDestinationStoreId,
     routeMode,
     routeResultMessage,
+    selectedTransitRouteIndex,
     userLocation,
     walkingRoute,
   });

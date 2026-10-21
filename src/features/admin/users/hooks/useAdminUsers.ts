@@ -35,7 +35,7 @@ export const useAdminUsers = () => {
     onSuccess: async () => {
       showToast("회원 상태를 변경했어요.");
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: adminQueryKeys.usersAll }),
+        queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
         queryClient.invalidateQueries({ queryKey: adminQueryKeys.userSummary }),
       ]);
     },
