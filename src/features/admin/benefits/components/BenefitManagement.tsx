@@ -13,6 +13,7 @@ import {
 import { useEffect, useState } from "react";
 import { AdminErrorBanner } from "@/features/admin/common/components/AdminErrorBanner";
 import { AdminPagination } from "@/features/admin/common/components/AdminPagination";
+import { AdminTableShell } from "@/features/admin/common/components/AdminTableShell";
 import { AdminResultSummary } from "@/features/admin/common/components/AdminResultSummary";
 import { BenefitFormModal } from "@/features/admin/benefits/components/BenefitFormModal";
 import { FilterDropdown } from "@/features/admin/common/components/FilterDropdown";
@@ -245,7 +246,19 @@ export const BenefitManagement = ({
       </div>
 
       {/* 데스크톱: 표 */}
-      <Card padding="none" className="hidden overflow-hidden md:block">
+      <AdminTableShell
+        className="hidden md:block"
+        pagination={
+          !isLoading && benefits.length > 0 ? (
+            <AdminPagination
+              currentPage={page + 1}
+              disabled={isLoading}
+              totalPages={totalPages}
+              onPageChange={(nextPage) => setPage(nextPage - 1)}
+            />
+          ) : null
+        }
+      >
         <table className="w-full table-fixed border-collapse text-sm">
           <thead className="bg-surface-muted text-xs font-extrabold text-gray-400 dark:bg-white/5">
             <tr>
@@ -332,17 +345,7 @@ export const BenefitManagement = ({
             )}
           </tbody>
         </table>
-        {!isLoading && benefits.length > 0 && (
-          <div className="border-border-soft flex items-center justify-center border-t px-5 py-4 dark:border-white/10">
-            <AdminPagination
-              currentPage={page + 1}
-              disabled={isLoading}
-              totalPages={totalPages}
-              onPageChange={(nextPage) => setPage(nextPage - 1)}
-            />
-          </div>
-        )}
-      </Card>
+      </AdminTableShell>
 
       <AdminResultSummary
         keyword={hasSearchKeyword ? keyword : ""}
