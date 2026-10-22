@@ -92,7 +92,7 @@ entities/{entity}
   index.ts      외부 공개 API
 ```
 
-현재 entity: `store`, `benefit`, `reservation`, `location`, `route`, `chat`, `faq`, `feedback`, `user`. `@x` 공개 API는 `store/@x/route`, `route/@x/store`, `feedback/@x/chat`이 있다. 요금제(`plan`)는 BE 관리자 API만 있어 FE entity는 아직 없다.
+현재 entity: `store`, `benefit`, `reservation`, `location`, `route`, `chat`, `faq`, `feedback`, `user`, `plan`. `@x` 공개 API는 `store/@x/route`, `route/@x/store`, `feedback/@x/chat`이 있다. `plan` entity는 관리자 요금제 API·타입·요금제 대상 배지 UI를 제공한다.
 
 ### shared
 
@@ -153,7 +153,7 @@ shared/
 
 현재 feature slice:
 
-- `admin`: 관리자 화면. `common`(셸·권한 확인·공통 입력·페이지·데이터 Provider·쿼리 키·폼 스키마), `dashboard`, `partners`(매장+혜택 탭), `stores`, `benefits`, `faq`, `users`, `feedback`(답변 피드백) 하위 폴더로 나뉜다. 화면별 데이터 훅은 각 폴더의 `hooks/`에 둔다.
+- `admin`: 관리자 화면. `common`(셸·권한 확인·공통 입력·페이지·데이터 Provider·쿼리 키·폼 스키마), `dashboard`, `partners`(매장+혜택 탭), `stores`, `benefits`, `faq`, `users`, `feedback`(답변 피드백), `plans`(요금제 CRUD) 하위 폴더로 나뉜다. 화면별 데이터 훅은 각 폴더의 `hooks/`에 둔다.
 - `auth`: 로그인·회원가입·OAuth 요청(`authService`), 헤더 로그인 버튼(`HeaderControls`), 마이페이지(`ProfilePanel`). 로그인 상태(`AuthProvider`, `useAuthUser`)·토큰·로그인 복귀 경로는 `entities/user`에 있다.
 - `chat`: 채팅 기능. `conversation`(대화 흐름·입력창·전송·스트리밍 표시·투어), `message`(메시지 목록·말풍선·마크다운·진행 단계·답변 피드백), `cards`(요금제 카드·카드 레일), `store`(매장 답변 카드·채팅 지도 슬롯·지도 데이터), `sidebar`(사이드바 내부 기능·상담 목록·메뉴), `search`(상담 검색), `settings`(채팅 설정) 하위 폴더로 나뉜다. 화면 영역 조립체 `ChatSidebar`는 `widgets/chat-sidebar`에 둔다.
 - `store`: 매장 기능. `panel`(패널 상태·하위 조립), `search`(검색·목록·필터), `benefit`(제휴 혜택), `map`(지도·핀·카메라), `route`(길찾기), `reservation`(예약), `detail`(매장 상세) 하위 폴더로 나뉜다. 화면 영역 조립체 `StoreMapPanel`은 `widgets/store-map-panel`에 두며, 카카오맵 로더·타입은 `shared`에 있다.
@@ -170,6 +170,6 @@ shared/
 
 ## Current Integration Boundary
 
-- 실제 BE 연동: 인증/OAuth, 채팅 세션·메시지·SSE, 매장·혜택·예약·길찾기, FAQ·매장·혜택·사용자 관리자 API, 답변 피드백 및 trace
+- 실제 BE 연동: 인증/OAuth, 채팅 세션·메시지·SSE, 매장·혜택·예약·길찾기, FAQ·매장·혜택·사용자·요금제 관리자 API, 답변 피드백 및 trace
 - fallback mock: API base URL이 없는 Storybook·로컬 목업 환경의 관리자 요약/피드백 데이터
-- BE에는 `/admin/plans`가 있지만 FE 요금제 관리자 UI는 아직 없으며 별도 검토 대상이다.
+- `/admin/plans` 요금제 관리자 UI는 `app/(service)/admin/plans`, `features/admin/plans`, `entities/plan`에서 실제 BE API와 연동한다.
