@@ -27,6 +27,7 @@ export const adminQueryKeys = {
     page: number;
     pageSize: number;
     sortBy: string;
+    targetGroup: string;
   }) => [...plansAll, params] as const,
   benefits: (params: {
     category: string;

@@ -83,6 +83,7 @@ export const PlanFormModal = ({
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const validationRef = useRef<HTMLParagraphElement>(null);
   useEffect(() => {
     if (validationMessage) {
@@ -95,6 +96,7 @@ export const PlanFormModal = ({
     }
   }, [validationMessage]);
   const closeModal = () => {
+    if (isSubmitting) return;
     setValidationMessage(null);
     onClose();
   };
@@ -206,7 +208,12 @@ export const PlanFormModal = ({
       showValidation("문자 제공량은 제한 정책에서만 입력할 수 있습니다.");
       return;
     }
-    await onSave(mode === "edit" ? value : value);
+    setIsSubmitting(true);
+    try {
+      await onSave(mode === "edit" ? value : value);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   const field = (
     key: keyof AdminPlanRequest,
@@ -308,10 +315,10 @@ export const PlanFormModal = ({
       className="max-h-[calc(100dvh-3rem)] overflow-y-auto"
       actions={
         <>
-          <Button variant="ghost" onClick={closeModal}>
+          <Button variant="ghost" onClick={closeModal} disabled={isSubmitting}>
             취소
           </Button>
-          <Button form="plan-form" type="submit">
+          <Button form="plan-form" type="submit" isLoading={isSubmitting}>
             {mode === "create" ? "등록" : "저장"}
           </Button>
         </>
