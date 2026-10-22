@@ -8,7 +8,11 @@ export const faqFormSchema = z.object({
     error: "카테고리를 선택해 주세요.",
   }),
   question: z.string().trim().min(1, "질문을 입력해 주세요."),
-  subcategory: z.string().optional(),
+  subcategory: z
+    .string()
+    .trim()
+    .max(50, "세부 주제는 50자 이내로 입력해 주세요.")
+    .optional(),
 });
 
 export type FaqFormValues = z.infer<typeof faqFormSchema>;
@@ -42,7 +46,9 @@ const businessHoursSchema = optionalPattern(
     if (!value) return true;
     const opening = Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5));
     const closing = Number(value.slice(6, 8)) * 60 + Number(value.slice(9, 11));
-    return opening < closing;
+    // BE는 종료 시각이 시작 시각보다 이른 자정 넘김 영업시간을 허용한다.
+    // 같은 시각만 BE 계약상 유효하지 않다.
+    return opening !== closing;
   },
   {
     message: "종료 시간은 시작 시간보다 늦게 입력해 주세요.",
@@ -54,15 +60,43 @@ const phoneSchema = optionalPattern(
 );
 
 export const storeFormSchema = z.object({
-  address: z.string().trim().min(1, "주소를 입력해 주세요."),
+  address: z
+    .string()
+    .trim()
+    .min(1, "주소를 입력해 주세요.")
+    .max(255, "주소는 255자 이내로 입력해 주세요."),
   benefitId: z.string().optional(),
   businessHours: businessHoursSchema,
-  consultServices: z.string().optional(),
   lat: latitudeSchema,
   lng: longitudeSchema,
-  name: z.string().trim().min(1, "이름을 입력해 주세요."),
-  phone: phoneSchema,
-  providedServices: z.string().optional(),
+  name: z
+    .string()
+    .trim()
+    .min(1, "이름을 입력해 주세요.")
+    .max(100, "이름은 100자 이내로 입력해 주세요."),
+  phone: phoneSchema.refine((value) => !value || value.length <= 20, {
+    message: "전화번호는 20자 이내로 입력해 주세요.",
+  }),
+  consultServices: z
+    .string()
+    .optional()
+    .refine(
+      (value) =>
+        !value || value.split(",").every((item) => item.trim().length <= 50),
+      {
+        message: "서비스 항목은 각각 50자 이내로 입력해 주세요.",
+      },
+    ),
+  providedServices: z
+    .string()
+    .optional()
+    .refine(
+      (value) =>
+        !value || value.split(",").every((item) => item.trim().length <= 50),
+      {
+        message: "서비스 항목은 각각 50자 이내로 입력해 주세요.",
+      },
+    ),
 });
 
 export type StoreFormValues = z.infer<typeof storeFormSchema>;

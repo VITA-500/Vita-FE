@@ -7,9 +7,11 @@
 - API base URL은 `NEXT_PUBLIC_API_BASE_URL`이다.
 - 회원 요청은 `credentials: include`와 HttpOnly access-token cookie를 사용한다.
 - 비회원 채팅은 `X-Guest-Id` UUID 헤더와 `credentials: omit`을 사용한다.
-- 쓰기 요청은 `GET /auth/csrf` 응답의 `headerName`, `token`을 CSRF 헤더로 보낸다.
-- 오류 응답은 BE `ErrorResponse`를 FE `ApiError`로 변환한다.
+- 쿠키 인증 상태의 쓰기 요청은 `GET /auth/csrf` 응답의 `headerName`, `token`을 CSRF 헤더로 보낸다. 로그인·회원가입 및 쿠키 인증이 없는 게스트 요청은 BE CSRF 면제 대상이다.
+- 오류 응답은 wrapper 없이 `{ code, message, fieldErrors }` 형식이다. `fieldErrors`는 `VALIDATION_ERROR`일 때만 `{ field, message }` 배열로 제공될 수 있다.
 - 관리자 API 권한 검증은 BE가 담당한다.
+
+주요 오류 코드는 `UNAUTHORIZED`(401), `FORBIDDEN`(403), `VALIDATION_ERROR`(400), `NOT_FOUND`(404), `CONFLICT` 계열(409)이다. 로그인 실패는 계정 존재 여부·정지 여부·비밀번호 오류를 구분하지 않고 `INVALID_CREDENTIALS`(401)로 응답한다. BE에 별도 계정 잠금 오류 코드는 없다.
 
 ## Auth
 
@@ -66,9 +68,20 @@ directions의 `mode`는 `car`, `walk`, `bicycle`, `transit`이다. 응답은 `pa
 
 ## Admin
 
-현재 FE가 사용하는 관리자 API는 `/admin/stores`, `/admin/benefits`, `/admin/faqs`, `/admin/users`, `/admin/stats/chat`, `/admin/traces`다.
+현재 FE가 사용하는 관리자 API는 `/admin/stores`, `/admin/benefits`, `/admin/faqs`, `/admin/users`, `/admin/plans`, `/admin/stats/chat`, `/admin/traces`다.
 
-BE에는 `/admin/plans` 요금제 CRUD도 존재하지만 현재 FE에는 대응 UI/entity가 없다. 관리자 요금제 화면 추가 여부는 별도 검토 대상으로 둔다.
+요금제 API:
+
+| Method | Path                    | 설명                                                      |
+| ------ | ----------------------- | --------------------------------------------------------- |
+| GET    | `/admin/plans`          | `page`, `size`, `keyword`, `sortBy` 기반 서버 페이지 목록 |
+| POST   | `/admin/plans`          | 요금제 등록, 성공 시 201                                  |
+| PATCH  | `/admin/plans/{planId}` | 요금제 부분 수정                                          |
+| DELETE | `/admin/plans/{planId}` | 요금제 비활성화                                           |
+
+요금제 등록 필수값은 `planCode`, `name`, `summary`, `price`, `networkType`, `targetGroup`, `dataPolicy`, `voicePolicy`, `smsPolicy`, `description`이다. 문자열 최대 길이는 각각 `50`, `100`, `255`, `20`, `20`, `20`, `20`, `20`이며 `price`, `minAge`, `maxAge`는 0 이상, `baseDataMb`, `exhaustedSpeedKbps`, `voiceMinutes`, `smsCount`는 양수다. 수정은 필드 생략과 명시적 `null`을 구분한다. 알 수 없는 필드는 거부된다.
+
+현재 BE controller의 요금제 목록 필터에는 `targetGroup`이 없으므로, target group 필터링은 별도 BE 계약 변경 없이는 서버 필터로 간주하지 않는다. FE는 대상 그룹을 선택한 경우에 한해 최대 100건을 조회한 뒤 임시로 클라이언트 필터링한다. 전체 목록 조회는 사용자가 선택한 `page`·`size`를 서버에 전달한다.
 
 목록 응답은 다음 `PageResponse` 형태다.
 

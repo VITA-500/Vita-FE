@@ -96,6 +96,41 @@ describe("admin form schemas", () => {
     ).toBe(false);
   });
 
+  it("accepts overnight business hours supported by BE", () => {
+    expect(
+      storeFormSchema.safeParse({
+        name: "야간 매장",
+        address: "서울",
+        lat: "37.5",
+        lng: "127",
+        businessHours: "22:00-02:00",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects store fields that exceed BE limits", () => {
+    expect(
+      storeFormSchema.safeParse({
+        name: "매장",
+        address: "a".repeat(256),
+        lat: "37.5",
+        lng: "127",
+        consultServices: "a".repeat(51),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects FAQ subcategories over the BE limit", () => {
+    expect(
+      faqFormSchema.safeParse({
+        answer: "답변",
+        category: "모바일",
+        question: "질문",
+        subcategory: "a".repeat(51),
+      }).success,
+    ).toBe(false);
+  });
+
   it.each(["00:00-23:59", " 09:00-18:00 ", "", "   ", undefined])(
     "allows valid and optional operation values: %s",
     (businessHours) => {

@@ -52,6 +52,10 @@ const UserManagement = () => {
       setReasonError("변경 사유를 입력해야 처리할 수 있어요.");
       return;
     }
+    if (reason.trim().length > 500) {
+      setReasonError("변경 사유는 500자 이내로 입력해 주세요.");
+      return;
+    }
 
     const nextStatus: AdminUserStatus =
       statusTarget.status === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";

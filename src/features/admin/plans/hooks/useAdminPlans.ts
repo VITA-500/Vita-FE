@@ -5,6 +5,10 @@ import { adminPlanApi, type AdminPlanRequest } from "@/entities/plan";
 import type { PlanStatus, PlanTargetGroup } from "@/entities/plan";
 import { adminQueryKeys } from "@/features/admin/common/context/adminQueryKeys";
 import { env } from "@/shared/config/env";
+
+// BE 목록 API에 targetGroup 필터가 없어 선택 시에만 제한적으로 FE 필터링한다.
+const TARGET_GROUP_FILTER_LIMIT = 100;
+
 export const useAdminPlans = () => {
   const client = useQueryClient();
   const [keyword, setKeywordState] = useState("");
@@ -12,12 +16,17 @@ export const useAdminPlans = () => {
   const [pageSize, setPageSizeState] = useState(20);
   const [sortBy, setSortBy] = useState("createdAt,desc");
   const [targetGroup, setTargetGroupState] = useState<PlanTargetGroup | "">("");
-  const params = { keyword, page, pageSize, sortBy };
+  const params = { keyword, page, pageSize, sortBy, targetGroup };
   const query = useQuery({
     enabled: Boolean(env.apiBaseUrl),
     queryKey: adminQueryKeys.plans(params),
     queryFn: () =>
-      adminPlanApi.fetchPlans({ page: 0, size: 100, keyword, sortBy }),
+      adminPlanApi.fetchPlans({
+        page: targetGroup ? 0 : page,
+        size: targetGroup ? TARGET_GROUP_FILTER_LIMIT : pageSize,
+        keyword,
+        sortBy,
+      }),
   });
   const refresh = () =>
     client.invalidateQueries({ queryKey: adminQueryKeys.plansAll });
@@ -37,18 +46,26 @@ export const useAdminPlans = () => {
     setTargetGroupState(value);
     setPage(0);
   };
-  const allPlans = query.data?.content ?? [];
+  const serverPlans = query.data?.content ?? [];
   const filteredPlans = targetGroup
-    ? allPlans.filter((plan) => plan.targetGroup === targetGroup)
-    : allPlans;
-  const totalPages = Math.max(1, Math.ceil(filteredPlans.length / pageSize));
+    ? serverPlans.filter((plan) => plan.targetGroup === targetGroup)
+    : serverPlans;
+  const totalCount = targetGroup
+    ? filteredPlans.length
+    : (query.data?.totalCount ?? 0);
+  const totalPages = targetGroup
+    ? Math.max(1, Math.ceil(totalCount / pageSize))
+    : Math.max(1, query.data?.totalPages ?? 1);
+  const visiblePlans = targetGroup
+    ? filteredPlans.slice(page * pageSize, (page + 1) * pageSize)
+    : filteredPlans;
   return {
-    plans: filteredPlans.slice(page * pageSize, (page + 1) * pageSize),
+    plans: visiblePlans,
     keyword,
     page,
     pageSize,
     sortBy,
-    totalCount: filteredPlans.length,
+    totalCount,
     totalPages,
     isLoading: query.isLoading || query.isFetching,
     error: query.error,
