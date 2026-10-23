@@ -70,6 +70,28 @@ export const useStoreMapPanel = (
 
   /** 로그인하러 가기 직전: 지금 보던 지도 화면(검색·필터·위치·고른 매장·예약하려던 매장)을 보관한다. */
   const saveMapStateBeforeLogin = () => {
+    // 태그/영역 검색 결과는 submittedSearchStores에만 있고, 원본 stores가
+    // 비어 있을 수 있다. 복귀 후 기본 조회로 되돌아가지 않도록 화면에
+    // 실제로 사용 중인 결과를 복원 목록으로 저장한다.
+    const snapshotStores =
+      state.stores.length > 0
+        ? state.stores
+        : (state.submittedSearchStores ?? state.mapStores);
+
+    if (process.env.NODE_ENV === "development") {
+      console.log("[store snapshot] save before login", {
+        selectedStoreId: state.selectedStoreId,
+        stores: state.stores.length,
+        submittedSearchStores: state.submittedSearchStores?.length ?? 0,
+        mapStores: state.mapStores.length,
+        snapshotStores: snapshotStores.length,
+        consultServiceFilters: state.consultServiceFilters,
+        providedServiceFilters: state.providedServiceFilters,
+        openFilter: state.openFilter,
+        pendingReservationStoreId: state.loginRequiredStore?.id,
+      });
+    }
+
     saveStoreMapSnapshot({
       activeMapCategory: state.activeMapCategory,
       allStores: state.allStores,
@@ -85,7 +107,7 @@ export const useStoreMapPanel = (
       selectedBenefitCategory: state.selectedBenefitCategory,
       selectedStoreId: state.selectedStoreId,
       soloStoreId: state.soloStoreId,
-      stores: state.stores,
+      stores: snapshotStores,
       storesOrigin: state.storesOrigin,
       submittedSearchOrigin: state.submittedSearchOrigin,
       submittedSearchStores: state.submittedSearchStores,

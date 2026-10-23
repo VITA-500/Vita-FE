@@ -15,18 +15,12 @@ export const AdminAuthGate = ({ children }: AdminAuthGateProps) => {
   const router = useRouter();
   const { isAuthenticated, isLoading, isReady, user } = useAuthUser();
   const isAdmin = user?.role === "ADMIN";
-  const isDevelopment = process.env.NODE_ENV === "development";
 
   useEffect(() => {
-    if (isDevelopment) return;
     if (!isReady || isLoading || isAuthenticated) return;
 
     router.replace(routes.login);
-  }, [isAuthenticated, isDevelopment, isLoading, isReady, router]);
-
-  if (isDevelopment) {
-    return children;
-  }
+  }, [isAuthenticated, isLoading, isReady, router]);
 
   if (!isReady || isLoading) {
     return (

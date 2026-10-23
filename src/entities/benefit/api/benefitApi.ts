@@ -1,4 +1,5 @@
 import { toBenefitCategoryOptions } from "@/entities/benefit/model/categoryOptions";
+import { demoBenefitCategories } from "@/entities/benefit/model/demoBenefits";
 import type { BenefitSummary } from "@/entities/benefit/model/types";
 import { requestJson } from "@/shared/api/http";
 
@@ -30,6 +31,11 @@ const fetchBenefits = async ({
 export const benefitApi = {
   fetchBenefits,
   /** 혜택 카테고리 선택지(카테고리별 제휴 매장 수 포함) */
-  fetchBenefitCategories: async () =>
-    toBenefitCategoryOptions(await fetchBenefits({ timeoutMs: 7000 })),
+  fetchBenefitCategories: async () => {
+    try {
+      return toBenefitCategoryOptions(await fetchBenefits({ timeoutMs: 7000 }));
+    } catch {
+      return demoBenefitCategories;
+    }
+  },
 };

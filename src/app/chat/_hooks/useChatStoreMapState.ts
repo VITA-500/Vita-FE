@@ -114,6 +114,7 @@ export const useChatStoreMapState = (
         : {
             key: `${storesKey}:${userLocation?.lat ?? ""}:${userLocation?.lng ?? ""}`,
             points: initialFitPoints,
+            includeUserLocation: true,
           },
     [initialFitPoints, mapFocusRequest, storesKey, userLocation],
   );

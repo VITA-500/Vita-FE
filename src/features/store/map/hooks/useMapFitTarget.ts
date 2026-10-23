@@ -89,9 +89,9 @@ export const useMapFitTarget = ({
     fittedTargetKeyRef.current = fitTarget.key;
     window.clearTimeout(fitZoomTimeoutRef.current);
     const fitPoints =
-      fitTarget.includeUserLocation === false
-        ? fitTarget.points
-        : buildMapFitPoints(fitTarget.points, userLocation);
+      fitTarget.includeUserLocation === true
+        ? buildMapFitPoints(fitTarget.points, userLocation)
+        : fitTarget.points;
 
     const containerRect = mapContainerRef.current?.getBoundingClientRect();
     const container = {
@@ -169,7 +169,10 @@ export const useMapFitTarget = ({
         lat: store.lat,
         lng: store.lng,
       }));
-      const points = buildMapFitPoints(storePoints, userLocation);
+      // 일반 지도 페이지에서는 위치 조회가 늦게 끝나도 사용자가 보던 화면을
+      // 현재 위치 기준으로 다시 맞추지 않는다. 현재 위치를 함께 맞춰야 하는
+      // 화면은 fitTarget에서 명시적으로 includeUserLocation을 사용한다.
+      const points = storePoints;
 
       if (
         !map ||

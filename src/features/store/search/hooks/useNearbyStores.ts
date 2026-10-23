@@ -119,6 +119,15 @@ export const useNearbyStores = ({
       followUserLocation?: boolean;
     },
   ) => {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[nearby stores] fetch start", {
+        restored: Boolean(restoredSnapshot),
+        location: lookupLocation,
+        openFilter,
+        followUserLocation: options?.followUserLocation ?? false,
+      });
+    }
+
     let isCurrentRequest = true;
     // 결과가 없어 직전 지역으로 되돌아갈 때 따라가기 상태도 함께 되돌린다.
     const previousFollowState = {
@@ -169,6 +178,15 @@ export const useNearbyStores = ({
     fetchNearbyStores(lookupLocation, { openFilter })
       .then((nearbyStores) => {
         if (isCurrentRequest) {
+          if (process.env.NODE_ENV === "development") {
+            console.log("[nearby stores] fetch applied", {
+              restored: Boolean(restoredSnapshot),
+              count: nearbyStores.length,
+              ids: nearbyStores.map((store) => store.id),
+              openFilter,
+            });
+          }
+
           if (options?.restoreOnEmpty && nearbyStores.length === 0) {
             restorePreviousArea(
               `이 지역 반경 ${SEARCH_RADIUS_KM}km 안에는 매장 정보가 없어요. 직전에 보던 지역으로 돌아갈게요.`,
@@ -217,6 +235,13 @@ export const useNearbyStores = ({
   };
 
   useEffect(() => {
+    // 로그인 후 복원한 지도에서는 늦게 도착한 위치 정보가 복원된 매장 목록을
+    // 현재 위치 주변 매장으로 덮어쓰지 않도록 한다. 사용자가 직접 내 위치
+    // 버튼을 누른 경우의 조회는 focusUserLocation에서 별도로 처리한다.
+    if (restoredSnapshot) {
+      return;
+    }
+
     if (!userLocation) {
       return;
     }
@@ -241,8 +266,22 @@ export const useNearbyStores = ({
         isFollowingUserLocationRef.current = true;
 
         lastNearbyLookupKeyRef.current = `${lat}:${lng}:${openFilterKey}`;
+        if (process.env.NODE_ENV === "development") {
+          console.log("[nearby stores] location effect fetch start", {
+            restored: Boolean(restoredSnapshot),
+            location: { lat, lng },
+            openFilter,
+          });
+        }
         fetchNearbyStores({ lat, lng }, { openFilter })
           .then((nearbyStores) => {
+            if (process.env.NODE_ENV === "development") {
+              console.log("[nearby stores] location effect fetch applied", {
+                restored: Boolean(restoredSnapshot),
+                count: nearbyStores.length,
+                ids: nearbyStores.map((store) => store.id),
+              });
+            }
             setStoresOrigin({ lat, lng });
             setStores(nearbyStores);
           })
@@ -254,6 +293,7 @@ export const useNearbyStores = ({
     // 상태 변경 함수(setter)와 ref는 패널에서 넘겨받지만 항상 같은 값이라, 기존처럼 위치가 바뀔 때만 실행된다.
   }, [
     fetchNearbyStores,
+    restoredSnapshot,
     setFocusPoint,
     setSearchPoint,
     setStores,
@@ -287,11 +327,30 @@ export const useNearbyStores = ({
     let isCurrentRequest = true;
     let isSettled = false;
 
+    if (process.env.NODE_ENV === "development") {
+      console.log("[nearby stores] lookup effect fetch start", {
+        restored: Boolean(restoredSnapshot),
+        followingUserLocation: isFollowingUserLocationRef.current,
+        lookup: lookup.location,
+        lookupKey: lookup.key,
+        openFilter,
+      });
+    }
+
     fetchNearbyStores(lookup.location, { openFilter })
       .then((nearbyStores) => {
         isSettled = true;
 
         if (isCurrentRequest) {
+          if (process.env.NODE_ENV === "development") {
+            console.log("[nearby stores] lookup effect fetch applied", {
+              restored: Boolean(restoredSnapshot),
+              count: nearbyStores.length,
+              ids: nearbyStores.map((store) => store.id),
+              lookup: lookup.location,
+            });
+          }
+
           if (nearbyStores.length > 0) {
             lastStoreAreaRef.current = lookup.location;
           }
@@ -323,6 +382,7 @@ export const useNearbyStores = ({
     nearbyLookup,
     openFilter,
     openFilterKey,
+    restoredSnapshot,
     setStores,
     setStoresOrigin,
   ]);

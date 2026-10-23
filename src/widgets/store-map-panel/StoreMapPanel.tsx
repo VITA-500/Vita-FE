@@ -16,6 +16,15 @@ export const StoreMapPanel = ({
 }: StoreMapPanelProps) => {
   const restoredSnapshot = useSavedStoreMapSnapshot(!initialAction);
 
+  if (process.env.NODE_ENV === "development") {
+    console.log("[store snapshot] panel render", {
+      restored: Boolean(restoredSnapshot),
+      selectedStoreId: restoredSnapshot?.selectedStoreId,
+      pendingReservationStoreId: restoredSnapshot?.pendingReservationStore?.id,
+      stores: restoredSnapshot?.stores.length ?? 0,
+    });
+  }
+
   return (
     <StoreMapPanelContent
       // 보관한 화면을 읽으면 처음 값부터 다시 시작하도록 새로 그린다.
