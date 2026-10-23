@@ -141,7 +141,7 @@ export const useStoreSearchResults = ({
     activeMapCategory === "benefit"
       ? categoryStores
       : submittedSearchStores
-        ? filterStoresByServices(submittedSearchStores)
+        ? filterOpenStores(filterStoresByServices(submittedSearchStores))
         : hasActiveServiceFilter
           ? categoryDisplayStores
           : categoryStores;
