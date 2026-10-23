@@ -5,6 +5,7 @@ import type {
 } from "@/entities/store/model/types";
 import { requestJson } from "@/shared/api/http";
 import { formatDistance, type UserLocation } from "@/shared/lib/geo";
+import { demoStores } from "@/entities/store/model/demoStores";
 
 type StoreNearbyItemResponse = {
   storeId: number;
@@ -172,12 +173,15 @@ export const storeApi = {
       ...toOpenFilterParams(options.openFilter),
     });
 
-    const response = await requestJson<NearbyStoresResponse>(
-      `/stores/nearby?${params.toString()}`,
-      {
-        timeoutMs: 12000,
-      },
-    );
+    let response: NearbyStoresResponse;
+    try {
+      response = await requestJson<NearbyStoresResponse>(
+        `/stores/nearby?${params.toString()}`,
+        { timeoutMs: 12000 },
+      );
+    } catch {
+      return demoStores.filter((store) => store.storeType === "PHONE");
+    }
 
     // 개수 제한 없이 반경 내 매장을 모두 받고, 화면에서 12개씩 페이지로 나눠 보여준다.
     const stores = response.stores.map(toNearbyStoreLocation);
@@ -225,12 +229,18 @@ export const storeApi = {
       ...toOpenFilterParams(options.openFilter),
     });
 
-    const response = await requestJson<BenefitStoresResponse>(
-      `/benefits/${encodeURIComponent(category)}/stores?${params.toString()}`,
-      {
-        timeoutMs: 12000,
-      },
-    );
+    let response: BenefitStoresResponse;
+    try {
+      response = await requestJson<BenefitStoresResponse>(
+        `/benefits/${encodeURIComponent(category)}/stores?${params.toString()}`,
+        { timeoutMs: 12000 },
+      );
+    } catch {
+      return demoStores.filter(
+        (store) =>
+          store.storeType === "PARTNER" && store.benefitCategory === category,
+      );
+    }
 
     return response.stores.map(toBenefitStoreLocation);
   },

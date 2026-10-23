@@ -88,7 +88,9 @@ const ChatPageContent = () => {
         conversation={conversation}
         isOpen={sidebar.isOpen}
         onNewChat={handleNewChat}
-        onBeforeLogin={activeMode === "store" ? beforeLogin : undefined}
+        onBeforeLogin={
+          activeMode === "store" ? (beforeLogin ?? undefined) : undefined
+        }
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onSetOpen={sidebar.setIsOpen}
