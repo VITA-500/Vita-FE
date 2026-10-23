@@ -14,6 +14,7 @@ type ChatPageSidebarProps = {
   conversation: ChatConversation;
   isOpen: boolean;
   onNewChat: () => void;
+  onBeforeLogin?: () => void;
   onOpenSearch: () => void;
   onOpenSettings: () => void;
   onSetOpen: (isOpen: boolean) => void;
@@ -28,6 +29,7 @@ export const ChatPageSidebar = ({
   conversation,
   isOpen,
   onNewChat,
+  onBeforeLogin,
   onOpenSearch,
   onOpenSettings,
   onSetOpen,
@@ -49,13 +51,20 @@ export const ChatPageSidebar = ({
       onOpenHome={() => router.push(routes.home)}
       onNewChat={onNewChat}
       // 로그인 후 지금 보던 화면(상담·매장 지도·마이페이지)으로 돌아온다.
-      onOpenLogin={() =>
+      onOpenLogin={() => {
+        if (process.env.NODE_ENV === "development") {
+          console.log("[store login] sidebar login clicked", {
+            activeMode,
+            hasBeforeLogin: Boolean(onBeforeLogin),
+          });
+        }
+        onBeforeLogin?.();
         router.push(
           buildLoginHref(
             `${window.location.pathname}${window.location.search}`,
           ),
-        )
-      }
+        );
+      }}
       onOpenSearch={() => {
         tooltip.hideTooltip();
         onOpenSearch();

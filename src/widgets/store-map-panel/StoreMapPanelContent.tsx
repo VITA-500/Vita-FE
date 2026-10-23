@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StoreMapPanelInfoContent } from "@/features/store/detail/components/StorePanelInfoBubble";
 import { StoreMapPanelMap } from "@/features/store/map/components/StoreMapPanelMap";
 import { StoreMapPanelShells } from "@/features/store/panel/components/StoreMapPanelShells";
@@ -10,6 +10,7 @@ import {
 } from "@/features/store/panel/components/StoreMapPanelControls";
 import { useCloseOnOutsideTap } from "@/features/store/panel/hooks/useCloseOnOutsideTap";
 import { useStoreMapPanel } from "@/features/store/panel/hooks/useStoreMapPanel";
+import { useStoreMapLogin } from "@/features/store/panel/context/StoreMapLoginContext";
 import { useElementHeight } from "@/shared/hooks/useElementHeight";
 import { useElementWidth } from "@/shared/hooks/useElementWidth";
 import { useIsDesktopViewport } from "@/shared/hooks/useIsDesktopViewport";
@@ -22,6 +23,21 @@ export const StoreMapPanelContent = ({
   restoredSnapshot,
 }: StoreMapPanelContentProps) => {
   const panel = useStoreMapPanel(initialAction, restoredSnapshot);
+  const { setBeforeLogin } = useStoreMapLogin();
+  const saveMapStateBeforeLoginRef = useRef(panel.saveMapStateBeforeLogin);
+  const beforeLogin = useCallback(() => {
+    saveMapStateBeforeLoginRef.current();
+  }, []);
+
+  useEffect(() => {
+    saveMapStateBeforeLoginRef.current = panel.saveMapStateBeforeLogin;
+  }, [panel.saveMapStateBeforeLogin]);
+
+  useEffect(() => {
+    setBeforeLogin(beforeLogin);
+
+    return () => setBeforeLogin(null);
+  }, [beforeLogin, setBeforeLogin]);
   const {
     activeMapCategory,
     activeStorePage,
