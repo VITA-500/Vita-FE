@@ -59,10 +59,12 @@ const PlanCard = ({
   plan,
   onEdit,
   onToggle,
+  isPending,
 }: {
   plan: AdminPlan;
   onEdit: () => void;
   onToggle: () => void;
+  isPending: boolean;
 }) => (
   <Card padding="sm">
     <div className="flex items-start justify-between gap-3">
@@ -106,6 +108,7 @@ const PlanCard = ({
           aria-label={
             plan.status === "ACTIVE" ? "요금제 비활성화" : "요금제 활성화"
           }
+          disabled={isPending}
           onClick={onToggle}
         >
           {plan.status === "ACTIVE" ? (
@@ -142,20 +145,28 @@ export const PlanManagement = () => {
   const [draft, setDraft] = useState(keyword);
   const [editing, setEditing] = useState<AdminPlan | null>(null);
   const [creating, setCreating] = useState(false);
+  const [pendingPlanId, setPendingPlanId] = useState<number | null>(null);
   useEffect(() => {
     const id = window.setTimeout(() => {
       if (draft !== keyword) setKeyword(draft);
     }, 350);
     return () => window.clearTimeout(id);
   }, [draft, keyword, setKeyword]);
-  const toggle = (plan: AdminPlan) =>
-    runWithStatus(
-      plan.status === "ACTIVE" ? "요금제 비활성화" : "요금제 활성화",
-      () =>
-        updatePlan(plan.planId, {
-          status: plan.status === "ACTIVE" ? "INACTIVE" : "ACTIVE",
-        }),
-    );
+  const toggle = async (plan: AdminPlan) => {
+    if (pendingPlanId === plan.planId) return;
+    setPendingPlanId(plan.planId);
+    try {
+      await runWithStatus(
+        plan.status === "ACTIVE" ? "요금제 비활성화" : "요금제 활성화",
+        () =>
+          updatePlan(plan.planId, {
+            status: plan.status === "ACTIVE" ? "INACTIVE" : "ACTIVE",
+          }),
+      );
+    } finally {
+      setPendingPlanId(null);
+    }
+  };
   const save = async (
     input:
       | Parameters<typeof createPlan>[0]
@@ -264,6 +275,7 @@ export const PlanManagement = () => {
               key={plan.planId}
               plan={plan}
               onEdit={() => setEditing(plan)}
+              isPending={pendingPlanId === plan.planId}
               onToggle={() => void toggle(plan)}
             />
           ))
@@ -354,6 +366,7 @@ export const PlanManagement = () => {
                           size="sm"
                           className="h-12 w-12 rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white"
                           aria-label="요금제 수정"
+                          disabled={pendingPlanId === plan.planId}
                           onClick={() => setEditing(plan)}
                         >
                           <Edit2 size={30} />
@@ -375,6 +388,7 @@ export const PlanManagement = () => {
                               ? "요금제 비활성화"
                               : "요금제 활성화"
                           }
+                          disabled={pendingPlanId === plan.planId}
                           onClick={() => void toggle(plan)}
                         >
                           {plan.status === "ACTIVE" ? (

@@ -14,6 +14,14 @@ const GUEST_BACKUP_OWNER_KEY = "guest-backup";
 const getStorageKey = (ownerKey: string) =>
   `${CHAT_CONVERSATION_KEY_PREFIX}:${ownerKey}`;
 
+const safeSetItem = (key: string, value: string) => {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Storage failures must not break chat hydration or rendering.
+  }
+};
+
 export const getChatConversationOwnerKey = (
   user?: { userId: number } | null,
 ) => {
@@ -106,13 +114,10 @@ export const chatConversationStorage = {
       return;
     }
 
-    window.localStorage.setItem(
-      getStorageKey(ownerKey),
-      JSON.stringify(conversation),
-    );
+    safeSetItem(getStorageKey(ownerKey), JSON.stringify(conversation));
 
     if (ownerKey === GUEST_OWNER_KEY) {
-      window.localStorage.setItem(
+      safeSetItem(
         getStorageKey(GUEST_BACKUP_OWNER_KEY),
         JSON.stringify(conversation),
       );

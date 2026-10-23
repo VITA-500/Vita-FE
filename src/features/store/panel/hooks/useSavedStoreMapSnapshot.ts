@@ -19,6 +19,16 @@ export const useSavedStoreMapSnapshot = (isEnabled: boolean) => {
 
     const savedSnapshot = readStoreMapSnapshot();
 
+    if (process.env.NODE_ENV === "development") {
+      console.log("[store snapshot] read", {
+        enabled: isEnabled,
+        selectedStoreId: savedSnapshot?.selectedStoreId,
+        pendingReservationStoreId: savedSnapshot?.pendingReservationStore?.id,
+        stores: savedSnapshot?.stores.length ?? 0,
+        openFilter: savedSnapshot?.openFilter,
+      });
+    }
+
     if (!savedSnapshot) return;
 
     const timeoutId = window.setTimeout(() => {

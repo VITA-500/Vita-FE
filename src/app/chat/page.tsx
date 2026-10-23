@@ -15,6 +15,10 @@ import { useAuthUser } from "@/entities/user";
 import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
 import { RailTooltip } from "@/shared/ui/molecules/RailTooltip";
+import {
+  StoreMapLoginProvider,
+  useStoreMapLogin,
+} from "@/features/store/panel/context/StoreMapLoginContext";
 
 const ChatPageContent = () => {
   const router = useRouter();
@@ -59,6 +63,8 @@ const ChatPageContent = () => {
     conversation.startNewChat();
   };
 
+  const { beforeLogin } = useStoreMapLogin();
+
   return (
     <main
       // 모바일 브라우저는 100vh가 주소창·툴바 뒤까지 잡혀 아래쪽(채팅 입력창·지도 바텀 시트)이 가려지므로, 실제 보이는 높이(dvh)를 쓴다.
@@ -82,6 +88,9 @@ const ChatPageContent = () => {
         conversation={conversation}
         isOpen={sidebar.isOpen}
         onNewChat={handleNewChat}
+        onBeforeLogin={
+          activeMode === "store" ? (beforeLogin ?? undefined) : undefined
+        }
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onSetOpen={sidebar.setIsOpen}
@@ -136,7 +145,9 @@ const ChatPageContent = () => {
 
 const ChatPage = () => (
   <Suspense fallback={null}>
-    <ChatPageContent />
+    <StoreMapLoginProvider>
+      <ChatPageContent />
+    </StoreMapLoginProvider>
   </Suspense>
 );
 

@@ -194,6 +194,7 @@ const ProfilePanelContent = ({
               label="이름"
               value={name}
               onChange={(event) => setName(event.target.value)}
+              autoComplete="name"
               icon={<UserRound size={19} />}
               maxLength={100}
               placeholder="이름을 입력하세요"
@@ -205,6 +206,7 @@ const ProfilePanelContent = ({
               onChange={(event) => setPassword(event.target.value)}
               icon={<KeyRound size={19} />}
               type="password"
+              autoComplete="new-password"
               minLength={8}
               placeholder={
                 user.hasPassword

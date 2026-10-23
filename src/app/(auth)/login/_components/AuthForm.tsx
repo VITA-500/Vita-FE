@@ -12,6 +12,7 @@ export const AuthForm = ({ form }: { form: AuthFormState }) => (
         value={form.name}
         onChange={(event) => form.setName(event.target.value)}
         type="text"
+        autoComplete="name"
         placeholder="이름을 입력하세요"
         icon={<UserRound size={19} />}
       />
@@ -22,6 +23,7 @@ export const AuthForm = ({ form }: { form: AuthFormState }) => (
       value={form.email}
       onChange={(event) => form.setEmail(event.target.value)}
       type="email"
+      autoComplete="username"
       placeholder="이메일을 입력하세요"
       icon={<Mail size={19} />}
     />
@@ -31,6 +33,7 @@ export const AuthForm = ({ form }: { form: AuthFormState }) => (
       value={form.password}
       onChange={(event) => form.setPassword(event.target.value)}
       type="password"
+      autoComplete={form.isLogin ? "current-password" : "new-password"}
       placeholder="비밀번호를 입력하세요"
       icon={<LockKeyhole size={19} />}
     />
@@ -41,6 +44,7 @@ export const AuthForm = ({ form }: { form: AuthFormState }) => (
         value={form.passwordConfirm}
         onChange={(event) => form.setPasswordConfirm(event.target.value)}
         type="password"
+        autoComplete="new-password"
         placeholder="비밀번호를 한 번 더 입력하세요"
         icon={<LockKeyhole size={19} />}
       />

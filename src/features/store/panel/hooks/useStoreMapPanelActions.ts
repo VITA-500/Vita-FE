@@ -29,7 +29,9 @@ export const useStoreMapPanelActions = (state: StoreMapPanelState) => {
     locationStatus: state.locationStatus,
     // 모달에서 "위치 허용"을 누르는 시점에 호출된다.
     onConsent: () => {
-      state.setCameraOwner("auto");
+      // 위치 허용은 사용자가 명시적으로 현재 위치를 요청한 동작이다.
+      // 필터 결과가 갱신돼도 자동 핀 맞춤이 이 카메라 이동을 덮어쓰지 않게 한다.
+      state.setCameraOwner("user");
       selection.focusUserLocation();
     },
     onRouteCancel: state.resetRouteState,
@@ -121,7 +123,9 @@ export const useStoreMapPanelActions = (state: StoreMapPanelState) => {
     },
     showNearbyStoresAfterRoute,
     focusUserLocation: () => {
-      state.setCameraOwner("auto");
+      // 내 위치 버튼은 필터 선택 여부와 무관하게 사용자의 카메라 이동으로 본다.
+      // 필터 검색 결과가 다시 그려지는 시점의 자동 맞춤보다 우선해야 한다.
+      state.setCameraOwner("user");
       selection.focusUserLocation();
     },
     setOpenFilter: (...args: Parameters<typeof state.setOpenFilter>) => {
