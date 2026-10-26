@@ -23,6 +23,21 @@ export const resolveChatActionHref = (
   storeMap?: ChatStoreMap,
 ) => {
   const nearestStore = storeMap?.stores[0];
+  const activeServices = storeMap?.activeServices ?? [];
+
+  // 휴대폰 매장 답변에 질문 조건(예: 로밍상담·주차 가능)이 있으면 지도도 그 조건 필터를 켜고 연다.
+  // 조건 없이 열면 답변에서 본 매장과 달리 주변 매장 전체가 보여 흐름이 끊긴다.
+  if (
+    storeMap?.type !== "PARTNER" &&
+    activeServices.length > 0 &&
+    isStoreMapHref(action.href)
+  ) {
+    const params = new URLSearchParams({ mode: "store", action: "filter" });
+
+    activeServices.forEach((service) => params.append("service", service));
+
+    return `${routes.chat}?${params.toString()}`;
+  }
 
   if (
     storeMap?.type !== "PARTNER" ||

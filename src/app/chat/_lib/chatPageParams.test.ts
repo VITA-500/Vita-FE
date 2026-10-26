@@ -24,6 +24,23 @@ describe("chatPageParams", () => {
     });
   });
 
+  it("채팅 질문 조건(service)만 들고 오면 필터 동작으로 읽는다", () => {
+    expect(
+      getStoreMapInitialAction(
+        new URLSearchParams(
+          "mode=store&action=filter&service=로밍상담&service=주차 가능",
+        ),
+      ),
+    ).toEqual({
+      action: "filter",
+      activeServices: ["로밍상담", "주차 가능"],
+      storeId: "",
+    });
+    expect(
+      getStoreMapInitialAction(new URLSearchParams("mode=store&action=filter")),
+    ).toBeNull();
+  });
+
   it("매장 id나 동작이 없거나 모르는 값이면 처음 동작이 없다", () => {
     expect(
       getStoreMapInitialAction(new URLSearchParams("action=select")),

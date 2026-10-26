@@ -137,7 +137,8 @@ export const useStoreSearchState = ({
   /**
    * 보이는 지도 영역 기준 검색.
    * - text: 검색어에 맞는 매장을 영역 안에서 찾고, 중심 좌표(내 위치 또는 지도 중심)에서 가까운 순
-   * - tag : 영역 안 매장을 모두 가져오고(뱃지 조건은 렌더 시 적용), 보이는 화면 중심에서 가까운 순.
+   * - tag : 영역 안 매장을 모두 가져오고(뱃지 조건은 렌더 시 적용), text와 같은 기준(내 위치 또는 옮긴 지도 중심)에서 가까운 순.
+   *         (조회는 화면 중심으로 하되, 거리 표시는 필터 전 목록과 같은 내 위치 기준으로 맞춘다)
    *         영역을 넘기지 않으면 뱃지 검색 기준 영역(tagSearchAreaRef) → 지금 보이는 화면 순으로 쓰고, 쓴 영역을 기준으로 기억한다.
    * 결과는 검색 결과(submittedSearchStores)로만 보여주고, 원래 매장 목록(stores)은 건드리지 않는다.
    */
@@ -191,11 +192,9 @@ export const useStoreSearchState = ({
           ? visibleStores.filter((store) => matchesStoreSearch(store, query))
           : visibleStores;
 
-      setSubmittedSearchOrigin(
-        mode === "text"
-          ? getTextSearchSortCenter(viewport, anchorSource)
-          : queryCenter,
-      );
+      // 필터(tag) 검색도 텍스트 검색과 같은 기준점을 쓴다. 화면 중심(queryCenter)을 쓰면
+      // 목록 패널에 가려진 지도 중심에서 거리를 재게 되어, 필터를 켜는 순간 같은 매장의 거리가 달라진다.
+      setSubmittedSearchOrigin(getTextSearchSortCenter(viewport, anchorSource));
       setSubmittedSearchStores(results);
 
       return results;
