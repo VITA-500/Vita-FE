@@ -48,9 +48,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         (error.status === 401 || error.status === 403)
       ) {
         tokenStorage.removeAuthHint();
+        return null;
       }
 
-      return null;
+      return undefined;
     }
   }, []);
 
@@ -73,7 +74,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         const nextUser = await loadUser();
 
-        setUser(nextUser);
+        if (nextUser !== undefined) setUser(nextUser);
       } finally {
         setHasAccessToken(tokenStorage.hasAccessTokenHint());
         setIsLoading(false);

@@ -1,8 +1,6 @@
 import Image from "next/image";
-import {
-  authService,
-  type OAuthProvider,
-} from "@/features/auth/lib/authService";
+import { showToast } from "@/shared/providers/ToastProvider";
+import { authService, type OAuthProvider } from "@/features/auth";
 import {
   readLoginReturnToFromLocation,
   rememberLoginReturnTo,
@@ -41,7 +39,15 @@ export const SocialLoginButtons = ({
     onBeforeRedirect();
     // 소셜 로그인은 BE를 거쳐 /oauth/callback으로 돌아오므로, 돌아갈 화면을 미리 보관해 둔다.
     rememberLoginReturnTo(readLoginReturnToFromLocation());
-    window.location.assign(authService.createOAuthAuthorizationUrl(provider));
+    try {
+      window.location.assign(authService.createOAuthAuthorizationUrl(provider));
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "소셜 로그인을 시작하지 못했습니다.",
+      );
+    }
   };
 
   return (

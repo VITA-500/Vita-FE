@@ -4,9 +4,11 @@ import { env } from "@/shared/config/env";
 import { benefitCategoryFilterOptions } from "@/features/admin/benefits/lib/benefitManagementConfig";
 import { adminQueryKeys } from "@/features/admin/common/context/adminQueryKeys";
 import { Plus, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AdminEmptyState } from "@/features/admin/common/components/AdminEmptyState";
 import { AdminErrorBanner } from "@/features/admin/common/components/AdminErrorBanner";
+import { AdminListToolbar } from "@/features/admin/common/components/AdminListToolbar";
+import { AdminPageHeader } from "@/features/admin/common/components/AdminPageHeader";
 import { AdminPagination } from "@/features/admin/common/components/AdminPagination";
 import { AdminResultSummary } from "@/features/admin/common/components/AdminResultSummary";
 import { FilterDropdown } from "@/features/admin/common/components/FilterDropdown";
@@ -34,15 +36,23 @@ import {
   storeTypeLabels,
 } from "@/features/admin/stores/lib/storeManagementConfig";
 import { benefitApi } from "@/entities/benefit";
+import { previewBenefits } from "@/features/admin/common/lib/adminPreviewData";
+import { useAdminPreviewState } from "@/features/admin/common/hooks/useAdminPreviewState";
 import type { AdminStoreType } from "@/entities/store";
 
 type StoreManagementProps = {
   storeType?: AdminStoreType;
   embedded?: boolean;
+  toolbarLeading?: ReactNode;
+  createModalOpen?: boolean;
+  onCreateModalOpenChange?: (open: boolean) => void;
 };
 export const StoreManagement = ({
   storeType = "PHONE",
   embedded = false,
+  toolbarLeading,
+  createModalOpen,
+  onCreateModalOpenChange,
 }: StoreManagementProps) => {
   const {
     addStore,
@@ -74,6 +84,11 @@ export const StoreManagement = ({
   const { runWithStatus } = useActionStatus();
   const [searchDraft, setSearchDraft] = useState(storeKeyword);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const isCreateOpen = createModalOpen ?? isAddModalOpen;
+  const setCreateOpen = (open: boolean) => {
+    onCreateModalOpenChange?.(open);
+    if (createModalOpen === undefined) setIsAddModalOpen(open);
+  };
   const [editingStoreId, setEditingStoreId] = useState<number | null>(null);
   const [deletingStoreId, setDeletingStoreId] = useState<number | null>(null);
   const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
@@ -81,13 +96,21 @@ export const StoreManagement = ({
   const isPartnerStore = storeType === "PARTNER";
   const isStoreTypeSynced = storeTypeFilter === storeType;
 
-  const Heading = embedded ? "h2" : "h1";
   const benefitQuery = useQuery({
     queryKey: [...adminQueryKeys.benefitsAll, "options"],
     queryFn: () => benefitApi.fetchBenefits(),
     enabled: isPartnerStore && Boolean(env.apiBaseUrl),
   });
-  const benefits = benefitQuery.data ?? [];
+  const [previewBenefitRows] = useAdminPreviewState(
+    "benefits",
+    previewBenefits,
+  );
+  const benefits = env.apiBaseUrl
+    ? (benefitQuery.data ?? [])
+    : previewBenefitRows.map((benefit) => ({
+        ...benefit,
+        description: benefit.description ?? "",
+      }));
   const selectedBenefit = benefits.find(
     (benefit) => benefit.benefitId === storeBenefitId,
   );
@@ -131,7 +154,7 @@ export const StoreManagement = ({
 
   const handleCreate = async (input: StoreInput) => {
     await runWithStatus(`${labels.name} 추가`, () => addStore(input));
-    setIsAddModalOpen(false);
+    setCreateOpen(false);
   };
 
   const handleUpdate = async (input: StoreInput) => {
@@ -176,33 +199,24 @@ export const StoreManagement = ({
 
   return (
     <div>
-      <div className="mb-7 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <Heading
-            className={
-              embedded
-                ? "text-lg font-bold text-gray-950 dark:text-white"
-                : "text-2xl font-extrabold tracking-normal text-gray-950 dark:text-white"
-            }
-          >
-            {labels.title}
-          </Heading>
-          <p className="text-text-secondary mt-2 text-sm font-medium">
-            {labels.name} 정보를 추가·수정하고 연결된 혜택을 관리합니다.
-          </p>
-        </div>
+      {!embedded && (
+        <AdminPageHeader
+          title={labels.title}
+          description={`${labels.name} 정보를 추가·수정하고 연결된 혜택을 관리합니다.`}
+          action={
+            <Button
+              size="sm"
+              leftIcon={<Plus size={16} />}
+              onClick={() => setCreateOpen(true)}
+            >
+              {labels.name} 추가
+            </Button>
+          }
+        />
+      )}
 
-        <Button
-          size="sm"
-          leftIcon={<Plus size={16} />}
-          onClick={() => setIsAddModalOpen(true)}
-        >
-          {labels.name} 추가
-        </Button>
-      </div>
-
-      <div className="mb-7 grid gap-3 xl:grid-cols-[minmax(280px,420px)_auto] xl:items-start xl:justify-between">
-        <div className="flex gap-2">
+      <AdminListToolbar>
+        <div className="flex max-w-[520px] gap-2">
           <SearchInput
             placeholder={`${labels.name}명이나 주소를 검색하세요`}
             value={searchDraft}
@@ -212,63 +226,66 @@ export const StoreManagement = ({
             <Button
               variant="secondary"
               size="sm"
-              className="h-12 shrink-0 rounded-2xl"
+              className="h-10 shrink-0 rounded-xl"
               onClick={clearSearch}
             >
               초기화
             </Button>
           )}
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-          {isPartnerStore && storeBenefitId !== undefined && (
-            <button
-              type="button"
-              onClick={() => setStoreBenefitId(undefined)}
-              className="border-brand/20 bg-brand/5 text-brand hover:bg-brand/10 inline-flex h-12 max-w-full items-center justify-between gap-2 rounded-xl border px-3 text-sm font-bold transition"
-              aria-label="연결 혜택 필터 해제"
-            >
-              <span className="truncate">
-                {selectedBenefit
-                  ? `${selectedBenefit.brand} · ${selectedBenefit.name}`
-                  : `선택한 혜택 #${storeBenefitId}`}
-              </span>
-              <X size={15} className="shrink-0" aria-hidden="true" />
-            </button>
-          )}
-          {isPartnerStore && (
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          {toolbarLeading}
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+            {isPartnerStore && storeBenefitId !== undefined && (
+              <button
+                type="button"
+                onClick={() => setStoreBenefitId(undefined)}
+                className="border-brand/20 bg-brand/5 text-brand hover:bg-brand/10 inline-flex h-12 max-w-full items-center justify-between gap-2 rounded-xl border px-3 text-sm font-bold transition"
+                aria-label="연결 혜택 필터 해제"
+              >
+                <span className="truncate">
+                  {selectedBenefit
+                    ? `${selectedBenefit.brand} · ${selectedBenefit.name}`
+                    : `선택한 혜택 #${storeBenefitId}`}
+                </span>
+                <X size={15} className="shrink-0" aria-hidden="true" />
+              </button>
+            )}
+            {isPartnerStore && (
+              <FilterDropdown
+                aria-label="제휴 업종 필터"
+                className="w-full sm:w-[160px]"
+                options={benefitCategoryFilterOptions}
+                value={storeCategory ?? "ALL"}
+                onChange={(value) =>
+                  setStoreCategory(value === "ALL" ? undefined : value)
+                }
+              />
+            )}
             <FilterDropdown
-              aria-label="제휴 업종 필터"
+              aria-label="매장 정렬"
               className="w-full sm:w-[160px]"
-              options={benefitCategoryFilterOptions}
-              value={storeCategory ?? "ALL"}
-              onChange={(value) =>
-                setStoreCategory(value === "ALL" ? undefined : value)
-              }
-            />
-          )}
-          <FilterDropdown
-            aria-label="매장 정렬"
-            className="w-full sm:w-[160px]"
-            options={storeSortOptions}
-            value={sortValue}
-            onChange={(nextValue) => {
-              const selected = storeSortOptions.find(
-                (option) => option.value === nextValue,
-              );
+              options={storeSortOptions}
+              value={sortValue}
+              onChange={(nextValue) => {
+                const selected = storeSortOptions.find(
+                  (option) => option.value === nextValue,
+                );
 
-              if (!selected) return;
-              setStoreSort(selected.field, selected.direction);
-            }}
-          />
-          <FilterDropdown
-            aria-label="페이지당 매장 수"
-            className="w-full sm:w-[120px]"
-            options={storePageSizeFilterOptions}
-            value={String(storePageSize)}
-            onChange={(nextValue) => setStorePageSize(Number(nextValue))}
-          />
+                if (!selected) return;
+                setStoreSort(selected.field, selected.direction);
+              }}
+            />
+            <FilterDropdown
+              aria-label="페이지당 매장 수"
+              className="w-full sm:w-[120px]"
+              options={storePageSizeFilterOptions}
+              value={String(storePageSize)}
+              onChange={(nextValue) => setStorePageSize(Number(nextValue))}
+            />
+          </div>
         </div>
-      </div>
+      </AdminListToolbar>
 
       {storeError && <AdminErrorBanner message={storeError} />}
       {isPartnerStore && benefitError && (
@@ -352,13 +369,13 @@ export const StoreManagement = ({
       />
 
       <StoreFormModal
-        key={isAddModalOpen ? "create-open" : "create-closed"}
-        isOpen={isAddModalOpen}
+        key={isCreateOpen ? "create-open" : "create-closed"}
+        isOpen={isCreateOpen}
         mode="create"
         benefits={benefits}
         storeType={storeType}
         storeLabel={labels.name}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={() => setCreateOpen(false)}
         onSave={handleCreate}
       />
 

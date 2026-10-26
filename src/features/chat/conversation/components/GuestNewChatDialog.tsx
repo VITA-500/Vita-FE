@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { X } from "lucide-react";
 import { routes } from "@/shared/constants/routes";
+import { buildLoginHref } from "@/entities/user";
 import { PortalDialog } from "@/shared/ui/organisms/PortalDialog";
 
 type GuestNewChatDialogProps = {
@@ -60,7 +61,7 @@ export const GuestNewChatDialog = ({
         </button>
 
         <Link
-          href={routes.login}
+          href={buildLoginHref(routes.chat)}
           className="flex h-11 w-full items-center justify-center rounded-2xl bg-gray-100 text-sm font-bold text-gray-700 transition hover:bg-gray-200 dark:bg-white/10 dark:text-gray-200 dark:hover:bg-white/15"
         >
           로그인

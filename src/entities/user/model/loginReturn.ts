@@ -20,7 +20,12 @@ export const sanitizeLoginReturnTo = (value: string | null | undefined) => {
     return null;
   }
 
-  if (value.startsWith("/\\") || value.startsWith(routes.login)) {
+  if (
+    value.includes("\\") ||
+    /[\u0000-\u0020]/.test(value) ||
+    value.startsWith(routes.login) ||
+    value.startsWith(routes.oauthCallback)
+  ) {
     return null;
   }
 

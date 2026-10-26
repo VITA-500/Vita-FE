@@ -2,6 +2,8 @@
 
 import { cn } from "@/shared/lib/cn";
 import { useAdminTrace } from "@/features/admin/feedback/hooks/useAdminTrace";
+import { Check, CircleMinus, X } from "lucide-react";
+import type { AdminTraceSpan } from "@/entities/feedback";
 
 const isInfrastructureErrorAnswer = (answer: string) =>
   /BedrockRuntime|unable to process your request|Status Code:\s*5\d\d|Request ID:/i.test(
@@ -62,6 +64,12 @@ const recordOf = (value: unknown) =>
 const numberOf = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 
+const spanStatus = (span: AdminTraceSpan) => {
+  if (span.error) return "error" as const;
+  if (span.skipped) return "skipped" as const;
+  return "success" as const;
+};
+
 export const FeedbackTraceInline = ({
   trace,
 }: {
@@ -112,6 +120,7 @@ export const FeedbackTraceInline = ({
   const completionTokens = numberOf(generationHistory?.completion_tokens);
   const totalTokens = numberOf(generationHistory?.total_tokens);
   const visibleCandidates = candidates.slice(0, 3);
+  const spans = trace.trace.spans;
 
   return (
     <div className="bg-surface-muted mt-3 space-y-3 rounded-xl px-3 py-3 dark:bg-white/5">
@@ -159,39 +168,58 @@ export const FeedbackTraceInline = ({
         <p className="mb-2 text-xs font-extrabold text-gray-700 dark:text-gray-200">
           처리 단계
         </p>
-        <div className="space-y-1.5">
-          {trace.trace.spans.map((span, index) => (
-            <div key={`${span.id ?? span.type}-${index}`}>
-              <div className="flex items-start justify-between gap-3 text-xs">
+        <div className="space-y-0">
+          {spans.map((span, index) => (
+            <div
+              key={`${span.id ?? span.type}-${index}`}
+              className="relative flex gap-3 pb-4 last:pb-0"
+            >
+              {index < spans.length - 1 && (
                 <span
-                  className={cn(
-                    "flex items-center gap-1.5",
-                    span.skipped
-                      ? "text-gray-400"
-                      : "font-semibold text-gray-700 dark:text-gray-200",
-                  )}
-                >
-                  <span>{traceSpanLabels[span.type] ?? span.type}</span>
-                  {span.skipped && (
-                    <span className="rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-bold text-gray-500 dark:bg-white/10 dark:text-gray-400">
-                      건너뜀
+                  aria-hidden="true"
+                  className="absolute top-7 bottom-0 left-3 w-px bg-gray-200 dark:bg-white/15"
+                />
+              )}
+              <SpanStatusIcon status={spanStatus(span)} />
+              <div className="min-w-0 flex-1 pt-0.5">
+                <div className="flex items-start justify-between gap-3 text-xs">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="font-bold text-gray-800 dark:text-gray-100">
+                      {traceSpanLabels[span.type] ?? span.type}
                     </span>
-                  )}
-                </span>
-                <span className="shrink-0 text-gray-400">
-                  {span.tookMs ?? "-"}ms
-                </span>
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[10px] font-bold",
+                        spanStatus(span) === "success" &&
+                          "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+                        spanStatus(span) === "error" &&
+                          "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+                        spanStatus(span) === "skipped" &&
+                          "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400",
+                      )}
+                    >
+                      {spanStatus(span) === "success"
+                        ? "성공"
+                        : spanStatus(span) === "error"
+                          ? "실패"
+                          : "건너뜀"}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-gray-400">
+                    {span.tookMs ?? "-"}ms
+                  </span>
+                </div>
+                {span.skipped && (
+                  <p className="mt-1 text-[11px] text-gray-400">
+                    사유: {span.skipped}
+                  </p>
+                )}
+                {span.error && (
+                  <p className="mt-1 text-[11px] font-semibold text-red-600 dark:text-red-300">
+                    오류: {traceErrorMessage(span.error)}
+                  </p>
+                )}
               </div>
-              {span.skipped && (
-                <p className="ml-1 text-[11px] text-gray-400">
-                  사유: {span.skipped}
-                </p>
-              )}
-              {span.error && (
-                <p className="ml-1 text-[11px] font-semibold text-red-600 dark:text-red-300">
-                  오류: {traceErrorMessage(span.error)}
-                </p>
-              )}
             </div>
           ))}
         </div>
@@ -270,3 +298,29 @@ const TraceMetric = ({ label, value }: { label: string; value: string }) => (
     </p>
   </div>
 );
+
+const SpanStatusIcon = ({
+  status,
+}: {
+  status: "success" | "error" | "skipped";
+}) => {
+  const styles = {
+    success: "bg-emerald-600 text-white",
+    error: "bg-red-600 text-white",
+    skipped: "bg-gray-300 text-gray-600 dark:bg-gray-600 dark:text-gray-200",
+  };
+  const Icon =
+    status === "success" ? Check : status === "error" ? X : CircleMinus;
+
+  return (
+    <span
+      className={cn(
+        "relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+        styles[status],
+      )}
+      aria-hidden="true"
+    >
+      <Icon size={14} strokeWidth={2.5} />
+    </span>
+  );
+};

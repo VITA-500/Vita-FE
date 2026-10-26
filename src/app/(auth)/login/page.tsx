@@ -7,6 +7,7 @@ import { SocialLoginButtons } from "./_components/SocialLoginButtons";
 import { useAuthForm } from "./_hooks/useAuthForm";
 import { routes } from "@/shared/constants/routes";
 import { Logo } from "@/shared/ui/atoms/Logo";
+import { readLoginReturnToFromLocation } from "@/entities/user";
 
 const LoginPage = () => {
   const router = useRouter();
@@ -19,7 +20,9 @@ const LoginPage = () => {
         {/* 돌아가기 */}
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() =>
+            router.replace(readLoginReturnToFromLocation() ?? routes.chat)
+          }
           className="mb-5 flex cursor-pointer items-center gap-2 text-sm font-bold text-gray-500 transition hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
         >
           <ArrowLeft size={19} />

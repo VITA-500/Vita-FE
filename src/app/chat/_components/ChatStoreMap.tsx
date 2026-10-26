@@ -7,16 +7,16 @@ import {
   getChatMapPinFitPadding,
   LEGACY_DEFAULT_CHAT_STORE_ORIGIN_LABEL,
 } from "../_lib/chatStoreMapView";
-import { ChatCardRail } from "@/features/chat/cards/components/ChatCardRail";
-import { ChatStoreResultCard } from "@/features/chat/store/components/ChatStoreResultCard";
-import { CHAT_STORE_RADIUS_KM } from "@/features/chat/store/lib/chatStoreMap";
+import { ChatCardRail } from "@/features/chat";
+import { ChatStoreResultCard } from "@/features/chat";
+import { CHAT_STORE_RADIUS_KM } from "@/features/chat";
 import {
   getChatStoreDistanceLabel,
   isUserOriginNavigationPrompt,
-} from "@/features/chat/store/lib/chatStoreMapOrigin";
-import { StoreMapPreview } from "@/features/store/map/components/StoreMapPreview";
-import { StorePanelModals } from "@/features/store/reservation/components/StorePanelModals";
-import { useStoreReservation } from "@/features/store/reservation/hooks/useStoreReservation";
+} from "@/features/chat";
+import { StoreMapPreview } from "@/features/store";
+import { StorePanelModals } from "@/features/store";
+import { useStoreReservation } from "@/features/store";
 import type { ChatStoreMap as ChatStoreMapData } from "@/entities/chat";
 
 type ChatStoreMapProps = {

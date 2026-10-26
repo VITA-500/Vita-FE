@@ -7,8 +7,8 @@ VITA FE 인증은 백엔드가 발급하는 HttpOnly cookie를 기준으로 동�
 1. 사용자가 로그인 폼을 제출한다.
 2. `authService.login`이 `POST /auth/login`을 호출한다.
 3. 백엔드는 `accessToken`을 HttpOnly cookie로 내려준다.
-4. 프론트는 `vita_has_access_token=1` hint cookie를 저장한다.
-5. `AuthProvider.refreshUser(true)`로 `/users/me`를 호출해 사용자 정보를 확인한다.
+4. 프론트는 `/users/me`로 로그인 상태를 확인한 뒤 `vita_has_access_token=1` hint cookie를 저장한다.
+5. 인증 변경 이벤트로 `AuthProvider`의 사용자 정보를 갱신한다. 일시적인 통신 오류는 기존 사용자 정보를 유지하고, 401·403은 인증 상태를 해제한다.
 
 ## Signup
 
@@ -27,6 +27,12 @@ VITA FE 인증은 백엔드가 발급하는 HttpOnly cookie를 기준으로 동�
 6. 프론트 callback 페이지가 `/users/me`를 호출해 로그인 상태를 확정한다.
 
 OAuth provider는 외부 화면과 배포 redirect URI에 의존하므로, 자동화 테스트보다 배포 환경 수동 QA로 최종 확인한다.
+
+로그인 후 복귀 경로는 같은 사이트의 내부 경로만 허용한다. 로그인 화면의 돌아가기는 해당 경로 또는 `/chat`으로 이동한다. OAuth 수동 복귀도 기존 경로를 유지하며, 콜백을 떠난 후 도착한 응답은 화면을 이동시키지 않는다.
+
+## 관리자 접근
+
+`AdminAuthGate`는 비로그인 사용자를 원래 관리자 경로를 보존한 로그인 화면으로 보내고, `ADMIN` 역할만 관리자 콘텐츠를 표시한다. 임시 관리자 미리보기 우회는 제거했다. 관리자 API의 최종 권한 검증은 백엔드가 수행한다.
 
 ## Auth State
 

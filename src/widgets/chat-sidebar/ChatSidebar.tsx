@@ -2,24 +2,22 @@
 
 import type { MouseEvent } from "react";
 import { useRef, useState } from "react";
+import Image from "next/image";
 import { PanelLeftClose, PanelLeftOpen, Search, X } from "lucide-react";
-import { ChatCurrentSession } from "@/features/chat/sidebar/components/ChatCurrentSession";
-import { ChatDeleteConfirmDialog } from "@/features/chat/sidebar/components/ChatDeleteConfirmDialog";
-import { ChatSessionList } from "@/features/chat/sidebar/components/ChatSessionList";
-import { ChatSessionMenu } from "@/features/chat/sidebar/components/ChatSessionMenu";
-import { ChatSidebarFooter } from "@/features/chat/sidebar/components/ChatSidebarFooter";
-import { ChatSidebarNav } from "@/features/chat/sidebar/components/ChatSidebarNav";
-import { useFloatingChatMenu } from "@/features/chat/sidebar/hooks/useFloatingChatMenu";
+import { ChatCurrentSession } from "@/features/chat";
+import { ChatDeleteConfirmDialog } from "@/features/chat";
+import { ChatSessionList } from "@/features/chat";
+import { ChatSessionMenu } from "@/features/chat";
+import { ChatSidebarFooter } from "@/features/chat";
+import { ChatSidebarNav } from "@/features/chat";
+import { useFloatingChatMenu } from "@/features/chat";
 import { usePointerDownOutside } from "@/shared/hooks/usePointerDownOutside";
-import {
-  buildSidebarChatItems,
-  type SidebarChatItem,
-} from "@/features/chat/sidebar/lib/chatSidebarItems";
+import { buildSidebarChatItems, type SidebarChatItem } from "@/features/chat";
 import {
   chatSidebarClassName,
   chatSidebarIconButtonClassName,
-} from "@/features/chat/sidebar/lib/chatSidebarStyles";
-import type { ChatMode } from "@/features/chat/types";
+} from "@/features/chat";
+import type { ChatMode } from "@/features/chat";
 import { cn } from "@/shared/lib/cn";
 import { Logo } from "@/shared/ui/atoms/Logo";
 import type { ChatSessionSummary } from "@/entities/chat";
@@ -175,10 +173,10 @@ export const ChatSidebar = ({
       className={cn(
         chatSidebarClassName,
         // 모바일은 접힌 레일(64px)을 띄우지 않고 서랍처럼 화면 밖으로 완전히 숨긴다(좌측 상단 버튼으로 연다).
-        isOpen ? "w-[296px]" : "w-[296px] max-md:-translate-x-full md:w-[64px]",
+        isOpen ? "w-[276px]" : "w-[276px] max-md:-translate-x-full md:w-[64px]",
       )}
     >
-      <div className="flex h-full w-[296px] shrink-0 flex-col">
+      <div className="flex h-full w-[276px] shrink-0 flex-col">
         <div className="flex h-16 items-center justify-between">
           <div
             className={cn(
@@ -198,7 +196,7 @@ export const ChatSidebar = ({
           <div
             className={cn(
               "group relative shrink-0 justify-center",
-              isOpen ? "hidden md:flex md:w-[64px]" : "flex w-[64px]",
+              isOpen ? "hidden md:flex md:w-[120px]" : "flex w-[64px]",
             )}
             onMouseEnter={onShowRailTooltip(isOpen ? "홈" : "사이드바 열기")}
             onMouseLeave={onHideTooltip}
@@ -207,11 +205,18 @@ export const ChatSidebar = ({
               <button
                 type="button"
                 onClick={onOpenHome}
-                className="relative flex h-10 w-auto items-center rounded-xl transition"
+                className="relative flex h-10 w-[104px] items-center justify-start rounded-xl transition"
                 aria-label="홈으로 이동"
               >
-                <span className="translate-x-3 text-xl font-extrabold tracking-normal text-gray-950 dark:text-white">
-                  VITA
+                <span className="bg-surface-warm relative z-10 ml-1 flex h-8 w-10 shrink-0 items-center justify-center">
+                  <Image
+                    src="/images/logo.webp"
+                    alt="VITA"
+                    width={40}
+                    height={34}
+                    priority
+                    className="h-8 w-10 object-contain"
+                  />
                 </span>
               </button>
             ) : (

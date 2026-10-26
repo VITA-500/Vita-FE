@@ -10,8 +10,9 @@ import {
   BenefitStoreCount,
 } from "@/features/admin/benefits/components/BenefitManagementParts";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { AdminErrorBanner } from "@/features/admin/common/components/AdminErrorBanner";
+import { AdminListToolbar } from "@/features/admin/common/components/AdminListToolbar";
 import { AdminPagination } from "@/features/admin/common/components/AdminPagination";
 import { AdminTableShell } from "@/features/admin/common/components/AdminTableShell";
 import { AdminResultSummary } from "@/features/admin/common/components/AdminResultSummary";
@@ -45,9 +46,15 @@ const toErrorMessage = (error: unknown, fallback: string) =>
 export const BenefitManagement = ({
   embedded = false,
   onSelectBenefit,
+  toolbarLeading,
+  createModalOpen,
+  onCreateModalOpenChange,
 }: {
   embedded?: boolean;
   onSelectBenefit?: (benefitId: number) => void;
+  toolbarLeading?: ReactNode;
+  createModalOpen?: boolean;
+  onCreateModalOpenChange?: (open: boolean) => void;
 }) => {
   const {
     benefits,
@@ -71,6 +78,11 @@ export const BenefitManagement = ({
   } = useAdminBenefits();
   const { runWithStatus } = useActionStatus();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const isCreateOpen = createModalOpen ?? isCreateModalOpen;
+  const setCreateOpen = (open: boolean) => {
+    onCreateModalOpenChange?.(open);
+    if (createModalOpen === undefined) setIsCreateModalOpen(open);
+  };
   const [editingBenefitId, setEditingBenefitId] = useState<number | null>(null);
   const [deletingBenefitId, setDeletingBenefitId] = useState<number | null>(
     null,
@@ -114,7 +126,7 @@ export const BenefitManagement = ({
   };
 
   const saveNewBenefit = (input: AdminBenefitRequest) => {
-    setIsCreateModalOpen(false);
+    setCreateOpen(false);
     runAction(
       "제휴 혜택 등록",
       () => createBenefit(input),
@@ -152,11 +164,11 @@ export const BenefitManagement = ({
     <div>
       <BenefitManagementHeader
         embedded={embedded}
-        onCreate={() => setIsCreateModalOpen(true)}
+        onCreate={() => setCreateOpen(true)}
       />
 
-      <div className="mb-7 grid gap-3 xl:grid-cols-[minmax(280px,420px)_auto] xl:items-start xl:justify-between">
-        <div className="flex gap-2">
+      <AdminListToolbar>
+        <div className="flex max-w-[520px] gap-2">
           <SearchInput
             placeholder="브랜드명이나 혜택 이름을 검색하세요"
             value={searchDraft}
@@ -166,7 +178,7 @@ export const BenefitManagement = ({
             <Button
               variant="secondary"
               size="sm"
-              className="h-12 shrink-0 rounded-2xl"
+              className="h-10 shrink-0 rounded-xl"
               onClick={() => {
                 setSearchDraft("");
                 setKeyword("");
@@ -176,32 +188,35 @@ export const BenefitManagement = ({
             </Button>
           )}
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <FilterDropdown
-            aria-label="제휴 혜택 정렬"
-            className="w-full sm:w-[160px]"
-            options={benefitSortOptions}
-            value={sort}
-            onChange={(nextValue) => setSort(nextValue as BenefitSort)}
-          />
-          <FilterDropdown
-            aria-label="카테고리 필터"
-            className="w-full sm:w-[140px]"
-            options={benefitCategoryFilterOptions}
-            value={categoryFilter}
-            onChange={(nextValue) =>
-              setCategoryFilter(nextValue as BenefitCategoryFilter)
-            }
-          />
-          <FilterDropdown
-            aria-label="페이지당 제휴 혜택 수"
-            className="w-full sm:w-[120px]"
-            options={benefitPageSizeOptions}
-            value={String(pageSize)}
-            onChange={(nextValue) => setPageSize(Number(nextValue))}
-          />
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          {toolbarLeading}
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <FilterDropdown
+              aria-label="제휴 혜택 정렬"
+              className="w-full sm:w-[160px]"
+              options={benefitSortOptions}
+              value={sort}
+              onChange={(nextValue) => setSort(nextValue as BenefitSort)}
+            />
+            <FilterDropdown
+              aria-label="카테고리 필터"
+              className="w-full sm:w-[140px]"
+              options={benefitCategoryFilterOptions}
+              value={categoryFilter}
+              onChange={(nextValue) =>
+                setCategoryFilter(nextValue as BenefitCategoryFilter)
+              }
+            />
+            <FilterDropdown
+              aria-label="페이지당 제휴 혜택 수"
+              className="w-full sm:w-[120px]"
+              options={benefitPageSizeOptions}
+              value={String(pageSize)}
+              onChange={(nextValue) => setPageSize(Number(nextValue))}
+            />
+          </div>
         </div>
-      </div>
+      </AdminListToolbar>
 
       {error && <AdminErrorBanner message={error} />}
 
@@ -355,9 +370,9 @@ export const BenefitManagement = ({
       />
 
       <BenefitFormModal
-        isOpen={isCreateModalOpen}
+        isOpen={isCreateOpen}
         mode="create"
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => setCreateOpen(false)}
         onSave={saveNewBenefit}
       />
 

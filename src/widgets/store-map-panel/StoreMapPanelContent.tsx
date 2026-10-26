@@ -1,21 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { StoreMapPanelInfoContent } from "@/features/store/detail/components/StorePanelInfoBubble";
-import { StoreMapPanelMap } from "@/features/store/map/components/StoreMapPanelMap";
-import { StoreMapPanelShells } from "@/features/store/panel/components/StoreMapPanelShells";
+import { StoreMapPanelInfoContent } from "@/features/store";
+import { StoreMapPanelMap } from "@/features/store";
+import { StoreMapPanelShells } from "@/features/store";
 import {
   StoreMapPanelStoreListContent,
   StoreMapPanelTopBar,
-} from "@/features/store/panel/components/StoreMapPanelControls";
-import { useCloseOnOutsideTap } from "@/features/store/panel/hooks/useCloseOnOutsideTap";
-import { useStoreMapPanel } from "@/features/store/panel/hooks/useStoreMapPanel";
-import { useStoreMapLogin } from "@/features/store/panel/context/StoreMapLoginContext";
+} from "@/features/store";
+import { useCloseOnOutsideTap } from "@/features/store";
+import { useStoreMapPanel } from "@/features/store";
+import { useStoreMapLogin } from "@/features/store";
 import { useElementHeight } from "@/shared/hooks/useElementHeight";
 import { useElementWidth } from "@/shared/hooks/useElementWidth";
 import { useIsDesktopViewport } from "@/shared/hooks/useIsDesktopViewport";
-import type { MapFitPadding } from "@/features/store/map/lib/mapFit";
-import type { StoreMapPanelContentProps } from "@/features/store/panel/lib/storeMapPanelTypes";
+import type { MapFitPadding } from "@/features/store";
+import type { StoreMapPanelContentProps } from "@/features/store";
 
 export const StoreMapPanelContent = ({
   initialAction,

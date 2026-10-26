@@ -28,6 +28,9 @@ import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/atoms/Button";
 import { Card } from "@/shared/ui/atoms/Card";
 import { SearchInput } from "@/shared/ui/molecules/SearchInput";
+import { AdminStatusBadge } from "@/features/admin/common/components/AdminStatusBadge";
+import { AdminPageHeader } from "@/features/admin/common/components/AdminPageHeader";
+import { AdminListToolbar } from "@/features/admin/common/components/AdminListToolbar";
 import type { AdminFaqCategory } from "@/entities/faq";
 type FaqCategoryFilter = "ALL" | AdminFaqCategory;
 type FaqStatusFilter = "ALL" | "ACTIVE" | "INACTIVE";
@@ -100,26 +103,21 @@ export const FaqManagement = () => {
 
   return (
     <div>
-      <div className="mb-7 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-normal text-gray-950 dark:text-white">
-            FAQ 관리
-          </h1>
-          <p className="text-text-secondary mt-2 text-sm font-medium">
-            FAQ를 검색하고, 카테고리별로 관리할 수 있습니다.
-          </p>
-        </div>
+      <AdminPageHeader
+        title="FAQ 관리"
+        description="FAQ를 검색하고, 카테고리별로 관리할 수 있습니다."
+        action={
+          <Button
+            size="sm"
+            leftIcon={<Plus size={16} />}
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            FAQ 등록
+          </Button>
+        }
+      />
 
-        <Button
-          size="sm"
-          leftIcon={<Plus size={16} />}
-          onClick={() => setIsCreateModalOpen(true)}
-        >
-          FAQ 등록
-        </Button>
-      </div>
-
-      <div className="mb-7 grid gap-3 xl:grid-cols-[minmax(280px,420px)_auto] xl:items-start xl:justify-between">
+      <AdminListToolbar className="mb-6 xl:grid-cols-[minmax(280px,420px)_auto] xl:items-start xl:justify-between">
         <div className="flex gap-2">
           <SearchInput
             placeholder="질문이나 키워드를 검색하세요"
@@ -130,7 +128,7 @@ export const FaqManagement = () => {
             <Button
               variant="secondary"
               size="sm"
-              className="h-12 shrink-0 rounded-2xl"
+              className="h-10 shrink-0 rounded-xl"
               onClick={clearSearch}
             >
               초기화
@@ -177,7 +175,7 @@ export const FaqManagement = () => {
             onChange={(nextValue) => setFaqPageSize(Number(nextValue))}
           />
         </div>
-      </div>
+      </AdminListToolbar>
 
       {faqError && <AdminErrorBanner message={faqError} />}
 
@@ -217,7 +215,7 @@ export const FaqManagement = () => {
                   compact
                   isActive={faq.status === "ACTIVE"}
                   onEdit={() => setEditingFaqId(faq.faqId)}
-                  onDelete={() => setDeletingFaqId(faq.faqId)}
+                  onDeactivate={() => setDeletingFaqId(faq.faqId)}
                   onActivate={() => setActivatingFaqId(faq.faqId)}
                 />
               </div>
@@ -248,13 +246,14 @@ export const FaqManagement = () => {
         }
       >
         <table className="w-full table-fixed border-collapse text-sm">
-          <thead className="bg-surface-muted text-xs font-extrabold text-gray-400 dark:bg-white/5">
+          <thead className="bg-surface-muted text-[11px] font-semibold text-gray-400 dark:bg-white/5">
             <tr>
-              <th className="w-[88px] px-5 py-4 text-left">ID</th>
-              <th className="px-4 py-4 text-left">질문</th>
-              <th className="w-[22%] px-4 py-4 text-left">카테고리</th>
-              <th className="w-[128px] px-4 py-4 text-center">등록일</th>
-              <th className="w-[180px] px-5 py-4 text-center">관리</th>
+              <th className="w-[72px] px-5 py-3 text-left">ID</th>
+              <th className="px-4 py-3 text-left">질문 / 답변 요약</th>
+              <th className="w-[20%] px-4 py-3 text-left">카테고리</th>
+              <th className="w-[150px] px-4 py-3 text-center">상태</th>
+              <th className="w-[128px] px-4 py-3 text-center">수정일</th>
+              <th className="w-[132px] px-5 py-3 text-center">관리</th>
             </tr>
           </thead>
           <tbody className="divide-border-soft divide-y dark:divide-white/10">
@@ -264,7 +263,7 @@ export const FaqManagement = () => {
               ))
             ) : faqs.length === 0 ? (
               <tr>
-                <td colSpan={5} className="h-[640px] px-5 py-0">
+                <td colSpan={6} className="h-[640px] px-5 py-0">
                   <AdminEmptyState
                     title="조건에 맞는 FAQ가 없습니다."
                     description="검색어와 카테고리 필터를 조정하거나 새 FAQ를 등록해 주세요."
@@ -276,25 +275,41 @@ export const FaqManagement = () => {
                 {faqs.map((faq) => (
                   <tr
                     key={faq.faqId}
-                    className="hover:bg-surface-muted/70 min-h-20 transition dark:hover:bg-white/5"
+                    className="hover:bg-surface-muted/70 min-h-16 transition dark:hover:bg-white/5"
                   >
-                    <td className="px-5 py-4 font-bold text-gray-400">
+                    <td className="px-5 py-3 text-xs font-bold text-gray-400">
                       #{faq.faqId}
                     </td>
-                    <td className="px-4 py-4 font-extrabold break-keep whitespace-normal text-gray-800 dark:text-gray-100">
-                      {faq.question}
+                    <td className="px-4 py-3 break-keep whitespace-normal">
+                      <p className="line-clamp-1 text-sm font-bold text-gray-800 dark:text-gray-100">
+                        {faq.question}
+                      </p>
+                      <p className="text-text-secondary mt-1 line-clamp-1 text-xs font-normal">
+                        {faq.answer}
+                      </p>
                     </td>
-                    <td className="truncate px-4 py-4 font-semibold text-gray-500">
+                    <td className="truncate px-4 py-3 text-xs font-medium text-gray-500">
                       {faq.category}
                     </td>
-                    <td className="px-4 py-4 text-center font-semibold text-gray-400">
+                    <td className="px-4 py-3 text-center">
+                      <AdminStatusBadge
+                        label={
+                          faq.status === "ACTIVE"
+                            ? "활성 · 답변에 사용"
+                            : "비활성 · 보관"
+                        }
+                        tone={faq.status === "ACTIVE" ? "active" : "inactive"}
+                        icon={faq.status === "ACTIVE" ? "active" : "inactive"}
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs font-semibold text-gray-400">
                       {formatKoreanDate(faq.createdAt)}
                     </td>
-                    <td className="px-5 py-4 text-center">
+                    <td className="px-5 py-3 text-center">
                       <FaqRowActions
                         isActive={faq.status === "ACTIVE"}
                         onEdit={() => setEditingFaqId(faq.faqId)}
-                        onDelete={() => setDeletingFaqId(faq.faqId)}
+                        onDeactivate={() => setDeletingFaqId(faq.faqId)}
                         onActivate={() => setActivatingFaqId(faq.faqId)}
                       />
                     </td>
@@ -308,7 +323,7 @@ export const FaqManagement = () => {
                     aria-hidden="true"
                     className="h-20"
                   >
-                    <td colSpan={5} />
+                    <td colSpan={6} />
                   </tr>
                 ))}
               </>
@@ -354,6 +369,7 @@ export const FaqManagement = () => {
         onConfirm={() => {
           if (activatingFaq) {
             const faqId = activatingFaq.faqId;
+            setFaqStatusFilter("ALL");
             void runWithStatus("FAQ 활성화", () =>
               setFaqStatus(faqId, "ACTIVE"),
             );
@@ -363,13 +379,14 @@ export const FaqManagement = () => {
       />
 
       <FaqStatusModal
-        mode="delete"
+        mode="deactivate"
         faq={deletingFaq}
         onClose={() => setDeletingFaqId(null)}
         onConfirm={() => {
           if (deletingFaq) {
             const faqId = deletingFaq.faqId;
-            void runWithStatus("FAQ 삭제", () => deleteFaq(faqId));
+            setFaqStatusFilter("ALL");
+            void runWithStatus("FAQ 비활성화", () => deleteFaq(faqId));
           }
           setDeletingFaqId(null);
         }}

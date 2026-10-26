@@ -30,13 +30,6 @@ const blank: AdminPlanRequest = {
   description: "",
 };
 
-const targetAgeRanges = {
-  KIDS: { label: "키즈", min: 0, max: 13 },
-  TEEN: { label: "청소년", min: 14, max: 18 },
-  YOUTH: { label: "청년", min: 19, max: 34 },
-  SENIOR: { label: "시니어", min: 65, max: 150 },
-} as const;
-
 const getAgeValidationMessage = (plan: AdminPlanRequest) => {
   if (
     plan.minAge !== null &&
@@ -45,14 +38,12 @@ const getAgeValidationMessage = (plan: AdminPlanRequest) => {
   ) {
     return "최소 연령은 최대 연령보다 클 수 없습니다.";
   }
-  const range =
-    targetAgeRanges[plan.targetGroup as keyof typeof targetAgeRanges];
   if (
-    range &&
-    ((plan.minAge !== null && plan.minAge < range.min) ||
-      (plan.maxAge !== null && plan.maxAge > range.max))
+    [plan.minAge, plan.maxAge].some(
+      (age) => age !== null && (!Number.isInteger(age) || age < 0 || age > 150),
+    )
   ) {
-    return `${range.label} 대상은 만 ${range.min}~${range.max}세 범위로 입력해 주세요.`;
+    return "가입 연령은 0~150세의 정수로 입력해 주세요.";
   }
   return null;
 };

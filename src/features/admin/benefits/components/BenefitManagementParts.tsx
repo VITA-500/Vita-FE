@@ -1,6 +1,7 @@
 import { Modal } from "@/shared/ui/organisms/Modal";
 import { ChevronRight, Edit2, Trash2, Plus } from "lucide-react";
 import { AdminEmptyState } from "@/features/admin/common/components/AdminEmptyState";
+import { AdminPageHeader } from "@/features/admin/common/components/AdminPageHeader";
 import { renderBenefitCategoryIcon } from "@/entities/benefit";
 import { formatKoreanDate } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/atoms/Button";
@@ -89,8 +90,8 @@ export const BenefitActions = ({
   size: "sm" | "md";
 }) => {
   const buttonClassName =
-    size === "md" ? "h-12 w-12 rounded-lg p-0" : "h-9 w-9 rounded-lg p-0";
-  const iconSize = size === "md" ? 26 : 20;
+    size === "md" ? "h-10 w-10 rounded-lg p-0" : "h-9 w-9 rounded-lg p-0";
+  const iconSize = size === "md" ? 18 : 17;
   const canDelete = benefit.storeCount === 0;
 
   return (
@@ -170,28 +171,17 @@ export const BenefitManagementHeader = ({
   embedded: boolean;
   onCreate: () => void;
 }) => {
-  const Heading = embedded ? "h2" : "h1";
-  return (
-    <div className="mb-7 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div>
-        <Heading
-          className={
-            embedded
-              ? "text-lg font-bold text-gray-950 dark:text-white"
-              : "text-2xl font-extrabold tracking-normal text-gray-950 dark:text-white"
-          }
-        >
-          제휴 서비스 관리
-        </Heading>
-        <p className="text-text-secondary mt-2 text-sm font-medium">
-          제휴 브랜드와 혜택을 관리합니다. 등록한 혜택은 제휴점 관리에서 매장에
-          연결할 수 있어요.
-        </p>
-      </div>
+  if (embedded) return null;
 
-      <Button size="sm" leftIcon={<Plus size={16} />} onClick={onCreate}>
-        제휴 혜택 등록
-      </Button>
-    </div>
+  return (
+    <AdminPageHeader
+      title="제휴 서비스 관리"
+      description="제휴 브랜드와 혜택을 관리합니다. 등록한 혜택은 제휴점 관리에서 매장에 연결할 수 있어요."
+      action={
+        <Button size="sm" leftIcon={<Plus size={16} />} onClick={onCreate}>
+          제휴 혜택 등록
+        </Button>
+      }
+    />
   );
 };

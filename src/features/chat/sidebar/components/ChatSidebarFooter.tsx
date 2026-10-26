@@ -115,7 +115,7 @@ export const ChatSidebarFooter = ({
 
       {!isAuthReady ? (
         <div
-          className={cn("h-12 shrink-0", isOpen ? "w-[296px]" : "w-[64px]")}
+          className={cn("h-12 shrink-0", isOpen ? "w-[276px]" : "w-[64px]")}
         />
       ) : isGuest && isOpen ? (
         <div className="space-y-3 px-3">
@@ -173,7 +173,7 @@ export const ChatSidebarFooter = ({
           </button>
         </div>
       ) : isAuthenticated && isOpen ? (
-        <div className="group relative flex h-12 w-[296px] items-center pr-3 text-left transition-colors">
+        <div className="group relative flex h-12 w-[276px] items-center pr-3 text-left transition-colors">
           <span className="absolute inset-y-0 right-2 left-2 rounded-xl transition group-hover:bg-gray-300/70 dark:group-hover:bg-white/10" />
 
           <button
@@ -216,7 +216,7 @@ export const ChatSidebarFooter = ({
         </div>
       ) : (
         <div
-          className={cn("h-12 shrink-0", isOpen ? "w-[296px]" : "w-[64px]")}
+          className={cn("h-12 shrink-0", isOpen ? "w-[276px]" : "w-[64px]")}
         />
       )}
     </div>

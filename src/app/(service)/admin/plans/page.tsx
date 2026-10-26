@@ -1,4 +1,4 @@
-import { PlanManagement } from "@/features/admin/plans/components/PlanManagement";
+import { PlanManagement } from "@/features/admin";
 export default function AdminPlansPage() {
   return <PlanManagement />;
 }

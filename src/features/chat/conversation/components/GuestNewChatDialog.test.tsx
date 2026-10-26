@@ -17,7 +17,7 @@ describe("GuestNewChatDialog", () => {
     );
     expect(screen.getByRole("link", { name: "로그인" })).toHaveAttribute(
       "href",
-      "/login",
+      "/login?returnTo=%2Fchat",
     );
   });
 

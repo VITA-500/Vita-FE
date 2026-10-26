@@ -39,9 +39,9 @@ export type StoreDetailResponse = {
   address: string;
   lat: number;
   lng: number;
-  businessHours?: string;
-  openNow?: boolean;
-  phone?: string;
+  businessHours?: string | null;
+  openNow?: boolean | null;
+  phone?: string | null;
   consultServices?: string[];
   providedServices?: string[];
   storeType?: StoreLocation["storeType"] | null;
