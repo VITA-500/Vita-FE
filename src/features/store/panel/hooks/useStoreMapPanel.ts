@@ -28,16 +28,31 @@ export const useStoreMapPanel = (
       initialAction.benefitCategory ?? "",
       initialAction.storeId,
       initialAction.routeMode ?? "",
+      (initialAction.activeServices ?? []).join("|"),
     ].join(":");
   }, [initialAction]);
 
   useEffect(() => {
     if (!initialAction || !initialActionKey) return;
+    if (initialAction.action === "filter") return;
     if (handledInitialActionKeyRef.current === initialActionKey) return;
 
     handledInitialActionKeyRef.current = initialActionKey;
     void actions.handleInitialStoreAction(initialAction);
   }, [actions, initialAction, initialActionKey]);
+
+  // 채팅에서 질문 조건과 함께 들어온 경우(action=filter): 첫 주변 매장 조회가 끝난 뒤
+  // (내 위치·지도 영역이 잡힌 뒤) 뱃지를 직접 누른 것과 같은 필터 검색을 한 번 켠다.
+  const { storesOrigin } = state;
+
+  useEffect(() => {
+    if (initialAction?.action !== "filter" || !initialActionKey) return;
+    if (handledInitialActionKeyRef.current === initialActionKey) return;
+    if (!storesOrigin) return;
+
+    handledInitialActionKeyRef.current = initialActionKey;
+    actions.applyServiceFilterSearch(initialAction.activeServices ?? []);
+  }, [actions, initialAction, initialActionKey, storesOrigin]);
 
   // 되살린 기록은 한 번만 쓴다. (다시 들어올 때 또 되살아나지 않도록 화면을 띄운 뒤 지운다)
   useEffect(() => {

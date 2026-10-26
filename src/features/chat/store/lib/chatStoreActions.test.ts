@@ -49,6 +49,19 @@ describe("resolveChatActionHref", () => {
     ).toBe("아이스크림");
   });
 
+  it("opens the phone store map with the question's service filters", () => {
+    const href = resolveChatActionHref(storeMapAction, {
+      type: "PHONE",
+      activeServices: ["로밍상담", "주차 가능"],
+      stores: [store],
+    });
+    const params = new URLSearchParams(href.split("?")[1]);
+
+    expect(params.get("mode")).toBe("store");
+    expect(params.get("action")).toBe("filter");
+    expect(params.getAll("service")).toEqual(["로밍상담", "주차 가능"]);
+  });
+
   it("keeps phone store and unrelated actions as they are", () => {
     expect(
       resolveChatActionHref(storeMapAction, {

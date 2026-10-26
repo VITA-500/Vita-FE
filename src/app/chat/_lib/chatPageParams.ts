@@ -24,6 +24,15 @@ export const getStoreMapInitialAction = (
 ): StoreMapInitialAction | null => {
   const storeId = searchParams.get("storeId");
   const actionParam = searchParams.get("action");
+  const services = searchParams.getAll("service");
+
+  // 채팅 답변의 "가까운 매장 보기": 매장 없이 질문 조건(service)만 들고 온다.
+  // 예: /chat?mode=store&action=filter&service=로밍상담&service=주차 가능
+  if (actionParam === "filter") {
+    return services.length > 0
+      ? { action: "filter", activeServices: services, storeId: "" }
+      : null;
+  }
 
   if (!storeId || (actionParam !== "select" && actionParam !== "route")) {
     return null;
@@ -41,7 +50,7 @@ export const getStoreMapInitialAction = (
 
   return {
     action: actionParam,
-    activeServices: searchParams.getAll("service"),
+    activeServices: services,
     benefitCategory: searchParams.get("benefitCategory") ?? undefined,
     category,
     routeMode,
