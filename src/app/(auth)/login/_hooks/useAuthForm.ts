@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
-import { authService } from "@/features/auth/lib/authService";
+import { authService } from "@/features/auth";
 import { readLoginReturnToFromLocation, tokenStorage } from "@/entities/user";
 import { ApiError } from "@/shared/api/http";
 import { routes } from "@/shared/constants/routes";
@@ -70,8 +70,8 @@ export const useAuthForm = () => {
           password,
         });
 
-        tokenStorage.setAuthHint();
         await authService.getMe();
+        tokenStorage.setAuthHint();
         window.dispatchEvent(new Event("vita-auth-changed"));
         showToast("로그인되었습니다.");
         // 지도에서 예약하려다 로그인한 경우 등, 들어오기 전 화면으로 돌아간다.
@@ -90,10 +90,17 @@ export const useAuthForm = () => {
       setPasswordConfirm("");
       setSuccessMessage("회원가입이 완료되었습니다. 로그인해주세요.");
     } catch (error) {
+      if (
+        error instanceof ApiError &&
+        (error.status === 401 || error.status === 403)
+      )
+        tokenStorage.removeAuthHint();
       const message =
         error instanceof ApiError
           ? error.message
-          : "요청 처리 중 문제가 발생했습니다.";
+          : error instanceof Error
+            ? error.message
+            : "요청 처리 중 문제가 발생했습니다.";
 
       setErrorMessage(message);
     } finally {

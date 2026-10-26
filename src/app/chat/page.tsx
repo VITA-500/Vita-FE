@@ -9,16 +9,13 @@ import { ChatPageSidebar } from "./_components/ChatPageSidebar";
 import { useChatSidebarOpen } from "./_hooks/useChatSidebarOpen";
 import { useRailTooltip } from "./_hooks/useRailTooltip";
 import { getStoreMapInitialAction, toChatMode } from "./_lib/chatPageParams";
-import { useChatConversationController } from "@/features/chat/conversation/hooks/useChatConversationController";
-import { useChatTour } from "@/features/chat/conversation/hooks/useChatTour";
+import { useChatConversationController } from "@/features/chat";
+import { useChatTour } from "@/features/chat";
 import { useAuthUser } from "@/entities/user";
 import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
 import { RailTooltip } from "@/shared/ui/molecules/RailTooltip";
-import {
-  StoreMapLoginProvider,
-  useStoreMapLogin,
-} from "@/features/store/panel/context/StoreMapLoginContext";
+import { StoreMapLoginProvider, useStoreMapLogin } from "@/features/store";
 
 const ChatPageContent = () => {
   const router = useRouter();

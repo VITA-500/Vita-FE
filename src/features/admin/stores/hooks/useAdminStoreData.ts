@@ -2,7 +2,11 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
-import { storeDetails, storeRows } from "@/features/admin/common/lib/adminData";
+import {
+  previewStoreDetails,
+  previewBenefits,
+} from "@/features/admin/common/lib/adminPreviewData";
+import { useAdminPreviewState } from "@/features/admin/common/hooks/useAdminPreviewState";
 import type {
   AdminStoreData,
   StoreSortDirection,
@@ -12,11 +16,7 @@ import { adminQueryKeys } from "@/features/admin/common/context/adminQueryKeys";
 import { invalidateStoreBenefits } from "@/features/admin/common/lib/invalidateStoreBenefits";
 import { env } from "@/shared/config/env";
 import { adminStoreApi } from "@/entities/store";
-import type {
-  AdminStore,
-  AdminStoreDetail,
-  AdminStoreType,
-} from "@/entities/store";
+import type { AdminStoreDetail, AdminStoreType } from "@/entities/store";
 
 export const getInitialStoreType = (
   pathname?: string | null,
@@ -27,12 +27,11 @@ export const useAdminStoreData = (
   initialStoreType: AdminStoreType,
 ): AdminStoreData => {
   const queryClient = useQueryClient();
-  const [stores, setStores] = useState<AdminStore[]>(
-    env.apiBaseUrl ? [] : storeRows,
+  const [storeDetailRows, setStoreDetailRows] = useAdminPreviewState(
+    "store-details",
+    previewStoreDetails,
   );
-  const [storeDetailRows, setStoreDetailRows] = useState<AdminStoreDetail[]>(
-    env.apiBaseUrl ? [] : storeDetails,
-  );
+  const [benefitRows] = useAdminPreviewState("benefits", previewBenefits);
   const [storeError] = useState<string | null>(null);
   const [storeCategory, setStoreCategoryState] = useState<string | undefined>();
   const [storeBenefitId, setStoreBenefitIdState] = useState<
@@ -47,9 +46,6 @@ export const useAdminStoreData = (
     useState<StoreSortDirection>("desc");
   const [storeTypeFilter, setStoreTypeFilterState] =
     useState<AdminStoreType>(initialStoreType);
-  const [storeTotalCount, setStoreTotalCount] = useState(
-    env.apiBaseUrl ? 0 : storeRows.length,
-  );
 
   const storeQuery = useQuery({
     enabled: Boolean(env.apiBaseUrl),
@@ -86,9 +82,49 @@ export const useAdminStoreData = (
     await storeQuery.refetch();
   }, [storeQuery]);
 
+  const filteredStores = useMemo(
+    () =>
+      storeDetailRows
+        .filter(
+          (row) =>
+            row.storeType === storeTypeFilter &&
+            `${row.name} ${row.address}`
+              .toLowerCase()
+              .includes(storeKeyword.toLowerCase()) &&
+            (!storeBenefitId || row.benefitId === storeBenefitId) &&
+            (!storeCategory ||
+              benefitRows.some(
+                (benefit) =>
+                  benefit.benefitId === row.benefitId &&
+                  benefit.category === storeCategory,
+              )),
+        )
+        .sort((a, b) => {
+          const result = String(
+            a[storeSortField as keyof typeof a] ?? "",
+          ).localeCompare(String(b[storeSortField as keyof typeof b] ?? ""));
+          return storeSortDirection === "asc" ? result : -result;
+        }),
+    [
+      storeDetailRows,
+      benefitRows,
+      storeTypeFilter,
+      storeKeyword,
+      storeBenefitId,
+      storeCategory,
+      storeSortField,
+      storeSortDirection,
+    ],
+  );
   const currentStores = useMemo(
-    () => (env.apiBaseUrl ? (storeQuery.data?.stores ?? []) : stores),
-    [storeQuery.data?.stores, stores],
+    () =>
+      env.apiBaseUrl
+        ? (storeQuery.data?.stores ?? [])
+        : filteredStores.slice(
+            storePage * storePageSize,
+            (storePage + 1) * storePageSize,
+          ),
+    [storeQuery.data?.stores, filteredStores, storePage, storePageSize],
   );
   const currentStoreDetails = useMemo(
     () => (env.apiBaseUrl ? (storeQuery.data?.details ?? []) : storeDetailRows),
@@ -102,10 +138,10 @@ export const useAdminStoreData = (
       : storeError;
   const currentStoreTotalCount = env.apiBaseUrl
     ? (storeQuery.data?.totalCount ?? 0)
-    : storeTotalCount;
+    : filteredStores.length;
   const currentStoreTotalPages = env.apiBaseUrl
     ? Math.max(1, storeQuery.data?.totalPages ?? 1)
-    : Math.max(1, Math.ceil(storeTotalCount / storePageSize));
+    : Math.max(1, Math.ceil(filteredStores.length / storePageSize));
 
   const setStoreKeyword = useCallback((keyword: string) => {
     setStoreKeywordState(keyword);
@@ -169,9 +205,7 @@ export const useAdminStoreData = (
           updatedAt: now,
         };
 
-        setStores((currentStores) => [nextStore, ...currentStores]);
         setStoreDetailRows((currentDetails) => [nextStore, ...currentDetails]);
-        setStoreTotalCount((currentCount) => currentCount + 1);
       },
       stores: currentStores,
       storeDetails: currentStoreDetails,
@@ -219,10 +253,6 @@ export const useAdminStoreData = (
         setStoreSortField("updatedAt");
         setStoreSortDirection("desc");
         setStorePage(0);
-        setStores((currentStores) => [
-          nextStore,
-          ...currentStores.filter((store) => store.storeId !== storeId),
-        ]);
         setStoreDetailRows((currentDetails) => [
           nextStore,
           ...currentDetails.filter((store) => store.storeId !== storeId),
@@ -232,13 +262,6 @@ export const useAdminStoreData = (
         if (!env.apiBaseUrl) {
           const updatedAt = new Date().toISOString();
 
-          setStores((currentStores) =>
-            currentStores.map((store) =>
-              inputs[store.storeId]
-                ? { ...store, ...inputs[store.storeId], updatedAt }
-                : store,
-            ),
-          );
           setStoreDetailRows((currentDetails) =>
             currentDetails.map((store) =>
               inputs[store.storeId]
@@ -263,13 +286,9 @@ export const useAdminStoreData = (
       setStoreTypeFilter,
       deleteStore: async (storeId) => {
         if (!env.apiBaseUrl) {
-          setStores((currentStores) =>
-            currentStores.filter((store) => store.storeId !== storeId),
-          );
           setStoreDetailRows((currentDetails) =>
             currentDetails.filter((store) => store.storeId !== storeId),
           );
-          setStoreTotalCount((currentCount) => Math.max(0, currentCount - 1));
           return;
         }
 
@@ -290,6 +309,7 @@ export const useAdminStoreData = (
       setStoreSort,
       setStoreTypeFilter,
       storeDetailRows,
+      setStoreDetailRows,
       storeKeyword,
       storePage,
       storePageSize,

@@ -122,8 +122,8 @@ const FilterChip = ({
     aria-pressed={role === "tab" ? undefined : isActive}
     onClick={onClick}
     className={cn(
-      "inline-flex items-center gap-1.5 rounded-full border font-bold transition",
-      size === "md" ? "h-9 px-3.5 text-sm" : "h-7 px-2.5 text-xs",
+      "inline-flex items-center gap-1.5 rounded-lg border font-semibold transition",
+      size === "md" ? "h-8 px-3 text-sm" : "h-7 px-2.5 text-xs",
       isActive
         ? "border-brand bg-brand-soft text-brand dark:bg-brand/15"
         : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-white/10 dark:bg-zinc-900 dark:text-gray-300 dark:hover:bg-white/5",

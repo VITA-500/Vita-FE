@@ -1,5 +1,5 @@
-import { PartnerManagement } from "@/features/admin/partners/components/PartnerManagement";
-import { AdminDataProvider } from "@/features/admin/common/context/AdminDataContext";
+import { PartnerManagement } from "@/features/admin";
+import { AdminDataProvider } from "@/features/admin";
 
 const AdminPartnersPage = async ({
   searchParams,

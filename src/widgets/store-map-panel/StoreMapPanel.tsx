@@ -1,8 +1,8 @@
 "use client";
 
-import { useSavedStoreMapSnapshot } from "@/features/store/panel/hooks/useSavedStoreMapSnapshot";
+import { useSavedStoreMapSnapshot } from "@/features/store";
 import { StoreMapPanelContent } from "@/widgets/store-map-panel/StoreMapPanelContent";
-import type { StoreMapPanelProps } from "@/features/store/panel/lib/storeMapPanelTypes";
+import type { StoreMapPanelProps } from "@/features/store";
 
 /**
  * 매장 지도 화면.

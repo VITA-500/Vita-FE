@@ -1,12 +1,23 @@
 @import "tailwindcss";
+@import "driver.js/dist/driver.css";
 
 /* Recharts bars are interactive SVG nodes; don't show a browser focus ring after clicking a bar. */
 .recharts-bar-rectangle:focus {
   outline: none;
 }
-@import "driver.js/dist/driver.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+@keyframes prompt-suggestion-rise {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 :root {
   --background: #ffffff;

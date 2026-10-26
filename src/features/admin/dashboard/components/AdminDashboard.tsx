@@ -4,6 +4,7 @@ import {
   BadgePercent,
   BookOpen,
   CalendarDays,
+  Clock3,
   MessagesSquare,
   Store,
   UserX,
@@ -14,17 +15,28 @@ import {
   DashboardMetric,
   FeedbackReactionsCard,
 } from "@/features/admin/dashboard/components/AdminDashboardCards";
+import { ButtonLink } from "@/shared/ui/atoms/Button";
+import { routes } from "@/shared/constants/routes";
+import { useEffect, useState } from "react";
 
 /** 대시보드는 summary만 쓴다. 질문 목록은 답변 피드백 페이지에서 본다. */
 const DASHBOARD_FEEDBACK_LIMIT = 1;
 
 export const AdminDashboard = () => {
+  const [dataBasedAt, setDataBasedAt] = useState<Date | null>(null);
   const {
     error: feedbackError,
     isLoading: isFeedbackLoading,
     stats: feedbackStats,
   } = useAdminAnswerFeedback(DASHBOARD_FEEDBACK_LIMIT);
   const operations = useAdminOperationsSummary();
+  useEffect(() => {
+    if (!isFeedbackLoading && !operations.isLoading) {
+      const timeoutId = window.setTimeout(() => setDataBasedAt(new Date()), 0);
+      return () => window.clearTimeout(timeoutId);
+    }
+    return undefined;
+  }, [isFeedbackLoading, operations.isLoading]);
   const hasOperationsError = Boolean(operations.error);
   const operationsSummary = operations.summary;
   const emptyBenefits = operationsSummary?.emptyBenefits ?? 0;
@@ -50,13 +62,46 @@ export const AdminDashboard = () => {
   );
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-extrabold tracking-normal text-gray-950 dark:text-white">
-          대시보드
-        </h1>
-        <p className="text-text-secondary mt-2 text-sm font-medium">
-          반복되는 문의와 오늘 발생한 답변 피드백을 우선 확인하고, 운영 현황을
-          함께 살펴보세요.
+      <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-normal text-gray-950 dark:text-white">
+            대시보드
+          </h1>
+          <p className="text-text-secondary mt-2 text-sm font-medium break-keep">
+            반복되는 문의와 오늘 발생한 답변 피드백을 우선 확인하고, 운영 현황을
+            함께 살펴보세요.
+          </p>
+        </div>
+        <p className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium text-gray-500 dark:text-gray-400">
+          <Clock3 size={20} aria-hidden="true" />
+          데이터 기준
+          <strong className="text-gray-900 dark:text-white">
+            {dataBasedAt ? (
+              <>
+                <span className="sm:hidden">
+                  {dataBasedAt.toLocaleString("ko-KR", {
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                  })}
+                </span>
+                <span className="hidden sm:inline">
+                  {dataBasedAt.toLocaleString("ko-KR", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                  })}
+                </span>
+              </>
+            ) : (
+              "확인 중"
+            )}
+          </strong>
         </p>
       </div>
 
@@ -85,6 +130,15 @@ export const AdminDashboard = () => {
           icon={<MessagesSquare size={18} aria-hidden="true" />}
           priority="FAQ 보완 우선"
           description="같은 질문을 하나로 묶은 항목 수와, 그 질문들이 누적해서 발생한 횟수예요. 자주 나오는 질문부터 FAQ를 보완하세요."
+          action={
+            <ButtonLink
+              href={`${routes.adminFeedback}?filter=quality`}
+              variant="secondary"
+              size="xs"
+            >
+              보완 대상 확인
+            </ButtonLink>
+          }
         />
         <DashboardMetric
           label="오늘 발생"

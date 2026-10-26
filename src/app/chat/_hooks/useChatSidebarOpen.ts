@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ChatMode } from "@/features/chat/types";
+import type { ChatMode } from "@/features/chat";
 import { useIsDesktopViewport } from "@/shared/hooks/useIsDesktopViewport";
 
 /**

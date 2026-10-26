@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/api/http";
 import type { MyPageResponse } from "./types";
@@ -50,6 +50,26 @@ const AuthStateProbe = () => {
 };
 
 describe("AuthProvider", () => {
+  it("preserves the user after a transient refresh failure", async () => {
+    mocks.hasAccessTokenHint.mockReturnValue(true);
+    mocks.getMe
+      .mockResolvedValueOnce(user)
+      .mockRejectedValue(new TypeError("Network error"));
+    render(
+      <AuthProvider>
+        <AuthStateProbe />
+      </AuthProvider>,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("name")).toHaveTextContent("비타"),
+    );
+    await act(async () => {
+      window.dispatchEvent(new Event("vita-auth-changed"));
+    });
+    await waitFor(() => expect(mocks.getMe).toHaveBeenCalledTimes(2));
+    expect(screen.getByTestId("authenticated")).toHaveTextContent("true");
+    expect(mocks.removeAuthHint).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
       callback(0);

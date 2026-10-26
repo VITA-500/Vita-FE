@@ -81,7 +81,9 @@ directions의 `mode`는 `car`, `walk`, `bicycle`, `transit`이다. 응답은 `pa
 
 요금제 등록 필수값은 `planCode`, `name`, `summary`, `price`, `networkType`, `targetGroup`, `dataPolicy`, `voicePolicy`, `smsPolicy`, `description`이다. 문자열 최대 길이는 각각 `50`, `100`, `255`, `20`, `20`, `20`, `20`, `20`이며 `price`, `minAge`, `maxAge`는 0 이상, `baseDataMb`, `exhaustedSpeedKbps`, `voiceMinutes`, `smsCount`는 양수다. 수정은 필드 생략과 명시적 `null`을 구분한다. 알 수 없는 필드는 거부된다.
 
-현재 BE controller의 요금제 목록 필터에는 `targetGroup`이 없으므로, target group 필터링은 별도 BE 계약 변경 없이는 서버 필터로 간주하지 않는다. FE는 대상 그룹을 선택한 경우에 한해 최대 100건을 조회한 뒤 임시로 클라이언트 필터링한다. 전체 목록 조회는 사용자가 선택한 `page`·`size`를 서버에 전달한다.
+현재 BE controller의 요금제 목록 필터에는 `targetGroup`이 없으므로, 대상 그룹을 선택하면 FE는 100건 단위로 서버의 전체 페이지를 조회한 뒤 필터링한다. 일반 목록 조회는 사용자가 선택한 `page`·`size`를 서버에 전달한다. 가입 연령은 0~150세의 정수이며 최소 연령은 최대 연령을 넘을 수 없다. 대상 그룹별 고정 연령 범위는 BE 계약에 없다.
+
+Trace 목록도 공통 `PageResponse`(`content`, `totalCount`, `totalPages`, `currentPage`)를 사용한다. 소셜 계정의 이메일 및 매장 전화번호·영업시간 등은 null일 수 있으며, 화면 표시 시 빈 값으로 정규화한다. 비밀번호는 공백 없이 8자 이상이며 영문·숫자·특수문자를 모두 포함해야 한다. 비밀번호 원문은 trim하지 않는다.
 
 목록 응답은 다음 `PageResponse` 형태다.
 

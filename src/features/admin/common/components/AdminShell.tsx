@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { MouseEvent, ReactNode } from "react";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   BarChart3,
   FileQuestion,
@@ -15,6 +16,8 @@ import {
   Store,
   Users,
   Smartphone,
+  Check,
+  RefreshCw,
 } from "lucide-react";
 import { routes } from "@/shared/constants/routes";
 import { cn } from "@/shared/lib/cn";
@@ -44,11 +47,14 @@ type AdminShellProps = {
 
 export const AdminShell = ({ children }: AdminShellProps) => {
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   // 데스크톱에서는 접힌 아이콘 사이드바(md:w-[64px])로 시작하고, 모바일에서는
   // 완전히 닫힌 상태로 시작해요. true로 시작하면 모바일 폭에서 배경 딤 처리가
   // 처음부터 opacity-100으로 걸려 있어 화면 전체가 흐릿하게 깨져 보였어요.
   const [isOpen, setIsOpen] = useState(false);
   const [railTooltip, setRailTooltip] = useState<RailTooltipProps | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
   const isMenuActive = (href: string) =>
     href === routes.admin ? pathname === href : pathname.startsWith(href);
@@ -63,6 +69,25 @@ export const AdminShell = ({ children }: AdminShellProps) => {
       });
     };
   const hideRailTooltip = () => setRailTooltip(null);
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.refetchQueries({
+          predicate: (query) => query.queryKey[0] === "admin",
+          type: "active",
+        }),
+        new Promise((resolve) => window.setTimeout(resolve, 600)),
+      ]);
+      setLastSyncedAt(new Date());
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const currentMenu = adminMenus.find((menu) => isMenuActive(menu.href));
 
   return (
     <main className="bg-surface-warm relative flex min-h-screen text-gray-950 dark:text-white">
@@ -192,6 +217,42 @@ export const AdminShell = ({ children }: AdminShellProps) => {
             <Menu size={22} />
           </button>
 
+          <header className="mb-7 flex min-h-10 items-center justify-between gap-4 border-b border-gray-200 pb-4 dark:border-white/10">
+            <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+              운영 관리
+              <span className="mx-2 text-gray-300 dark:text-gray-600">/</span>
+              <span className="text-gray-950 dark:text-white">
+                {currentMenu?.label ?? "관리"}
+              </span>
+            </p>
+            <div className="flex items-center gap-3">
+              <span
+                className="hidden items-center gap-1.5 text-xs font-medium text-emerald-600 sm:flex dark:text-emerald-400"
+                aria-live="polite"
+              >
+                <Check size={15} aria-hidden="true" />
+                {isRefreshing
+                  ? "동기화 중"
+                  : lastSyncedAt
+                    ? "방금 동기화됨"
+                    : "자동 동기화 대기 중"}
+              </span>
+              <button
+                type="button"
+                onClick={() => void handleRefresh()}
+                disabled={isRefreshing}
+                className="focus-visible:ring-brand/40 inline-flex h-9 items-center gap-2 rounded-lg px-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-wait disabled:opacity-60 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
+                aria-label="관리자 데이터 새로고침"
+              >
+                <RefreshCw
+                  size={17}
+                  aria-hidden="true"
+                  className={isRefreshing ? "animate-spin" : undefined}
+                />
+                <span className="hidden sm:inline">새로고침</span>
+              </button>
+            </div>
+          </header>
           {children}
         </div>
       </div>

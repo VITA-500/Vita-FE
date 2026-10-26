@@ -1,5 +1,5 @@
-import { FaqManagement } from "@/features/admin/faq/components/FaqManagement";
-import { AdminDataProvider } from "@/features/admin/common/context/AdminDataContext";
+import { FaqManagement } from "@/features/admin";
+import { AdminDataProvider } from "@/features/admin";
 
 const AdminFaqsPage = () => (
   <AdminDataProvider>

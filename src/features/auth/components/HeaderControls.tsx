@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { LogOut, UserRound } from "lucide-react";
-import { useAuthUser } from "@/entities/user";
+import { buildLoginHref, useAuthUser } from "@/entities/user";
 import { ThemeToggleButton } from "@/shared/ui/molecules/ThemeToggleButton";
 import { showToast } from "@/shared/providers/ToastProvider";
 import { routes } from "@/shared/constants/routes";
@@ -18,6 +19,14 @@ const HeaderControls = ({
   initialHasAccessToken = false,
   onSelectComplete,
 }: HeaderControlsProps) => {
+  const router = useRouter();
+  const openLogin = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    onSelectComplete?.();
+    router.push(
+      buildLoginHref(`${window.location.pathname}${window.location.search}`),
+    );
+  };
   const { isAuthenticated, isLoading, logout, user } = useAuthUser({
     initialHasAccessToken,
   });
@@ -46,7 +55,7 @@ const HeaderControls = ({
         ) : (
           <Link
             href={routes.login}
-            onClick={onSelectComplete}
+            onClick={openLogin}
             className="bg-brand hover:bg-brand-hover inline-flex h-10 items-center justify-center rounded-full px-5 text-sm font-bold text-white shadow-sm transition"
           >
             로그인
@@ -82,7 +91,7 @@ const HeaderControls = ({
       ) : (
         <Link
           href={routes.login}
-          onClick={onSelectComplete}
+          onClick={openLogin}
           className="bg-brand hover:bg-brand-hover inline-flex h-10 items-center justify-center rounded-full px-5 text-sm font-bold text-white shadow-sm transition"
         >
           로그인

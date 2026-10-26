@@ -58,7 +58,7 @@ export const ChatSidebarNav = ({
         (menu.label !== "새 상담" || (!isGuest && isNewChatEmpty));
       const shortcut = getMenuShortcut(menu.label);
       const itemClassName = cn(
-        "group relative flex h-11 w-[296px] items-center pr-3 text-sm font-bold transition-colors duration-150",
+        "group relative flex h-11 w-[276px] items-center pr-3 text-sm font-bold transition-colors duration-150",
         isActive
           ? "text-brand"
           : menu.disabled
@@ -151,7 +151,7 @@ export const ChatSidebarNav = ({
     {!isOpen && (
       <button
         type="button"
-        className="group relative flex h-11 w-[296px] items-center pr-3 text-sm font-bold text-gray-500 transition-colors duration-150 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white"
+        className="group relative flex h-11 w-[276px] items-center pr-3 text-sm font-bold text-gray-500 transition-colors duration-150 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white"
         aria-label="최근 상담"
         onClick={onOpenSidebar}
         onMouseEnter={onShowRailTooltip("최근 상담")}

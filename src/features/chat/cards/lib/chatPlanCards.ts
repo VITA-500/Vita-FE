@@ -1,7 +1,7 @@
 import type {
   ChatMarkdownBlock,
   ChatMarkdownListItem,
-} from "@/features/chat/message/components/ChatMarkdown";
+} from "@/features/chat/message/lib/chatMarkdownParser";
 import type { PlanCardProps } from "@/shared/ui/organisms/PlanCard";
 import type { ChatPlan } from "@/entities/chat";
 

@@ -27,21 +27,21 @@ export const StoreRowActions = ({
       size={compact ? "xs" : "sm"}
       className={cn(
         "rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white",
-        compact ? "h-9 w-9" : "h-12 w-12",
+        compact ? "h-9 w-9" : "h-10 w-10",
       )}
       aria-label="매장 수정"
       onClick={onEdit}
     >
-      <Edit2 size={compact ? 18 : 30} />
+      <Edit2 size={compact ? 17 : 18} />
     </Button>
     <Button
       variant="dangerGhost"
       size={compact ? "xs" : "sm"}
-      className={cn("rounded-lg p-0", compact ? "h-9 w-9" : "h-12 w-12")}
+      className={cn("rounded-lg p-0", compact ? "h-9 w-9" : "h-10 w-10")}
       aria-label="매장 삭제"
       onClick={onDelete}
     >
-      <Trash2 size={compact ? 18 : 30} />
+      <Trash2 size={compact ? 17 : 18} />
     </Button>
   </div>
 );

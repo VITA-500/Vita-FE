@@ -6,6 +6,7 @@ import LoginPage from "./page";
 const mocks = vi.hoisted(() => ({
   push: vi.fn(),
   back: vi.fn(),
+  replace: vi.fn(),
   login: vi.fn(),
   getMe: vi.fn(),
   signup: vi.fn(),
@@ -13,7 +14,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mocks.push, back: mocks.back }),
+  useRouter: () => ({
+    push: mocks.push,
+    back: mocks.back,
+    replace: mocks.replace,
+  }),
 }));
 vi.mock("@/features/auth/lib/authService", () => ({
   authService: {
@@ -31,6 +36,12 @@ const type = async (label: string, value: string) =>
   userEvent.type(screen.getByLabelText(label), value);
 
 describe("LoginPage", () => {
+  it("돌아가기는 인증 기록 대신 채팅 화면으로 이동한다", async () => {
+    render(<LoginPage />);
+    await userEvent.click(screen.getByRole("button", { name: "돌아가기" }));
+    expect(mocks.replace).toHaveBeenCalledWith("/chat");
+    expect(mocks.back).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.login.mockResolvedValue({});
