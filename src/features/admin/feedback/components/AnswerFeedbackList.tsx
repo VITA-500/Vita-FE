@@ -39,6 +39,16 @@ const getFailReasonStyle = (reason: string) =>
   failReasonStyles[reason as AdminAnswerFeedbackReason] ??
   failReasonStyles.ANSWER_FAILED;
 
+const isToday = (value: string) => {
+  const formatter = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return formatter.format(new Date(value)) === formatter.format(new Date());
+};
+
 const isInfrastructureErrorAnswer = (answer: string) =>
   /BedrockRuntime|unable to process your request|Status Code:\s*5\d\d|Request ID:/i.test(
     answer,
@@ -46,7 +56,7 @@ const isInfrastructureErrorAnswer = (answer: string) =>
 
 /** 머리글과 각 행이 같은 칸 너비를 쓰도록 맞춘다(md 이상에서만 표 형태). */
 const rowGridClassName =
-  "md:grid md:grid-cols-[minmax(0,1fr)_64px_104px_64px_64px] md:gap-4";
+  "md:grid md:grid-cols-[minmax(0,1fr)_180px_64px] md:gap-4";
 
 export type DismissFeedback = (
   id: number,
@@ -73,6 +83,7 @@ export const AnswerFeedbackList = ({
   emptyDescription = "챗봇이 답하지 못했거나 사용자가 아쉬워요를 누른 답변이 생기면 여기에 모여요.",
 }: AnswerFeedbackListProps) => {
   const [dismissTarget, setDismissTarget] = useState<AdminAnswerFeedback>();
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const isDismissingTarget =
     dismissTarget !== undefined && dismissingId === dismissTarget.id;
 
@@ -99,13 +110,11 @@ export const AnswerFeedbackList = ({
       <div
         className={cn(
           rowGridClassName,
-          "hidden px-4 pb-2 text-xs font-bold text-gray-400 md:grid",
+          "hidden px-4 pb-2 text-[11px] font-semibold tracking-wide text-gray-400 md:grid",
         )}
       >
-        <span className="text-center">질문</span>
-        <span>횟수</span>
-        <span>피드백 유형</span>
-        <span>발생 일자</span>
+        <span>질문</span>
+        <span>상태 요약</span>
         <span className="text-center">{onDismiss ? "관리" : ""}</span>
       </div>
       <div className="space-y-3">
@@ -113,7 +122,13 @@ export const AnswerFeedbackList = ({
           <FeedbackRow
             key={`${candidate.id}-${candidate.question}`}
             candidate={candidate}
+            isExpanded={expandedId === candidate.id}
             isDismissing={dismissingId === candidate.id}
+            onToggle={() =>
+              setExpandedId((current) =>
+                current === candidate.id ? null : candidate.id,
+              )
+            }
             onRequestDismiss={onDismiss ? setDismissTarget : undefined}
           />
         ))}
@@ -163,14 +178,17 @@ export const AnswerFeedbackList = ({
 
 const FeedbackRow = ({
   candidate,
+  isExpanded,
   isDismissing,
+  onToggle,
   onRequestDismiss,
 }: {
   candidate: AnswerFeedbackListItem;
+  isExpanded: boolean;
   isDismissing: boolean;
+  onToggle: () => void;
   onRequestDismiss?: (candidate: AdminAnswerFeedback) => void;
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
   const trace = useAdminTrace(candidate.id, isExpanded);
   // 2026-10-18 BE부터 자동 감지만 있는 항목도 무시할 수 있다.
   const canDismiss = Boolean(onRequestDismiss);
@@ -188,15 +206,17 @@ const FeedbackRow = ({
     <div
       className={cn(
         rowGridClassName,
-        "border-border-soft grid gap-3 rounded-2xl border px-4 py-3 md:items-center dark:border-white/10",
+        "border-border-soft grid gap-3 rounded-2xl border px-4 py-3 transition-colors md:items-center dark:border-white/10",
+        isExpanded &&
+          "border-l-brand bg-brand-soft/30 dark:bg-brand/10 border-l-4",
       )}
     >
       <div className="min-w-0">
         {/* 화살표는 질문 칸 오른쪽 끝에 고정해 질문 길이와 상관없이 행마다 같은 위치에 둔다. */}
-        <div className="flex items-start gap-2">
+        <div className="relative flex items-start gap-2">
           <p
             className={cn(
-              "min-w-0 flex-1 text-sm leading-6 font-extrabold break-words whitespace-pre-line text-gray-800 dark:text-gray-100",
+              "min-w-0 flex-1 pr-8 text-sm leading-6 font-bold break-words whitespace-pre-line text-gray-800 dark:text-gray-100",
               !isExpanded && "line-clamp-2",
             )}
           >
@@ -204,10 +224,10 @@ const FeedbackRow = ({
           </p>
           <button
             type="button"
-            className="hover:bg-surface-muted flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition outline-none hover:text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
+            className="hover:bg-surface-muted absolute top-0 right-0 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-gray-400 transition outline-none hover:text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
             aria-expanded={isExpanded}
             aria-label={isExpanded ? "답변 접기" : "답변 펼치기"}
-            onClick={() => setIsExpanded((value) => !value)}
+            onClick={onToggle}
           >
             <ChevronDown
               size={16}
@@ -222,17 +242,9 @@ const FeedbackRow = ({
         )}
       </div>
 
-      {/* 모바일에서는 한 줄로 흐르고, md 이상에서는 각 항목이 표 칸에 들어간다. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 md:contents">
-        <div className="text-brand flex h-6 items-center gap-1">
-          <MessageSquareWarning size={16} />
-          <span className="text-base font-black">
-            {candidate.count.toLocaleString("ko-KR")}
-          </span>
-          <span className="text-xs font-bold text-gray-400">회</span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1 md:flex-col md:items-start">
+      {/* 모바일에서는 질문 아래에, 데스크톱에서는 우측 요약 열에 상태 정보를 쌓는다. */}
+      <div className="flex min-w-0 flex-col items-start gap-1.5 md:justify-center md:text-right">
+        <div className="flex flex-wrap items-center justify-start gap-1 md:justify-end">
           {badgeReasons.map((reason) => (
             <span
               key={reason}
@@ -250,55 +262,64 @@ const FeedbackRow = ({
             </span>
           )}
         </div>
-
-        <span className="flex h-6 items-center text-xs font-bold whitespace-nowrap text-gray-400">
-          {formatKoreanMonthDay(candidate.lastOccurredAt)}
-        </span>
-
-        <div className="ml-auto flex md:-mt-1 md:ml-0 md:justify-center">
-          <div className="flex items-center gap-1">
-            {canDismiss ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="xs"
-                isLoading={isDismissing}
-                onClick={() => onRequestDismiss?.(candidate)}
-              >
-                무시
-              </Button>
-            ) : null}
-          </div>
+        <div className="text-brand flex items-center gap-1">
+          <MessageSquareWarning size={15} />
+          <span className="text-sm font-bold">
+            {candidate.count.toLocaleString("ko-KR")}회 반복
+          </span>
         </div>
+        <span className="flex h-5 items-center text-xs font-bold whitespace-nowrap text-gray-400">
+          최근 {formatKoreanMonthDay(candidate.lastOccurredAt)}
+        </span>
+        {isToday(candidate.lastOccurredAt) && (
+          <span className="text-[11px] font-bold whitespace-nowrap text-blue-700 dark:text-blue-300">
+            오늘 발생
+          </span>
+        )}
       </div>
 
-      {/* 답변은 행 전체 너비로 펼쳐 오른쪽이 비지 않게 한다. */}
+      <div className="ml-auto flex md:-mt-1 md:ml-0 md:justify-center">
+        {canDismiss ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            isLoading={isDismissing}
+            onClick={() => onRequestDismiss?.(candidate)}
+          >
+            무시
+          </Button>
+        ) : null}
+      </div>
+
       {isExpanded && (
-        <div className="bg-surface-muted flex items-start gap-2 rounded-xl px-3 py-2.5 md:col-span-full dark:bg-white/5">
-          <span className="bg-brand-soft text-brand dark:bg-brand/15 shrink-0 rounded-full px-2 py-0.5 text-[11px] leading-4 font-extrabold">
-            답변
-          </span>
-          <p className="max-h-48 min-w-0 flex-1 overflow-y-auto text-xs leading-5 font-medium break-words whitespace-pre-line text-gray-600 dark:text-gray-300">
-            {visibleAnswer ||
-              (candidate.failReason === "ANSWER_FAILED"
-                ? "답변 생성에 실패했어요. 처리 단계의 오류 상태를 확인해 주세요."
-                : "저장된 답변이 없어요.")}
-          </p>
+        <div className="space-y-3 md:col-span-3">
+          <div className="bg-surface-muted flex items-start gap-2 rounded-xl px-3 py-2.5 dark:bg-white/5">
+            <span className="bg-brand-soft text-brand dark:bg-brand/15 shrink-0 rounded-full px-2 py-0.5 text-[11px] leading-4 font-extrabold">
+              답변
+            </span>
+            <p className="max-h-48 min-w-0 flex-1 overflow-y-auto text-xs leading-5 font-medium break-words whitespace-pre-line text-gray-600 dark:text-gray-300">
+              {visibleAnswer ||
+                (candidate.failReason === "ANSWER_FAILED"
+                  ? "답변 생성에 실패했어요. 처리 단계의 오류 상태를 확인해 주세요."
+                  : "저장된 답변이 없어요.")}
+            </p>
+          </div>
+          {comments.length > 0 && (
+            <div className="flex items-start gap-2 rounded-xl bg-rose-50/60 px-3 py-2.5 dark:bg-rose-500/10">
+              <span className="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] leading-4 font-extrabold text-rose-600 dark:bg-rose-500/20 dark:text-rose-300">
+                이유
+              </span>
+              <ul className="min-w-0 flex-1 space-y-1 text-xs leading-5 font-medium break-words text-gray-600 dark:text-gray-300">
+                {comments.map((comment, index) => (
+                  <li key={`${index}-${comment}`}>{comment}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <FeedbackTraceInline trace={trace} />
         </div>
       )}
-      {isExpanded && comments.length > 0 && (
-        <div className="flex items-start gap-2 rounded-xl bg-rose-50/60 px-3 py-2.5 md:col-span-full dark:bg-rose-500/10">
-          <span className="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] leading-4 font-extrabold text-rose-600 dark:bg-rose-500/20 dark:text-rose-300">
-            이유
-          </span>
-          <ul className="min-w-0 flex-1 space-y-1 text-xs leading-5 font-medium break-words text-gray-600 dark:text-gray-300">
-            {comments.map((comment, index) => (
-              <li key={`${index}-${comment}`}>{comment}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {isExpanded && <FeedbackTraceInline trace={trace} />}
     </div>
   );
 };

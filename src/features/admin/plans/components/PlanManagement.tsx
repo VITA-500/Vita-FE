@@ -21,6 +21,8 @@ import { Button } from "@/shared/ui/atoms/Button";
 import { Card } from "@/shared/ui/atoms/Card";
 import { SearchInput } from "@/shared/ui/molecules/SearchInput";
 import { AdminStatusBadge } from "@/features/admin/common/components/AdminStatusBadge";
+import { AdminPageHeader } from "@/features/admin/common/components/AdminPageHeader";
+import { AdminListToolbar } from "@/features/admin/common/components/AdminListToolbar";
 
 const targetOptions = [
   { label: "전체 대상", value: "" },
@@ -93,7 +95,7 @@ const PlanCard = ({
           aria-label="요금제 수정"
           onClick={onEdit}
         >
-          <Edit2 size={20} />
+          <Edit2 size={17} />
         </Button>
       </ActionTooltip>
       <ActionTooltip label={plan.status === "ACTIVE" ? "비활성화" : "활성화"}>
@@ -112,9 +114,9 @@ const PlanCard = ({
           onClick={onToggle}
         >
           {plan.status === "ACTIVE" ? (
-            <Ban size={20} />
+            <Ban size={17} />
           ) : (
-            <RotateCcw size={20} />
+            <RotateCcw size={17} />
           )}
         </Button>
       </ActionTooltip>
@@ -186,22 +188,20 @@ export const PlanManagement = () => {
     : 0;
   return (
     <div>
-      <div className="mb-7 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold">요금제 관리</h1>
-          <p className="text-text-secondary mt-2 text-sm font-medium">
-            요금제 설명을 수정하거나 항목을 비활성화할 수 있습니다.
-          </p>
-        </div>
-        <Button
-          size="sm"
-          leftIcon={<Plus size={16} />}
-          onClick={() => setCreating(true)}
-        >
-          요금제 등록
-        </Button>
-      </div>
-      <div className="mb-7 grid gap-3 xl:grid-cols-[minmax(280px,420px)_auto] xl:items-start xl:justify-between">
+      <AdminPageHeader
+        title="요금제 관리"
+        description="요금제 설명을 수정하거나 항목을 비활성화할 수 있습니다."
+        action={
+          <Button
+            size="sm"
+            leftIcon={<Plus size={16} />}
+            onClick={() => setCreating(true)}
+          >
+            요금제 등록
+          </Button>
+        }
+      />
+      <AdminListToolbar className="xl:grid-cols-[minmax(280px,420px)_auto] xl:items-start xl:justify-between">
         <div className="flex gap-2">
           <SearchInput
             placeholder="요금제 이름을 검색하세요"
@@ -212,7 +212,7 @@ export const PlanManagement = () => {
             <Button
               size="sm"
               variant="secondary"
-              className="h-12 shrink-0 rounded-2xl"
+              className="h-10 shrink-0 rounded-xl"
               onClick={() => {
                 setDraft("");
                 setKeyword("");
@@ -245,7 +245,7 @@ export const PlanManagement = () => {
             onChange={(v) => setPageSize(Number(v))}
           />
         </div>
-      </div>
+      </AdminListToolbar>
       {error && (
         <AdminErrorBanner
           message={
@@ -364,12 +364,12 @@ export const PlanManagement = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-12 w-12 rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                          className="h-10 w-10 rounded-lg p-0 text-gray-400 hover:text-gray-700 dark:hover:text-white"
                           aria-label="요금제 수정"
                           disabled={pendingPlanId === plan.planId}
                           onClick={() => setEditing(plan)}
                         >
-                          <Edit2 size={30} />
+                          <Edit2 size={18} />
                         </Button>
                       </ActionTooltip>
                       <ActionTooltip
@@ -380,8 +380,8 @@ export const PlanManagement = () => {
                           size="sm"
                           className={
                             plan.status === "ACTIVE"
-                              ? "h-12 w-12 rounded-lg p-0 text-rose-500 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
-                              : "h-12 w-12 rounded-lg p-0 text-emerald-500 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-300"
+                              ? "h-10 w-10 rounded-lg p-0 text-rose-500 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
+                              : "h-10 w-10 rounded-lg p-0 text-emerald-500 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-300"
                           }
                           aria-label={
                             plan.status === "ACTIVE"
@@ -392,9 +392,9 @@ export const PlanManagement = () => {
                           onClick={() => void toggle(plan)}
                         >
                           {plan.status === "ACTIVE" ? (
-                            <Ban size={30} />
+                            <Ban size={18} />
                           ) : (
-                            <RotateCcw size={30} />
+                            <RotateCcw size={18} />
                           )}
                         </Button>
                       </ActionTooltip>

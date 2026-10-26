@@ -1,9 +1,9 @@
 "use client";
 
 import type { ChatConversation } from "./chatPageTypes";
-import { GuestNewChatDialog } from "@/features/chat/conversation/components/GuestNewChatDialog";
-import { ChatSearchDialog } from "@/features/chat/search/components/ChatSearchDialog";
-import { ChatSettingsPanel } from "@/features/chat/settings/components/ChatSettingsPanel";
+import { GuestNewChatDialog } from "@/features/chat";
+import { ChatSearchDialog } from "@/features/chat";
+import { ChatSettingsPanel } from "@/features/chat";
 
 type ChatPageDialogsProps = {
   conversation: ChatConversation;

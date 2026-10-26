@@ -48,7 +48,7 @@ export type AdminStoreDetail = AdminStore & {
   lat: number;
   lng: number;
   businessHours?: string | null;
-  phone?: string;
+  phone?: string | null;
   consultServices: string[];
   providedServices: string[];
   benefitName?: string | null;

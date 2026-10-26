@@ -9,8 +9,8 @@ import {
   findChatStoreMap,
   getMatchedServices,
   readCachedChatLocation,
-} from "@/features/chat/store/lib/chatStoreMap";
-import { getChatStoreMapUserLocation } from "@/features/chat/store/lib/chatStoreMapOrigin";
+} from "@/features/chat";
+import { getChatStoreMapUserLocation } from "@/features/chat";
 import {
   buildMarkerColorInfoById,
   buildMarkerLabelById,

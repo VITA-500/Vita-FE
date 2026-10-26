@@ -5,7 +5,7 @@ export type AdminUserStatus = "ACTIVE" | "SUSPENDED" | "DELETED";
 
 export type AdminUserListItem = {
   userId: number;
-  email: string;
+  email: string | null;
   name: string;
   role: AdminUserRole;
   status: AdminUserStatus;

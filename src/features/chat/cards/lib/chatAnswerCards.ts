@@ -1,7 +1,7 @@
 import type {
   ChatMarkdownBlock,
   ChatMarkdownListItem,
-} from "@/features/chat/message/components/ChatMarkdown";
+} from "@/features/chat/message/lib/chatMarkdownParser";
 import { blockToPlanCards } from "@/features/chat/cards/lib/chatPlanCards";
 
 /**

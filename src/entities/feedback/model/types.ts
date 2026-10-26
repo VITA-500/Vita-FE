@@ -1,3 +1,5 @@
+import type { PageResponse } from "@/shared/api/response";
+
 /** 사용자가 챗봇 답변에 남기는 평가 */
 export type AnswerFeedback = "LIKE" | "DISLIKE";
 
@@ -106,10 +108,4 @@ export type AdminTraceDetail = {
   flags: AdminTraceFlag[];
   spans: AdminTraceSpan[];
 };
-export type AdminTraceListResponse = {
-  content: AdminTraceListItem[];
-  totalElements: number;
-  totalPages: number;
-  number: number;
-  size: number;
-};
+export type AdminTraceListResponse = PageResponse<AdminTraceListItem>;

@@ -34,7 +34,7 @@ export const AdminPagination = ({
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 pt-2 md:pt-0">
+    <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2 pt-1 md:pt-0">
       <div className="flex items-center justify-center gap-1">
         <Button
           variant="ghost"

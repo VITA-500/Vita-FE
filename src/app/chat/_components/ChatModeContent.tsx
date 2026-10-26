@@ -2,12 +2,12 @@
 
 import { ChatStoreMap } from "./ChatStoreMap";
 import type { ChatConversation } from "./chatPageTypes";
-import { ProfilePanel } from "@/features/auth/components/ProfilePanel";
-import { ChatConversationContent } from "@/features/chat/conversation/components/ChatConversationContent";
-import { ChatStoreMapSlotProvider } from "@/features/chat/store/components/ChatStoreMapSlot";
-import type { ChatMode } from "@/features/chat/types";
-import { StoreMapPanel } from "@/widgets/store-map-panel/StoreMapPanel";
-import type { StoreMapInitialAction } from "@/features/store/types";
+import { ProfilePanel } from "@/features/auth";
+import { ChatConversationContent } from "@/features/chat";
+import { ChatStoreMapSlotProvider } from "@/features/chat";
+import type { ChatMode } from "@/features/chat";
+import { StoreMapPanel } from "@/widgets/store-map-panel";
+import type { StoreMapInitialAction } from "@/features/store";
 import type { ChatStoreMap as ChatStoreMapData } from "@/entities/chat";
 
 /** 답변 속 매장 지도 블록. 채팅(feature)과 매장 지도(feature)를 여기서 조립한다. */

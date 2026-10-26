@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { ChatMode } from "@/features/chat/types";
+import type { ChatMode } from "@/features/chat";
 import { useChatSidebarOpen } from "./useChatSidebarOpen";
 
 const viewport = vi.hoisted(() => ({ isDesktop: true }));

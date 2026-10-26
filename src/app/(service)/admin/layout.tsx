@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { AdminAuthGate } from "@/features/admin/common/components/AdminAuthGate";
-import { AdminShell } from "@/features/admin/common/components/AdminShell";
-import { ActionStatusProvider } from "@/features/admin/common/context/ActionStatusContext";
+import { AdminAuthGate } from "@/features/admin";
+import { AdminShell } from "@/features/admin";
+import { ActionStatusProvider } from "@/features/admin";
 
 const AdminLayout = ({ children }: { children: ReactNode }) => (
   <AdminAuthGate>

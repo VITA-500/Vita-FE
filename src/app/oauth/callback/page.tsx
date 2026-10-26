@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { authService } from "@/features/auth/lib/authService";
+import { authService } from "@/features/auth";
 import {
   buildLoginHref,
   LOGIN_RETURN_PARAM,
@@ -23,11 +23,19 @@ const OAuthCallbackContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
+  const returnToRef = useRef<string | null | undefined>(undefined);
+  const requestRef = useRef<ReturnType<typeof authService.getMe> | null>(null);
+  const leavingRef = useRef(false);
 
   useEffect(() => {
+    let active = true;
     const completeOAuthLogin = async () => {
       // 소셜 로그인을 시작하기 전에 보관해 둔 돌아갈 화면. 실패해 로그인 화면으로 돌아가도 이어서 쓴다.
-      const returnTo = takeRememberedLoginReturnTo();
+      if (returnToRef.current === undefined)
+        returnToRef.current = takeRememberedLoginReturnTo();
+      const returnTo = returnToRef.current;
+      await Promise.resolve();
+      if (!active || leavingRef.current) return;
 
       if (error) {
         const message =
@@ -42,13 +50,16 @@ const OAuthCallbackContent = () => {
       }
 
       try {
-        await authService.getMe();
+        requestRef.current ??= authService.getMe();
+        await requestRef.current;
+        if (!active || leavingRef.current) return;
         tokenStorage.setAuthHint();
         window.dispatchEvent(new Event("vita-auth-changed"));
         showToast("로그인되었습니다.");
         // 로그인 화면에 들어오기 전 화면(예: 매장 지도)으로 돌아간다.
         router.replace(returnTo ?? routes.chat);
       } catch {
+        if (!active || leavingRef.current) return;
         tokenStorage.removeAuthHint();
         showToast("로그인 정보를 확인하지 못했습니다.");
         router.replace(buildLoginHref(returnTo));
@@ -56,6 +67,9 @@ const OAuthCallbackContent = () => {
     };
 
     void completeOAuthLogin();
+    return () => {
+      active = false;
+    };
   }, [error, router]);
 
   return (
@@ -75,6 +89,11 @@ const OAuthCallbackContent = () => {
 
         <Link
           href={routes.login}
+          onClick={(event) => {
+            event.preventDefault();
+            leavingRef.current = true;
+            router.replace(buildLoginHref(returnToRef.current));
+          }}
           className="mt-7 inline-flex h-11 items-center justify-center rounded-full bg-gray-100 px-5 text-sm font-bold text-gray-700 transition hover:bg-gray-200 dark:bg-white/10 dark:text-gray-200 dark:hover:bg-white/15"
         >
           로그인으로 돌아가기

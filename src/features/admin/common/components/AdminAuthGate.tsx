@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect } from "react";
-import { useAuthUser } from "@/entities/user";
+import { buildLoginHref, useAuthUser } from "@/entities/user";
 import { routes } from "@/shared/constants/routes";
 import { ButtonLink } from "@/shared/ui/atoms/Button";
 import { Card, CardContent } from "@/shared/ui/atoms/Card";
@@ -19,7 +19,9 @@ export const AdminAuthGate = ({ children }: AdminAuthGateProps) => {
   useEffect(() => {
     if (!isReady || isLoading || isAuthenticated) return;
 
-    router.replace(routes.login);
+    router.replace(
+      buildLoginHref(`${window.location.pathname}${window.location.search}`),
+    );
   }, [isAuthenticated, isLoading, isReady, router]);
 
   if (!isReady || isLoading) {

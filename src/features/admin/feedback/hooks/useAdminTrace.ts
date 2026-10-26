@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { adminAnswerFeedbackApi } from "@/entities/feedback";
+import { mockAdminTrace } from "@/features/admin/common/lib/adminData";
 import { env } from "@/shared/config/env";
 
 export const useAdminTrace = (messageId: number | null, enabled = true) => {
@@ -18,6 +19,14 @@ export const useAdminTrace = (messageId: number | null, enabled = true) => {
         : adminAnswerFeedbackApi.getTrace(traceId);
     },
   });
+
+  if (!env.apiBaseUrl) {
+    return {
+      error: null,
+      isLoading: false,
+      trace: enabled && messageId ? { ...mockAdminTrace, messageId } : null,
+    };
+  }
 
   return {
     error: query.error ? "처리 과정을 불러오지 못했어요." : null,

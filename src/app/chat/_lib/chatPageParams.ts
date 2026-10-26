@@ -1,9 +1,6 @@
 import type { StoreRouteMode } from "@/entities/route";
-import type { ChatMode } from "@/features/chat/types";
-import type {
-  MapCategory,
-  StoreMapInitialAction,
-} from "@/features/store/types";
+import type { ChatMode } from "@/features/chat";
+import type { MapCategory, StoreMapInitialAction } from "@/features/store";
 
 type SearchParamsReader = Pick<URLSearchParams, "get" | "getAll">;
 

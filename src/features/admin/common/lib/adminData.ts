@@ -1,4 +1,7 @@
-import type { AdminAnswerFeedbackStats } from "@/entities/feedback";
+import type {
+  AdminAnswerFeedbackStats,
+  AdminTraceDetail,
+} from "@/entities/feedback";
 import type { AdminFaq } from "@/entities/faq";
 import type { AdminStore, AdminStoreDetail } from "@/entities/store";
 import { adminFaqCategories } from "@/entities/faq";
@@ -121,6 +124,64 @@ export const mockAnswerFeedbackStats: AdminAnswerFeedbackStats = {
       failReason: "DISLIKED",
       count: 7,
       lastOccurredAt: "2026-10-05T18:32:00",
+    },
+  ],
+};
+
+/** API가 닫힌 로컬·Storybook에서 답변 처리 타임라인을 확인하기 위한 목데이터. */
+export const mockAdminTrace: AdminTraceDetail = {
+  id: 101,
+  messageId: 1,
+  createdAt: "2026-10-24T14:32:00",
+  appVersion: "storybook-preview",
+  config: { faq_threshold: 0.83, model: "preview-model" },
+  totalMs: 1820,
+  flags: [
+    {
+      code: "SEARCH_FAILURE_SUSPECTED",
+      message: "1위 후보가 기준 유사도에 못 미침",
+      spanId: 102,
+    },
+    { code: "SLOW", message: "답변 생성 단계가 느림", spanId: 103 },
+  ],
+  spans: [
+    {
+      id: 101,
+      type: "transform",
+      startedAt: "2026-10-24T14:32:00.000",
+      endedAt: "2026-10-24T14:32:00.180",
+      tookMs: 180,
+      history: {
+        question: "해외에서 데이터가 갑자기 안 터질 때 어떻게 하나요?",
+        normalized_question: "해외 데이터 연결 문제 해결 방법",
+      },
+    },
+    {
+      id: 102,
+      type: "faq_retrieve",
+      startedAt: "2026-10-24T14:32:00.180",
+      endedAt: "2026-10-24T14:32:00.420",
+      tookMs: 240,
+      history: {
+        candidates: [
+          { similarity: 0.71, passed_threshold: false },
+          { similarity: 0.64, passed_threshold: false },
+        ],
+      },
+    },
+    {
+      id: 103,
+      type: "generation",
+      startedAt: "2026-10-24T14:32:00.420",
+      endedAt: "2026-10-24T14:32:01.820",
+      tookMs: 1400,
+      history: {
+        first_delta_ms: 640,
+        delta_count: 12,
+        prompt_tokens: 842,
+        completion_tokens: 126,
+        total_tokens: 968,
+      },
     },
   ],
 };

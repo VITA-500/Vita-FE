@@ -6,7 +6,7 @@ import type { AdminFaq } from "@/entities/faq";
 
 type FaqStatusModalProps = {
   faq?: AdminFaq;
-  mode: "activate" | "delete";
+  mode: "activate" | "deactivate";
   onClose: () => void;
   onConfirm: () => void;
 };
@@ -17,10 +17,11 @@ const modalCopy = {
     description: "활성화하면 FAQ가 다시 노출됩니다.",
     title: "FAQ를 활성화할까요?",
   },
-  delete: {
-    confirmLabel: "삭제",
-    description: "삭제하면 FAQ가 비활성 상태로 전환됩니다.",
-    title: "FAQ를 삭제할까요?",
+  deactivate: {
+    confirmLabel: "비활성화",
+    description:
+      "비활성화하면 FAQ가 사용자 답변에 노출되지 않고 보관 상태로 전환됩니다. 필요하면 다시 활성화할 수 있습니다.",
+    title: "FAQ를 비활성화할까요?",
   },
 } as const;
 
@@ -46,7 +47,7 @@ export const FaqStatusModal = ({
             취소
           </Button>
           <Button
-            variant={mode === "delete" ? "danger" : "primary"}
+            variant={mode === "deactivate" ? "secondary" : "primary"}
             size="sm"
             onClick={onConfirm}
           >

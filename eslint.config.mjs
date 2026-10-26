@@ -32,6 +32,12 @@ const entityDeepImport = {
   regex: "^@/entities/[^/]+/",
   message: "entity는 공개 API(@/entities/{entity})로만 import한다.",
 };
+const publicApiImport = (layer, ownSlice) => ({
+  regex: ownSlice
+    ? `^@/${layer}/(?!${escapeRegex(ownSlice)}(/|$))[^/]+/`
+    : `^@/${layer}/[^/]+/`,
+  message: `${layer} slice 외부에서는 공개 API(@/${layer}/{slice})만 사용한다.`,
+});
 
 const boundaryRules = (patterns) => ({
   "no-restricted-imports": [BOUNDARY_LEVEL, { patterns }],
@@ -41,7 +47,7 @@ const sharedBoundary = {
   files: [`src/shared/${sourceFiles}`],
   rules: boundaryRules([
     upperLayerImport(
-      ["app", "features", "entities"],
+      ["app", "widgets", "features", "entities"],
       "shared는 app·features·entities를 import하지 않는다.",
     ),
   ]),
@@ -54,7 +60,7 @@ const entityBoundaries = listSlices("entities").map((slice) => {
     files: [`src/entities/${slice}/${sourceFiles}`],
     rules: boundaryRules([
       upperLayerImport(
-        ["app", "features"],
+        ["app", "widgets", "features"],
         "entities는 app·features를 import하지 않는다.",
       ),
       {
@@ -72,7 +78,10 @@ const featureBoundaries = listSlices("features").map((slice) => {
   return {
     files: [`src/features/${slice}/${sourceFiles}`],
     rules: boundaryRules([
-      upperLayerImport(["app"], "features는 app을 import하지 않는다."),
+      upperLayerImport(
+        ["app", "widgets"],
+        "features는 app·widgets를 import하지 않는다.",
+      ),
       {
         regex: `^@/features/(?!${name}(/|$))`,
         message:
@@ -85,8 +94,24 @@ const featureBoundaries = listSlices("features").map((slice) => {
 
 const appBoundary = {
   files: [`src/app/${sourceFiles}`],
-  rules: boundaryRules([entityDeepImport]),
+  rules: boundaryRules([
+    entityDeepImport,
+    publicApiImport("features"),
+    publicApiImport("widgets"),
+  ]),
 };
+const widgetBoundaries = listSlices("widgets").map((slice) => ({
+  files: [`src/widgets/${slice}/${sourceFiles}`],
+  rules: boundaryRules([
+    upperLayerImport(["app"], "widgets는 app을 import하지 않는다."),
+    {
+      regex: `^@/widgets/(?!${escapeRegex(slice)}(/|$))`,
+      message: "widget끼리 직접 import하지 않는다.",
+    },
+    entityDeepImport,
+    publicApiImport("features"),
+  ]),
+}));
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -94,6 +119,7 @@ const eslintConfig = defineConfig([
   sharedBoundary,
   ...entityBoundaries,
   ...featureBoundaries,
+  ...widgetBoundaries,
   appBoundary,
   // Override default ignores of eslint-config-next.
   globalIgnores([

@@ -1,5 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AdminShell } from "@/features/admin/common/components/AdminShell";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+    },
+  },
+});
 
 const meta = {
   title: "Admin/AdminShell",
@@ -14,6 +23,13 @@ const meta = {
       navigation: { pathname: "/admin" },
     },
   },
+  decorators: [
+    (Story) => (
+      <QueryClientProvider client={queryClient}>
+        <Story />
+      </QueryClientProvider>
+    ),
+  ],
 } satisfies Meta<typeof AdminShell>;
 
 export default meta;

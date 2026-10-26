@@ -4,11 +4,11 @@ import { cn } from "@/shared/lib/cn";
 
 const variantStyles = {
   primary:
-    "bg-brand text-white shadow-sm shadow-brand/20 hover:bg-brand-hover focus-visible:ring-brand/30",
+    "bg-brand text-white shadow-sm shadow-brand/15 hover:bg-brand-hover focus-visible:ring-brand/30",
   secondary:
-    "border border-border bg-white text-gray-900 shadow-sm hover:bg-gray-50 focus-visible:ring-gray-300 dark:border-white/10 dark:bg-zinc-950 dark:text-white dark:hover:bg-white/10 dark:focus-visible:ring-white/20",
+    "border border-border bg-white text-gray-800 hover:bg-gray-50 focus-visible:ring-gray-300 dark:border-white/10 dark:bg-zinc-950 dark:text-white dark:hover:bg-white/10 dark:focus-visible:ring-white/20",
   outline:
-    "border border-brand bg-white text-brand shadow-sm hover:bg-brand-soft focus-visible:ring-brand/30 dark:bg-zinc-950 dark:hover:bg-brand/10",
+    "border border-brand/60 bg-white text-brand hover:bg-brand-soft focus-visible:ring-brand/30 dark:bg-zinc-950 dark:hover:bg-brand/10",
   ghost:
     "bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-950 focus-visible:ring-gray-300 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-white/20",
   danger:
@@ -19,9 +19,9 @@ const variantStyles = {
 
 const sizeStyles = {
   xs: "h-8 px-3 text-xs",
-  sm: "h-10 px-4 text-sm",
-  md: "h-12 px-5 text-sm",
-  lg: "h-14 px-7 text-base",
+  sm: "h-9 px-3.5 text-sm",
+  md: "h-11 px-4 text-sm",
+  lg: "h-12 px-6 text-base",
 } as const;
 
 export type ButtonVariant = keyof typeof variantStyles;
@@ -40,7 +40,7 @@ export const buttonClassName = ({
   size = "md",
 }: ButtonStyleProps & { className?: string }) =>
   cn(
-    "inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl font-bold whitespace-nowrap transition outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 dark:focus-visible:ring-offset-zinc-950",
+    "inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl font-bold whitespace-nowrap transition outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 dark:focus-visible:ring-offset-zinc-950",
     variantStyles[variant],
     sizeStyles[size],
     fullWidth && "w-full",

@@ -14,12 +14,13 @@ export const PromptSuggestions = ({
     </p>
 
     <div id="vita-suggestion-tour" className="space-y-4">
-      {suggestedPrompts.map((prompt) => (
+      {suggestedPrompts.map((prompt, index) => (
         <button
           key={prompt.title}
           type="button"
           onClick={() => onSelectPrompt(prompt.prompt)}
-          className="group border-border hover:border-brand/50 hover:bg-surface-brand-hover dark:hover:bg-surface-brand-hover flex w-full items-center justify-between gap-4 rounded-2xl border bg-white px-6 py-5 text-left transition-[background-color,border-color,box-shadow] duration-150 hover:shadow-sm dark:border-white/10 dark:bg-zinc-950"
+          style={{ animationDelay: `${index * 90}ms` }}
+          className="group border-border hover:border-brand/50 hover:bg-surface-brand-hover dark:hover:bg-surface-brand-hover flex w-full animate-[prompt-suggestion-rise_480ms_cubic-bezier(0.16,1,0.3,1)_both] items-center justify-between gap-4 rounded-2xl border bg-white px-6 py-5 text-left transition-[background-color,border-color,box-shadow] duration-150 hover:shadow-sm dark:border-white/10 dark:bg-zinc-950"
         >
           <span className="min-w-0">
             <span className="text-text-primary block text-sm font-bold dark:text-white">

@@ -91,21 +91,29 @@ const ProfilePanelContent = ({
     setFeedbackMessage("");
 
     const trimmedName = name.trim();
-    const trimmedPassword = password.trim();
 
     if (!trimmedName) {
       setErrorMessage("이름을 입력해주세요.");
       return;
     }
 
-    if (trimmedPassword && trimmedPassword.length < 8) {
-      setErrorMessage("비밀번호는 8자 이상이어야 합니다.");
+    if (
+      password &&
+      (password.length < 8 ||
+        !/[A-Za-z]/.test(password) ||
+        !/[0-9]/.test(password) ||
+        !/[^A-Za-z0-9\s]/.test(password) ||
+        /\s/.test(password))
+    ) {
+      setErrorMessage(
+        "비밀번호는 공백 없이 8자 이상, 영문·숫자·특수문자를 포함해야 합니다.",
+      );
       return;
     }
 
     const request = {
       ...(trimmedName !== user.name ? { name: trimmedName } : {}),
-      ...(trimmedPassword ? { password: trimmedPassword } : {}),
+      ...(password ? { password } : {}),
     };
 
     if (!request.name && !request.password) {

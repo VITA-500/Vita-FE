@@ -18,14 +18,17 @@ export const AdminTableShell = ({
   paginationClassName,
   tableWrapperClassName,
 }: AdminTableShellProps) => (
-  <Card padding="none" className={cn("overflow-hidden", className)}>
+  <Card
+    padding="none"
+    className={cn("border-border-soft overflow-hidden shadow-none", className)}
+  >
     <div className={cn("overflow-x-auto", tableWrapperClassName)}>
       {children}
     </div>
     {pagination && (
       <div
         className={cn(
-          "border-border-soft flex items-center justify-center gap-1 border-t px-5 py-4 dark:border-white/10",
+          "border-border-soft bg-surface-muted/30 flex items-center justify-center gap-1 border-t px-5 py-3 dark:border-white/10 dark:bg-white/[0.02]",
           paginationClassName,
         )}
       >

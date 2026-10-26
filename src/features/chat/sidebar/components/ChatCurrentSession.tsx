@@ -67,7 +67,7 @@ export const ChatCurrentSession = ({
         )}
       </p>
 
-      <div className="group relative flex h-11 w-[296px] items-center pr-3 text-sm font-semibold">
+      <div className="group relative flex h-11 w-[276px] items-center pr-3 text-sm font-semibold">
         {isOpen && (
           <span
             aria-hidden="true"

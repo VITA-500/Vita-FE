@@ -30,6 +30,7 @@ app  →  widgets  →  features  →  entities  →  shared
 - slice 외부에서는 공개 API(`index.ts`)로만 import한다. `@/entities/store`는 허용, `@/entities/store/model/storeMappers` 같은 내부 경로 import는 금지.
 - route path, UI text, env 접근은 문자열을 흩뿌리지 않고 `shared/constants`, `shared/config`를 우선 사용한다.
 - 위 규칙은 `eslint.config.mjs`의 `no-restricted-imports`로 검사한다. 현재 단계는 `warn`이라 커밋·빌드를 막지 않으므로, PR 전에 `npm run lint` 경고를 0으로 맞춘다. `error` 전환은 팀 합의 후 진행한다.
+  - `features`와 `widgets`의 외부 참조는 각 slice의 `index.ts`를 사용한다. widget 간 직접 참조 및 하위 계층의 widget 참조도 검사한다.
 - 상대 경로(`../../`)로 계층을 넘는 import는 검사되지 않으므로 계층 밖은 `@/` 경로로 import한다. 상대 경로는 같은 라우트 안(`./_components` 등)에서만 쓴다.
 
 ## Folder Structure

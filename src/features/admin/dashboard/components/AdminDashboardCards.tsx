@@ -98,6 +98,7 @@ export const DashboardMetric = ({
   icon,
   priority,
   description,
+  action,
 }: {
   label: string;
   value?: number;
@@ -110,17 +111,18 @@ export const DashboardMetric = ({
   icon: ReactNode;
   priority: string;
   description: string;
+  action?: ReactNode;
 }) => {
   const styles = metricToneStyles[tone];
 
   return (
-    <Card className={cn("relative overflow-hidden", styles.card)}>
+    <Card className={cn("relative overflow-hidden shadow-none", styles.card)}>
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <p className={cn("text-[11px] font-semibold", styles.priority)}>
             {priority}
           </p>
-          <h2 className="mt-1 text-sm font-bold text-gray-950 dark:text-white">
+          <h2 className="mt-1 text-sm font-bold break-keep text-gray-950 dark:text-white">
             {label}
           </h2>
         </div>
@@ -142,9 +144,10 @@ export const DashboardMetric = ({
         />
         {!isLoading && !hasError && extra}
       </div>
-      <p className="mt-2 max-w-md text-xs leading-5 font-medium text-gray-600 dark:text-gray-300">
+      <p className="mt-2 max-w-md text-xs leading-5 font-medium break-keep text-gray-600 dark:text-gray-300">
         {description}
       </p>
+      {action && <div className="mt-3">{action}</div>}
     </Card>
   );
 };
@@ -205,7 +208,7 @@ export const FeedbackReactionsCard = ({
       : null;
 
   return (
-    <Card className="border-gray-200 bg-white dark:border-white/10 dark:bg-zinc-900">
+    <Card className="border-gray-200 bg-white shadow-none dark:border-white/10 dark:bg-zinc-900">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">

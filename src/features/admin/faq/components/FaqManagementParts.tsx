@@ -2,7 +2,7 @@ import { Card } from "@/shared/ui/atoms/Card";
 
 export const FaqSkeletonRow = () => (
   <tr className="h-20" aria-hidden="true">
-    {Array.from({ length: 5 }, (_, index) => (
+    {Array.from({ length: 6 }, (_, index) => (
       <td className="px-4 py-4" key={index}>
         <div
           className={`bg-surface-muted h-4 animate-pulse rounded-full dark:bg-white/10 ${index === 0 ? "w-12" : index === 2 ? "w-24" : "mx-auto w-20"}`}

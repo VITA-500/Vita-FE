@@ -1,8 +1,54 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PlanFormModal } from "./PlanFormModal";
+import { previewPlans } from "@/features/admin/common/lib/adminPreviewData";
 
 describe("PlanFormModal", () => {
+  beforeEach(() => {
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: vi.fn(),
+    });
+  });
+  it("accepts a valid age range without imposing target-specific policy", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <PlanFormModal
+        isOpen
+        mode="edit"
+        initialValues={{ ...previewPlans[1], minAge: 18, maxAge: 39 }}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+    fireEvent.submit(document.getElementById("plan-form")!);
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          targetGroup: "YOUTH",
+          minAge: 18,
+          maxAge: 39,
+        }),
+      ),
+    );
+  });
+  it("rejects an age outside the BE 0–150 range", async () => {
+    const onSave = vi.fn();
+    render(
+      <PlanFormModal
+        isOpen
+        mode="edit"
+        initialValues={{ ...previewPlans[1], minAge: 18, maxAge: 151 }}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+    fireEvent.submit(document.getElementById("plan-form")!);
+    expect(
+      await screen.findByText("가입 연령은 0~150세의 정수로 입력해 주세요."),
+    ).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
+  });
   afterEach(() => {
     vi.restoreAllMocks();
   });
