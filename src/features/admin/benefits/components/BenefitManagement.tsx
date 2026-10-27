@@ -221,7 +221,7 @@ export const BenefitManagement = ({
       {error && <AdminErrorBanner message={error} />}
 
       {/* 모바일: 카드 목록 */}
-      <div className="space-y-3 md:hidden">
+      <div className="space-y-3 lg:hidden">
         {isLoading ? (
           <Card>
             <p className="text-text-secondary py-6 text-center text-sm font-semibold">
@@ -262,7 +262,7 @@ export const BenefitManagement = ({
 
       {/* 데스크톱: 표 */}
       <AdminTableShell
-        className="hidden md:block"
+        className="hidden lg:block"
         pagination={
           !isLoading && benefits.length > 0 ? (
             <AdminPagination

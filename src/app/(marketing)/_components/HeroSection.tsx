@@ -35,10 +35,10 @@ const HeroSection = () => {
             </h1>
 
             <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-gray-600 sm:mt-5 sm:text-lg sm:leading-8 sm:whitespace-pre-line lg:mx-0 dark:text-gray-400">
-              <span className="block sm:hidden">
-                궁금한 내용을 물어보면 필요한 정보를 찾아 정리하고
-                <br />
-                가까운 매장까지 한 번에 안내해요.
+              {/* 모바일은 고정 줄바꿈 대신 자연 줄바꿈 + 균형 맞춤. 고정 <br />은 좁은 화면에서 "하고"만 한 줄로 남았다. */}
+              <span className="block text-balance sm:hidden">
+                궁금한 내용을 물어보면 필요한 정보를 찾아 정리하고 가까운
+                매장까지 한 번에 안내해요.
               </span>
               <span className="hidden sm:block">{t.home.heroDescription}</span>
             </p>

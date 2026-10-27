@@ -16,7 +16,7 @@ const HomeCtaSection = () => {
     <section className="bg-surface-warm px-5 py-16 text-gray-950 sm:px-6 sm:py-20 dark:text-white">
       <MotionReveal>
         <div className="mx-auto flex max-w-[1200px] flex-col items-center text-center">
-          <h2 className="text-[30px] leading-[1.22] font-extrabold sm:text-5xl sm:leading-[1.25]">
+          <h2 className="text-[26px] leading-[1.22] font-extrabold min-[360px]:text-[30px] sm:text-5xl sm:leading-[1.25]">
             <span className="block">{titleLead}</span>
             <span className="text-brand block whitespace-nowrap">
               {titleHighlight}

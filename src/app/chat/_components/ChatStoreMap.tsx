@@ -104,14 +104,15 @@ export const ChatStoreMap = ({
       </div>
 
       <div className="border-t border-gray-200 bg-white p-3 dark:border-white/10 dark:bg-zinc-950">
-        {/* 제휴 매장은 서비스 대신 혜택명이 들어 있어 "○○ 가능한 매장" 안내가 의미가 없다. */}
+        {/* 제휴 매장은 서비스 대신 혜택명이 들어 있어 "○○ 조건에 맞는 매장" 안내가 의미가 없다.
+            "가능한 매장"으로 쓰면 "주차 가능", "방문예약 가능" 같은 서비스에서 "가능 가능한"으로 겹친다. */}
         {activeServices.length > 0 && storeMap.type !== "PARTNER" && (
           <div className="mb-2 flex items-start gap-2 px-1 text-xs leading-5 font-bold text-gray-500 dark:text-gray-400">
             <Tag className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span className="min-w-0">
               {hasFullMatchStore
-                ? `${activeServices.join(", ")} 가능한 매장을 먼저 보여드려요.`
-                : `반경 ${CHAT_STORE_RADIUS_KM}km 안에 ${activeServices.join(", ")} 가능한 매장이 없어 가까운 매장을 보여드려요.`}
+                ? `${activeServices.join(", ")} 조건에 맞는 매장을 먼저 보여드려요.`
+                : `반경 ${CHAT_STORE_RADIUS_KM}km 안에 ${activeServices.join(", ")} 조건에 맞는 매장이 없어 가까운 매장을 보여드려요.`}
             </span>
           </div>
         )}
