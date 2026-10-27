@@ -174,11 +174,14 @@ export const useStoreFilterSearchActions = ({
     setSearchPoint(null);
     setSoloStoreId("");
     setCameraOwner("user");
-    void searchVisibleArea("tag", { viewport }).then((results) => {
-      if (results && filterStoresByServices(results).length === 0) {
-        showToast("이 지역에는 선택한 서비스를 제공하는 매장이 없어요.");
-      }
-    });
+    // 드래그 직후 setSearchAnchorSource("map")는 아직 반영 전이라 기준점을 직접 넘긴다(옮긴 화면 중심 기준).
+    void searchVisibleArea("tag", { viewport, anchorSource: "map" }).then(
+      (results) => {
+        if (results && filterStoresByServices(results).length === 0) {
+          showToast("이 지역에는 선택한 서비스를 제공하는 매장이 없어요.");
+        }
+      },
+    );
 
     return true;
   };
