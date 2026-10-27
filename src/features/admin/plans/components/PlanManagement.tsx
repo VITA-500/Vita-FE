@@ -255,7 +255,7 @@ export const PlanManagement = () => {
           }
         />
       )}
-      <div className="space-y-3 md:hidden">
+      <div className="space-y-3 lg:hidden">
         {isLoading ? (
           <Card>
             <p className="text-text-secondary py-6 text-center text-sm font-semibold">
@@ -290,7 +290,7 @@ export const PlanManagement = () => {
         )}
       </div>
       <AdminTableShell
-        className="hidden md:block"
+        className="hidden lg:block"
         pagination={
           plans.length > 0 && (
             <AdminPagination
