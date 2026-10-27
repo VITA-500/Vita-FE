@@ -45,6 +45,9 @@ export const useChatAutoScroll = ({
   const streamingScrollKey = `${streamingReply?.content.length ?? 0}:${
     streamingReply?.isPreparingBlock ? "block" : ""
   }`;
+  const latestMessage = messages[messages.length - 1];
+  const latestUserMessageId =
+    latestMessage?.role === "user" ? latestMessage.id : null;
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -73,13 +76,11 @@ export const useChatAutoScroll = ({
 
     // 사용자가 새 질문을 보냈으면(끝 메시지가 처음 보는 사용자 질문) 이전 답변을 읽던 중이어도 맨 아래로 이동한다.
     // 상담을 불러온 직후(하이드레이션)에도 끝이 사용자 질문일 수 있지만, 그때도 맨 아래가 맞다.
-    const lastMessage = messages[messages.length - 1];
-
     if (
-      lastMessage.role === "user" &&
-      lastMessage.id !== lastUserMessageIdRef.current
+      latestUserMessageId &&
+      latestUserMessageId !== lastUserMessageIdRef.current
     ) {
-      lastUserMessageIdRef.current = lastMessage.id;
+      lastUserMessageIdRef.current = latestUserMessageId;
       shouldJumpToBottomRef.current = true;
       isAtLatestRef.current = true;
       // "최신 대화 보기" 버튼 상태는 아래 scrollTo 뒤 scroll 이벤트에서 갱신된다.
@@ -109,6 +110,7 @@ export const useChatAutoScroll = ({
     activeMode,
     chatStatus,
     isStreamingAnswer,
+    latestUserMessageId,
     messageScrollKey,
     messages.length,
     streamingScrollKey,

@@ -179,7 +179,7 @@ export const FaqManagement = () => {
 
       {faqError && <AdminErrorBanner message={faqError} />}
 
-      <div className="space-y-3 md:hidden">
+      <div className="space-y-3 lg:hidden">
         {shouldShowSkeletonRows ? (
           Array.from(
             { length: Math.min(visibleSkeletonRows, 4) },
@@ -233,7 +233,7 @@ export const FaqManagement = () => {
       </div>
 
       <AdminTableShell
-        className="hidden md:block"
+        className="hidden lg:block"
         pagination={
           !shouldShowSkeletonRows && faqs.length > 0 ? (
             <AdminPagination
@@ -248,7 +248,7 @@ export const FaqManagement = () => {
         <table className="w-full table-fixed border-collapse text-sm">
           <thead className="bg-surface-muted text-[11px] font-semibold text-gray-400 dark:bg-white/5">
             <tr>
-              <th className="w-[72px] px-5 py-3 text-left">ID</th>
+              <th className="w-[96px] px-5 py-3 text-left">ID</th>
               <th className="px-4 py-3 text-left">질문 / 답변 요약</th>
               <th className="w-[20%] px-4 py-3 text-left">카테고리</th>
               <th className="w-[150px] px-4 py-3 text-center">상태</th>
@@ -277,7 +277,7 @@ export const FaqManagement = () => {
                     key={faq.faqId}
                     className="hover:bg-surface-muted/70 min-h-16 transition dark:hover:bg-white/5"
                   >
-                    <td className="px-5 py-3 text-xs font-bold text-gray-400">
+                    <td className="px-5 py-3 text-xs font-bold whitespace-nowrap text-gray-400">
                       #{faq.faqId}
                     </td>
                     <td className="px-4 py-3 break-keep whitespace-normal">

@@ -198,10 +198,15 @@
   }
 }
 
+/* 한글은 글자 단위가 아니라 단어(공백) 단위로 줄바꿈한다(단어 중간 끊김 방지).
+   공백 없는 긴 문자열(URL 등)은 칸을 넘치지 않게 접는다.
+   anywhere 대신 break-word를 쓴다. 표·flex 칸의 최소 폭 계산에 영향을 주지 않기 위해서다. */
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .hero-visual-frame {
