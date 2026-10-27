@@ -35,11 +35,15 @@ VITA 프론트엔드는 가상 통신사의 AI 상담 서비스와 위치 기반
 - TypeScript
 - Tailwind CSS 4
 - Storybook 10
+- TanStack Query
+- React Hook Form + Zod
 - next-themes
 - motion
 - driver.js
+- Recharts
 - lucide-react
 - Kakao Maps SDK
+- Vitest + Testing Library
 
 ---
 
@@ -57,9 +61,11 @@ VITA 프론트엔드는 가상 통신사의 AI 상담 서비스와 위치 기반
 | 매장    | 매장 검색 / 목록 / 상세 카드   | 매장명, 주소, 전화번호, 영업 상태 검색 및 선택 매장 상세 정보 표시            |
 | 매장    | 이동수단별 길찾기              | 도보, 자동차, 자전거, 대중교통 mode 기반 경로 표시                            |
 | 매장    | 예약 흐름                      | 예약 가능 시간 선택과 매장 예약 요청 흐름                                     |
-| 관리자  | 관리자 대시보드                | FAQ, 매장 관리 현황을 확인할 수 있는 관리자 화면                              |
-| 관리자  | FAQ 관리                       | FAQ 목록, 필터, 정렬, 등록/수정/삭제 흐름을 고려한 관리 UI                    |
-| 관리자  | 매장 관리                      | 매장 정보와 서비스 항목을 관리할 수 있는 관리자 UI                            |
+| 관리자  | 관리자 대시보드                | FAQ 보완 대상, 답변 품질 문제, 매장·제휴·FAQ·회원 운영 현황을 확인하는 화면   |
+| 관리자  | 답변 피드백                    | 아쉬워요·답변 실패·응답 품질 문제를 모아 보고 처리 단계(trace)를 확인         |
+| 관리자  | FAQ 관리                       | FAQ 목록, 필터, 정렬, 등록/수정/비활성화 관리 UI                              |
+| 관리자  | 매장·제휴 관리                 | 대리점·제휴점 정보와 서비스·제휴 혜택을 관리하는 UI                           |
+| 관리자  | 회원·요금제 관리               | 회원 상태(정지) 관리, 요금제 등록·수정·활성화 관리 UI                         |
 | 공통    | 디자인 시스템                  | Button, Modal, Card, Input, Select 등 재사용 가능한 공통 UI 구성              |
 | 공통    | 반응형 / 다크 모드             | 모바일, 태블릿, 데스크톱 대응 및 테마 전환 지원                               |
 
@@ -104,28 +110,43 @@ NEXT_PUBLIC_KAKAO_MAP_APP_KEY=카카오맵_JAVASCRIPT_KEY
 
 ```text
 src/
-  app/                 Next.js 라우트와 전역 설정
-    (auth)/            인증 관련 화면
-    (marketing)/       랜딩 페이지 레이아웃
-    (service)/         서비스 화면 레이아웃
-    chat/              AI 상담 화면
-    admin/             관리자 대시보드, FAQ/매장 관리 화면
+  app/                 Next.js 라우트와 전역 설정(providers, layout)
+    (marketing)/       랜딩 페이지와 랜딩 섹션(_components)
+    (auth)/login/      로그인·회원가입 화면
+    (service)/admin/   관리자 대시보드, 답변 피드백, FAQ·대리점·제휴·회원·요금제 관리
+    chat/              AI 상담 화면(채팅 / 매장 지도 / 프로필 모드)
+    oauth/callback/    소셜 로그인 콜백
 
-  features/            도메인/기능 단위 코드
-    admin/             관리자 대시보드, 회원·FAQ·매장·제휴 혜택 관리 UI와 API 상태
-    auth/              인증 상태, 로그인/회원가입/OAuth API adapter
-    home/              랜딩 화면 섹션
-    chat/              채팅 UI, 투어, 채팅 타입, 비로그인 채팅 UX
-    store/             매장 위치 타입, API adapter, 카카오맵 로더, 지도 UI
+  widgets/             여러 feature를 화면 영역으로 조립
+    chat-sidebar/      상담 목록·검색·계정 메뉴 사이드바
+    store-map-panel/   매장 지도·목록·길찾기·예약 패널
+
+  features/            사용자 액션 단위 기능
+    admin/             관리자 화면 UI, 조회·수정 훅, 캐시 갱신
+    auth/              로그인·회원가입·OAuth 요청(authService), 프로필
+    chat/              대화·메시지·답변 카드·검색·설정·사이드바·채팅 내 매장 안내
+    store/             지도·검색·필터·상세·길찾기·예약·제휴 혜택
+
+  entities/            도메인 데이터(API 호출, 타입, 쿼리, 작은 UI)
+    chat/              상담 세션·메시지 API, SSE 답변 스트림
+    store/             주변 매장·매장 상세 API, 영업 상태
+    route/             길찾기 API, 경로 응답 정규화
+    reservation/       방문 예약 API, 예약 가능 시간
+    user/              내 정보 API, 로그인 상태(AuthProvider)
+    benefit/ faq/ feedback/ plan/ location/
 
   shared/              앱 전역에서 재사용되는 코드
-    api/               백엔드 API 요청 공통 유틸
+    api/               HTTP 요청(CSRF 포함)·SSE 공통 유틸
     config/            환경변수 접근
     constants/         라우트, 화면 문구
-    layout/            Header, Footer 등 레이아웃 컴포넌트
-    lib/               공통 유틸
+    hooks/             공통 훅(뷰포트, 카카오맵 준비 등)
+    layout/            Footer, Section 등 레이아웃 컴포넌트
+    lib/               공통 유틸, 카카오맵 스크립트 로더
+    providers/         테마, 토스트
     ui/                Button, Card, Modal, SearchInput 등 공통 UI
 ```
+
+의존 방향은 `app → widgets → features → entities → shared`입니다. 자세한 규칙은 [Architecture](./docs/Architecture.md)를 참고합니다.
 
 ---
 
@@ -164,11 +185,13 @@ src/
 - 선택 매장 정보 카드는 화면 밖으로 이탈하지 않도록 지도 컨테이너 내부에서 위치를 보정했습니다.
 - 매장 영업 상태는 `영업 전`, `영업 중`, `영업 종료`로 구분해 목록, 정보 카드, 채팅 매장 카드에서 일관되게 표시합니다.
 - 영업 시간 필터와 매장/서비스, 제휴 혜택 필터를 조합해 지도와 목록의 탐색 범위를 좁힐 수 있습니다.
+- 필터를 켜도 목록의 거리와 정렬은 필터 전과 같은 기준(내 위치, 지도를 직접 옮긴 뒤에는 옮긴 화면 중심)으로 유지합니다.
 
 ### 매장 예약 및 채팅 내 매장 안내
 
 - 매장 정보 카드에서 예약 가능한 시간대를 선택하고 예약 요청을 보낼 수 있도록 예약 모달 흐름을 구성했습니다.
 - 채팅 답변 안의 매장 블록은 지도, 매장 카드, 예약하기, 길찾기 버튼을 함께 제공해 상담 흐름에서 바로 행동으로 이어지도록 했습니다.
+- 답변의 "가까운 매장 보기"로 매장 지도에 들어가면 질문 조건(예: 로밍상담·주차 가능)을 필터로 켜고 열어, 답변에서 본 매장 범위가 지도에서도 이어집니다(`/chat?mode=store&action=filter&service=…`).
 - 지도 핀과 매장 카드 선택 상태를 연결해 핀을 누르면 해당 카드가 보이고, 카드 선택 시 지도 초점이 해당 매장으로 이동합니다.
 
 ### 이동수단별 길찾기 UX 구현
@@ -188,7 +211,7 @@ src/
 
 ### 관리자 화면 및 운영 도구 UI
 
-- 관리자 대시보드, 회원·FAQ·매장·제휴 혜택 관리 화면을 구현했습니다.
+- 관리자 대시보드, 답변 피드백(처리 단계 trace 포함), 회원·FAQ·대리점·제휴·요금제 관리 화면을 구현했습니다.
 - 필터, 정렬, 빈 상태, 입력 필드, 위험 액션 확인 등 운영 화면에서 반복되는 UI를 컴포넌트화했습니다.
 - 관리자 데이터는 페이지별 query hook과 entity API로 분리합니다. API base URL이 없는 Storybook·로컬 목업 환경에서만 mock fallback을 사용합니다.
 - FAQ/매장 데이터의 CRUD 화면 구조를 미리 잡아 백엔드 관리자 API 연동 시 UI 변경을 최소화할 수 있도록 했습니다.
@@ -250,9 +273,12 @@ flowchart TD
     D4 --> D5[이동수단 선택]
     D5 --> D6[길찾기 경로 표시]
 
-    E --> E1[FAQ 관리]
-    E --> E2[매장 관리]
-    E --> E3[운영 데이터 확인]
+    C3 -->|가까운 매장 보기 · 질문 조건 필터 유지| D2
+
+    E --> E1[대시보드 · 운영 현황]
+    E --> E2[답변 피드백 확인]
+    E2 --> E3[FAQ 보완]
+    E --> E4[대리점·제휴·회원·요금제 관리]
 ```
 
 ---
@@ -261,12 +287,15 @@ flowchart TD
 
 ### API 연동 전후를 고려한 구조
 
-프론트엔드는 백엔드 API 계약과 화면 흐름을 분리해 관리할 수 있도록 service 계층과 type을 나눴습니다.
+프론트엔드는 백엔드 API 계약과 화면 흐름을 분리해 관리할 수 있도록, 도메인별 API와 타입을 `entities/*/api`에 두고 공통 요청은 `shared/api`에서 처리합니다.
 
-- `authService`: 로그인, 회원가입, OAuth, 인증 상태 API adapter
-- `chatService`: 채팅 세션, 게스트 세션 claim, 메시지 전송, SSE 답변 스트리밍 adapter
-- `storeService`: 주변 매장 조회, 영업 시간 필터, 길찾기, 예약 요청 adapter
-- `adminStoreService`: 관리자 매장 관리 화면용 adapter
+- `shared/api`: 공통 HTTP 요청(쿠키 인증, CSRF 토큰, 타임아웃)과 SSE 파서
+- `authService`(features/auth): 로그인, 회원가입, OAuth 요청
+- `userApi`: 내 정보 조회·수정, 로그아웃
+- `chatApi`: 채팅 세션, 게스트 세션 claim, 메시지 전송, SSE 답변 스트리밍
+- `storeApi` / `routeApi` / `reservationApi`: 주변 매장 조회·영업 시간 필터, 길찾기, 방문 예약
+- `feedbackApi`, `benefitApi`: 답변 피드백, 제휴 혜택
+- `admin*Api`(각 entity의 `api/admin.ts`): 관리자 FAQ·매장·혜택·회원·요금제·답변 피드백 API
 
 ### 지도 화면의 복잡한 상태 분리
 
@@ -313,8 +342,10 @@ flowchart TD
 - 매장 질문 시 현재 위치 좌표 전달
 - 채팅 사이드바 / 채팅 검색 / 메시지 리스트 / 입력창
 - 관리자 대시보드
+- 답변 피드백 화면(처리 단계 trace)
 - FAQ 관리 화면
-- 매장 관리 화면
+- 대리점·제휴 관리 화면
+- 회원·요금제 관리 화면
 - Kakao Maps 기반 매장 지도
 - 현재 위치 기반 주변 매장 조회
 - 매장 검색 및 매장 목록 패널
@@ -328,4 +359,5 @@ flowchart TD
 - 다크 모드
 - Storybook 기반 공통 UI 확인
 - 자체 로그인/회원가입/OAuth API 연동
-- 채팅, 매장, 예약, 길찾기 주요 API 연동
+- 채팅, 매장, 예약, 길찾기, 관리자 주요 API 연동
+- 채팅 답변 → 매장 지도 이동 시 질문 조건 필터 유지
