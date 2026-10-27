@@ -1,51 +1,61 @@
-<svg width="1040" height="620" viewBox="0 0 1040 620" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+<svg width="1040" height="640" viewBox="0 0 1040 640" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">VITA frontend flow</title>
-  <desc id="desc">Current VITA screen flow from user entry to Next.js pages, widgets, feature modules, shared API utilities, backend API, and Kakao Map JavaScript SDK.</desc>
-  <rect width="1040" height="620" rx="24" fill="#FFFDF8"/>
+  <desc id="desc">VITA screen flow from user entry to landing, login, AI chat, store map, and admin screens, through entities and shared API to the backend and Kakao Map SDK.</desc>
+  <rect width="1040" height="640" rx="24" fill="#FFFDF8"/>
   <text x="56" y="58" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="28" font-weight="700">VITA Frontend Flow</text>
-  <text x="56" y="86" fill="#5F6368" font-family="Arial, sans-serif" font-size="14">현재 기준: 화면 진입, widget/feature 조립, 공통 UI, API, 지도 연동 흐름</text>
-  <rect x="64" y="162" width="160" height="82" rx="16" fill="#FFFFFF" stroke="#FFE6D4"/>
-  <text x="104" y="196" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="18" font-weight="700">User</text>
-  <text x="92" y="220" fill="#5F6368" font-family="Arial, sans-serif" font-size="13">서비스 이용자</text>
-  <rect x="300" y="112" width="200" height="64" rx="14" fill="#FFF6E5"/>
-  <text x="334" y="139" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="15" font-weight="700">Landing</text>
-  <text x="334" y="158" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">marketing route</text>
-  <rect x="300" y="206" width="200" height="64" rx="14" fill="#FFF6E5"/>
-  <text x="334" y="233" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="15" font-weight="700">Login</text>
-  <text x="334" y="252" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">auth route</text>
-  <rect x="300" y="300" width="200" height="64" rx="14" fill="#FFF6E5"/>
-  <text x="334" y="327" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="15" font-weight="700">AI Chat</text>
-  <text x="334" y="346" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">app → widgets → chat features</text>
-  <rect x="300" y="394" width="200" height="64" rx="14" fill="#FFF6E5"/>
-  <text x="334" y="421" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="15" font-weight="700">Store Map UI</text>
-  <text x="334" y="440" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">widgets/store-map-panel</text>
-  <rect x="592" y="146" width="186" height="84" rx="16" fill="#FFFFFF" stroke="#FFE6D4"/>
-  <text x="624" y="181" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="17" font-weight="700">shared-ui</text>
-  <text x="624" y="204" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">Button, Card, Modal,</text>
-  <text x="624" y="220" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">SearchInput, 정보형 UI</text>
-  <rect x="592" y="284" width="186" height="84" rx="16" fill="#FFFFFF" stroke="#FFE6D4"/>
-  <text x="624" y="319" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="17" font-weight="700">shared/api</text>
-  <text x="624" y="342" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">http 유틸</text>
-  <text x="624" y="358" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">API base URL 설정</text>
-  <rect x="592" y="422" width="186" height="84" rx="16" fill="#FFFFFF" stroke="#FFE6D4"/>
-  <text x="624" y="457" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="17" font-weight="700">Kakao Map</text>
-  <text x="624" y="480" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">지도 스크립트 로더</text>
-  <text x="624" y="496" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">매장 지도 링크</text>
-  <rect x="854" y="284" width="142" height="84" rx="16" fill="#FFEBC2" stroke="#FDB63D"/>
-  <text x="890" y="319" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="17" font-weight="700">BE API</text>
-  <text x="882" y="342" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">auth 연동 완료</text>
-  <text x="888" y="358" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">기능 API Phase 2</text>
-  <path d="M224 203H300" stroke="#FDB63D" stroke-width="3" stroke-linecap="round"/>
-  <path d="M286 193L300 203L286 213" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M224 203C262 203 260 238 300 238" stroke="#FDB63D" stroke-width="3" stroke-linecap="round"/>
-  <path d="M224 203C262 203 260 332 300 332" stroke="#FDB63D" stroke-width="3" stroke-linecap="round"/>
-  <path d="M224 203C262 203 260 426 300 426" stroke="#FDB63D" stroke-width="3" stroke-linecap="round"/>
-  <path d="M500 238C540 238 550 188 592 188" stroke="#FDB63D" stroke-width="3" stroke-linecap="round"/>
-  <path d="M500 332H592" stroke="#FDB63D" stroke-width="3" stroke-linecap="round"/>
-  <path d="M578 322L592 332L578 342" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M500 426C540 426 550 464 592 464" stroke="#FDB63D" stroke-width="3" stroke-linecap="round"/>
-  <path d="M778 326H854" stroke="#FDB63D" stroke-width="3" stroke-linecap="round"/>
-  <path d="M840 316L854 326L840 336" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="64" y="530" width="932" height="42" rx="12" fill="#F5F5F5"/>
-  <text x="92" y="556" fill="#5F6368" font-family="Arial, sans-serif" font-size="13">관리자 화면은 dev 기준 포함, 채팅/매장/관리자 기능 API는 Phase 2에서 실제 연동</text>
+  <text x="56" y="86" fill="#5F6368" font-family="Arial, sans-serif" font-size="14">화면 진입 → widget/feature 조립 → entities API → shared/api → BE API · Kakao Map</text>
+  <rect x="48" y="282" width="150" height="84" rx="16" fill="#FFFFFF" stroke="#FFE6D4"/>
+  <text x="96" y="317" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="18" font-weight="700">User</text>
+  <text x="80" y="341" fill="#5F6368" font-family="Arial, sans-serif" font-size="13">서비스 이용자</text>
+  <rect x="268" y="112" width="252" height="60" rx="14" fill="#FFF6E5"/>
+  <text x="288" y="137" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="15" font-weight="700">Landing</text>
+  <text x="288" y="156" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">(marketing)</text>
+  <rect x="268" y="192" width="252" height="60" rx="14" fill="#FFF6E5"/>
+  <text x="288" y="217" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="15" font-weight="700">Login</text>
+  <text x="288" y="236" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">(auth)/login · oauth/callback</text>
+  <rect x="268" y="272" width="252" height="60" rx="14" fill="#FFF6E5"/>
+  <text x="288" y="297" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="15" font-weight="700">AI Chat</text>
+  <text x="288" y="316" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">chat → chat-sidebar · features/chat</text>
+  <rect x="268" y="382" width="252" height="60" rx="14" fill="#FFF6E5"/>
+  <text x="288" y="407" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="15" font-weight="700">Store Map</text>
+  <text x="288" y="426" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">chat?mode=store → store-map-panel</text>
+  <rect x="268" y="472" width="252" height="60" rx="14" fill="#FFF6E5"/>
+  <text x="288" y="497" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="15" font-weight="700">Admin</text>
+  <text x="288" y="516" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">(service)/admin → features/admin</text>
+  <path d="M198 324C236 324 232 142 268 142" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M198 324C236 324 232 222 268 222" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M198 324H268" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M198 324C236 324 232 412 268 412" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M198 324C236 324 232 502 268 502" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M300 332V382" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M292 372L300 382L308 372" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="312" y="354" fill="#B86E00" font-family="Arial, sans-serif" font-size="11" font-weight="700">가까운 매장 보기</text>
+  <text x="312" y="369" fill="#B86E00" font-family="Arial, sans-serif" font-size="11">질문 조건 필터 유지</text>
+  <rect x="560" y="112" width="200" height="72" rx="16" fill="#FFFFFF" stroke="#FFE6D4"/>
+  <text x="582" y="144" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="17" font-weight="700">shared/ui</text>
+  <text x="582" y="168" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">Button · Card · Modal · 정보형 UI</text>
+  <rect x="560" y="232" width="200" height="128" rx="16" fill="#FFFFFF" stroke="#FFE6D4"/>
+  <text x="582" y="264" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="17" font-weight="700">entities/*/api</text>
+  <text x="582" y="288" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">chat · store · route · reservation</text>
+  <text x="582" y="305" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">user · feedback · admin*Api</text>
+  <text x="582" y="322" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">↓</text>
+  <text x="582" y="339" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">shared/api: HTTP(CSRF) · SSE</text>
+  <rect x="560" y="412" width="200" height="84" rx="16" fill="#FFFFFF" stroke="#FFE6D4"/>
+  <text x="582" y="444" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="17" font-weight="700">Kakao Map SDK</text>
+  <text x="582" y="468" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">shared/lib 스크립트 로더</text>
+  <text x="582" y="485" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">지도 · 마커 · 경로</text>
+  <rect x="824" y="252" width="176" height="96" rx="16" fill="#FFEBC2" stroke="#FDB63D"/>
+  <text x="846" y="284" fill="#1F1F1F" font-family="Arial, sans-serif" font-size="17" font-weight="700">BE API</text>
+  <text x="846" y="308" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">인증 · 채팅(SSE) · 매장</text>
+  <text x="846" y="325" fill="#5F6368" font-family="Arial, sans-serif" font-size="12">길찾기 · 예약 · 관리자</text>
+  <path d="M520 142C540 142 540 148 560 148" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M520 222C540 222 540 270 560 270" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M520 302C540 302 540 290 560 290" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M520 412C540 412 540 312 560 312" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M520 502C540 502 540 334 560 334" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M520 418C540 418 540 454 560 454" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M760 300H824" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M810 290L824 300L810 310" stroke="#FDB63D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="48" y="566" width="952" height="44" rx="12" fill="#F5F5F5"/>
+  <text x="74" y="593" fill="#5F6368" font-family="Arial, sans-serif" font-size="13">모든 화면의 기능 API는 BE와 실제 연동 · 채팅 답변 → 매장 지도 이동 시 질문 조건(service)을 URL(action=filter)로 전달</text>
 </svg>
